@@ -1,0 +1,162 @@
+/* postcss-enable */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Theme Colors */
+  --bg-primary: #0d0d0d;
+  --bg-secondary: #1a1a1a;
+  --bg-tertiary: #1f1f1f;
+  --bg-card: #2a2a2a;
+  --bg-hover: #333333;
+
+  --border-default: rgba(255, 255, 255, 0.05);
+  --border-hover: rgba(59, 130, 246, 0.3);
+
+  --text-primary: #ffffff;
+  --text-secondary: #d1d5db;
+  --text-tertiary: #9ca3af;
+  --text-muted: #6b7280;
+
+  --accent-blue-500: #3b82f6;
+  --accent-blue-400: #60a5fa;
+  --accent-blue-300: rgba(59, 130, 246, 0.3);
+  --accent-blue-200: rgba(59, 130, 246, 0.2);
+  --accent-blue-100: rgba(59, 130, 246, 0.1);
+  --accent-blue-50: rgba(59, 130, 246, 0.05);
+
+  --accent-green-500: #10b981;
+  --accent-green-400: #34d399;
+  --accent-green-200: rgba(16, 185, 129, 0.2);
+  --accent-green-100: rgba(16, 185, 129, 0.1);
+
+  --accent-yellow-500: #f59e0b;
+  --accent-yellow-400: #fbbf24;
+  --accent-yellow-200: rgba(245, 158, 11, 0.2);
+  --accent-yellow-100: rgba(245, 158, 11, 0.1);
+
+  --accent-red-500: #ef4444;
+  --accent-red-400: #f87171;
+  --accent-red-200: rgba(239, 68, 68, 0.2);
+  --accent-red-100: rgba(239, 68, 68, 0.1);
+
+  --accent-gray-900: #111827;
+  --accent-gray-800: #1f2937;
+  --accent-gray-700: #374151;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Custom Scrollbar - Modern Pill Design */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 100px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 100px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: rgba(148, 163, 184, 0.7);
+  background-clip: padding-box;
+}
+
+/* Dark scrollbar for dark backgrounds */
+.dark *::-webkit-scrollbar-thumb,
+[class*="bg-gray-"]::-webkit-scrollbar-thumb,
+[class*="bg-[#"]::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.4);
+}
+
+.dark *::-webkit-scrollbar-thumb:hover,
+[class*="bg-gray-"]::-webkit-scrollbar-thumb:hover,
+[class*="bg-[#"]::-webkit-scrollbar-thumb:hover {
+  background: rgba(71, 85, 105, 0.6);
+}
+
+/* Custom scrollbar class for specific elements */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 100px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5);
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.15s ease-out;
+}

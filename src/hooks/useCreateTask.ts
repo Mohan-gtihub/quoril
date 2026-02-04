@@ -1,0 +1,69 @@
+import { useState } from 'react'
+import { useTaskStore } from '@/store/taskStore'
+import { useFocusStore } from '@/store/focusStore'
+
+const DAILY_LIMIT = 8 * 60 // 8 hours
+
+export function useCreateTask(listId: string) {
+    const { createTask, getTodayPlannedMinutes } = useTaskStore()
+    const { startFocus } = useFocusStore()
+
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    async function submit(data: {
+        title: string
+        minutes: number
+        priority: 'low' | 'medium' | 'high'
+        focusAfter: boolean
+    }) {
+        setError(null)
+
+        if (!data.title.trim()) {
+            setError('Title is required')
+            return
+        }
+
+        if (data.minutes < 5) {
+            setError('Minimum focus time is 5 minutes')
+            return
+        }
+
+        const today = getTodayPlannedMinutes()
+
+        if (today + data.minutes > DAILY_LIMIT) {
+            setError('Daily focus limit exceeded')
+            return
+        }
+
+        setLoading(true)
+
+        try {
+            const task = await createTask(
+                {
+                    list_id: listId,
+                    title: data.title.trim(),
+                    priority: data.priority,
+                    estimated_minutes: data.minutes,
+                },
+                'today' // DEFAULT COLUMN
+            )
+
+            if (data.focusAfter) {
+                startFocus(task.id)
+            }
+
+            return task
+        } catch {
+            setError('Failed to create task')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return {
+        submit,
+        loading,
+        error,
+    }
+}
