@@ -1,6 +1,7 @@
 import { Task, Subtask, List } from '@/types/database'
 import { v4 as uuidv4 } from 'uuid'
 import { supabase } from './supabase'
+import { dataSyncService } from './dataSyncService'
 
 /* ---------------- HELPERS ---------------- */
 
@@ -44,7 +45,8 @@ export const localService = {
     tasks: {
         list: async (listId?: string) => {
             const user = await getUser()
-            if (!user || !db()) return { data: [], error: 'No DB' }
+            if (!user) return { data: [], error: 'No session' }
+            if (!db()) return { data: [], error: 'No DB' }
             const rows = await db().getTasks(user.id, listId)
             return { data: rows.map(mapTask), error: null }
         },
@@ -75,6 +77,7 @@ export const localService = {
             }
 
             await db().saveTask(row)
+            dataSyncService.trigger()
             return { data: mapTask(row), error: null }
         },
 
@@ -100,6 +103,7 @@ export const localService = {
 
             const keys = Object.keys(row)
             await db().exec(`UPDATE tasks SET ${keys.map(k => `${k}=?`).join(',')} WHERE id=?`, [...Object.values(row), id])
+            dataSyncService.trigger()
 
             const [fresh] = await db().exec('SELECT * FROM tasks WHERE id=?', [id])
             return { data: mapTask(fresh), error: null }
@@ -108,6 +112,14 @@ export const localService = {
         delete: async (id: string) => {
             if (!db()) return { error: 'No DB' }
             await db().deleteTask(id)
+            dataSyncService.trigger()
+            return { error: null }
+        },
+
+        permanentDelete: async (id: string) => {
+            if (!db()) return { error: 'No DB' }
+            await db().hardDeleteTask(id)
+            dataSyncService.trigger()
             return { error: null }
         },
 
@@ -119,16 +131,18 @@ export const localService = {
             for (const item of items) {
                 await db().exec('UPDATE tasks SET sort_order=?, synced=0 WHERE id=?', [item.sort_order, item.id])
             }
+            dataSyncService.trigger()
         }
     },
 
     /* ================= LISTS ================= */
 
     lists: {
-        list: async () => {
+        list: async (archived: boolean = false) => {
             const user = await getUser()
-            if (!user || !db()) return { data: [], error: 'No DB' }
-            const rows = await db().getLists(user.id)
+            if (!user) return { data: [], error: 'No session' }
+            if (!db()) return { data: [], error: 'No DB' }
+            const rows = await db().getLists(user.id, archived)
             return { data: rows, error: null }
         },
 
@@ -151,6 +165,7 @@ export const localService = {
             }
 
             await db().saveList(data)
+            dataSyncService.trigger()
             return { data: data as List, error: null }
         },
 
@@ -159,12 +174,33 @@ export const localService = {
             const data = { ...updates, updated_at: new Date().toISOString(), synced: 0 }
             const keys = Object.keys(data)
             await db().exec(`UPDATE lists SET ${keys.map(k => `${k}=?`).join(',')} WHERE id = ?`, [...Object.values(data), id])
+            dataSyncService.trigger()
             return { data: { ...updates, id }, error: null }
         },
 
         delete: async (id: string) => {
             if (!db()) return { error: 'No DB' }
             await db().deleteList(id)
+            dataSyncService.trigger()
+            return { error: null }
+        },
+
+        permanentDelete: async (id: string) => {
+            if (!db()) return { error: 'No DB' }
+            await db().hardDeleteList(id)
+            dataSyncService.trigger()
+            return { error: null }
+        },
+
+        archive: async (id: string) => {
+            if (!db()) return { error: 'No DB' }
+            await db().archiveList(id)
+            return { error: null }
+        },
+
+        restore: async (id: string) => {
+            if (!db()) return { error: 'No DB' }
+            await db().restoreList(id)
             return { error: null }
         }
     },
@@ -174,6 +210,8 @@ export const localService = {
     subtasks: {
         list: async (taskId: string) => {
             if (!db()) return { data: [], error: 'No DB' }
+            const user = await getUser()
+            if (!user) return { data: [], error: 'No session' }
             const rows = await db().getSubtasks(taskId)
             return { data: rows.map((r: any) => ({ ...r, completed: !!r.done })), error: null }
         },
@@ -197,6 +235,7 @@ export const localService = {
             }
 
             await db().saveSubtask(row)
+            dataSyncService.trigger()
             return { data: { ...row, completed: !!row.done }, error: null }
         },
 
@@ -211,12 +250,14 @@ export const localService = {
 
             const keys = Object.keys(row)
             await db().exec(`UPDATE subtasks SET ${keys.map(k => `${k}=?`).join(',')} WHERE id=?`, [...Object.values(row), id])
+            dataSyncService.trigger()
             return { data: { ...updates, id }, error: null }
         },
 
         delete: async (id: string) => {
             if (!db()) return { error: 'No DB' }
             await db().exec('UPDATE subtasks SET deleted_at=?, synced=0 WHERE id=?', [new Date().toISOString(), id])
+            dataSyncService.trigger()
             return { error: null }
         }
     },
@@ -226,7 +267,8 @@ export const localService = {
     focus: {
         list: async () => {
             const user = await getUser()
-            if (!user || !db()) return { data: [], error: 'No DB' }
+            if (!user) return { data: [], error: 'No session' }
+            if (!db()) return { data: [], error: 'No DB' }
             const rows = await db().getSessions(user.id)
             return { data: rows.map((r: any) => ({ ...r, ...(r.metadata ? JSON.parse(r.metadata) : {}) })), error: null }
         },
@@ -254,6 +296,7 @@ export const localService = {
             }
 
             await db().saveSession(row)
+            dataSyncService.trigger()
             return { data: { ...session, id }, error: null }
         },
 
@@ -283,6 +326,7 @@ export const localService = {
 
             const keys = Object.keys(row)
             await db().exec(`UPDATE focus_sessions SET ${keys.map(k => `${k}=?`).join(',')} WHERE id=?`, [...Object.values(row), id])
+            dataSyncService.trigger()
 
             return { error: null }
         }

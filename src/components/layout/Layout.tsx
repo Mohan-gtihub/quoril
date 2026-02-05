@@ -15,8 +15,9 @@ export function Layout({ children }: LayoutProps) {
     // Resize window when focus panel state changes
     useEffect(() => {
         if (showFocusPanel) {
-            // Resize to compact widget
-            window.electron?.resizeWindow(340, 600, 20, 20)
+            // Resize to compact widget (Sidebar Mode)
+            const height = window.screen.availHeight - 40
+            window.electron?.resizeWindow(340, height, 20, 20)
         } else {
             // Restore to normal size
             window.electron?.restoreWindow()
@@ -34,7 +35,7 @@ export function Layout({ children }: LayoutProps) {
 
     // Normal view
     return (
-        <div className="flex flex-col h-full bg-[#0d0d0d]">
+        <div className="flex flex-col h-full bg-[var(--bg-primary)]">
             <div className="flex flex-1 min-h-0 overflow-hidden">
                 <Sidebar />
                 <main className="flex-1 overflow-auto custom-scrollbar">

@@ -22,8 +22,8 @@ const __dirname = path.dirname(__filename)
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
 
-const isDev = process.env.NODE_ENV === 'development'
-const DEV_URL = 'http://localhost:5173'
+const isDev = !app.isPackaged
+const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 
 /* ---------------- STATE ---------------- */
 
@@ -39,9 +39,10 @@ function createWindow() {
         height: 900,
         minWidth: 1000,
         minHeight: 600,
-        backgroundColor: '#1a1f2e',
         show: false,
         frame: false,
+        transparent: true,
+        hasShadow: false,
 
         webPreferences: {
             preload: path.join(__dirname, 'index.mjs'),
@@ -53,12 +54,12 @@ function createWindow() {
 
     Menu.setApplicationMenu(null)
 
-    if (isDev) {
-        mainWindow.loadURL(DEV_URL)
+    if (isDev && VITE_DEV_SERVER_URL) {
+        mainWindow.loadURL(VITE_DEV_SERVER_URL)
         mainWindow.webContents.openDevTools()
     } else {
         mainWindow.loadFile(
-            path.join(__dirname, '../../dist/index.html')
+            path.join(__dirname, '../dist/index.html')
         )
     }
 
@@ -67,6 +68,30 @@ function createWindow() {
     })
 
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+        // Keep internal routes inside the app (e.g. popups)
+        if ((VITE_DEV_SERVER_URL && url.startsWith(VITE_DEV_SERVER_URL)) || url.startsWith('file://')) {
+            return {
+                action: 'allow',
+                overrideBrowserWindowOptions: {
+                    width: 340, // Adjusted width
+                    height: 48, // Initial height for the pill
+                    frame: false,
+                    autoHideMenuBar: true,
+                    alwaysOnTop: true,
+                    backgroundColor: '#1a1f2e',
+                    transparent: true, // Added transparency
+                    hasShadow: false, // Added no shadow
+                    resizable: false, // Set to non-resizable initially
+                    webPreferences: {
+                        preload: path.join(__dirname, 'index.mjs'),
+                        contextIsolation: true,
+                        nodeIntegration: false,
+                    }
+                }
+            }
+        }
+
+        // Open truly external URLs in the default browser
         shell.openExternal(url)
         return { action: 'deny' }
     })
@@ -143,17 +168,40 @@ function setupIPC() {
         mainWindow?.close()
     )
 
-    ipcMain.on('resize-window', (_, { width, height, x, y }) => {
-        if (mainWindow) {
-            mainWindow.setSize(width, height)
-            if (x !== undefined && y !== undefined) {
-                mainWindow.setPosition(x, y)
+    ipcMain.handle('window:closeDevTools', () => {
+        mainWindow?.webContents.closeDevTools()
+    })
+
+    ipcMain.handle('window:setAlwaysOnTop', (_, flag: boolean) => {
+        mainWindow?.setAlwaysOnTop(flag, 'screen-saver')
+    })
+
+    ipcMain.handle('window:setResizable', (_, flag: boolean) => {
+        mainWindow?.setResizable(flag)
+    })
+
+    ipcMain.on('resize-window', (event, { width, height, x, y }) => {
+        const win = BrowserWindow.fromWebContents(event.sender)
+        if (win) {
+            win.setResizable(true)
+            win.unmaximize()
+            win.setFullScreen(false)
+            win.setKiosk(false)
+            win.setMinimumSize(0, 0)
+
+            if (typeof x === 'number' && typeof y === 'number') {
+                win.setBounds({ width, height, x, y })
+            } else {
+                win.setSize(width, height)
             }
+
+            win.setResizable(false)
         }
     })
 
     ipcMain.on('restore-window', () => {
         if (mainWindow) {
+            mainWindow.setMinimumSize(1000, 600)
             mainWindow.setSize(1400, 900)
             mainWindow.center()
         }
@@ -183,8 +231,8 @@ function setupIPC() {
 
     /* Lists */
 
-    ipcMain.handle('db:getLists', (_, uid) =>
-        dbOps.getLists(uid)
+    ipcMain.handle('db:getLists', (_, uid, archived) =>
+        dbOps.getLists(uid, archived)
     )
 
     ipcMain.handle('db:saveList', (_, list) =>
@@ -193,6 +241,14 @@ function setupIPC() {
 
     ipcMain.handle('db:deleteList', (_, id) =>
         safe(() => dbOps.deleteList(id))
+    )
+
+    ipcMain.handle('db:restoreList', (_, id) =>
+        safe(() => dbOps.restoreList(id))
+    )
+
+    ipcMain.handle('db:archiveList', (_, id) =>
+        safe(() => dbOps.archiveList(id))
     )
 
     /* Subtasks */
@@ -244,7 +300,11 @@ function safe(fn: () => any) {
 /* ---------------- APP ---------------- */
 
 app.whenReady().then(async () => {
-    await initDatabase()
+    try {
+        await initDatabase()
+    } catch (e) {
+        console.error('Failed to initialize database:', e)
+    }
 
     createWindow()
     createTray()

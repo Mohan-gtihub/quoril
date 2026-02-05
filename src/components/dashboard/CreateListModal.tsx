@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useListStore } from '@/store/listStore'
+import type { List } from '@/types/list'
 
 interface CreateListModalProps {
     isOpen: boolean
     onClose: () => void
+    listToEdit?: List | null
 }
 
 const PRESET_COLORS = [
@@ -18,12 +20,26 @@ const PRESET_COLORS = [
 
 const PRESET_ICONS = ['📋', '💼', '🎯', '📚', '💡', '🚀', '✨', '🔥']
 
-export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
-    const { createList } = useListStore()
+export function CreateListModal({ isOpen, onClose, listToEdit }: CreateListModalProps) {
+    const { createList, updateList } = useListStore()
     const [name, setName] = useState('')
     const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0])
     const [selectedIcon, setSelectedIcon] = useState(PRESET_ICONS[0])
     const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        if (isOpen) {
+            if (listToEdit) {
+                setName(listToEdit.name)
+                setSelectedColor(listToEdit.color)
+                setSelectedIcon(listToEdit.icon)
+            } else {
+                setName('')
+                setSelectedColor(PRESET_COLORS[0])
+                setSelectedIcon(PRESET_ICONS[0])
+            }
+        }
+    }, [isOpen, listToEdit])
 
     if (!isOpen) return null
 
@@ -33,25 +49,30 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
 
         setLoading(true)
         try {
-
-            const result = await createList({
-                name: name.trim(),
-                color: selectedColor,
-                icon: selectedIcon,
-            })
-
-
-            if (result) {
-                // Refresh the lists
+            if (listToEdit) {
+                await updateList(listToEdit.id, {
+                    name: name.trim(),
+                    color: selectedColor,
+                    icon: selectedIcon,
+                })
+                // Refresh is handled by generic update in store usually, but let's be safe
                 const { fetchLists } = useListStore.getState()
                 await fetchLists()
-
-                setName('')
-                setSelectedColor(PRESET_COLORS[0])
-                setSelectedIcon(PRESET_ICONS[0])
                 onClose()
             } else {
-                console.error('[CreateList] Failed to create list - no result returned')
+                const result = await createList({
+                    name: name.trim(),
+                    color: selectedColor,
+                    icon: selectedIcon,
+                })
+
+                if (result) {
+                    const { fetchLists } = useListStore.getState()
+                    await fetchLists()
+                    onClose()
+                } else {
+                    console.error('[CreateList] Failed to create list - no result returned')
+                }
             }
         } catch (error) {
             console.error('[CreateList] Error:', error)
@@ -61,14 +82,16 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="bg-[var(--bg-card)] rounded-2xl p-8 w-full max-w-md border border-[var(--border-default)] shadow-2xl">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-white">Create New List</h2>
+                    <h2 className="text-xl font-bold text-[var(--text-primary)]">
+                        {listToEdit ? 'Configure Module' : 'Initialize Module'}
+                    </h2>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-white transition-colors"
+                        className="p-2 hover:bg-[var(--bg-hover)] rounded-full transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -78,23 +101,23 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Name Input */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                            List Name
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+                            Deployment Designation
                         </label>
                         <input
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            placeholder="e.g., Work Projects"
-                            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="e.g., Strategic Ops"
+                            className="w-full px-4 py-3 bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-xl text-[var(--text-primary)] placeholder:[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/50"
                             autoFocus
                         />
                     </div>
 
                     {/* Icon Picker */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                            Icon
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+                            Visual Identifier
                         </label>
                         <div className="grid grid-cols-8 gap-2">
                             {PRESET_ICONS.map((icon) => (
@@ -102,9 +125,9 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
                                     key={icon}
                                     type="button"
                                     onClick={() => setSelectedIcon(icon)}
-                                    className={`p-2 rounded-lg text-2xl transition-colors ${selectedIcon === icon
-                                        ? 'bg-blue-600'
-                                        : 'bg-gray-700 hover:bg-gray-600'
+                                    className={`p-2 rounded-xl text-2xl transition-all ${selectedIcon === icon
+                                        ? 'bg-[var(--accent-primary)] text-white shadow-lg shadow-[var(--accent-primary)]/25'
+                                        : 'bg-[var(--bg-hover)] hover:bg-[var(--bg-tertiary)]'
                                         }`}
                                 >
                                     {icon}
@@ -115,8 +138,8 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
 
                     {/* Color Picker */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                            Color
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+                            Signature Frequency
                         </label>
                         <div className="grid grid-cols-6 gap-2">
                             {PRESET_COLORS.map((color) => (
@@ -124,7 +147,7 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
                                     key={color}
                                     type="button"
                                     onClick={() => setSelectedColor(color)}
-                                    className={`w-10 h-10 rounded-lg transition-transform ${selectedColor === color ? 'scale-110 ring-2 ring-white' : ''
+                                    className={`w-10 h-10 rounded-xl transition-all ${selectedColor === color ? 'scale-110 ring-2 ring-[var(--accent-primary)] ring-offset-2 ring-offset-[var(--bg-card)]' : 'hover:scale-105 opacity-80 hover:opacity-100'
                                         }`}
                                     style={{ backgroundColor: color }}
                                 />
@@ -133,20 +156,20 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
                     </div>
 
                     {/* Buttons */}
-                    <div className="flex gap-3 pt-4">
+                    <div className="flex gap-4 pt-6">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                            className="flex-1 px-4 py-3 bg-[var(--bg-hover)] text-[var(--text-primary)] rounded-xl font-bold hover:bg-[var(--bg-tertiary)] transition-all"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={!name.trim() || loading}
-                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 px-4 py-3 bg-[var(--accent-primary)] text-white rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[var(--accent-primary)]/20"
                         >
-                            {loading ? 'Creating...' : 'Create List'}
+                            {loading ? (listToEdit ? 'Updating...' : 'Deploying...') : (listToEdit ? 'Save Changes' : 'Deploy Module')}
                         </button>
                     </div>
                 </form>

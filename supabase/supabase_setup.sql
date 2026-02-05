@@ -1,5 +1,5 @@
 -- ============================================
--- Blitzit Clone - Complete Database Setup
+-- Quoril - Complete Database Setup
 -- ============================================
 
 -- 1. Create lists table
@@ -222,5 +222,5 @@ BEGIN
     RAISE NOTICE 'Database setup completed successfully!';
     RAISE NOTICE 'Tables created: lists, tasks, focus_sessions, profiles';
     RAISE NOTICE 'RLS policies enabled for all tables';
-    RAISE NOTICE 'You can now use the Blitzit app!';
+    RAISE NOTICE 'You can now use the Quoril app!';
 END $$;

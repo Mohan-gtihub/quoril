@@ -31,8 +31,10 @@ export interface ElectronAPI {
         startTask: (id: string) => Promise<any>
         pauseTask: (id: string) => Promise<any>
         reorderTasks: (items: any) => Promise<any>
-        getLists: (userId: string) => Promise<any[]>
+        getLists: (userId: string, archived?: boolean) => Promise<any[]>
         saveList: (list: any) => Promise<any>
+        deleteList: (id: string) => Promise<any>
+        restoreList: (id: string) => Promise<any>
         getSubtasks: (taskId: string) => Promise<any[]>
         saveSubtask: (subtask: any) => Promise<any>
         deleteSubtask: (id: string) => Promise<any>
@@ -52,6 +54,9 @@ declare global {
         electron: {
             resizeWindow: (width: number, height: number, x?: number, y?: number) => void
             restoreWindow: () => void
+            setAlwaysOnTop: (flag: boolean) => void
+            setResizable: (flag: boolean) => void
+            closeDevTools: () => void
         }
     }
 }

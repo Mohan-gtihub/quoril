@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react'
 import { useFocusStore } from '@/store/focusStore'
 import { useTaskStore } from '@/store/taskStore'
 import { useListStore } from '@/store/listStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { useTimerDisplay } from '@/hooks/useTimerDisplay'
 import { TaskCard } from '../planner/TaskCard'
+import { CreateTaskModal } from '../planner/CreateTaskModal'
 import { cn } from '@/utils/helpers'
 
 import {
@@ -12,10 +14,12 @@ import {
     CheckCircle2,
     ExternalLink,
     SkipForward,
-    ChevronRight,
     Timer,
-    Zap,
-    Layout
+    Coffee,
+    Plus,
+    XCircle,
+    Settings,
+    Home
 } from 'lucide-react'
 
 import {
@@ -59,16 +63,31 @@ function formatTime(sec: number) {
 export function FocusTimerPanel() {
     const focus = useFocusStore()
     const { tasks, moveTaskToColumn, reorderTasks } = useTaskStore()
-    const { selectedListId } = useListStore()
+    const { selectedListId, lists } = useListStore()
+
+    const [showCreateModal, setShowCreateModal] = useState(false)
+    const [showCelebration, setShowCelebration] = useState(false)
+
+    const celebrationGif = useMemo(() => {
+        const gifs = [
+            'https://media.giphy.com/media/11sBLVxNs7v6WA/giphy.gif',
+            'https://media.giphy.com/media/3o7abKhOpu0NwePO3u/giphy.gif',
+            'https://media.giphy.com/media/xT5LMHxhOfscxPfIfm/giphy.gif',
+            'https://media.giphy.com/media/l0HlHJGHe3yAMhdQY/giphy.gif'
+        ]
+        return gifs[Math.floor(Math.random() * gifs.length)]
+    }, [showCelebration])
 
     const {
-        isActive,
         isPaused,
         taskId,
         duration,
         remainingTime,
         isOvertime,
         progress,
+        isBreak,
+        breakRemaining,
+        breakRemainingAtStart
     } = useTimerDisplay()
 
     const {
@@ -88,14 +107,22 @@ export function FocusTimerPanel() {
     const activeTask = tasks.find(t => t.id === taskId)
     const nextTasks = useMemo(() => {
         return tasks
-            .filter((t: any) =>
-                t.id !== taskId &&
-                t.status !== 'done' &&
-                (selectedListId === 'all' || t.list_id === selectedListId) &&
-                useTaskStore.getState().getColumnStatuses('today').includes(t.status)
-            )
+            .filter((t: any) => {
+                if (t.id === taskId) return false
+                if (t.status === 'done') return false
+                if (t.deleted_at) return false
+
+                if (selectedListId === 'all') {
+                    const isActiveList = lists.some(l => l.id === t.list_id)
+                    if (!isActiveList) return false
+                } else if (t.list_id !== selectedListId) {
+                    return false
+                }
+
+                return useTaskStore.getState().getColumnStatuses('today').includes(t.status)
+            })
             .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-    }, [tasks, taskId, selectedListId])
+    }, [tasks, taskId, selectedListId, lists])
 
     /* ---------- DND ---------- */
     const [activeId, setActiveId] = useState<string | null>(null)
@@ -110,7 +137,6 @@ export function FocusTimerPanel() {
         const { active, over } = e
         if (!over) return
 
-        // Check if dropped on the active task area (regardless of if a task is already active)
         if (over.id === 'active-task-target') {
             const taskIdToStart = active.id as string
             if (taskIdToStart !== taskId) {
@@ -134,9 +160,19 @@ export function FocusTimerPanel() {
     }
 
     /* ---------- ACTIONS ---------- */
+    /* ---------- ACTIONS ---------- */
     const handleDone = async () => {
-        if (taskId) await moveTaskToColumn(taskId, 'done')
-        await endSession()
+        if (focus.isBreak) {
+            await focus.stopBreak()
+            return
+        }
+        if (taskId) {
+            await moveTaskToColumn(taskId, 'done')
+            setShowCelebration(true)
+            // DO NOT endSession() yet, waiting for user action in celebration view
+        } else {
+            await endSession()
+        }
     }
 
     const handleSkip = async () => {
@@ -158,9 +194,10 @@ export function FocusTimerPanel() {
         }
     }
 
-    const handlePopOut = () => {
-        window.open('/focus-popup', 'BlitzFocus', 'width=400,height=700,resizable=yes,alwaysOnTop=yes')
-    }
+
+    // Calculate stats
+    const totalEstimatedTime = nextTasks.reduce((acc, t) => acc + (t.estimated_minutes || 0), 0)
+    const completedTasks = tasks.filter(t => t.status === 'done' && !t.deleted_at).length
 
     return (
         <div
@@ -171,216 +208,269 @@ export function FocusTimerPanel() {
             onDragLeave={() => setIsNativeDragOver(false)}
             onDrop={handleNativeDrop}
             className={cn(
-                "h-full flex flex-col w-full overflow-hidden transition-colors",
-                isNativeDragOver ? "bg-blue-500/5 ring-4 ring-inset ring-blue-500/20" : "bg-[var(--bg-secondary)]"
+                "h-full flex flex-col w-full transition-colors bg-[#0d0f14]",
+                isNativeDragOver && "ring-2 ring-inset ring-blue-500/40"
             )}
         >
-            {/* GLASS HEADER */}
-            <div className="h-20 flex items-center justify-between px-8 border-b backdrop-blur-xl sticky top-0 z-40" style={{ borderColor: 'var(--border-default)', backgroundColor: 'rgba(26, 26, 30, 0.8)' }}>
-                <div className="flex items-center gap-4">
-                    <div className="relative group">
-                        <div className={cn(
-                            "w-3 h-3 rounded-full transition-all duration-500",
-                            isActive && !isPaused ? "bg-emerald-500 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.5)]" : "bg-white/20"
-                        )} />
-                    </div>
-                    <div>
-                        <span className="font-black text-[10px] tracking-[0.25em] uppercase text-white/40 block pb-0.5">Focus Terminal</span>
-                        <span className="text-[9px] font-bold text-blue-400/60 font-mono tracking-tighter">OS_v1.0.4.quoril</span>
-                    </div>
+            {/* MINIMALIST HEADER */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-white/5">
+                <div className="flex items-center gap-3">
+                    <button className="text-sm text-white/60 hover:text-white/90 transition-colors font-medium">
+                        All
+                    </button>
+                    <span className="text-white/30">›</span>
+                    <span className="text-sm text-white font-semibold">Today</span>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <button onClick={handlePopOut} className="p-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 hover:bg-white/10 transition-all text-white/40 hover:text-white">
-                        <ExternalLink size={16} />
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => {
+                            setShowFocusPanel(false)
+                            setTimeout(() => window.location.hash = '#/settings', 100)
+                        }}
+                        className="w-8 h-8 rounded-lg bg-white/[0.08] hover:bg-white/30 hover:scale-110 transition-all duration-200 flex items-center justify-center group border border-transparent hover:border-white/20"
+                    >
+                        <Settings className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
                     </button>
                     <button
                         onClick={() => {
                             setShowFocusPanel(false)
-                            setTimeout(() => window.resizeTo(1400, 900), 100)
+                            setTimeout(() => window.location.hash = '#/dashboard', 100)
                         }}
-                        className="p-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 hover:bg-white/10 transition-all text-white/40 hover:text-white"
+                        className="w-8 h-8 rounded-lg bg-white/[0.08] hover:bg-white/30 hover:scale-110 transition-all duration-200 flex items-center justify-center group border border-transparent hover:border-white/20"
                     >
-                        <ChevronRight size={18} />
+                        <Home className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
+                    </button>
+                    <button
+                        onClick={() => {
+                            useSettingsStore.getState().updateSettings({ superFocusMode: true })
+                            setShowFocusPanel(false)
+                        }}
+                        className="w-8 h-8 rounded-lg bg-white/[0.08] hover:bg-white/30 hover:scale-110 transition-all duration-200 flex items-center justify-center group border border-transparent hover:border-white/20"
+                    >
+                        <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
                     </button>
                 </div>
             </div>
 
-            {/* SCROLLABLE BODY */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-10">
+            {/* STATS BAR */}
+            <div className="px-5 py-3 border-b border-white/5">
+                <div className="flex items-center justify-between text-xs">
+                    <span className="text-white/50">Est: {Math.floor(totalEstimatedTime / 60)}hr {totalEstimatedTime % 60}min</span>
+                    <span className="text-white/50">{completedTasks}/{nextTasks.length + completedTasks} Done</span>
+                </div>
+            </div>
+
+            {/* SCROLLABLE CONTENT */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <DndContext
                     sensors={sensors}
                     collisionDetection={closestCorners}
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
                 >
-                    {activeTask ? (
-                        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            {/* PREMIUM TIMER CARD */}
-                            <div className="relative overflow-hidden p-10 rounded-[2.5rem] border group transition-all duration-1000"
-                                style={{
-                                    background: 'linear-gradient(165deg, #1a1a1e 0%, #0d0d0f 100%)',
-                                    borderColor: isOvertime ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255, 255, 255, 0.05)'
-                                }}>
-
-                                {/* Dynamic Atmosphere */}
-                                <div className={cn(
-                                    "absolute inset-0 transition-opacity duration-1000",
-                                    isPaused ? "opacity-20 bg-amber-500/5" : "opacity-40 bg-blue-500/5"
-                                )} />
-                                <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 blur-[100px] group-hover:bg-blue-500/20 transition-all" />
-
-                                <div className="relative z-10 text-center">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20 mb-6 block">
-                                        {isOvertime ? 'OVERTIME PROTOCOL' : isPaused ? 'SYSTEM PAUSED' : 'QUANTUM FLOW ACTIVE'}
+                    <div className="p-5 space-y-3">
+                        {/* ACTIVE TASK - COMPACT TIMER CARD */}
+                        {activeTask && !showCelebration ? (
+                            <div
+                                ref={setDropRef}
+                                className={cn(
+                                    "relative rounded-2xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 p-4 transition-all",
+                                    isOver && "ring-2 ring-blue-500/40 scale-[1.02]"
+                                )}
+                            >
+                                {/* Status Badge */}
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400">
+                                        {isBreak ? 'BREAK' : isPaused ? 'PAUSED' : isOvertime ? 'OVERTIME' : 'DOING'}
                                     </span>
+                                    <button
+                                        onClick={() => endSession()}
+                                        className="text-white/40 hover:text-white/80 transition-colors"
+                                    >
+                                        <XCircle className="w-4 h-4" />
+                                    </button>
+                                </div>
 
-                                    <div className={cn(
-                                        "font-mono text-8xl font-black tracking-tighter mb-6 transition-all duration-700",
-                                        isOvertime ? "text-red-500" : isPaused ? "text-amber-500" : "text-white"
-                                    )}
-                                        style={{
-                                            textShadow: isPaused ? 'none' : isOvertime ? '0 0 40px rgba(239, 68, 68, 0.4)' : '0 0 40px rgba(255,255,255,0.1)'
-                                        }}>
-                                        {formatTime(isOvertime ? -remainingTime : remainingTime)}
+                                {/* Task Title */}
+                                <h3 className="text-base font-semibold text-white mb-3 line-clamp-2">
+                                    {activeTask.title}
+                                </h3>
+
+                                {/* Timer Display - Compact */}
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="font-mono text-2xl font-bold text-white tracking-tight">
+                                        {isBreak && isPaused && breakRemaining === 0
+                                            ? "00:00:00"
+                                            : formatTime(isBreak ? breakRemaining : (isOvertime ? -remainingTime : remainingTime))}
                                     </div>
-
-                                    {/* Cinematic Progress */}
-                                    {duration > 0 && (
-                                        <div className="mt-10 mx-auto max-w-[240px]">
-                                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden ring-1 ring-white/10">
-                                                <div
-                                                    className="h-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(59,130,246,0.5)]"
-                                                    style={{
-                                                        width: `${Math.min(100, progress)}%`,
-                                                        background: isOvertime ? 'linear-gradient(to right, #ef4444, #f87171)' : 'linear-gradient(to right, #2563eb, #60a5fa)',
-                                                    }}
-                                                />
-                                            </div>
+                                    {duration > 0 && !isBreak && (
+                                        <div className="text-xs text-white/50 font-mono">
+                                            / {formatTime(duration)}
                                         </div>
                                     )}
                                 </div>
-                            </div>
 
-                            {/* ACTIVE FRONTIER */}
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between px-2">
-                                    <div className="flex items-center gap-2">
-                                        <Zap size={12} className="text-amber-500 fill-amber-500" />
-                                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Active Frontier</h3>
+                                {/* Progress Bar */}
+                                {duration > 0 && (
+                                    <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden mb-4">
+                                        <div
+                                            className={cn(
+                                                "h-full transition-all duration-1000",
+                                                isBreak ? "bg-amber-500" : isOvertime ? "bg-red-500" : "bg-emerald-500"
+                                            )}
+                                            style={{
+                                                width: `${Math.min(100, isBreak && breakRemainingAtStart > 0
+                                                    ? ((breakRemainingAtStart - breakRemaining) / breakRemainingAtStart) * 100
+                                                    : progress)}%`,
+                                            }}
+                                        />
                                     </div>
-                                    <span className="text-[9px] font-bold text-white/20 font-mono">ID_{activeTask.id.slice(0, 8)}</span>
+                                )}
+
+                                {/* Action Buttons - Minimal */}
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={isPaused ? resumeSession : pauseSession}
+                                        className={cn(
+                                            "flex-1 h-9 rounded-xl flex items-center justify-center gap-2 transition-all text-sm font-medium",
+                                            isPaused
+                                                ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
+                                                : "bg-white/10 text-white/80 hover:bg-white/15"
+                                        )}
+                                    >
+                                        {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                                    </button>
+                                    <button
+                                        onClick={handleDone}
+                                        className="flex-1 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-all flex items-center justify-center gap-2 text-sm font-medium"
+                                    >
+                                        <CheckCircle2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={handleSkip}
+                                        className="h-9 px-4 rounded-xl bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80 transition-all flex items-center justify-center"
+                                    >
+                                        <SkipForward className="w-4 h-4" />
+                                    </button>
                                 </div>
 
-                                <div
-                                    ref={setDropRef}
-                                    className={cn(
-                                        "relative transition-all duration-500 rounded-3xl group/active",
-                                        isOver ? "scale-[1.05] z-50 ring-4 ring-blue-500/50 shadow-[0_0_50px_rgba(59,130,246,0.4)]" : ""
-                                    )}
-                                >
-                                    <TaskCard
-                                        task={activeTask}
-                                        column="today"
-                                        draggable={false}
-                                        disableTimer
-                                    />
-                                    {isOver && (
-                                        <div className="absolute inset-0 bg-blue-500/10 rounded-3xl flex items-center justify-center backdrop-blur-sm border-2 border-blue-500/50">
-                                            <div className="text-center animate-in zoom-in duration-300">
-                                                <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/50">
-                                                    <Zap className="text-white fill-current" />
-                                                </div>
-                                                <span className="text-xs font-black text-white uppercase tracking-widest">Release to Focus</span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* FUTURISTIC CONTROLS */}
-                            <div className="grid grid-cols-3 gap-4">
-                                <ControlBtn
-                                    icon={isPaused ? <Play size={24} className="fill-current" /> : <Pause size={24} className="fill-current" />}
-                                    label={isPaused ? 'Engage' : 'Holding'}
-                                    active={isPaused}
-                                    onClick={isPaused ? resumeSession : pauseSession}
-                                    color={isPaused ? 'amber' : 'blue'}
-                                />
-                                <ControlBtn
-                                    icon={<CheckCircle2 size={24} />}
-                                    label="Fulfill"
-                                    onClick={handleDone}
-                                    color="emerald"
-                                />
-                                <ControlBtn
-                                    icon={<SkipForward size={24} />}
-                                    label="Bypass"
-                                    onClick={handleSkip}
-                                    color="gray"
-                                />
-                            </div>
-                        </div>
-                    ) : (
-                        <div
-                            ref={setDropRef}
-                            className={cn(
-                                "flex flex-col items-center justify-center h-[400px] text-center space-y-6 rounded-[3rem] transition-all duration-500",
-                                isOver ? "bg-blue-500/10 border-2 border-dashed border-blue-500/40 scale-[1.02] shadow-[0_0_50px_rgba(59,130,246,0.2)]" : "border-2 border-transparent"
-                            )}
-                        >
-                            <div className={cn(
-                                "w-24 h-24 rounded-[2rem] bg-white/5 border border-white/5 flex items-center justify-center transition-all duration-500",
-                                isOver ? "bg-blue-500 text-white rotate-12 scale-110" : "text-white/10"
-                            )}>
-                                <Timer size={48} strokeWidth={1} className={isOver ? 'animate-pulse' : ''} />
-                            </div>
-                            <div>
-                                <p className={cn(
-                                    "text-lg font-black uppercase tracking-[0.3em] transition-colors",
-                                    isOver ? "text-blue-400" : "text-white/40"
-                                )}>
-                                    {isOver ? "Ignite Session" : "Hangar Empty"}
-                                </p>
-                                <p className="text-xs text-white/20 mt-2 italic">
-                                    {isOver ? "Release to launch this mission" : "Transmit a mission into the void to begin."}
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* QUEUE */}
-                    <div className="space-y-6 pt-10 border-t border-white/5">
-                        <div className="flex items-center justify-between px-2">
-                            <div className="flex items-center gap-2">
-                                <Layout size={12} className="text-white/20" />
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Mission Buffer</h3>
-                            </div>
-                            <span className="text-[10px] font-bold text-white/20">{nextTasks.length} queued</span>
-                        </div>
-
-                        <SortableContext items={nextTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                            <div className="space-y-4 pb-20">
-                                {nextTasks.length > 0 ? (
-                                    nextTasks.map(t => (
-                                        <div key={t.id} className="animate-in fade-in slide-in-from-left-4 duration-500">
-                                            <TaskCard
-                                                task={t}
-                                                column="today"
-                                                draggable
-                                                disableTimer
-                                                onComplete={() => { }}
-                                            />
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="py-16 border-2 border-dashed border-white/5 rounded-[2rem] flex flex-col items-center justify-center text-white/10 space-y-3">
-                                        <Layout size={32} strokeWidth={1} />
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Buffer Clear</span>
+                                {isOver && (
+                                    <div className="absolute inset-0 bg-blue-500/10 flex items-center justify-center backdrop-blur-sm rounded-2xl border-2 border-dashed border-blue-500/40">
+                                        <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Drop to switch...</span>
                                     </div>
                                 )}
                             </div>
+                        ) : showCelebration && activeTask ? (
+                            // CELEBRATION CARD
+                            <div className="relative rounded-2xl bg-[#0a0c10] border-2 border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.15)] p-5 text-center transition-all animate-in fade-in zoom-in-95 duration-300">
+                                <h3 className="text-lg font-bold text-white mb-4 flex items-center justify-center gap-2">
+                                    Well done! <span className="text-lg">💥</span>
+                                </h3>
+
+                                <div className="rounded-xl overflow-hidden mb-4 border border-white/10 shadow-lg aspect-video">
+                                    <img src={celebrationGif} alt="Celebration" className="w-full h-full object-cover" />
+                                </div>
+
+                                <div className="mb-6">
+                                    <p className="text-sm font-medium text-white/50 line-through mb-1">{activeTask.title}</p>
+                                    <p className="text-emerald-400 font-bold text-base">You finished the task!</p>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={async () => {
+                                            setShowCelebration(false)
+                                            await endSession() // Clear current
+                                            const next = nextTasks[0]?.id
+                                            if (next) {
+                                                focus.startSession(next)
+                                            }
+                                        }}
+                                        className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-green-400 text-black font-bold text-sm hover:shadow-[0_0_20px_rgba(52,211,153,0.4)] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                    >
+                                        <SkipForward className="w-4 h-4 fill-black/20" />
+                                        Next Task
+                                    </button>
+
+                                    <button
+                                        onClick={async () => {
+                                            setShowCelebration(false)
+                                            await endSession() // Clear task session
+                                            focus.startBreak()
+                                        }}
+                                        className="w-full py-2.5 rounded-xl border border-white/10 text-white/60 hover:bg-white/5 hover:text-white transition-all text-sm font-medium flex items-center justify-center gap-2"
+                                    >
+                                        <Coffee className="w-4 h-4" />
+                                        Take a Break
+                                    </button>
+                                </div>
+
+                                <div className="mt-5 pt-4 border-t border-white/5 flex justify-between text-[11px] text-white/30 font-medium">
+                                    <span>Est: {activeTask.estimated_minutes ? `${activeTask.estimated_minutes}m` : 'None'}</span>
+                                    <span>Taken: {Math.floor(duration / 60)}min</span>
+                                </div>
+                            </div>
+                        ) : null}
+
+                        {/* EMPTY STATE */}
+                        {!activeTask && (
+                            <div
+                                ref={setDropRef}
+                                className={cn(
+                                    "rounded-2xl border-2 border-dashed border-white/10 p-12 flex flex-col items-center justify-center text-center transition-all",
+                                    isOver && "border-blue-500/40 bg-blue-500/5 scale-[1.02]"
+                                )}
+                            >
+                                <Timer className="w-10 h-10 text-white/20 mb-3" />
+                                <p className="text-sm font-medium text-white/40">
+                                    {isOver ? "Drop to start" : "No active task"}
+                                </p>
+                                <p className="text-xs text-white/30 mt-1">
+                                    {isOver ? "" : "Drag a task here to begin"}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* TASK LIST */}
+                        <SortableContext items={nextTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                            <div className="space-y-3 pt-2">
+                                {nextTasks.map(t => (
+                                    <div key={t.id}>
+                                        <TaskCard
+                                            task={t}
+                                            column="today"
+                                            draggable
+                                            disableTimer
+                                            onComplete={() => { }}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
                         </SortableContext>
+
+                        {/* ADD TASK BUTTON */}
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="w-full h-10 rounded-xl border border-dashed border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all flex items-center justify-center gap-2 text-white/50 hover:text-white/80 group mt-3"
+                        >
+                            <Plus className="w-4 h-4" />
+                            <span className="text-xs font-medium uppercase tracking-wider">Add Task</span>
+                        </button>
+
+                        {/* COMPLETED SECTION */}
+                        {completedTasks > 0 && (
+                            <div className="pt-6 mt-6 border-t border-white/5">
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="text-xs font-medium text-white/40 uppercase tracking-wider">
+                                        {completedTasks} Done
+                                    </span>
+                                    <span className="text-xs text-white/30">
+                                        {Math.floor(tasks.filter(t => t.status === 'done').reduce((acc, t) => acc + (t.estimated_minutes || 0), 0) / 60)}h {tasks.filter(t => t.status === 'done').reduce((acc, t) => acc + (t.estimated_minutes || 0), 0) % 60}min
+                                    </span>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <DragOverlay dropAnimation={{
@@ -393,7 +483,7 @@ export function FocusTimerPanel() {
                         }),
                     }}>
                         {activeId ? (
-                            <div className="scale-105 shadow-2xl z-[100] cursor-grabbing w-full">
+                            <div className="scale-105 shadow-2xl z-[100] cursor-grabbing w-full opacity-80">
                                 <TaskCard
                                     task={tasks.find(t => t.id === activeId)!}
                                     column="today"
@@ -405,38 +495,37 @@ export function FocusTimerPanel() {
                     </DragOverlay>
                 </DndContext>
             </div>
-        </div>
-    )
-}
 
-interface ControlBtnProps {
-    icon: React.ReactNode
-    label: string
-    onClick: () => void
-    color: 'blue' | 'amber' | 'emerald' | 'gray'
-    active?: boolean
-}
+            {/* BOTTOM ACTION BAR */}
+            <div className="border-t border-white/5 p-4 flex items-center justify-between bg-[#0a0c10]">
+                <button
+                    onClick={() => focus.isBreak ? focus.stopBreak() : focus.startBreak()}
+                    className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium",
+                        focus.isBreak
+                            ? "bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30"
+                            : "bg-white/[0.08] text-white/60 hover:bg-white/25 hover:text-white border border-transparent hover:border-white/20"
+                    )}
+                >
+                    <Coffee className="w-4 h-4" />
+                    <span>{focus.isBreak ? 'End Break' : 'Break'}</span>
+                </button>
 
-function ControlBtn({ icon, label, onClick, color }: ControlBtnProps) {
-    const colors: Record<string, string> = {
-        blue: 'text-blue-500 bg-blue-500/10 border-blue-500/20 hover:bg-blue-500/20',
-        amber: 'text-amber-500 bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/20',
-        emerald: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20',
-        gray: 'text-white/40 bg-white/5 border-white/5 hover:bg-white/10 hover:text-white',
-    }
-
-    return (
-        <button
-            onClick={onClick}
-            className={cn(
-                "group flex flex-col items-center justify-center gap-3 h-28 rounded-[2rem] transition-all duration-300 border backdrop-blur-sm",
-                colors[color]
-            )}
-        >
-            <div className="transition-transform duration-500 group-hover:scale-110 group-active:scale-95">
-                {icon}
+                <button
+                    onClick={() => setShowFocusPanel(false)}
+                    className="px-4 py-2 rounded-lg bg-white/[0.08] text-white/60 hover:bg-white/25 hover:text-white transition-all duration-200 text-sm font-medium border border-transparent hover:border-white/20"
+                >
+                    Close Session
+                </button>
             </div>
-            <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60 group-hover:opacity-100">{label}</span>
-        </button>
+
+            {showCreateModal && (
+                <CreateTaskModal
+                    isOpen={true}
+                    onClose={() => setShowCreateModal(false)}
+                    listId={selectedListId && selectedListId !== 'all' ? selectedListId : (lists[0]?.id || '')}
+                />
+            )}
+        </div>
     )
 }

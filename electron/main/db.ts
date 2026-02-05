@@ -4,7 +4,6 @@ import fs from 'fs'
 import { app } from 'electron'
 
 let db: Database.Database
-const CURRENT_VERSION = 1
 
 /* ---------------- INIT ---------------- */
 
@@ -20,7 +19,6 @@ export async function initDatabase() {
     db.pragma('synchronous = NORMAL')
 
     autoMigrate()
-
 }
 
 /* ---------------- MIGRATION ---------------- */
@@ -50,6 +48,7 @@ function autoMigrate() {
                     id TEXT PRIMARY KEY,
                     user_id TEXT,
                     list_id TEXT,
+
                     title TEXT,
                     description TEXT,
 
@@ -68,6 +67,7 @@ function autoMigrate() {
 
                     created_at TEXT,
                     updated_at TEXT,
+
                     deleted_at TEXT,
 
                     synced INTEGER DEFAULT 0
@@ -90,6 +90,8 @@ function autoMigrate() {
 
                     created_at TEXT,
                     updated_at TEXT,
+
+                    archived_at TEXT,
                     deleted_at TEXT,
 
                     synced INTEGER DEFAULT 0
@@ -150,6 +152,33 @@ function autoMigrate() {
 
         version = 1
     }
+
+    /* Add archived_at if missing */
+
+    const listCols = db.prepare(`PRAGMA table_info(lists)`).all()
+
+    if (!listCols.some((c: any) => c.name === 'archived_at')) {
+        db.exec(`ALTER TABLE lists ADD COLUMN archived_at TEXT`)
+    }
+
+    /* Add deleted_at if missing (Fixes "Archive Failed" / Glitches) */
+
+    // Lists
+    if (!listCols.some((c: any) => c.name === 'deleted_at')) {
+        db.exec(`ALTER TABLE lists ADD COLUMN deleted_at TEXT`)
+    }
+
+    // Tasks
+    const taskCols = db.prepare(`PRAGMA table_info(tasks)`).all()
+    if (!taskCols.some((c: any) => c.name === 'deleted_at')) {
+        db.exec(`ALTER TABLE tasks ADD COLUMN deleted_at TEXT`)
+    }
+
+    // Subtasks
+    const subtaskCols = db.prepare(`PRAGMA table_info(subtasks)`).all()
+    if (!subtaskCols.some((c: any) => c.name === 'deleted_at')) {
+        db.exec(`ALTER TABLE subtasks ADD COLUMN deleted_at TEXT`)
+    }
 }
 
 /* ---------------- HELPERS ---------------- */
@@ -173,6 +202,7 @@ function exec(sql: string, params: any[] = []) {
     const clean = sanitize(params)
 
     try {
+
         if (sql.trim().toUpperCase().startsWith('SELECT')) {
             return db.prepare(sql).all(...clean)
         }
@@ -213,9 +243,7 @@ export const dbOps = {
         task.updated_at = now()
         task.synced = 0
 
-        if (!task.created_at) {
-            task.created_at = now()
-        }
+        if (!task.created_at) task.created_at = now()
 
         const cols = Object.keys(task)
         const vals = sanitize(Object.values(task))
@@ -228,20 +256,17 @@ export const dbOps = {
     },
 
     deleteTask(id: string) {
+        // Soft Delete
+        exec(`
+            UPDATE tasks
+            SET deleted_at=?, synced=0
+            WHERE id=?
+        `, [now(), id])
+    },
 
-        exec(
-            `UPDATE tasks
-             SET deleted_at=?, synced=0
-             WHERE id=?`,
-            [now(), id]
-        )
-
-        exec(
-            `UPDATE focus_sessions
-             SET synced=1
-             WHERE task_id=?`,
-            [id]
-        )
+    hardDeleteTask(id: string) {
+        // Hard Delete
+        exec(`DELETE FROM tasks WHERE id=?`, [id])
     },
 
     startTask(id: string) {
@@ -259,12 +284,11 @@ export const dbOps = {
             WHERE started_at IS NOT NULL
         `)
 
-        exec(
-            `UPDATE tasks
-             SET started_at=?, status='active', synced=0
-             WHERE id=?`,
-            [now(), id]
-        )
+        exec(`
+            UPDATE tasks
+            SET started_at=?, status='active', synced=0
+            WHERE id=?
+        `, [now(), id])
     },
 
     pauseTask(id: string) {
@@ -303,11 +327,15 @@ export const dbOps = {
 
     /* ---------- LISTS ---------- */
 
-    getLists(userId: string) {
+    getLists(userId: string, archived = false) {
+
+        const condition = archived
+            ? 'archived_at IS NOT NULL AND deleted_at IS NULL'
+            : 'archived_at IS NULL AND deleted_at IS NULL'
 
         return exec(`
             SELECT * FROM lists
-            WHERE user_id=? AND deleted_at IS NULL
+            WHERE user_id=? AND ${condition}
             ORDER BY sort_order ASC
         `, [userId])
     },
@@ -317,9 +345,7 @@ export const dbOps = {
         list.updated_at = now()
         list.synced = 0
 
-        if (!list.created_at) {
-            list.created_at = now()
-        }
+        if (!list.created_at) list.created_at = now()
 
         const cols = Object.keys(list)
         const vals = sanitize(Object.values(list))
@@ -331,14 +357,39 @@ export const dbOps = {
         )
     },
 
-    deleteList(id: string) {
+    archiveList(id: string) {
 
-        exec(
-            `UPDATE lists
-             SET deleted_at=?, synced=0
-             WHERE id=?`,
-            [now(), id]
-        )
+        exec(`
+            UPDATE lists
+            SET archived_at=?, synced=0
+            WHERE id=?
+        `, [now(), id])
+    },
+
+    restoreList(id: string) {
+
+        exec(`
+            UPDATE lists
+            SET archived_at=NULL,
+                deleted_at=NULL,
+                synced=0,
+                updated_at=?
+            WHERE id=?
+        `, [now(), id])
+    },
+
+    deleteList(id: string) {
+        // Soft Delete
+        exec(`
+            UPDATE lists
+            SET deleted_at=?, synced=0
+            WHERE id=?
+        `, [now(), id])
+    },
+
+    hardDeleteList(id: string) {
+        // Hard Delete
+        exec(`DELETE FROM lists WHERE id=?`, [id])
     },
 
     /* ---------- SUBTASKS ---------- */
@@ -357,9 +408,7 @@ export const dbOps = {
         sub.updated_at = now()
         sub.synced = 0
 
-        if (!sub.created_at) {
-            sub.created_at = now()
-        }
+        if (!sub.created_at) sub.created_at = now()
 
         const cols = Object.keys(sub)
         const vals = sanitize(Object.values(sub))
@@ -387,9 +436,7 @@ export const dbOps = {
 
         session.synced = 0
 
-        if (!session.created_at) {
-            session.created_at = now()
-        }
+        if (!session.created_at) session.created_at = now()
 
         const cols = Object.keys(session)
         const vals = sanitize(Object.values(session))
@@ -414,9 +461,10 @@ export const dbOps = {
 
     markSynced(table: string, id: string) {
 
-        exec(
-            `UPDATE ${table} SET synced=1 WHERE id=?`,
-            [id]
-        )
+        exec(`
+            UPDATE ${table}
+            SET synced=1
+            WHERE id=?
+        `, [id])
     }
 }

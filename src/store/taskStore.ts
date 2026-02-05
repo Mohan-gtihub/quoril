@@ -5,6 +5,8 @@ import type { TaskColumn } from '@/types/list'
 
 import { localService } from '@/services/localStorage'
 import { backupService } from '@/services/backupService'
+import { audioService } from '@/services/audioService'
+import { useSettingsStore } from './settingsStore'
 import { parseTitleForTime } from '@/utils/timeParser'
 
 import {
@@ -37,7 +39,9 @@ interface TaskState {
     toggleComplete: (id: string) => Promise<void>
 
     startTask: (id: string) => Promise<void>
-    pauseTask: (id: string) => Promise<void>
+    archiveTask: (id: string) => Promise<void>
+    permanentDeleteTask: (id: string) => Promise<void>
+    restoreTask: (id: string) => Promise<void>
 
     moveTaskToColumn: (
         taskId: string,
@@ -79,7 +83,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
             const { data, error } = await localService.tasks.list(listId)
 
-            if (error) throw error
+            if (error) {
+                if (error === 'No session') {
+                    set({ loading: false })
+                    return
+                }
+                throw new Error(error)
+            }
 
             set({
                 tasks: data || [],
@@ -99,7 +109,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
             const data = get().tasks.filter(
                 (t) =>
-                    t.list_id === listId &&
+                    (listId === 'all' || t.list_id === listId) &&
                     statuses.includes(t.status as TaskStatus)
             )
 
@@ -230,29 +240,51 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
     /* ---------------- DELETE ---------------- */
 
-    deleteTask: async (id) => {
+    archiveTask: async (id) => {
         const prev = get().tasks
+        try {
+            set({
+                tasks: prev.filter((t) => t.id !== id),
+            })
+            // Update with deleted_at (Soft Delete)
+            await localService.tasks.update(id, { deleted_at: new Date().toISOString() })
 
+            backupService.remove(id)
+        } catch {
+            set({ tasks: prev, error: 'Archive failed' })
+        }
+    },
+
+    restoreTask: async (id) => {
+        // Logic to restore if we could see them
+        await localService.tasks.update(id, { deleted_at: null })
+        await get().fetchTasks()
+    },
+
+    permanentDeleteTask: async (id) => {
+        const prev = get().tasks
         try {
             set({ error: null })
-
             set({
                 tasks: prev.filter((t) => t.id !== id),
             })
 
             backupService.remove(id)
 
-            const { error } =
-                await localService.tasks.delete(id)
+            // CRITICAL FIX: Use Soft Delete (archive) instead of Hard Delete.
+            // Hard deleting locally removes the row, so Sync Service never sees it
+            // and never pushes the deletion to Supabase. Supabase then sends it back.
+            // By soft deleting, we set deleted_at, Sync pushes it, and it stays gone.
+            await localService.tasks.update(id, { deleted_at: new Date().toISOString() })
 
-            if (error) throw error
         } catch (e) {
-            await get().fetchTasks()
-
-            set({ error: 'Delete failed' })
-
-            throw e
+            set({ tasks: prev, error: 'Delete failed' })
         }
+    },
+
+    // Legacy Alias
+    deleteTask: async (id) => {
+        await get().permanentDeleteTask(id)
     },
 
     /* ---------------- COMPLETE ---------------- */
@@ -298,7 +330,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         }
     },
 
-    pauseTask: async (id) => {
+    pauseTask: async (id: string) => {
         try {
             const { data, error } =
                 await localService.tasks.pause(id)
@@ -332,10 +364,23 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                 -1
             )
 
-            await get().updateTask(taskId, {
+            const updates: Partial<Task> = {
                 status,
                 sort_order: max + 1,
-            })
+            }
+
+            if (column === 'done') {
+                updates.completed_at = new Date().toISOString()
+
+                // Play success sound
+                if (useSettingsStore.getState().successSoundEnabled) {
+                    audioService.playSuccess()
+                }
+            } else {
+                updates.completed_at = null
+            }
+
+            await get().updateTask(taskId, updates)
         } catch (e) {
             console.error(e)
         }
@@ -377,6 +422,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     getTodayPlannedMinutes: () => {
         return get().tasks
             .filter((t) =>
+                !t.deleted_at &&
                 COLUMN_STATUS.today.includes(
                     t.status as TaskStatus
                 )
@@ -408,7 +454,10 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             const { data, error } =
                 await localService.subtasks.list(taskId)
 
-            if (error) throw error
+            if (error) {
+                if (error === 'No session') return
+                throw new Error(error)
+            }
 
             set((s) => ({
                 subtasks: {

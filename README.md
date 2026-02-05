@@ -2,7 +2,7 @@
 
 A production-ready desktop application for task management and focus tracking, built with Electron, React, TypeScript, and Supabase.
 
-![Blitzit App Icon](./public/icon.png)
+![Quoril App Icon](./public/icon.png)
 
 ## 🚀 Quick Start
 
@@ -38,7 +38,7 @@ The Electron app will launch automatically with hot reload enabled.
 ## 🏗️ Project Structure
 
 ```
-blitzit-clone/
+quoril/
 ├── electron/              # Electron main and preload processes
 │   ├── main/             # Main process (window, tray, IPC)
 │   └── preload/          # Preload scripts (secure bridge)
@@ -232,4 +232,4 @@ MIT License - feel free to use this code for your own projects.
 
 **Status:** ✅ Foundation complete, actively developing features
 
-**Last Updated:** February 3, 2026
+**Last Updated:** February 5, 2026

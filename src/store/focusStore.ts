@@ -1,12 +1,16 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import toast from 'react-hot-toast'
 
 import type { FocusSession } from '@/types/database'
 
 import { localService } from '@/services/localStorage'
 import { backupService } from '@/services/backupService'
+import { audioService } from '@/services/audioService'
 import { hydrateElapsed, getTaskEstimate } from '@/utils/sessionUtils'
 import { useTaskStore } from './taskStore'
+import { useSettingsStore } from './settingsStore'
+import { useListStore } from './listStore'
 
 /* ---------------------------------------------
    TYPES
@@ -21,9 +25,8 @@ type SessionType =
     | 'break'
     | 'long_break'
 
-interface FocusState {
+export interface FocusState {
     /* Current Session */
-
     currentSessionId: string | null
     taskId: string | null
 
@@ -40,12 +43,20 @@ interface FocusState {
     showFocusPanel: boolean
 
     /* History */
-
     sessions: FocusSession[]
     loading: boolean
 
-    /* Actions */
+    /* Pomodoro / Break State */
+    isBreak: boolean
+    breakRemaining: number // seconds (live)
+    breakElapsed: number // seconds (accumulated break time)
+    breakRemainingAtStart: number // seconds (base for delta)
+    pomodoroRemaining: number // seconds (live)
+    pomodoroRemainingAtStart: number // seconds (base for delta)
+    pomodoroTotal: number // seconds (progress denominator)
+    lastAlertTime: number | null // ms
 
+    /* Actions */
     startSession: (
         taskId: string,
         duration?: number,
@@ -53,6 +64,9 @@ interface FocusState {
     ) => Promise<void>
 
     startFocus: (taskId: string) => Promise<void>
+
+    startBreak: (durationMinutes?: number) => void
+    stopBreak: () => void
 
     pauseSession: () => Promise<void>
     resumeSession: () => Promise<void>
@@ -82,7 +96,6 @@ export const useFocusStore = create<FocusState>()(
     persist(
         (set, get) => ({
             /* ---------------- STATE ---------------- */
-
             currentSessionId: null,
             taskId: null,
 
@@ -100,126 +113,192 @@ export const useFocusStore = create<FocusState>()(
             sessions: [],
             loading: false,
 
+            isBreak: false,
+            breakRemaining: 0,
+            breakElapsed: 0,
+            breakRemainingAtStart: 0,
+            pomodoroRemaining: 0,
+            pomodoroRemainingAtStart: 0,
+            pomodoroTotal: 25 * 60,
+            lastAlertTime: null,
+
             /* ---------------- START ---------------- */
 
-            startSession: async (
-                taskId,
-                duration,
-                type: SessionType = 'regular'
-            ) => {
+            startFocus: async (taskId: string) => {
+                await get().startSession(taskId)
+            },
+
+            startBreak: (durationMinutes) => {
+                const state = get()
+                // CHECKPOINT: Save current task progress if active
+                if (state.isActive && !state.isPaused && state.startTime) {
+                    const delta = Math.floor((Date.now() - state.startTime) / 1000)
+                    const total = state.elapsed + delta
+                    set({ elapsed: total })
+                }
+
+                const settings = useSettingsStore.getState()
+                const mins = durationMinutes ?? settings.defaultBreakLength
+                const seconds = mins * 60
+
+                set({
+                    isBreak: true,
+                    breakRemaining: seconds,
+                    breakRemainingAtStart: seconds,
+                    breakElapsed: 0,
+                    startTime: Date.now(),
+                    lastAlertTime: Date.now(),
+                    isPaused: false // Explicitly running
+                })
+            },
+
+            stopBreak: async () => {
+                const s = get()
+                // CHECKPOINT: Save break progress
+                if (s.startTime) {
+                    const delta = Math.floor((Date.now() - s.startTime) / 1000)
+                    const totalBreak = s.breakElapsed + delta
+
+                    try {
+                        // LOG THE BREAK SESSION
+                        const user = (await localService.auth.getUser()).data?.user
+                        if (user) {
+                            // 1. Log Session
+                            await localService.focus.create({
+                                user_id: user.id,
+                                task_id: s.taskId || '',
+                                start_time: new Date(Date.now() - (totalBreak * 1000)).toISOString(),
+                                end_time: new Date().toISOString(),
+                                planned_seconds: s.breakRemainingAtStart,
+                                session_type: 'break',
+                                actual_seconds: totalBreak,
+                            })
+
+                            // 2. Create Completed Task (Artifact) for Kanban Board
+                            const { selectedListId } = useListStore.getState()
+                            // Fallback to first list if 'all' or null
+                            let targetListId = selectedListId === 'all' ? null : selectedListId
+                            if (!targetListId) {
+                                const allLists = useListStore.getState().lists
+                                if (allLists.length > 0) targetListId = allLists[0].id
+                            }
+
+                            if (targetListId) {
+                                await useTaskStore.getState().createTask({
+                                    title: "Recovery Break - " + Math.round(totalBreak / 60) + "m",
+                                    list_id: targetListId,
+                                    actual_seconds: totalBreak,
+                                    estimated_minutes: Math.ceil(s.breakRemainingAtStart / 60),
+                                    completed_at: new Date().toISOString() // Mark as completed
+                                }, 'done') // Pass 'done' column explicitly
+                            }
+                        }
+                    } catch (e) {
+                        console.error('[Focus] break log failed', e)
+                    }
+                }
+
+                const settings = useSettingsStore.getState()
+                const pTime = settings.pomodorosEnabled ? 25 * 60 : 0
+
+                set({
+                    isBreak: false,
+                    isPaused: true, // Safety: Pause main task, let user resume
+                    startTime: null, // Clear timer ref
+                    pomodoroRemaining: pTime,
+                    pomodoroRemainingAtStart: pTime,
+                    pomodoroTotal: pTime,
+                    breakElapsed: 0
+                })
+            },
+
+            startSession: async (taskId, duration, type = 'regular') => {
                 try {
                     const state = get()
-
-                    /* Close old session */
+                    const settings = useSettingsStore.getState()
 
                     if (state.isActive) {
                         await state.endSession()
                     }
 
-                    const task =
-                        useTaskStore
-                            .getState()
-                            .tasks.find(t => t.id === taskId)
-
+                    const task = useTaskStore.getState().tasks.find(t => t.id === taskId)
                     if (!task) return
 
                     const now = Date.now()
+                    const previous = hydrateElapsed(task)
+                    const goal = duration ?? getTaskEstimate(task)
+                    const pTime = settings.pomodorosEnabled ? 25 * 60 : 0
 
-                    const previous =
-                        hydrateElapsed(task)
-
-                    const goal =
-                        duration ??
-                        getTaskEstimate(task)
-
-                    /* Mark task active */
-
-                    await useTaskStore
-                        .getState()
-                        .startTask(taskId)
-
-                    /* Init state */
+                    await useTaskStore.getState().startTask(taskId)
 
                     set({
                         currentSessionId: null,
                         taskId,
-
                         isActive: true,
                         isPaused: false,
-
                         startTime: now,
                         elapsed: previous,
-
                         duration: goal,
-
                         sessionType: type,
                         showFocusPanel: true,
+                        isBreak: false,
+                        pomodoroTotal: pTime,
+                        breakRemaining: 0,
+                        breakRemainingAtStart: 0,
+                        lastAlertTime: now
                     })
 
-                    /* Create history row */
-
-                    const user =
-                        (await localService.auth.getUser())
-                            .data?.user
-
+                    const user = (await localService.auth.getUser()).data?.user
                     if (!user) return
 
-                    const { data } =
-                        await localService.focus.create({
-                            user_id: user.id,
-                            task_id: taskId,
-
-                            start_time: new Date(now).toISOString(),
-                            planned_seconds: goal,
-
-                            session_type: type,
-
-                            actual_seconds: 0,
-                            end_time: null,
-                        })
+                    const { data } = await localService.focus.create({
+                        user_id: user.id,
+                        task_id: taskId,
+                        start_time: new Date(now).toISOString(),
+                        planned_seconds: goal,
+                        session_type: type,
+                        actual_seconds: 0,
+                        end_time: null,
+                    })
 
                     if (data) {
                         set({ currentSessionId: data.id })
                     }
-
                 } catch (e) {
                     console.error('[Focus] start failed', e)
                 }
-            },
-
-            startFocus: async (taskId) => {
-                await get().startSession(taskId)
             },
 
             /* ---------------- PAUSE ---------------- */
 
             pauseSession: async () => {
                 const s = get()
+                if (!s.startTime) return // Nothing running
 
-                if (!s.taskId || !s.startTime) return
+                const delta = Math.floor((Date.now() - s.startTime) / 1000)
 
-                const delta =
-                    Math.floor((Date.now() - s.startTime) / 1000)
+                if (s.isBreak) {
+                    // Update BREAK elapsed
+                    const totalBreak = s.breakElapsed + delta
+                    set({ breakElapsed: totalBreak, startTime: null, isPaused: true })
+                } else {
+                    // Update TASK elapsed
+                    const total = s.elapsed + delta
+                    const pRem = s.pomodoroRemainingAtStart - delta
 
-                const total = s.elapsed + delta
+                    if (s.taskId) {
+                        await useTaskStore.getState().updateTask(s.taskId, { status: 'paused', actual_seconds: total })
+                        backupService.save(s.taskId, total)
+                    }
 
-                await useTaskStore
-                    .getState()
-                    .pauseTask(s.taskId)
-
-                await useTaskStore
-                    .getState()
-                    .updateTask(s.taskId, {
-                        actual_seconds: total,
+                    set({
+                        elapsed: total,
+                        startTime: null,
+                        isPaused: true,
+                        pomodoroRemaining: Math.max(0, pRem),
+                        pomodoroRemainingAtStart: Math.max(0, pRem)
                     })
-
-                backupService.save(s.taskId, total)
-
-                set({
-                    elapsed: total,
-                    startTime: null,
-                    isPaused: true,
-                })
+                }
             },
 
             /* ---------------- RESUME ---------------- */
@@ -227,84 +306,53 @@ export const useFocusStore = create<FocusState>()(
             resumeSession: async () => {
                 const s = get()
 
-                if (!s.taskId) return
+                // Reset start time to NOW for whichever mode is active
+                set({ startTime: Date.now(), isPaused: false })
 
-                await useTaskStore
-                    .getState()
-                    .startTask(s.taskId)
-
-                set({
-                    startTime: Date.now(),
-                    isPaused: false,
-                })
+                if (!s.isBreak && s.taskId) {
+                    await useTaskStore.getState().startTask(s.taskId)
+                }
             },
 
             /* ---------------- END ---------------- */
 
-            endSession: async (
-                notes,
-                focusScore,
-                energyLevel
-            ) => {
+            endSession: async (notes, focusScore, energyLevel) => {
                 const s = get()
-
                 if (!s.taskId) {
                     get().reset()
                     return
                 }
 
                 try {
-                    const delta = s.startTime
-                        ? Math.floor(
-                            (Date.now() - s.startTime) / 1000
-                        )
-                        : 0
-
+                    const delta = s.startTime ? Math.floor((Date.now() - s.startTime) / 1000) : 0
                     const total = s.elapsed + delta
-
-                    const endISO =
-                        new Date().toISOString()
-
-                    /* Update history */
+                    const endISO = new Date().toISOString()
 
                     if (s.currentSessionId) {
-                        await localService.focus.update(
-                            s.currentSessionId,
-                            {
-                                end_time: endISO,
-                                actual_seconds: delta,
-                                notes: notes ?? null,
-                                focus_score: focusScore ?? null,
-                                energy_level: energyLevel ?? null,
-                            }
-                        )
+                        await localService.focus.update(s.currentSessionId, {
+                            end_time: endISO,
+                            actual_seconds: delta,
+                            notes: notes ?? null,
+                            focus_score: focusScore ?? null,
+                            energy_level: energyLevel ?? null,
+                        })
                     }
 
-                    /* Update task */
-
-                    await useTaskStore
-                        .getState()
-                        .updateTask(s.taskId, {
-                            actual_seconds: total,
-                        })
-
-                    /* Reset */
+                    await useTaskStore.getState().updateTask(s.taskId, { actual_seconds: total })
 
                     set({
                         currentSessionId: null,
                         taskId: null,
-
                         isActive: false,
                         isPaused: false,
-
                         startTime: null,
                         elapsed: 0,
-
                         showFocusPanel: false,
+                        isBreak: false,
+                        pomodoroRemaining: 0,
+                        breakRemaining: 0
                     })
-
                     await get().fetchSessions()
-
                 } catch (e) {
                     console.error('[Focus] end failed', e)
                     get().reset()
@@ -315,32 +363,54 @@ export const useFocusStore = create<FocusState>()(
 
             skipToNext: async (nextId) => {
                 const s = get()
-
-                if (s.isActive) {
-                    // Update task status and time before ending
-                    await s.endSession()
-                }
-
-                if (nextId) {
-                    await get().startSession(nextId)
-                }
+                if (s.isActive) await s.endSession()
+                if (nextId) await get().startSession(nextId)
             },
 
             /* ---------------- TIMER ---------------- */
 
             syncTimer: () => {
                 const s = get()
-
                 if (!s.isActive || !s.startTime) return
 
-                const display =
-                    s.elapsed +
-                    Math.floor((Date.now() - s.startTime) / 1000)
+                const delta = Math.floor((Date.now() - s.startTime) / 1000)
 
-                /* Hot backup only */
+                if (s.isBreak) {
+                    const rem = Math.max(0, s.breakRemainingAtStart - delta)
+                    set({ breakRemaining: rem })
 
-                if (s.taskId) {
-                    backupService.save(s.taskId, display)
+                    // STOP AT ZERO (Don't go negative, Don't auto-stop)
+                    if (rem === 0 && s.breakRemainingAtStart > 0) {
+                        set({
+                            breakRemaining: 0,
+                            breakElapsed: s.breakRemainingAtStart, // Cap at max
+                            isPaused: true, // "Wait for me"
+                            startTime: null // Stop ticking
+                        })
+                        toast("Break complete! Resume work or take more time.", { icon: '🔔' })
+                    }
+                } else {
+                    if (useSettingsStore.getState().pomodorosEnabled) {
+                        const rem = Math.max(0, s.pomodoroRemainingAtStart - delta)
+                        set({ pomodoroRemaining: rem })
+                        if (rem === 0 && s.pomodoroRemainingAtStart > 0) {
+                            get().startBreak()
+                            toast("Focus session complete! Take a break.", { icon: '☕' })
+                        }
+                    }
+
+                    const total = s.elapsed + delta
+                    if (s.taskId) backupService.save(s.taskId, total)
+
+                    // ALERT LOGIC
+                    const settings = useSettingsStore.getState()
+                    if (settings.timedAlertsEnabled && s.lastAlertTime) {
+                        const intervalMs = settings.alertInterval * 60 * 1000
+                        if (Date.now() - s.lastAlertTime >= intervalMs) {
+                            audioService.playAlert()
+                            set({ lastAlertTime: Date.now() })
+                        }
+                    }
                 }
             },
 
@@ -349,17 +419,9 @@ export const useFocusStore = create<FocusState>()(
             fetchSessions: async () => {
                 try {
                     set({ loading: true })
-
-                    const { data, error } =
-                        await localService.focus.list()
-
+                    const { data, error } = await localService.focus.list()
                     if (error) throw error
-
-                    set({
-                        sessions: data || [],
-                        loading: false,
-                    })
-
+                    set({ sessions: data || [], loading: false })
                 } catch {
                     set({ loading: false })
                 }
@@ -371,41 +433,38 @@ export const useFocusStore = create<FocusState>()(
                 set({
                     currentSessionId: null,
                     taskId: null,
-
                     isActive: false,
                     isPaused: false,
-
                     startTime: null,
                     elapsed: 0,
-
                     showFocusPanel: false,
+                    isBreak: false,
+                    pomodoroRemaining: 0,
+                    breakRemaining: 0
                 })
             },
 
-            setShowFocusPanel: (v) => {
-                set({ showFocusPanel: v })
-            },
+            setShowFocusPanel: (v) => set({ showFocusPanel: v }),
         }),
-
-        /* ---------------- PERSIST ---------------- */
-
         {
             name: 'focus-storage',
-
             partialize: (s) => ({
                 currentSessionId: s.currentSessionId,
                 taskId: s.taskId,
-
                 isActive: s.isActive,
                 isPaused: s.isPaused,
-
                 startTime: s.startTime,
                 elapsed: s.elapsed,
-
                 duration: s.duration,
-
                 sessionType: s.sessionType,
                 showFocusPanel: s.showFocusPanel,
+                isBreak: s.isBreak,
+                breakRemaining: s.breakRemaining,
+                breakElapsed: s.breakElapsed,
+                breakRemainingAtStart: s.breakRemainingAtStart,
+                pomodoroRemaining: s.pomodoroRemaining,
+                pomodoroRemainingAtStart: s.pomodoroRemainingAtStart,
+                pomodoroTotal: s.pomodoroTotal
             }),
         }
     )

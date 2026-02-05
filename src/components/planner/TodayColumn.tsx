@@ -6,6 +6,8 @@ import { TaskColumn } from '@/types/list'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useDroppable } from '@dnd-kit/core'
 
+import { useSettingsStore } from '@/store/settingsStore'
+
 interface TodayColumnProps {
     tasks: Task[]
     columnId: TaskColumn
@@ -15,6 +17,7 @@ interface TodayColumnProps {
 }
 
 export function TodayColumn({ tasks, columnId, onTaskComplete, onStartNow, onAddTask }: TodayColumnProps) {
+    const { hideEstDoneTimes } = useSettingsStore()
 
     // Simple Stats
     const totalMinutes = tasks.reduce((sum, t) => sum + (t.estimated_minutes || 0), 0)
@@ -30,26 +33,27 @@ export function TodayColumn({ tasks, columnId, onTaskComplete, onStartNow, onAdd
     return (
         <div
             ref={setNodeRef}
-            className="flex flex-col h-full bg-[#232936] rounded-xl border border-gray-700/50 shadow-lg overflow-hidden flex-shrink-0"
+            className="flex flex-col h-full rounded-xl border shadow-lg overflow-hidden flex-shrink-0"
+            style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-default)' }}
         >
-            {/* Header (Clean Blitzit Style) */}
-            <div className="p-4 bg-[#2a3441] border-b border-gray-700 flex-shrink-0">
+            {/* Header (Clean Quoril Style) */}
+            <div className="p-4 border-b flex-shrink-0" style={{ backgroundColor: 'var(--bg-hover)', borderColor: 'var(--border-default)' }}>
                 <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-white font-bold text-lg flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
+                    <h2 className="text-[var(--text-primary)] font-bold text-lg flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] shadow-[0_0_8px_var(--accent-glow)]"></span>
                         Today
                     </h2>
 
                     <div className="flex items-center gap-2">
                         {/* Task Count Badge */}
-                        <div className="px-2 py-0.5 bg-gray-800 rounded text-xs text-gray-400 font-mono">
+                        <div className="px-2 py-0.5 bg-[var(--bg-tertiary)] rounded text-xs text-[var(--text-muted)] font-mono">
                             {tasks.length}
                         </div>
 
                         {onAddTask && (
                             <button
                                 onClick={onAddTask}
-                                className="p-1 hover:bg-gray-700 rounded transition-colors text-gray-400 hover:text-white"
+                                className="p-1 hover:bg-[var(--bg-hover)] rounded transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                                 title="Add task"
                             >
                                 <Plus className="w-4 h-4" />
@@ -59,12 +63,14 @@ export function TodayColumn({ tasks, columnId, onTaskComplete, onStartNow, onAdd
                 </div>
 
                 {/* Simple Stats Row */}
-                <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>Est: {formatTime(totalMinutes)}</span>
+                {!hideEstDoneTimes && (
+                    <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
+                        <div className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>Est: {formatTime(totalMinutes)}</span>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* Unified Kanban List */}
@@ -96,23 +102,23 @@ export function TodayColumn({ tasks, columnId, onTaskComplete, onStartNow, onAdd
                 {onAddTask && (
                     <button
                         onClick={onAddTask}
-                        className="group w-full py-2 flex items-center gap-3 text-gray-500 hover:text-gray-300 transition-colors px-2 rounded-lg hover:bg-white/5"
+                        className="group w-full py-2 flex items-center gap-3 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors px-2 rounded-lg hover:bg-[var(--bg-hover)]"
                     >
-                        <Plus className="w-4 h-4 text-gray-600 group-hover:text-blue-400" />
+                        <Plus className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]" />
                         <span className="text-xs font-medium uppercase tracking-wider">Add Task</span>
                     </button>
                 )}
             </div>
 
-            {/* Blitzit Now CTA at the bottom */}
+            {/* Quoril Now CTA at the bottom */}
             {tasks.length > 0 && (
-                <div className="p-4 bg-[#2a3441] border-t border-gray-700 flex-shrink-0">
+                <div className="p-4 border-t flex-shrink-0" style={{ backgroundColor: 'var(--bg-hover)', borderColor: 'var(--border-default)' }}>
                     <button
                         onClick={() => tasks[0] && onStartNow(tasks[0])}
-                        className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-900/40 flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                        className="w-full py-3 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] hover:opacity-90 text-white font-bold rounded-xl shadow-lg shadow-[var(--accent-primary)]/40 flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
                     >
                         <Rocket className="w-4 h-4" />
-                        <span>Blitzit now</span>
+                        <span>Quoril now</span>
                     </button>
                 </div>
             )}

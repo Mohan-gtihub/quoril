@@ -1,4 +1,4 @@
-export const BACKUP_KEY = 'blitzit_time_backup'
+export const BACKUP_KEY = 'quoril_time_backup'
 
 /**
  * OPTIMIZED BACKUP SERVICE

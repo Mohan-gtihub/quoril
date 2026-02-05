@@ -78,17 +78,20 @@
       "dist-electron/**/*"
     ],
     "win": {
+      "icon": "public/icon.png",
       "target": [
         "nsis"
       ]
     },
     "mac": {
+      "icon": "public/icon.png",
       "target": [
         "dmg"
       ],
       "category": "public.app-category.productivity"
     },
     "linux": {
+      "icon": "public/icon.png",
       "target": [
         "AppImage"
       ],

@@ -19,13 +19,11 @@ export function LoginScreen() {
         setError('')
         setSuccess('')
 
-        // Validate email
         if (!isValidEmail(email)) {
             setError('Please enter a valid email address')
             return
         }
 
-        // Validate password length
         if (password.length < 8) {
             setError('Password must be at least 8 characters')
             return
@@ -49,101 +47,111 @@ export function LoginScreen() {
     }
 
     return (
-        <div className="h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 px-4">
-            <div className="max-w-md w-full space-y-8 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl">
-                {/* Logo */}
+        <div className="h-full flex items-center justify-center bg-[#0a0c10] px-4 font-sans select-none overflow-hidden relative">
+            {/* Ambient Glows */}
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
+
+            <div className="max-w-md w-full space-y-8 bg-[#0d0f14] p-10 rounded-3xl border border-white/5 shadow-2xl relative z-10">
+                {/* Header */}
                 <div className="text-center">
-                    <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-                        Quoril
+                    <div className="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse shadow-[0_0_8px_rgba(96,165,250,0.8)]" />
+                        <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest">Operation: Login</span>
+                    </div>
+                    <h1 className="text-4xl font-black text-white mb-2 tracking-tight">
+                        Quoril<span className="text-blue-500">_</span>
                     </h1>
-                    <p className="text-gray-600 dark:text-gray-400">
-                        {isSignUp ? 'Create your account' : 'Welcome back'}
+                    <p className="text-sm text-white/30 font-medium">
+                        {isSignUp ? 'Initialize your tactical workspace' : 'Authenticate to resume focus'}
                     </p>
                 </div>
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-                    <div className="space-y-4">
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Email address
+                    <div className="space-y-5">
+                        <div className="group">
+                            <label htmlFor="email" className="block text-[11px] font-black text-white/20 uppercase tracking-[0.2em] mb-2 ml-1">
+                                Neural Link (Email)
                             </label>
                             <input
                                 id="email"
                                 name="email"
                                 type="email"
-                                autoComplete="email"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="appearance-none relative block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 transition"
-                                placeholder="you@example.com"
+                                className="w-full px-5 py-3.5 bg-white/[0.02] border border-white/5 rounded-2xl text-white placeholder-white/10 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all duration-300"
+                                placeholder="commander@neural.link"
                             />
                         </div>
 
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Password
+                        <div className="group">
+                            <label htmlFor="password" className="block text-[11px] font-black text-white/20 uppercase tracking-[0.2em] mb-2 ml-1">
+                                Secure Keyhole
                             </label>
                             <input
                                 id="password"
                                 name="password"
                                 type="password"
-                                autoComplete={isSignUp ? 'new-password' : 'current-password'}
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="appearance-none relative block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 transition"
+                                className="w-full px-5 py-3.5 bg-white/[0.02] border border-white/5 rounded-2xl text-white placeholder-white/10 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all duration-300"
                                 placeholder="••••••••"
                             />
                         </div>
                     </div>
 
                     {success && (
-                        <div className="rounded-lg bg-green-50 dark:bg-green-900/20 p-4">
-                            <p className="text-sm text-green-800 dark:text-green-200">{success}</p>
+                        <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <p className="text-xs text-emerald-400 text-center font-medium leading-relaxed">{success}</p>
                         </div>
                     )}
 
                     {error && (
-                        <div className="rounded-lg bg-red-50 dark:bg-red-900/20 p-4">
-                            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+                        <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <p className="text-xs text-red-400 text-center font-medium leading-relaxed">{error}</p>
                         </div>
                     )}
 
                     <button
                         type="submit"
                         disabled={loading}
-                        className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        className="group relative w-full overflow-hidden py-4 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-sm transition-all duration-300 shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? (
-                            <span className="flex items-center">
-                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Processing...
+                            <span className="flex items-center justify-center gap-3">
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <span className="uppercase tracking-widest text-[11px] font-black">Syncing...</span>
                             </span>
                         ) : (
-                            isSignUp ? 'Create Account' : 'Sign In'
+                            <span className="uppercase tracking-[0.15em] text-[11px] font-black">
+                                {isSignUp ? 'Deploy Workspace' : 'Authorize Identity'}
+                            </span>
                         )}
                     </button>
 
-                    <div className="text-center">
+                    <div className="text-center pt-2">
                         <button
                             type="button"
                             onClick={() => {
                                 setIsSignUp(!isSignUp)
                                 setError('')
                             }}
-                            className="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition"
+                            className="text-[11px] font-bold text-white/20 hover:text-white/60 uppercase tracking-widest transition-all"
                         >
                             {isSignUp
-                                ? 'Already have an account? Sign in'
-                                : "Don't have an account? Sign up"}
+                                ? 'Already authorized? Login here'
+                                : "Identity missing? Signup here"}
                         </button>
                     </div>
                 </form>
+            </div>
+
+            {/* Version Tag */}
+            <div className="absolute bottom-8 text-[9px] font-mono text-white/10 uppercase tracking-[0.4em]">
+                System Ready // Secure Link Established
             </div>
         </div>
     )

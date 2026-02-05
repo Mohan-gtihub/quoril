@@ -9,32 +9,41 @@ import { useFocusStore } from '@/store/focusStore'
  * - Uses FocusStore.elapsed as the single source of truth for base time.
  */
 export function useTimerDisplay() {
-    const isActive = useFocusStore(s => s.isActive)
-    const isPaused = useFocusStore(s => s.isPaused)
-    const startTime = useFocusStore(s => s.startTime)
-    const storeElapsed = useFocusStore(s => s.elapsed)
-    const duration = useFocusStore(s => s.duration)
-    const taskId = useFocusStore(s => s.taskId)
+    const {
+        isActive,
+        isPaused,
+        startTime,
+        elapsed: storeElapsed,
+        duration,
+        taskId,
+        isBreak,
+        breakElapsed,
+        breakRemainingAtStart,
+        pomodoroRemaining,
+        pomodoroTotal
+    } = useFocusStore()
 
     // Tick state to force re-render every second
     const [, setTick] = useState(0)
 
-    // When session is running, tick every second
+    // When session is running (or in break), tick every second
     useEffect(() => {
+        // Tick if (active AND !paused) OR (isBreak AND !paused)
+        // Since isPaused now reflects the *current mode's* state, we just check !isPaused
         if (!isActive || isPaused || startTime == null) return
         const id = setInterval(() => setTick(t => t + 1), 1000)
         return () => clearInterval(id)
     }, [isActive, isPaused, startTime])
 
     // Display elapsed time:
-    // - Use storeElapsed (DB + backup totals) as base
-    // - Add live delta if session is running
     const liveDelta =
         isActive && !isPaused && startTime != null
             ? Math.floor((Date.now() - startTime) / 1000)
             : 0
 
-    const elapsed = storeElapsed + liveDelta
+    // If Break: Main task elapsed is FROZEN at storeElapsed
+    // If Task: Main task elapsed = storeElapsed + liveDelta
+    const elapsed = isBreak ? storeElapsed : (storeElapsed + liveDelta)
 
     // Remaining time, progress, overtime
     const totalSeconds = duration
@@ -46,6 +55,7 @@ export function useTimerDisplay() {
     return {
         isActive,
         isPaused,
+        isBreak,
         taskId,
         duration,
         elapsed,
@@ -53,5 +63,11 @@ export function useTimerDisplay() {
         isOvertime,
         progress,
         totalSeconds,
+        breakRemaining: isBreak
+            ? Math.max(0, breakRemainingAtStart - (breakElapsed + liveDelta))
+            : 0,
+        breakRemainingAtStart,
+        pomodoroRemaining: isBreak ? 0 : pomodoroRemaining,
+        pomodoroTotal
     }
 }

@@ -46,7 +46,7 @@ export function TaskDetailsPanel() {
     }
 
     return (
-        <div className="fixed inset-y-0 right-0 w-96 bg-[#232936] border-l border-gray-800 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col z-50">
+        <div className="fixed inset-y-0 right-0 w-96 bg-[var(--bg-card)] border-l border-[var(--border-default)] shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col z-50">
             {/* Header */}
             <div className="p-6 border-b border-gray-700/50 flex items-start justify-between">
                 <div className="flex-1">
@@ -54,7 +54,7 @@ export function TaskDetailsPanel() {
                         type="text"
                         value={task.title}
                         onChange={(e) => updateTask(task.id, { title: e.target.value })}
-                        className="bg-transparent text-xl font-bold text-white w-full focus:outline-none focus:ring-1 focus:ring-blue-500/50 rounded px-1 -ml-1 border-transparent hover:border-gray-700 border"
+                        className="bg-transparent text-xl font-bold text-[var(--text-primary)] w-full focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]/50 rounded px-1 -ml-1 border-transparent hover:border-[var(--border-default)] border"
                     />
                     <div className="flex items-center gap-2 mt-2">
                         <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${task.status === 'done' ? 'bg-green-500/10 text-green-400' : 'bg-gray-700 text-gray-400'
@@ -62,7 +62,7 @@ export function TaskDetailsPanel() {
                             {task.status.replace('_', ' ')}
                         </span>
                         {task.estimated_minutes && (
-                            <span className="text-gray-500 text-xs">
+                            <span className="text-[var(--text-tertiary)] text-xs font-mono">
                                 {task.estimated_minutes}m est.
                             </span>
                         )}
@@ -70,7 +70,7 @@ export function TaskDetailsPanel() {
                 </div>
                 <button
                     onClick={handleClose}
-                    className="text-gray-400 hover:text-white transition-colors"
+                    className="p-2 hover:bg-[var(--bg-hover)] rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
                 >
                     <X className="w-5 h-5" />
                 </button>
@@ -88,7 +88,7 @@ export function TaskDetailsPanel() {
                         value={task.description || ''}
                         onChange={(e) => updateTask(task.id, { description: e.target.value })}
                         placeholder="Add notes..."
-                        className="w-full bg-[#1a1f2e] text-gray-300 text-sm rounded-lg p-3 border border-gray-700/50 focus:border-blue-500 focus:outline-none min-h-[100px] resize-none"
+                        className="w-full bg-[var(--bg-hover)] text-[var(--text-secondary)] text-sm rounded-xl p-4 border border-[var(--border-default)] focus:ring-1 focus:ring-[var(--accent-primary)]/50 focus:outline-none min-h-[140px] resize-none placeholder:text-[var(--text-muted)]"
                     />
                 </div>
 
@@ -99,17 +99,17 @@ export function TaskDetailsPanel() {
                             Subtasks
                         </label>
                         {taskSubtasks.length > 0 && (
-                            <span className="text-xs text-blue-400 font-medium">
-                                {calculateProgress()}% Done
+                            <span className="text-xs text-[var(--accent-primary)] font-bold">
+                                {calculateProgress()}% Complete
                             </span>
                         )}
                     </div>
 
                     {/* Progress Bar */}
                     {taskSubtasks.length > 0 && (
-                        <div className="h-1 w-full bg-gray-800 rounded-full mb-4 overflow-hidden">
+                        <div className="h-1.5 w-full bg-[var(--bg-hover)] rounded-full mb-6 overflow-hidden border border-[var(--border-default)]">
                             <div
-                                className="h-full bg-blue-500 transition-all duration-300"
+                                className="h-full bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] transition-all duration-500 shadow-[0_0_10px_var(--accent-glow)]"
                                 style={{ width: `${calculateProgress()}%` }}
                             />
                         </div>
@@ -117,19 +117,19 @@ export function TaskDetailsPanel() {
 
                     <div className="space-y-2">
                         {taskSubtasks.map(subtask => (
-                            <div key={subtask.id} className="group flex items-center gap-2 bg-[#1a1f2e] p-2 rounded-lg border border-transparent hover:border-gray-700/50 transition-colors">
+                            <div key={subtask.id} className="group flex items-center gap-3 bg-[var(--bg-hover)] p-3 rounded-xl border border-[var(--border-default)] hover:border-[var(--accent-primary)]/30 transition-all">
                                 <button
                                     onClick={() => toggleSubtask(subtask.id)}
-                                    className={`flex-shrink-0 ${subtask.completed ? 'text-green-500' : 'text-gray-600 hover:text-gray-400'}`}
+                                    className={`flex-shrink-0 transition-colors ${subtask.completed ? 'text-emerald-500' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                                 >
                                     {subtask.completed ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
                                 </button>
-                                <span className={`flex-1 text-sm ${subtask.completed ? 'text-gray-500 line-through' : 'text-gray-200'}`}>
+                                <span className={`flex-1 text-sm transition-all ${subtask.completed ? 'text-[var(--text-muted)] line-through opacity-50' : 'text-[var(--text-primary)]'}`}>
                                     {subtask.title}
                                 </span>
                                 <button
                                     onClick={() => deleteSubtask(subtask.id)}
-                                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-600 hover:text-red-400 transition-all"
+                                    className="opacity-0 group-hover:opacity-100 p-1.5 text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 rounded-lg transition-all"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
@@ -138,14 +138,14 @@ export function TaskDetailsPanel() {
                     </div>
 
                     {/* Add Subtask Input */}
-                    <form onSubmit={handleAddSubtask} className="mt-3 flex items-center gap-2">
-                        <Plus className="w-4 h-4 text-gray-500" />
+                    <form onSubmit={handleAddSubtask} className="mt-4 flex items-center gap-3 px-3 py-2 rounded-xl border border-dashed border-[var(--border-default)] group hover:border-[var(--accent-primary)]/50 transition-all">
+                        <Plus className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]" />
                         <input
                             type="text"
                             value={newSubtaskTitle}
                             onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                            placeholder="Add a subtask..."
-                            className="bg-transparent text-sm text-white flex-1 focus:outline-none placeholder-gray-600"
+                            placeholder="Add mission objective..."
+                            className="bg-transparent text-sm text-[var(--text-primary)] flex-1 focus:outline-none placeholder:text-[var(--text-muted)]"
                         />
                     </form>
                 </div>
@@ -153,7 +153,7 @@ export function TaskDetailsPanel() {
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-gray-700/50 bg-[#1a1f2e]/50">
+            <div className="p-6 border-t border-[var(--border-default)] bg-[var(--bg-hover)]/30">
                 <button
                     onClick={() => {
                         if (window.confirm('Delete this task?')) {

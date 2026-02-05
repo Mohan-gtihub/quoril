@@ -8,5 +8,14 @@ contextBridge.exposeInMainWorld('electron', {
     },
     restoreWindow: () => {
         ipcRenderer.send('restore-window')
+    },
+    setAlwaysOnTop: (flag) => {
+        ipcRenderer.invoke('window:setAlwaysOnTop', flag)
+    },
+    setResizable: (flag) => {
+        ipcRenderer.invoke('window:setResizable', flag)
+    },
+    closeDevTools: () => {
+        ipcRenderer.invoke('window:closeDevTools')
     }
 })

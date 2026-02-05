@@ -40,6 +40,12 @@ class DataSyncService {
         }
     }
 
+    /* ================= TRIGGER ================= */
+
+    trigger() {
+        this.syncPendings()
+    }
+
     /* ================= MAIN LOOP ================= */
 
     private async syncPendings() {
@@ -125,6 +131,7 @@ class DataSyncService {
                 /* Prevent infinite retry on bad rows */
                 if (
                     err?.code === '23514' ||
+                    err?.code === '23503' || // Foreign Key Violation (e.g. List deleted)
                     String(err).includes('violates') ||
                     String(err).includes('constraint')
                 ) {
@@ -158,6 +165,7 @@ class DataSyncService {
                     is_system: Boolean(row.is_system),
                     created_at: row.created_at,
                     updated_at: row.updated_at,
+                    archived_at: row.archived_at,
                     deleted_at: row.deleted_at
                 }
 

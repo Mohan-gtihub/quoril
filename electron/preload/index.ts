@@ -53,8 +53,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
         startTask: (id: string) => ipcRenderer.invoke('db:startTask', id),
         pauseTask: (id: string) => ipcRenderer.invoke('db:pauseTask', id),
         reorderTasks: (items: any) => ipcRenderer.invoke('db:reorderTasks', items),
-        getLists: (userId: string) => ipcRenderer.invoke('db:getLists', userId),
+        getLists: (userId: string, archived?: boolean) => ipcRenderer.invoke('db:getLists', userId, archived),
         saveList: (list: any) => ipcRenderer.invoke('db:saveList', list),
+        archiveList: (id: string) => ipcRenderer.invoke('db:archiveList', id),
+        restoreList: (id: string) => ipcRenderer.invoke('db:restoreList', id),
         deleteList: (id: string) => ipcRenderer.invoke('db:deleteList', id),
         getSubtasks: (taskId: string) => ipcRenderer.invoke('db:getSubtasks', taskId),
         saveSubtask: (subtask: any) => ipcRenderer.invoke('db:saveSubtask', subtask),
@@ -67,6 +69,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
         getPending: (table: string) => ipcRenderer.invoke('db:getPending', table),
         markSynced: (table: string, id: string) => ipcRenderer.invoke('db:markSynced', table, id),
     },
+})
+
+// Window Management (Special case for legacy/custom calls)
+contextBridge.exposeInMainWorld('electron', {
+    resizeWindow: (width: number, height: number, x?: number, y?: number) => {
+        ipcRenderer.send('resize-window', { width, height, x, y })
+    },
+    restoreWindow: () => {
+        ipcRenderer.send('restore-window')
+    },
+    setAlwaysOnTop: (flag: boolean) => {
+        ipcRenderer.invoke('window:setAlwaysOnTop', flag)
+    },
+    setResizable: (flag: boolean) => {
+        ipcRenderer.invoke('window:setResizable', flag)
+    },
+    closeDevTools: () => {
+        ipcRenderer.invoke('window:closeDevTools')
+    }
 })
 
 // Type definitions for TypeScript
@@ -103,8 +124,10 @@ export interface ElectronAPI {
         startTask: (id: string) => Promise<any>
         pauseTask: (id: string) => Promise<any>
         reorderTasks: (items: any) => Promise<any>
-        getLists: (userId: string) => Promise<any[]>
+        getLists: (userId: string, archived?: boolean) => Promise<any[]>
         saveList: (list: any) => Promise<any>
+        archiveList: (id: string) => Promise<any>
+        restoreList: (id: string) => Promise<any>
         deleteList: (id: string) => Promise<any>
         getSubtasks: (taskId: string) => Promise<any[]>
         saveSubtask: (subtask: any) => Promise<any>

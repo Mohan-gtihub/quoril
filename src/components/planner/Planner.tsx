@@ -5,6 +5,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useListStore } from '@/store/listStore'
 import { useTaskStore } from '@/store/taskStore'
 import { useFocusStore } from '@/store/focusStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { Activity, Coffee, Plus } from 'lucide-react'
 import type { TaskColumn } from '@/types/list'
 import type { Task } from '@/types/database'
@@ -28,6 +29,11 @@ const COLUMNS: ColumnDef[] = [
     { id: 'today', title: 'Today', subtitle: 'Execution Center', color: 'bg-blue-500' },
     { id: 'done', title: 'Done', subtitle: 'History & Motivation', color: 'bg-green-500' },
 ]
+
+const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
 
 // -- Sub-Component for Droppable Column --
 function BoardColumn({
@@ -85,11 +91,13 @@ function BoardColumn({
 
                         <div className="flex items-center gap-2">
                             {column.id === 'done' ? (
-                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded font-bold" style={{ color: 'var(--accent-green-400)', backgroundColor: 'var(--accent-green-100)' }}>
-                                    {count} Completed
-                                </span>
+                                !useSettingsStore.getState().hideEstDoneTimes && (
+                                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded font-bold" style={{ color: 'var(--accent-green-400)', backgroundColor: 'var(--accent-green-100)' }}>
+                                        {count} Completed
+                                    </span>
+                                )
                             ) : (
-                                totalMinutes > 0 && (
+                                !useSettingsStore.getState().hideEstDoneTimes && totalMinutes > 0 && (
                                     <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ color: 'var(--text-tertiary)', backgroundColor: 'var(--accent-gray-800)' }}>
                                         {formatTime(totalMinutes)}
                                     </span>
@@ -145,15 +153,64 @@ function BoardColumn({
                     items={tasks.map(t => t.id)}
                     strategy={verticalListSortingStrategy}
                 >
-                    {tasks.map((task) => (
-                        <div key={task.id}>
-                            <TaskCard
-                                task={task}
-                                column={column.id}
-                                onComplete={() => onTaskComplete(task.id, column.id)}
-                            />
-                        </div>
-                    ))}
+                    {column.id === 'done' ? (
+                        // DONE COLUMN: O(n) Grouping Algorithm
+                        (() => {
+                            const groupedByDay = tasks
+                                .reduce<Record<string, Task[]>>((acc, task) => {
+                                    // Fallback to updated_at or now if completed_at is missing (legacy data fix)
+                                    const rawDate = task.completed_at || task.updated_at || new Date().toISOString()
+                                    const dateObj = new Date(rawDate)
+                                    const dayKey = dateObj.toDateString()
+                                    if (!acc[dayKey]) acc[dayKey] = []
+                                    acc[dayKey].push(task)
+                                    return acc
+                                }, {})
+
+                            return Object.entries(groupedByDay)
+                                .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
+                                .map(([day, dayTasks]) => {
+                                    const date = new Date(day)
+                                    const isToday = isSameDay(date, new Date())
+
+                                    return (
+                                        <div key={day}>
+                                            <div className="flex items-center justify-between text-[10px] uppercase font-bold text-white/30 mt-6 mb-2 tracking-wider px-1">
+                                                <span>
+                                                    {isToday ? 'Today' : date.toLocaleDateString(undefined, { weekday: 'short' })},
+                                                    {' '}
+                                                    {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                </span>
+                                                <span className="bg-white/5 px-1.5 py-0.5 rounded text-white/20">
+                                                    {dayTasks.length} {dayTasks.length === 1 ? 'task' : 'tasks'}
+                                                </span>
+                                            </div>
+
+                                            {dayTasks.map(task => (
+                                                <div key={task.id}>
+                                                    <TaskCard
+                                                        task={task}
+                                                        column={column.id}
+                                                        onComplete={() => onTaskComplete(task.id, column.id)}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )
+                                })
+                        })()
+                    ) : (
+                        // OTHER COLUMNS: Standard Grid
+                        tasks.map((task) => (
+                            <div key={task.id}>
+                                <TaskCard
+                                    task={task}
+                                    column={column.id}
+                                    onComplete={() => onTaskComplete(task.id, column.id)}
+                                />
+                            </div>
+                        ))
+                    )}
                 </SortableContext>
 
                 {/* Done Column Extras */}
@@ -218,7 +275,12 @@ export function Planner() {
         const sortedTasks = [...tasks].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
 
         sortedTasks.forEach(task => {
-            if (selectedListId && selectedListId !== 'all' && task.list_id !== selectedListId) {
+            if (task.deleted_at) return
+
+            if (selectedListId === 'all') {
+                const isActiveList = lists.some(l => l.id === task.list_id)
+                if (!isActiveList) return
+            } else if (selectedListId && task.list_id !== selectedListId) {
                 return
             }
 
@@ -380,7 +442,7 @@ export function Planner() {
         toast.success("Focus Mode Started! 🚀")
     }
 
-    if (!selectedList) {
+    if (!selectedList && selectedListId !== 'all') {
         return <div className="p-8 text-gray-400">Loading workspace...</div>
     }
 

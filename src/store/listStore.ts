@@ -1,212 +1,495 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { localService } from '@/services/localStorage'
-import type { List, ListInsert, ListUpdate, ListWithStats } from '@/types/list'
+import type { List } from '@/types/database'
 import type { Task } from '@/types/database'
 import { supabase } from '@/services/supabase'
+import toast from 'react-hot-toast'
+
+/* ================= TYPES ================= */
 
 interface ListState {
+
+    /* State */
+
     lists: List[]
+    archived: List[]
+    archivedLists: List[]
+
     selectedListId: string | null
+
     loading: boolean
     error: string | null
 
-    // Actions
-    syncFromSupabase: () => Promise<void>
+
+    /* Core */
+
+    load: () => Promise<void>
+    loadArchived: () => Promise<void>
+    syncFromCloud: () => Promise<void>
+
+
+    /* Aliases (UI compatibility) */
+
     fetchLists: () => Promise<void>
-    createList: (list: Omit<ListInsert, 'user_id'>) => Promise<List | null>
-    updateList: (id: string, updates: ListUpdate) => Promise<void>
-    deleteList: (id: string) => Promise<void>
+    fetchArchivedLists: () => Promise<void>
+
     setSelectedList: (id: string | null) => void
-    getListStats: (listId: string) => Promise<ListWithStats | null>
+
+    duplicateList: (id: string) => Promise<void>
+    deleteList: (id: string) => Promise<void>
+    restoreList: (id: string) => Promise<void>
+    permanentDeleteList: (id: string) => Promise<void>
+
+    getListStats: (id: string) => Promise<any | null>
+
+    createList: (data: Partial<List>) => Promise<List | null>
+    updateList: (id: string, data: Partial<List>) => Promise<void>
+
+
+    /* New API */
+
+    create: (data: Partial<List>) => Promise<List | null>
+    update: (id: string, data: Partial<List>) => Promise<void>
+
+    archive: (id: string) => Promise<void>
+    restore: (id: string) => Promise<void>
+
+    duplicate: (id: string) => Promise<void>
+
+    select: (id: string | null) => void
 }
+
+/* ================= STORE ================= */
 
 export const useListStore = create<ListState>()(
     persist(
+
         (set, get) => ({
+
+            /* ================= STATE ================= */
+
             lists: [],
+            archived: [],
+            archivedLists: [],
+
             selectedListId: null,
+
             loading: false,
             error: null,
 
-            fetchLists: async () => {
+
+            /* ================= LOAD ================= */
+
+            load: async () => {
                 try {
                     set({ loading: true, error: null })
+                    const { data, error } = await localService.lists.list(false)
 
-                    // Get current user
-                    const { data: { user }, error: userError } = await localService.auth.getUser()
-                    if (userError || !user) {
-                        throw new Error('User not authenticated')
+                    if (error) {
+                        // If it's just "No session", don't treat it as a terminal error
+                        if (error === 'No session') {
+                            set({ loading: false })
+                            return
+                        }
+                        throw new Error(error)
                     }
 
-                    // 1. Load from local DB first (fast)
-                    const { data, error } = await localService.lists.list()
-                    if (error) throw error
-                    set({ lists: data || [], loading: false })
-
-                    // 2. Sync from Supabase in background
-                    get().syncFromSupabase().catch(err => {
-                        console.error('Background list sync failed:', err)
-                    })
-                } catch (error) {
-                    console.error('Failed to fetch lists:', error)
                     set({
-                        error: error instanceof Error ? error.message : 'Failed to fetch lists',
+                        lists: data || [],
+                        loading: false
+                    })
+                } catch (err: any) {
+                    console.error('[ListStore] load failed', err)
+                    set({
+                        error: err?.message || 'Failed to load lists',
                         loading: false
                     })
                 }
             },
 
-            syncFromSupabase: async () => {
+
+            loadArchived: async () => {
                 try {
-                    const { data: { session } } = await supabase.auth.getSession()
+                    set({ loading: true, error: null })
+                    const { data, error } = await localService.lists.list(true)
+
+                    if (error) {
+                        if (error === 'No session') {
+                            set({ loading: false })
+                            return
+                        }
+                        throw new Error(error)
+                    }
+
+                    set({
+                        archived: data || [],
+                        archivedLists: data || [],
+                        loading: false
+                    })
+                } catch (err: any) {
+                    console.error('[ListStore] loadArchived failed', err)
+                    set({
+                        error: err?.message || 'Failed to load archived',
+                        loading: false
+                    })
+                }
+            },
+
+
+            /* ================= SYNC ================= */
+
+            syncFromCloud: async () => {
+
+                try {
+
+                    const { data: { session } } =
+                        await supabase.auth.getSession()
+
                     if (!session?.user) return
 
-                    const { data: cloudLists, error } = await supabase
+
+                    const { data, error } = await supabase
                         .from('lists')
                         .select('*')
                         .eq('user_id', session.user.id)
-                        .is('deleted_at', null)
 
-                    if (error) throw error
-                    if (!cloudLists || cloudLists.length === 0) return
+                    if (error || !data) return
+
 
                     if (window.electronAPI?.db) {
-                        const db = window.electronAPI.db;
-                        for (const cloudList of (cloudLists as List[])) {
-                            const [localList] = await db.exec('SELECT * FROM lists WHERE id = ?', [cloudList.id]);
-                            if (!localList || new Date(cloudList.updated_at) > new Date(localList.updated_at)) {
-                                await db.saveList(cloudList);
+
+                        const db = window.electronAPI.db
+
+                        for (const item of data as List[]) {
+
+                            const [local] =
+                                await db.exec(
+                                    'SELECT * FROM lists WHERE id=?',
+                                    [item.id]
+                                )
+
+                            if (
+                                !local ||
+                                new Date(item.updated_at) >
+                                new Date(local.updated_at)
+                            ) {
+                                await db.saveList(item)
                             }
                         }
                     }
 
-                    const { data: mergedLists } = await localService.lists.list()
-                    set({ lists: mergedLists || [] })
+                    // Refresh local state without re-triggering sync
+                    await get().load()
+                    await get().loadArchived()
 
-                } catch (error) {
-                    console.error('[Sync] Failed to sync lists from Supabase:', error)
+                } catch (err) {
+                    console.error('[ListStore] sync failed', err)
                 }
             },
 
-            createList: async (list) => {
+
+            /* ================= CRUD ================= */
+
+            create: async (data) => {
+
                 try {
-                    set({ error: null })
+
+                    const { data: res, error } =
+                        await localService.lists.create(data)
+
+                    if (error) throw error
 
 
-                    // Get current user
-                    const { data: { user }, error: userError } = await localService.auth.getUser()
-                    if (userError || !user) {
-                        throw new Error('User not authenticated')
-                    }
-
-
-                    const insertData = { ...list, user_id: user.id }
-
-                    const { data, error } = await localService.lists.create(insertData)
-
-                    if (error) {
-                        throw error
-                    }
-
-
-                    // Optimistic update
-                    set((state) => ({
-                        lists: [...state.lists, data as List]
+                    set(state => ({
+                        lists: [...state.lists, res as List]
                     }))
 
-                    return data
-                } catch (error) {
-                    console.error('[ListStore] Failed to create list:', error)
-                    set({ error: error instanceof Error ? error.message : 'Failed to create list' })
+
+                    return res as List
+
+                } catch (err: any) {
+
+                    console.error('[ListStore] create failed', err)
+
+                    set({ error: err?.message })
+
                     return null
                 }
             },
 
-            updateList: async (id, updates) => {
-                try {
-                    set({ error: null })
 
-                    const { data, error } = await localService.lists.update(id, updates)
+            update: async (id, data) => {
+
+                try {
+
+                    const { data: res, error } =
+                        await localService.lists.update(id, data)
 
                     if (error) throw error
 
-                    // Optimistic update
-                    set((state) => ({
-                        lists: state.lists.map((list) =>
-                            list.id === id ? { ...list, ...data } : list
+
+                    set(state => ({
+                        lists: state.lists.map(l =>
+                            l.id === id ? { ...l, ...res } : l
                         )
                     }))
-                } catch (error) {
-                    console.error('Failed to update list:', error)
-                    set({ error: error instanceof Error ? error.message : 'Failed to update list' })
+
+                } catch (err: any) {
+
+                    console.error('[ListStore] update failed', err)
+
+                    set({ error: err?.message })
                 }
             },
 
-            deleteList: async (id) => {
+
+            archive: async (id) => {
+                const prevLists = get().lists
+                const prevArchived = get().archived
+                const prevSelected = get().selectedListId
+
+                const list = prevLists.find(l => l.id === id)
+                if (!list) return
+
+                // 1. Optimistic Update
+                set(state => ({
+                    lists: state.lists.filter(l => l.id !== id),
+                    archived: [...state.archived, list],
+                    archivedLists: [...state.archivedLists, list],
+                    selectedListId: state.selectedListId === id ? null : state.selectedListId
+                }))
+
                 try {
-                    set({ error: null })
-
-                    const { error } = await localService.lists.delete(id)
-
-                    if (error) throw error
-
-                    // Remove from state
-                    set((state) => ({
-                        lists: state.lists.filter((list) => list.id !== id),
-                        selectedListId: state.selectedListId === id ? null : state.selectedListId
-                    }))
-                } catch (error) {
-                    console.error('Failed to delete list:', error)
-                    set({ error: error instanceof Error ? error.message : 'Failed to delete list' })
+                    // 2. Perform Async Action
+                    await localService.lists.archive(id)
+                } catch (err: any) {
+                    console.error('[ListStore] archive failed', err)
+                    // 3. Revert on Error
+                    set({
+                        lists: prevLists,
+                        archived: prevArchived,
+                        archivedLists: prevArchived,
+                        selectedListId: prevSelected,
+                        error: 'Archive failed'
+                    })
+                    toast.error('Failed to archive list')
                 }
             },
 
-            setSelectedList: (id) => {
+
+            restore: async (id) => {
+                const prevLists = get().lists
+                const prevArchived = get().archived
+
+                const list = prevArchived.find(l => l.id === id)
+                if (!list) return
+
+                // 1. Optimistic Update
+                set(state => ({
+                    lists: [...state.lists, list],
+                    archived: state.archived.filter(l => l.id !== id),
+                    archivedLists: state.archivedLists.filter(l => l.id !== id)
+                }))
+
+                try {
+                    // 2. Perform Async Action
+                    await localService.lists.restore(id)
+                } catch (err: any) {
+                    console.error('[ListStore] restore failed', err)
+                    // 3. Revert
+                    set({
+                        lists: prevLists,
+                        archived: prevArchived,
+                        archivedLists: prevArchived,
+                        error: 'Restore failed'
+                    })
+                    toast.error('Failed to restore list')
+                }
+            },
+
+
+            duplicate: async (id) => {
+
+                try {
+
+                    const list =
+                        get().lists.find(l => l.id === id)
+
+                    if (!list) return
+
+
+                    const copy = await get().create({
+                        name: list.name + ' (copy)',
+                        color: list.color,
+                        icon: list.icon,
+                        sort_order: list.sort_order + 1,
+                        is_system: false
+                    })
+
+                    if (!copy) return
+
+
+                    const { data: tasks } =
+                        await localService.tasks.list(id)
+
+
+                    if (!tasks) return
+
+
+                    for (const t of tasks as Task[]) {
+
+                        if (t.status === 'done') continue
+
+                        await localService.tasks.create({
+                            list_id: copy.id,
+                            title: t.title,
+                            description: t.description,
+                            status: t.status,
+                            priority: t.priority,
+                            estimated_minutes: t.estimated_minutes,
+                            sort_order: t.sort_order
+                        })
+                    }
+
+
+                    await get().load()
+
+                } catch (err: any) {
+
+                    console.error('[ListStore] duplicate failed', err)
+
+                    set({ error: err?.message })
+                }
+            },
+
+
+            /* ================= UI ================= */
+
+            select: (id) => {
+
                 set({ selectedListId: id })
             },
 
-            getListStats: async (listId) => {
+
+            /* ================= ALIASES ================= */
+
+            /* ================= ALIASES ================= */
+
+            fetchLists: async () => {
+                await get().load()
+                get().syncFromCloud().catch(() => { })
+            },
+
+            fetchArchivedLists: async () => {
+                await get().loadArchived()
+            },
+
+            setSelectedList: (id) => {
+                get().select(id)
+            },
+
+            deleteList: async (id) => {
+                await get().archive(id)
+            },
+
+            duplicateList: async (id) => {
+                await get().duplicate(id)
+            },
+
+            restoreList: async (id: string) => {
+                await get().restore(id)
+            },
+
+            permanentDeleteList: async (id: string) => {
                 try {
-                    const { data: { user }, error: userError } = await localService.auth.getUser()
-                    if (userError || !user) {
-                        throw new Error('User not authenticated')
+                    const now = new Date().toISOString()
+                    // 1. Soft Delete List to ensure sync works
+                    await localService.lists.update(id, { deleted_at: now })
+
+                    // 2. Cascade delete tasks in this list locally
+                    if (window.electronAPI?.db) {
+                        await window.electronAPI.db.exec(
+                            'UPDATE tasks SET deleted_at = ?, synced = 0 WHERE list_id = ?',
+                            [now, id]
+                        )
                     }
 
-                    // Get list
-                    const list = get().lists.find(l => l.id === listId)
+                    set(state => ({
+                        archived: state.archived.filter(l => l.id !== id),
+                        archivedLists: state.archivedLists.filter(l => l.id !== id)
+                    }))
+                    toast.success('List and its tasks deleted')
+                } catch {
+                    toast.error('Failed to delete list')
+                }
+            },
+
+            /* 🔥 COMPATIBILITY FOR OLD UI */
+
+            createList: async (data: Partial<List>) => {
+                return await get().create(data)
+            },
+
+            updateList: async (id: string, data: Partial<List>) => {
+                await get().update(id, data)
+            },
+
+
+
+            getListStats: async (listId) => {
+
+                try {
+
+                    const list =
+                        get().lists.find(l => l.id === listId)
+
                     if (!list) return null
 
-                    // Get tasks for this list
-                    const { data: tasks, error } = await localService.tasks.list(listId)
 
-                    if (error) throw error
+                    const { data: tasks } =
+                        await localService.tasks.list(listId)
 
-                    const taskCount = tasks?.length || 0
-                    const pendingCount = tasks?.filter((t: Task) => t.status !== 'done').length || 0
-                    const estimatedMinutes = tasks?.reduce((sum: number, t: Task) => sum + (t.estimated_minutes || 0), 0) || 0
+
+                    const activeTasks = (tasks || []).filter((t: Task) => !t.deleted_at)
+
+                    const count = activeTasks.length
+
+                    const pending =
+                        activeTasks.filter(
+                            (t: Task) => t.status !== 'done'
+                        ).length || 0
+
+                    const est =
+                        activeTasks.reduce(
+                            (s: number, t: Task) =>
+                                s + (t.estimated_minutes || 0),
+                            0
+                        ) || 0
+
 
                     return {
                         ...list,
-                        taskCount,
-                        pendingCount,
-                        estimatedMinutes
+                        taskCount: count,
+                        pendingCount: pending,
+                        estimatedMinutes: est
                     }
-                } catch (error) {
-                    console.error('Failed to get list stats:', error)
+
+                } catch {
+
                     return null
                 }
             }
+
         }),
+
         {
-            name: 'list-storage',
+            name: 'list-store',
+
             partialize: (state) => ({
                 selectedListId: state.selectedListId,
-                // We typically don't persist 'lists' to assume fresh fetch, 
-                // but persisting lists makes specific UX faster ("stale-while-revalidate").
-                // Let's persist basic stuff.
                 lists: state.lists
-            }),
+            })
         }
     )
 )
