@@ -1,4 +1,4 @@
-import { Play, Pause, Maximize2, Coffee, SkipForward, CheckCircle2, ListTodo, Check, GripVertical } from 'lucide-react'
+import { Play, Pause, Maximize2, Coffee, SkipForward, CheckCircle2, ListTodo, Check, GripVertical, Plus } from 'lucide-react'
 import { useFocusStore } from '@/store/focusStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useTimerDisplay } from '@/hooks/useTimerDisplay'
@@ -20,10 +20,11 @@ export function SuperFocusPill() {
     } = useFocusStore()
     const { updateSettings } = useSettingsStore()
     const { tasks, subtasks, fetchSubtasks, toggleSubtask, moveTaskToColumn } = useTaskStore()
-    const { remainingTime, breakRemaining, pomodoroRemaining } = useTimerDisplay()
+    const { remainingTime, breakRemaining, pomodoroRemaining, isOvertime } = useTimerDisplay()
     const settings = useSettingsStore()
     const [isHovered, setIsHovered] = useState(false)
     const [isExpanded, setIsExpanded] = useState(false)
+    const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
 
     const activeTask = tasks.find(t => t.id === taskId)
     const currentSubtasks = taskId ? subtasks[taskId] || [] : []
@@ -36,12 +37,14 @@ export function SuperFocusPill() {
 
     useEffect(() => {
         if (window.electron) {
-            // Aggressive resize attempts to overcome DevTools docking delays
             const performResize = () => {
                 window.electron.closeDevTools()
                 window.electron.setResizable(true)
-                // Expand height if showing subtasks
-                const height = isExpanded ? 48 + (currentSubtasks.length * 32) : 48
+                // Precise height: Pill(48) + Gap(8) + Container
+                const itemsCount = currentSubtasks.length
+                const containerHeight = (12 + 20 + (Math.max(1, itemsCount) * 32) + 48 + 12)
+                const height = isExpanded ? (48 + 8 + containerHeight) : 48
+
                 window.electron.resizeWindow(340, height, 40, 40)
                 window.electron.setAlwaysOnTop(true)
                 window.electron.setResizable(false)
@@ -75,20 +78,26 @@ export function SuperFocusPill() {
         await endSession()
     }
 
+    const handleAddSubtask = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!newSubtaskTitle.trim() || !taskId) return
+        await useTaskStore.getState().createSubtask(taskId, newSubtaskTitle.trim())
+        setNewSubtaskTitle('')
+    }
+
     return (
-        <div
-            className={cn(
-                "w-full h-full flex flex-col transition-all duration-300 pointer-events-auto",
-                "bg-[#0a0a0a] backdrop-blur-2xl border border-white/10 rounded-full overflow-hidden group hover:border-white/20",
-                isHovered && "scale-[1.01]",
-                "cursor-grab active:cursor-grabbing"
-            )}
-            style={{ WebkitAppRegion: 'no-drag' } as any}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-        >
+        <div className="w-full h-full flex flex-col gap-2 pointer-events-none">
             {/* Main Pill Row */}
-            <div className="h-[48px] flex items-center gap-3 px-4">
+            <div
+                className={cn(
+                    "w-[340px] h-[48px] flex items-center gap-3 px-4 shadow-2xl transition-all duration-300 pointer-events-auto shrink-0",
+                    "bg-[#0d1117] border border-white/10 rounded-full group hover:border-white/20",
+                    isHovered && "scale-[1.01]"
+                )}
+                style={{ WebkitAppRegion: 'no-drag' } as any}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+            >
                 {/* 1. RELIABLE DRAG HANDLE (Visual) */}
                 <div
                     className="w-10 h-full flex items-center justify-center text-white/10 hover:text-white/40 transition-colors cursor-grab active:cursor-grabbing group/handle"
@@ -106,7 +115,7 @@ export function SuperFocusPill() {
                         </span>
                         <span className={cn(
                             "font-mono font-bold text-sm tabular-nums tracking-tight ml-4 shrink-0",
-                            time < 0 ? "text-red-400" : (isBreak ? "text-amber-400" : "text-emerald-400")
+                            isOvertime ? "text-red-400" : (isBreak ? "text-amber-400" : "text-emerald-400")
                         )}>
                             {formatShortTime(time)}
                         </span>
@@ -126,18 +135,16 @@ export function SuperFocusPill() {
                                 <Coffee size={16} />
                             </button>
 
-                            {currentSubtasks.length > 0 && (
-                                <button
-                                    onClick={() => setIsExpanded(!isExpanded)}
-                                    className={cn(
-                                        "p-2 rounded-lg transition-colors",
-                                        isExpanded ? "text-blue-400 bg-blue-400/10" : "text-white/60 hover:text-white hover:bg-white/10"
-                                    )}
-                                    title="Subtasks"
-                                >
-                                    <ListTodo size={16} />
-                                </button>
-                            )}
+                            <button
+                                onClick={() => setIsExpanded(!isExpanded)}
+                                className={cn(
+                                    "p-2 rounded-lg transition-colors",
+                                    isExpanded ? "text-blue-400 bg-blue-400/10" : "text-white/60 hover:text-white hover:bg-white/10"
+                                )}
+                                title="Subtasks"
+                            >
+                                <ListTodo size={16} />
+                            </button>
                         </div>
 
                         <button
@@ -173,32 +180,60 @@ export function SuperFocusPill() {
                 )}
             </div>
 
-            {/* Subtasks Panel (Expandable) */}
-            {isExpanded && currentSubtasks.length > 0 && (
+            {/* Subtasks Panel (Floating Accordion) */}
+            {isExpanded && (
                 <div
-                    className="border-t border-white/5 bg-black/20 p-2 flex flex-col gap-1 animate-in slide-in-from-top-2 duration-300"
+                    className="mx-2 w-[324px] bg-[#0d1117] border border-white/10 rounded-2xl p-3 shadow-2xl animate-in slide-in-from-top-4 fade-in duration-300 pointer-events-auto overflow-hidden shrink-0"
                     style={{ WebkitAppRegion: 'no-drag' } as any}
                 >
-                    {currentSubtasks.map(subtask => (
-                        <div
-                            key={subtask.id}
-                            className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/5 transition-colors cursor-pointer group/sub"
-                            onClick={() => toggleSubtask(subtask.id)}
-                        >
-                            <div className={cn(
-                                "w-3.5 h-3.5 rounded border border-white/20 flex items-center justify-center transition-colors",
-                                subtask.completed ? "bg-emerald-500 border-emerald-500" : "group-hover/sub:border-white/40"
-                            )}>
-                                {subtask.completed && <Check size={10} className="text-white" />}
+                    <div className="flex items-center justify-between mb-2 px-1">
+                        <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Mission Objectives</span>
+                        <span className="text-[9px] text-[var(--accent-primary)]/60 font-mono font-bold">
+                            {currentSubtasks.filter(s => s.completed).length}/{currentSubtasks.length}
+                        </span>
+                    </div>
+
+                    <div className="space-y-1 mb-3 max-h-[200px] overflow-y-auto custom-scrollbar pr-1">
+                        {currentSubtasks.map(subtask => (
+                            <div
+                                key={subtask.id}
+                                className="flex items-center gap-3 px-2 py-1.5 rounded-xl hover:bg-white/5 transition-all cursor-pointer group/sub"
+                                onClick={() => toggleSubtask(subtask.id)}
+                            >
+                                <div className={cn(
+                                    "w-4 h-4 rounded border border-white/10 flex items-center justify-center transition-all shrink-0",
+                                    subtask.completed ? "bg-emerald-500 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "group-hover/sub:border-white/30"
+                                )}>
+                                    {subtask.completed && <Check size={11} className="text-white" />}
+                                </div>
+                                <span className={cn(
+                                    "text-xs truncate transition-all flex-1",
+                                    subtask.completed ? "text-white/20 line-through" : "text-white/70 group-hover/sub:text-white"
+                                )}>
+                                    {subtask.title}
+                                </span>
                             </div>
-                            <span className={cn(
-                                "text-[10px] truncate transition-all",
-                                subtask.completed ? "text-white/30 line-through" : "text-white/70"
-                            )}>
-                                {subtask.title}
-                            </span>
+                        ))}
+                        {currentSubtasks.length === 0 && (
+                            <div className="py-4 text-center border border-dashed border-white/5 rounded-xl bg-white/5">
+                                <span className="text-[10px] text-white/20 uppercase font-bold tracking-widest">Target is locked. No sub-missions.</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Add Subtask Input */}
+                    <form onSubmit={handleAddSubtask} className="relative mt-auto">
+                        <input
+                            type="text"
+                            placeholder="Add mission objective..."
+                            value={newSubtaskTitle}
+                            onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                            className="w-full h-10 bg-white/5 border border-white/10 rounded-xl px-4 text-xs text-white/80 outline-none focus:border-[var(--accent-primary)]/40 focus:bg-white/10 focus:ring-1 focus:ring-[var(--accent-primary)]/20 transition-all placeholder:text-white/20"
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg bg-white/5 text-white/20">
+                            <Plus size={14} />
                         </div>
-                    ))}
+                    </form>
                 </div>
             )}
         </div>

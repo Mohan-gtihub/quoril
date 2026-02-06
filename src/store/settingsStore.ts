@@ -10,6 +10,7 @@ interface SettingsState {
     pomodorosEnabled: boolean
     defaultBreakLength: number // minutes
     scrollingTitle: boolean
+    dailyFocusGoalMinutes: number // minutes
     superFocusMode: boolean
 
     // Alerts
@@ -41,6 +42,7 @@ export const useSettingsStore = create<SettingsState>()(
             pomodorosEnabled: false,
             defaultBreakLength: 10,
             scrollingTitle: true,
+            dailyFocusGoalMinutes: 240,
             superFocusMode: false,
 
             timedAlertsEnabled: true,

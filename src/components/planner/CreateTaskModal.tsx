@@ -14,7 +14,7 @@ export function CreateTaskModal({ isOpen, onClose, listId }: Props) {
     const { submit, loading, error } = useCreateTask(listId)
 
     const [title, setTitle] = useState('')
-    const [minutes, setMinutes] = useState(25)
+    const [minutes, setMinutes] = useState(0)
     const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium')
 
     /* Reset on close */
@@ -24,7 +24,7 @@ export function CreateTaskModal({ isOpen, onClose, listId }: Props) {
 
     function reset() {
         setTitle('')
-        setMinutes(25)
+        setMinutes(0)
         setPriority('medium')
     }
 
@@ -121,10 +121,11 @@ export function CreateTaskModal({ isOpen, onClose, listId }: Props) {
 
                     <input
                         type="number"
-                        min={5}
+                        min={0}
                         step={5}
-                        value={minutes}
-                        onChange={(e) => setMinutes(+e.target.value || 25)}
+                        value={minutes || ''}
+                        onChange={(e) => setMinutes(+e.target.value)}
+                        placeholder="Unlimited focus..."
                         className="w-full px-4 py-2 bg-[var(--bg-hover)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-xl outline-none focus:ring-1 focus:ring-[var(--accent-primary)]/50"
                     />
                 </div>

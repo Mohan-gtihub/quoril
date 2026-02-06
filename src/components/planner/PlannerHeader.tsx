@@ -1,32 +1,16 @@
-
-import { ChevronDown, Settings, User, LayoutGrid, Trash2 } from 'lucide-react'
+import { ChevronDown, Trash2, Search } from 'lucide-react'
 import { useListStore } from '@/store/listStore'
-import { useTaskStore } from '@/store/taskStore'
 import { useState } from 'react'
+import { DateNavigator } from './DateNavigator'
+import { IconButton } from '../dashboard/Dashboard'
 
 export function PlannerHeader() {
     const { lists, selectedListId, setSelectedList, deleteList } = useListStore()
-    const { tasks } = useTaskStore()
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
     const [hoveredListId, setHoveredListId] = useState<string | null>(null)
 
     const selectedList = lists.find(l => l.id === selectedListId)
 
-    // Calculate progress summary
-    const pendingTasks = tasks.filter(t => t.status !== 'done').length
-    const totalMinutes = tasks
-        .filter(t => t.status !== 'done')
-        .reduce((sum, t) => sum + (t.estimated_minutes || 0), 0)
-
-    const formatTime = (minutes: number) => {
-        if (minutes === 0) return '0min'
-        const hours = Math.floor(minutes / 60)
-        const mins = minutes % 60
-        if (hours > 0) {
-            return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`
-        }
-        return `${mins}min`
-    }
 
     const handleDeleteList = async (listId: string, listName: string, e: React.MouseEvent) => {
         e.stopPropagation()
@@ -49,8 +33,8 @@ export function PlannerHeader() {
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                    <div className="w-8 h-8 rounded bg-blue-600 flex items-center justify-center text-white font-bold">
-                        {selectedListId === 'all' ? <LayoutGrid className="w-5 h-5" /> : (selectedList?.name.charAt(0) || 'L')}
+                    <div className="w-8 h-8 rounded bg-[var(--accent-primary)] flex items-center justify-center text-white font-bold">
+                        {selectedListId === 'all' ? 'A' : (selectedList?.name.charAt(0) || 'L')}
                     </div>
                     <div className="text-left">
                         <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
@@ -76,7 +60,6 @@ export function PlannerHeader() {
                             onMouseEnter={(e) => { if (selectedListId !== 'all') e.currentTarget.style.backgroundColor = 'var(--bg-hover)' }}
                             onMouseLeave={(e) => { if (selectedListId !== 'all') e.currentTarget.style.backgroundColor = 'transparent' }}
                         >
-                            <LayoutGrid className="w-4 h-4" />
                             All Tasks
                         </button>
 
@@ -118,29 +101,21 @@ export function PlannerHeader() {
                 )}
             </div>
 
-            {/* Progress Summary */}
-            <div className="flex flex-col items-center">
-                <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                    {pendingTasks} pending tasks
-                </div>
-                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    Est: {formatTime(totalMinutes)}
-                </div>
+            {/* Center: Date Selection */}
+            <div className="flex-1 max-w-lg mx-8">
+                <DateNavigator />
             </div>
 
             {/* Right Controls */}
-            <div className="flex items-center gap-3">
-                <button className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold rounded-full hover:opacity-90 transition-opacity">
-                    PRO
+            <div className="flex items-center gap-1">
+                <IconButton icon={<Search size={16} />} />
+                <button className="px-3 py-1.5 bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-orange-500 text-[10px] font-black rounded-xl border border-orange-500/20 hover:bg-orange-500/30 transition-all uppercase tracking-widest mr-2">
+                    Premium
                 </button>
 
-                <button className="p-2 transition-colors" style={{ color: 'var(--text-muted)' }}>
-                    <Settings className="w-5 h-5" />
-                </button>
-
-                <button className="p-2 transition-colors" style={{ color: 'var(--text-muted)' }}>
-                    <User className="w-5 h-5" />
-                </button>
+                <div className="w-9 h-9 rounded-xl bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20 flex items-center justify-center text-[var(--accent-primary)] font-bold text-sm">
+                    {selectedListId === 'all' ? 'A' : (selectedList?.name.charAt(0) || 'U')}
+                </div>
             </div>
         </div>
     )

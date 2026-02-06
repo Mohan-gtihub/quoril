@@ -166,7 +166,7 @@ export const useFocusStore = create<FocusState>()(
                             // 1. Log Session
                             await localService.focus.create({
                                 user_id: user.id,
-                                task_id: s.taskId || '',
+                                task_id: s.taskId ?? '',
                                 start_time: new Date(Date.now() - (totalBreak * 1000)).toISOString(),
                                 end_time: new Date().toISOString(),
                                 planned_seconds: s.breakRemainingAtStart,
@@ -421,7 +421,7 @@ export const useFocusStore = create<FocusState>()(
                     set({ loading: true })
                     const { data, error } = await localService.focus.list()
                     if (error) throw error
-                    set({ sessions: data || [], loading: false })
+                    set({ sessions: data ?? [], loading: false })
                 } catch {
                     set({ loading: false })
                 }

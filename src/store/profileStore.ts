@@ -94,7 +94,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
             }
 
             let streak = 0
-            let currentStr = uniqueDates[0]
+            const currentStr = uniqueDates[0]
 
             // Verify start point
             if (currentStr !== today && currentStr !== yesterday) {

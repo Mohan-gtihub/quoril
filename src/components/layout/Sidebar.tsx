@@ -1,9 +1,87 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Plus, Zap, LayoutGrid, Bell, Settings, LogOut, BarChart3 } from 'lucide-react'
+import { LayoutGrid, Bell, Settings, LogOut, BarChart3 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/utils/helpers'
-import { useState } from 'react'
-import { useFocusStore } from '@/store/focusStore'
+import { useTaskStore } from '@/store/taskStore'
+import { subDays, format, startOfToday, isSameDay, addMonths, subMonths } from 'date-fns'
+import { useState, useMemo } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+
+function GithubContributionChart({ tasks }: { tasks: any[] }) {
+    const [viewDate, setViewDate] = useState(startOfToday())
+
+    const weeks = 12
+    const days = weeks * 7
+
+    const dates = useMemo(() => {
+        return Array.from({ length: days }).map((_, i) => subDays(viewDate, days - 1 - i))
+    }, [viewDate, days])
+
+    const getGlowStyle = (count: number) => {
+        if (count === 0) return { backgroundColor: '#161b22' }
+        if (count <= 2) return { backgroundColor: '#0e4429', opacity: 0.8 }
+        if (count <= 4) return { backgroundColor: '#006d32', boxShadow: '0 0 12px rgba(0, 109, 50, 0.4), inset 0 0 4px rgba(0, 0, 0, 0.3)' }
+        if (count <= 6) return { backgroundColor: '#26a641', boxShadow: '0 0 16px rgba(38, 166, 65, 0.7), inset 0 0 4px rgba(255, 255, 255, 0.2)' }
+        return { backgroundColor: '#39d353', boxShadow: '0 0 25px rgba(57, 211, 83, 1), inset 0 0 6px rgba(255, 255, 255, 0.4)' }
+    }
+
+    const completedDates = tasks
+        .filter(t => t.status === 'done' && t.completed_at)
+        .map(t => new Date(t.completed_at))
+
+    return (
+        <div className="space-y-3 px-1">
+            <div className="flex items-center justify-between px-2">
+                <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Focus Activity</h3>
+                <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-black text-[var(--text-tertiary)] uppercase whitespace-nowrap tabular-nums tracking-tighter">
+                        {format(viewDate, 'MMM yyyy')}
+                    </span>
+                    <div className="flex bg-[var(--bg-hover)] rounded-lg border border-[var(--border-default)] overflow-hidden">
+                        <button
+                            onClick={() => setViewDate(subMonths(viewDate, 1))}
+                            className="p-1 px-1.5 hover:text-[var(--text-primary)] transition-all hover:bg-[var(--bg-tertiary)] active:scale-90"
+                        >
+                            <ChevronLeft size={10} />
+                        </button>
+                        <button
+                            onClick={() => setViewDate(addMonths(viewDate, 1))}
+                            className="p-1 px-1.5 border-l border-[var(--border-default)] hover:text-[var(--text-primary)] transition-all hover:bg-[var(--bg-tertiary)] active:scale-90"
+                        >
+                            <ChevronRight size={10} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-[#0b0e14] border border-[var(--border-default)] p-3 rounded-2xl shadow-inner">
+                <div className="grid grid-cols-12 gap-1.5">
+                    {dates.map((date, i) => {
+                        const count = completedDates.filter(d => isSameDay(d, date)).length
+                        return (
+                            <div
+                                key={i}
+                                className="w-3.5 h-3.5 rounded-[3px] transition-all duration-500 cursor-crosshair transform hover:scale-125 hover:z-10"
+                                style={getGlowStyle(count)}
+                                title={`${format(date, 'MMM d, yyyy')}: ${count} focus missions`}
+                            />
+                        )
+                    })}
+                </div>
+                <div className="mt-4 flex items-center justify-between text-[9px] text-[var(--text-muted)] font-bold uppercase tracking-[0.2em]">
+                    <span className="opacity-50">Dormant</span>
+                    <div className="flex gap-1.5 items-center">
+                        <div className="w-2 h-2 rounded-[1px] bg-[#161b22]" />
+                        <div className="w-2 h-2 rounded-[1px] bg-[rgba(57,211,83,0.3)]" />
+                        <div className="w-2 h-2 rounded-[1px] bg-[rgba(57,211,83,0.7)]" />
+                        <div className="w-2 h-2 rounded-[1px] bg-[rgba(57,211,83,1)] shadow-[0_0_8px_rgba(57,211,83,0.8)]" />
+                    </div>
+                    <span className="text-[var(--accent-primary)]">Radiant</span>
+                </div>
+            </div>
+        </div>
+    )
+}
 
 export function Sidebar() {
     const { signOut, user } = useAuthStore()
@@ -12,24 +90,11 @@ export function Sidebar() {
 
     const isDashboard = location.pathname === '/dashboard'
 
-    const { startSession, setShowFocusPanel } = useFocusStore()
-    const [isDragOver, setIsDragOver] = useState(false)
-
     const handleSignOut = async () => {
         try {
             await signOut()
         } catch (error) {
             console.error('Sign out error:', error)
-        }
-    }
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault()
-        setIsDragOver(false)
-        const taskId = e.dataTransfer.getData('taskId')
-        if (taskId) {
-            startSession(taskId)
-            setShowFocusPanel(true)
         }
     }
 
@@ -57,50 +122,8 @@ export function Sidebar() {
                 </button>
             </div>
 
-            {/* PREMIUM FOCUS DROP ZONE */}
-            <div
-                onDragOver={(e) => {
-                    e.preventDefault()
-                    setIsDragOver(true)
-                }}
-                onDragLeave={() => setIsDragOver(false)}
-                onDrop={handleDrop}
-                className={cn(
-                    "relative group p-5 rounded-[2rem] border-2 border-dashed transition-all duration-500 flex flex-col items-center justify-center gap-3 overflow-hidden",
-                    isDragOver
-                        ? "bg-[var(--accent-primary)]/20 border-[var(--accent-primary)] scale-[1.05] shadow-[0_0_40px_var(--accent-glow)] ring-4 ring-[var(--accent-primary)]/10"
-                        : "bg-[var(--bg-hover)] border-[var(--border-default)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-hover)]"
-                )}
-            >
-                {/* Background Glow */}
-                <div className={cn(
-                    "absolute inset-0 opacity-20 transition-opacity duration-500",
-                    isDragOver ? "opacity-40 bg-gradient-to-b from-[var(--accent-primary)]/20 to-transparent" : "opacity-0"
-                )} />
-
-                <div className={cn(
-                    "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 shadow-2xl relative z-10",
-                    isDragOver
-                        ? "bg-[var(--accent-primary)] text-white rotate-12 scale-110 shadow-[var(--accent-primary)]/50"
-                        : "bg-[var(--bg-secondary)] text-[var(--accent-primary)]/50 group-hover:text-[var(--accent-primary)] group-hover:scale-105"
-                )}>
-                    <Zap className={cn("w-7 h-7 transition-all", isDragOver && "fill-current animate-pulse")} />
-                </div>
-
-                <div className="text-center relative z-10">
-                    <p className={cn(
-                        "text-[10px] font-black uppercase tracking-[0.25em] transition-colors duration-300",
-                        isDragOver ? "text-[var(--accent-primary)]" : "text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]"
-                    )}>
-                        {isDragOver ? "Release to Begin" : "Deep Work Zone"}
-                    </p>
-                    <p className="text-[9px] text-[var(--text-muted)] mt-1 font-medium italic">Drop any task into the void</p>
-                </div>
-
-                {isDragOver && (
-                    <div className="absolute inset-0 bg-[var(--accent-primary)]/5 animate-pulse pointer-events-none" />
-                )}
-            </div>
+            {/* GITHUB STREAK CHART */}
+            <GithubContributionChart tasks={useTaskStore().tasks} />
 
             {/* Sidebar Navigation */}
             <div className="flex-1 space-y-6">
@@ -132,20 +155,27 @@ export function Sidebar() {
                     </button>
                 </div>
 
-                <div className="space-y-1 pt-4 border-t border-[var(--border-default)]">
-                    <h3 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest px-3 mb-2">Quick Actions</h3>
-                    <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition group">
-                        <div className="w-5 h-5 rounded border border-[var(--border-default)] flex items-center justify-center group-hover:border-[var(--accent-primary)]/50 group-hover:bg-[var(--accent-primary)]/10 transition">
-                            <Plus className="w-3 h-3 text-[var(--text-tertiary)] group-hover:text-[var(--accent-primary)]" />
-                        </div>
-                        Create new list
+                <div className="pt-2">
+                    <button
+                        onClick={() => navigate('/settings')}
+                        className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded-xl transition"
+                    >
+                        <Settings className="w-4 h-4 text-[var(--text-tertiary)]" />
+                        Settings
+                    </button>
+                    <button
+                        onClick={handleSignOut}
+                        className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-[var(--error)] hover:bg-[var(--error)]/10 rounded-xl transition"
+                    >
+                        <LogOut className="w-4 h-4" />
+                        Sign Out
                     </button>
                 </div>
             </div>
 
             {/* User Profile / Status */}
             <div className="pt-6 border-t border-[var(--border-default)]">
-                <div className="flex items-center gap-3 bg-[var(--bg-hover)] p-3 rounded-2xl relative group overflow-hidden border border-transparent hover:border-[var(--border-default)] transition-all">
+                <div className="flex items-center gap-3 bg-[var(--bg-hover)] p-3 rounded-2xl relative group overflow-hidden border border-[var(--border-default)] transition-all">
                     <div className="w-10 h-10 rounded-xl bg-[var(--accent-primary)] flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-[var(--accent-primary)]/10 shrink-0">
                         {user?.email?.charAt(0).toUpperCase()}
                     </div>
@@ -153,13 +183,6 @@ export function Sidebar() {
                         <p className="text-sm font-bold text-[var(--text-primary)] truncate">{user?.email?.split('@')[0]}</p>
                         <p className="text-[10px] text-[var(--text-muted)] truncate">{user?.email}</p>
                     </div>
-                    <button
-                        onClick={handleSignOut}
-                        className="p-2 rounded-xl text-[var(--error)] hover:bg-[var(--error)]/10 transition-colors"
-                        title="Logout"
-                    >
-                        <LogOut className="w-4 h-4" />
-                    </button>
                 </div>
             </div>
         </aside>

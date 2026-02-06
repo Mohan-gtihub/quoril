@@ -65,9 +65,9 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
     const [isEditingTitle, setIsEditingTitle] = useState(false)
     const [titleInput, setTitleInput] = useState(task.title)
     const [isEditingEst, setIsEditingEst] = useState(false)
-    const [estInput, setEstInput] = useState(formatTimeInput(task.estimated_minutes || 0))
+    const [estInput, setEstInput] = useState(formatTimeInput(task.estimated_minutes ?? 0))
     const [isEditingActual, setIsEditingActual] = useState(false)
-    const [actualInput, setActualInput] = useState(formatTimeInput(Math.floor((task.actual_seconds || 0) / 60)))
+    const [actualInput, setActualInput] = useState(formatTimeInput(Math.floor((task.actual_seconds ?? 0) / 60)))
     const [descriptionInput, setDescriptionInput] = useState(task.description || '')
     const [isExpanded, setIsExpanded] = useState(false)
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
@@ -313,7 +313,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                             ) : (
                                 <span className="flex items-center gap-1 lowercase tracking-tight">
                                     <Zap className="w-3 h-3 text-amber-500/50" />
-                                    {task.estimated_minutes ? `${formatTimeInput(task.estimated_minutes)}` : 'set est'}
+                                    {(task.estimated_minutes ?? 0) > 0 ? `${formatTimeInput(task.estimated_minutes!)}` : 'unlimited'}
                                 </span>
                             )}
                         </div>
@@ -372,7 +372,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                         {isTaskActive ? (
                             <span className={cn(
                                 "animate-pulse px-2 py-0.5 rounded-md bg-[var(--bg-hover)]",
-                                displayRemainingSeconds < 0 ? "text-[var(--error)]" : "text-[var(--accent-primary)]"
+                                (isTaskActive ? timer.isOvertime : (task.estimated_minutes ?? 0) > 0 && displayRemainingSeconds < 0) ? "text-[var(--error)]" : "text-[var(--accent-primary)]"
                             )}>
                                 {formatRemainingTime(displayRemainingSeconds)}
                             </span>

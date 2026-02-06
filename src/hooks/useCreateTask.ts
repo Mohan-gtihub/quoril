@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useTaskStore } from '@/store/taskStore'
 import { useFocusStore } from '@/store/focusStore'
+import { usePlannerStore } from '@/store/plannerStore'
 
 const DAILY_LIMIT = 8 * 60 // 8 hours
 
 export function useCreateTask(listId: string) {
     const { createTask, getTodayPlannedMinutes } = useTaskStore()
     const { startFocus } = useFocusStore()
+    const { selectedDate } = usePlannerStore()
 
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -24,8 +26,8 @@ export function useCreateTask(listId: string) {
             return
         }
 
-        if (data.minutes < 5) {
-            setError('Minimum focus time is 5 minutes')
+        if (data.minutes < 0) {
+            setError('Focus time cannot be negative')
             return
         }
 
@@ -45,6 +47,7 @@ export function useCreateTask(listId: string) {
                     title: data.title.trim(),
                     priority: data.priority,
                     estimated_minutes: data.minutes,
+                    due_date: selectedDate.toISOString(),
                 },
                 'today' // DEFAULT COLUMN
             )

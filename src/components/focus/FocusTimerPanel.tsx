@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useFocusStore } from '@/store/focusStore'
 import { useTaskStore } from '@/store/taskStore'
 import { useListStore } from '@/store/listStore'
@@ -19,7 +19,8 @@ import {
     Plus,
     XCircle,
     Settings,
-    Home
+    Home,
+    Check
 } from 'lucide-react'
 
 import {
@@ -62,7 +63,7 @@ function formatTime(sec: number) {
 
 export function FocusTimerPanel() {
     const focus = useFocusStore()
-    const { tasks, moveTaskToColumn, reorderTasks } = useTaskStore()
+    const { tasks, moveTaskToColumn, reorderTasks, createSubtask, toggleSubtask, fetchSubtasks, subtasks } = useTaskStore()
     const { selectedListId, lists } = useListStore()
 
     const [showCreateModal, setShowCreateModal] = useState(false)
@@ -121,7 +122,7 @@ export function FocusTimerPanel() {
 
                 return useTaskStore.getState().getColumnStatuses('today').includes(t.status)
             })
-            .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     }, [tasks, taskId, selectedListId, lists])
 
     /* ---------- DND ---------- */
@@ -161,6 +162,20 @@ export function FocusTimerPanel() {
 
     /* ---------- ACTIONS ---------- */
     /* ---------- ACTIONS ---------- */
+    const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
+    const currentSubtasks = taskId ? (subtasks[taskId] || []) : []
+
+    useEffect(() => {
+        if (taskId) fetchSubtasks(taskId)
+    }, [taskId, fetchSubtasks])
+
+    const handleAddSubtask = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!newSubtaskTitle.trim() || !taskId) return
+        await createSubtask(taskId, newSubtaskTitle.trim())
+        setNewSubtaskTitle('')
+    }
+
     const handleDone = async () => {
         if (focus.isBreak) {
             await focus.stopBreak()
@@ -196,7 +211,7 @@ export function FocusTimerPanel() {
 
 
     // Calculate stats
-    const totalEstimatedTime = nextTasks.reduce((acc, t) => acc + (t.estimated_minutes || 0), 0)
+    const totalEstimatedTime = nextTasks.reduce((acc, t) => acc + (t.estimated_minutes ?? 0), 0)
     const completedTasks = tasks.filter(t => t.status === 'done' && !t.deleted_at).length
 
     return (
@@ -325,6 +340,50 @@ export function FocusTimerPanel() {
                                                     : progress)}%`,
                                             }}
                                         />
+                                    </div>
+                                )}
+
+                                {/* Subtasks Section */}
+                                {!isBreak && (
+                                    <div className="mb-4 bg-black/20 rounded-xl p-3 border border-white/5">
+                                        <div className="flex items-center justify-between mb-2 px-1">
+                                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Sub-Missions</span>
+                                            <span className="text-[10px] text-white/30 font-mono">
+                                                {currentSubtasks.filter(s => s.completed).length}/{currentSubtasks.length}
+                                            </span>
+                                        </div>
+                                        <div className="space-y-1.5 max-h-[120px] overflow-y-auto custom-scrollbar pr-1 mb-2">
+                                            {currentSubtasks.map(sub => (
+                                                <div
+                                                    key={sub.id}
+                                                    className="flex items-center gap-2 group/sub cursor-pointer"
+                                                    onClick={() => toggleSubtask(sub.id)}
+                                                >
+                                                    <div className={cn(
+                                                        "w-3.5 h-3.5 rounded border border-white/10 flex items-center justify-center transition-colors shrink-0",
+                                                        sub.completed ? "bg-emerald-500 border-emerald-500" : "group-hover/sub:border-white/30"
+                                                    )}>
+                                                        {sub.completed && <Check size={10} className="text-white" />}
+                                                    </div>
+                                                    <span className={cn(
+                                                        "text-xs truncate flex-1",
+                                                        sub.completed ? "text-white/20 line-through" : "text-white/60 group-hover/sub:text-white"
+                                                    )}>
+                                                        {sub.title}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <form onSubmit={handleAddSubtask} className="relative">
+                                            <input
+                                                type="text"
+                                                placeholder="Add sub-mission..."
+                                                value={newSubtaskTitle}
+                                                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                                                className="w-full h-8 bg-white/5 border border-white/5 rounded-lg px-3 text-xs text-white/70 outline-none focus:border-emerald-500/30 focus:bg-white/10 transition-all"
+                                            />
+                                            <Plus className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-white/20" />
+                                        </form>
                                     </div>
                                 )}
 
@@ -466,7 +525,7 @@ export function FocusTimerPanel() {
                                         {completedTasks} Done
                                     </span>
                                     <span className="text-xs text-white/30">
-                                        {Math.floor(tasks.filter(t => t.status === 'done').reduce((acc, t) => acc + (t.estimated_minutes || 0), 0) / 60)}h {tasks.filter(t => t.status === 'done').reduce((acc, t) => acc + (t.estimated_minutes || 0), 0) % 60}min
+                                        {Math.floor(tasks.filter(t => t.status === 'done').reduce((acc, t) => acc + (t.estimated_minutes ?? 0), 0) / 60)}h {tasks.filter(t => t.status === 'done').reduce((acc, t) => acc + (t.estimated_minutes ?? 0), 0) % 60}min
                                     </span>
                                 </div>
                             </div>

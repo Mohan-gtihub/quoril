@@ -9,7 +9,7 @@ export const getTaskTotalActual = (task: Task | null | undefined, includeLive: b
     if (!task) return 0
 
     // Ensure base is integer (use spent_s from DB)
-    const baseSeconds = Math.floor(task.spent_s || 0)
+    const baseSeconds = Math.floor(task.spent_s ?? 0)
 
     // Only include live delta if requested (legacy or non-focus calculation)
     let liveDelta = 0
@@ -17,7 +17,7 @@ export const getTaskTotalActual = (task: Task | null | undefined, includeLive: b
         liveDelta = Math.floor((Date.now() - new Date(task.started_at).getTime()) / 1000)
     }
 
-    const backupValue = backupService.get(task.id) || 0
+    const backupValue = backupService.get(task.id) ?? 0
     // Return integer to prevent floating-point values in DB
     return Math.floor(Math.max(baseSeconds + liveDelta, backupValue))
 }
@@ -33,13 +33,13 @@ export const hydrateElapsed = (task: Task | null | undefined): number => {
 }
 
 export const getTaskEstimate = (task: Task | null | undefined): number => {
-    if (!task) return 25 * 60
-    const minutes = task.estimated_minutes || 0
-    return minutes > 0 ? minutes * 60 : 25 * 60
+    if (!task) return 0
+    const minutes = task.estimated_minutes ?? 0
+    return minutes * 60
 }
 
 export const calculateRemainingSeconds = (task: Task | null | undefined, activeElapsedSeconds: number = 0): number => {
-    if (!task) return 25 * 60
+    if (!task) return 0
 
     const estimate = getTaskEstimate(task)
     // If activeElapsedSeconds is 0, we check if the task has a live 'started_at' to include.
@@ -56,5 +56,5 @@ export const calculateRemainingSeconds = (task: Task | null | undefined, activeE
  * @deprecated Use calculateRemainingSeconds instead for better clarity
  */
 export const calculateSessionDuration = (task: Task): number => {
-    return Math.max(0, calculateRemainingSeconds(task, 0))
+    return calculateRemainingSeconds(task, 0)
 }

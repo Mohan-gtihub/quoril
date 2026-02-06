@@ -1,0 +1,24 @@
+﻿
+> quoril@1.0.0 lint
+> eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0
+
+
+C:\Users\Asus\Documents\code\blitzit-clone\electron\main\index.ts
+  124:17  error  Empty block statement  no-empty
+
+C:\Users\Asus\Documents\code\blitzit-clone\src\components\reports\Reports.tsx
+  60:13  warning  'totalBreakSeconds' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Asus\Documents\code\blitzit-clone\src\services\dataSyncService.ts
+  235:25  error  Empty block statement  no-empty
+
+C:\Users\Asus\Documents\code\blitzit-clone\src\store\profileStore.ts
+  97:17  error  'currentStr' is never reassigned. Use 'const' instead  prefer-const
+
+C:\Users\Asus\Documents\code\blitzit-clone\src\store\taskStore.ts
+  145:17  error  'finalTask' is never reassigned. Use 'const' instead  prefer-const
+  193:17  error  'final' is never reassigned. Use 'const' instead      prefer-const
+
+Γ£û 6 problems (5 errors, 1 warning)
+  3 errors and 0 warnings potentially fixable with the `--fix` option.
+

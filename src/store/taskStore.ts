@@ -114,7 +114,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             )
 
             return data.sort(
-                (a, b) => (a.sort_order || 0) - (b.sort_order || 0)
+                (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
             )
         } catch {
             return []
@@ -138,11 +138,11 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             )
 
             const maxOrder = siblings.reduce(
-                (m, t) => Math.max(m, t.sort_order || 0),
+                (m, t) => Math.max(m, t.sort_order ?? 0),
                 -1
             )
 
-            let finalTask: Partial<Task> = {
+            const finalTask: Partial<Task> = {
                 ...task,
                 status,
                 sort_order: maxOrder + 1,
@@ -190,7 +190,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         try {
             set({ error: null })
 
-            let final = { ...updates }
+            const final = { ...updates }
 
             if (final.title && final.estimated_minutes === undefined) {
                 const { cleanTitle, minutes } =
@@ -360,7 +360,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             )
 
             const max = targets.reduce(
-                (m, t) => Math.max(m, t.sort_order || 0),
+                (m, t) => Math.max(m, t.sort_order ?? 0),
                 -1
             )
 
@@ -429,7 +429,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             )
             .reduce(
                 (sum, t) =>
-                    sum + (t.estimated_minutes || 0),
+                    sum + (t.estimated_minutes ?? 0),
                 0
             )
     },

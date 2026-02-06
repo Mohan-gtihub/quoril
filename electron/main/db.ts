@@ -8,17 +8,26 @@ let db: Database.Database
 /* ---------------- INIT ---------------- */
 
 export async function initDatabase() {
+    console.log('[DB] Initializing database...')
     const dir = app.getPath('userData')
     const file = path.join(dir, 'quoril_v2.sqlite')
 
+    console.log('[DB] Path:', file)
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 
-    db = new Database(file)
+    try {
+        db = new Database(file)
+        console.log('[DB] Database instance created.')
 
-    db.pragma('journal_mode = WAL')
-    db.pragma('synchronous = NORMAL')
+        db.pragma('journal_mode = WAL')
+        db.pragma('synchronous = NORMAL')
 
-    autoMigrate()
+        autoMigrate()
+        console.log('[DB] Initialization complete.')
+    } catch (err) {
+        console.error('[DB] Failed to create database instance:', err)
+        throw err
+    }
 }
 
 /* ---------------- MIGRATION ---------------- */
@@ -199,16 +208,18 @@ function sanitize(values: any[]) {
 /* ---------------- CORE EXEC ---------------- */
 
 function exec(sql: string, params: any[] = []) {
+    if (!db) {
+        console.error('[DB ERROR] exec called before database initialization!', sql)
+        throw new Error('Database not initialized')
+    }
     const clean = sanitize(params)
 
     try {
-
         if (sql.trim().toUpperCase().startsWith('SELECT')) {
             return db.prepare(sql).all(...clean)
         }
 
         return db.prepare(sql).run(...clean)
-
     } catch (e) {
         console.error('[DB ERROR]', sql, params, e)
         throw e

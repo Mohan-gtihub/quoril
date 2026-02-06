@@ -14,6 +14,8 @@ import { TaskDetailsPanel } from './TaskDetailsPanel'
 import { TaskCard } from './TaskCard'
 import { TodayColumn } from './TodayColumn'
 import { PlannerHeader } from './PlannerHeader'
+import { usePlannerStore } from '@/store/plannerStore'
+import { isSameDay, startOfToday, format } from 'date-fns'
 import toast from 'react-hot-toast'
 
 interface ColumnDef {
@@ -23,17 +25,7 @@ interface ColumnDef {
     color: string
 }
 
-const COLUMNS: ColumnDef[] = [
-    { id: 'backlog', title: 'Backlog', subtitle: 'Idea Storage', color: 'bg-gray-500' },
-    { id: 'this_week', title: 'This Week', subtitle: 'Short-term Plan', color: 'bg-purple-500' },
-    { id: 'today', title: 'Today', subtitle: 'Execution Center', color: 'bg-blue-500' },
-    { id: 'done', title: 'Done', subtitle: 'History & Motivation', color: 'bg-green-500' },
-]
 
-const isSameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
 
 // -- Sub-Component for Droppable Column --
 function BoardColumn({
@@ -252,6 +244,18 @@ export function Planner() {
     const { selectedListId, lists } = useListStore()
     const { tasks, fetchTasks, moveTaskToColumn, reorderTasks, selectedTaskId } = useTaskStore()
     const { startSession, isActive, taskId: activeFocusId, setShowFocusPanel, endSession } = useFocusStore()
+    const { selectedDate } = usePlannerStore()
+
+    const columns_def: ColumnDef[] = useMemo(() => {
+        const isSelectedToday = isSameDay(selectedDate, startOfToday())
+        const dayName = format(selectedDate, 'EEEE')
+        return [
+            { id: 'backlog', title: 'Backlog', subtitle: 'Idea Storage', color: 'bg-gray-500' },
+            { id: 'this_week', title: 'This Week', subtitle: 'Short-term Plan', color: 'bg-purple-500' },
+            { id: 'today', title: isSelectedToday ? 'Today' : dayName, subtitle: 'Execution Center', color: 'bg-blue-500' },
+            { id: 'done', title: 'Done', subtitle: 'History & Motivation', color: 'bg-green-500' },
+        ]
+    }, [selectedDate])
 
     const selectedList = lists.find(l => l.id === selectedListId)
 
@@ -285,17 +289,33 @@ export function Planner() {
             }
 
             const { getColumnStatuses } = useTaskStore.getState()
-            if (getColumnStatuses('backlog').includes(task.status)) cols.backlog.push(task)
-            else if (getColumnStatuses('this_week').includes(task.status)) cols.this_week.push(task)
-            else if (getColumnStatuses('today').includes(task.status)) cols.today.push(task)
-            else if (getColumnStatuses('done').includes(task.status)) cols.done.push(task)
+
+            // FILTERS BY DATE
+            const taskDate = task.due_date ? new Date(task.due_date) : null
+            const completedDate = task.completed_at ? new Date(task.completed_at) : null
+
+            if (getColumnStatuses('backlog').includes(task.status)) {
+                cols.backlog.push(task)
+            } else if (getColumnStatuses('this_week').includes(task.status)) {
+                cols.this_week.push(task)
+            } else if (getColumnStatuses('today').includes(task.status)) {
+                // TODAY LOGIC: 
+                // 1. If viewing actual today, show EVERYTHING currently active/paused.
+                // 2. If viewing a future/past day, show ONLY what was scheduled for that day.
+                if (isSameDay(selectedDate, startOfToday())) {
+                    cols.today.push(task)
+                } else if (taskDate && isSameDay(taskDate, selectedDate)) {
+                    cols.today.push(task)
+                }
+            } else if (getColumnStatuses('done').includes(task.status)) {
+                // Done only shows tasks completed ON the selected date
+                if (completedDate && isSameDay(completedDate, selectedDate)) {
+                    cols.done.push(task)
+                }
+            }
         })
 
-        // Time-based progress calculation
         const getProgress = (targetCols: Task[], doneCol: Task[]) => {
-            // For columns like Today, progress = (Done Today) / (Active Today + Done Today)
-            // But we need to filter 'Done' for those completed 'today'.
-            // For now, let's use a simpler total-based approach for the list if showing 'today' progress.
             const targetEst = targetCols.reduce((s, t) => s + (t.estimated_minutes || 0), 0)
             const doneEst = doneCol.reduce((s, t) => s + (t.estimated_minutes || 0), 0)
             const total = targetEst + doneEst
@@ -303,12 +323,8 @@ export function Planner() {
         }
 
         const map: Partial<Record<TaskColumn, number>> = {
-            today: getProgress(cols.today, cols.done.filter(t => {
-                if (!t.completed_at) return false
-                const d = new Date(t.completed_at)
-                return d.toDateString() === new Date().toDateString()
-            })),
-            this_week: getProgress(cols.this_week, cols.done.filter(t => {
+            today: getProgress(cols.today, cols.done),
+            this_week: getProgress(cols.this_week, tasks.filter(t => {
                 if (!t.completed_at) return false
                 const d = new Date(t.completed_at)
                 const now = new Date()
@@ -318,7 +334,7 @@ export function Planner() {
         }
 
         return { columns: cols, progressMap: map }
-    }, [tasks, selectedListId])
+    }, [tasks, selectedListId, selectedDate])
 
     const [showCreateModal, setShowCreateModal] = useState<{ column: TaskColumn, position: 'top' | 'bottom' } | null>(null)
     const [activeTask, setActiveTask] = useState<Task | null>(null)
@@ -355,7 +371,7 @@ export function Planner() {
         let targetColumn = over.id as TaskColumn
 
         // Check if we dropped over a task instead of a column
-        const isColumn = COLUMNS.some(c => c.id === targetColumn)
+        const isColumn = columns_def.some(c => c.id === targetColumn)
         if (!isColumn) {
             // Find which column the target task belongs to
             for (const [col, tasks] of Object.entries(tasksByColumn)) {
@@ -366,7 +382,7 @@ export function Planner() {
             }
         }
 
-        if (!COLUMNS.some(c => c.id === targetColumn)) return
+        if (!columns_def.some(c => c.id === targetColumn)) return
 
         // Find source column
         let sourceColumn: TaskColumn | null = null
@@ -402,7 +418,7 @@ export function Planner() {
             if (targetColumn === 'done' && taskId === activeFocusId) {
                 await endSession()
             }
-            const targetTitle = COLUMNS.find(c => c.id === targetColumn)?.title || targetColumn
+            const targetTitle = columns_def.find(c => c.id === targetColumn)?.title || targetColumn
             toast.success(`Moved to ${targetTitle}`)
         } catch {
             toast.error('Failed to move task')
@@ -448,7 +464,6 @@ export function Planner() {
 
     return (
         <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--bg-primary)' }}>
-            {/* 1. Top Bar */}
             <PlannerHeader />
 
             <DndContext
@@ -460,11 +475,12 @@ export function Planner() {
                 {/* Board Columns container */}
                 <div className="flex-1 overflow-x-auto overflow-y-hidden p-6">
                     <div className="flex h-full gap-6 min-w-max">
-                        {COLUMNS.map((col) => {
+                        {columns_def.map((col) => {
                             if (col.id === 'today') {
                                 return (
                                     <div key={col.id} className="w-96 min-w-[384px]">
                                         <TodayColumn
+                                            title={col.title}
                                             tasks={tasksByColumn[col.id]}
                                             columnId={col.id}
                                             onTaskComplete={(id) => handleTaskComplete(id, col.id)}

@@ -1,0 +1,68 @@
+﻿[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 1079 modules transformed.
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 2 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist-electron/[22m[36mindex.js  [39m[1m[2m13.93 kB[22m[1m[22m[2m Γöé gzip: 3.63 kB[22m
+[32mΓ£ô built in 1.43s[39m
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 1 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist-electron/[22m[36mindex.mjs  [39m[1m[2m2.49 kB[22m[1m[22m[2m Γöé gzip: 0.70 kB[22m
+[32mΓ£ô built in 67ms[39m
+node.exe : [31mx[39m Build failed in 3.81s
+At 
+C:\Users\Asus\AppData\Roaming\npm\npx.ps1:24 
+char:5
++     & "node$exe"  
+"$basedir/node_modules/npm/bin/npx-cli.js" 
+$args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( 
+   [31mx[39m Build failed in 3.81s:String)  
+   [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandEr 
+   ror
+ 
+[31merror during build:
+[31m[vite]: Rollup failed to resolve import 
+"canvas-confetti" from "C:/Users/Asus/Document
+s/code/blitzit-clone/src/components/ui/Complet
+ionCelebration.tsx".
+This is most likely unintended because it can 
+break your application at runtime.
+If you do want to externalize this module 
+explicitly add it to
+`build.rollupOptions.external`[31m
+    at viteWarn (file:///C:/Users/Asus/Documen
+ts/code/blitzit-clone/node_modules/vite/dist/n
+ode/chunks/dep-BK3b2jBa.js:65855:17)
+    at onwarn (file:///C:/Users/Asus/Documents
+/code/blitzit-clone/node_modules/@vitejs/plugi
+n-react/dist/index.js:90:7)
+    at onRollupWarning (file:///C:/Users/Asus/
+Documents/code/blitzit-clone/node_modules/vite
+/dist/node/chunks/dep-BK3b2jBa.js:65885:5)
+    at onwarn (file:///C:/Users/Asus/Documents
+/code/blitzit-clone/node_modules/vite/dist/nod
+e/chunks/dep-BK3b2jBa.js:65550:7)
+    at file:///C:/Users/Asus/Documents/code/bl
+itzit-clone/node_modules/rollup/dist/es/shared
+/node-entry.js:20972:13
+    at Object.logger [as onLog] (file:///C:/Us
+ers/Asus/Documents/code/blitzit-clone/node_mod
+ules/rollup/dist/es/shared/node-entry.js:22945
+:9)
+    at ModuleLoader.handleInvalidResolvedId (f
+ile:///C:/Users/Asus/Documents/code/blitzit-cl
+one/node_modules/rollup/dist/es/shared/node-en
+try.js:21689:26)
+    at file:///C:/Users/Asus/Documents/code/bl
+itzit-clone/node_modules/rollup/dist/es/shared
+/node-entry.js:21647:26[39m

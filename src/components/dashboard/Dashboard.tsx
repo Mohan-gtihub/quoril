@@ -8,13 +8,15 @@ import {
     Search,
     Settings,
     MoreVertical,
-    LayoutGrid,
     Zap
 } from 'lucide-react'
 
 import type { List, ListWithStats } from '@/types/list'
 import type { Task } from '@/types/database'
 import { CreateListModal } from './CreateListModal'
+import { DateNavigator } from '../planner/DateNavigator'
+import { usePlannerStore } from '@/store/plannerStore'
+import { isSameDay, startOfToday } from 'date-fns'
 
 export function Dashboard() {
     const [showArchived, setShowArchived] = useState(false)
@@ -30,7 +32,8 @@ export function Dashboard() {
         getListStats,
         duplicateList,
         deleteList,
-        restoreList
+        restoreList,
+        permanentDeleteList
     } = useListStore((state) => state)
 
     const { tasks, fetchTasks } = useTaskStore((state) => state)
@@ -66,23 +69,9 @@ export function Dashboard() {
         if (lists.length || archivedLists.length) {
             loadStats()
         }
-    }, [lists, archivedLists])
+    }, [lists, archivedLists, getListStats])
 
     /* ---------------- HELPERS ---------------- */
-
-    const getGreeting = () => {
-        const hour = new Date().getHours()
-
-        if (hour < 5 || hour >= 21) return 'Good Night'
-        if (hour < 12) return 'Good Morning'
-        if (hour < 17) return 'Good Afternoon'
-        return 'Good Evening'
-    }
-
-    const getUserName = () => {
-        if (!user?.email) return 'User'
-        return user.email.split('@')[0]
-    }
 
     const handleListClick = (id: string | 'all') => {
         setSelectedList(id === 'all' ? 'all' : id)
@@ -116,9 +105,18 @@ export function Dashboard() {
         return map
     }, [tasks])
 
+    const { selectedDate } = usePlannerStore()
+
     const allListsStats = useMemo(() => {
         const activeListIds = new Set(lists.map(l => l.id))
-        const pending = tasks.filter(t => t.status !== 'done' && activeListIds.has(t.list_id || ''))
+        const pending = tasks.filter(t => {
+            if (t.status === 'done') return false
+            if (!activeListIds.has(t.list_id || '')) return false
+
+            const taskDate = t.due_date ? new Date(t.due_date) : null
+            if (taskDate) return isSameDay(taskDate, selectedDate)
+            return isSameDay(selectedDate, startOfToday())
+        })
 
         const minutes = pending.reduce(
             (s, t) => s + (t.estimated_minutes || 0),
@@ -129,7 +127,7 @@ export function Dashboard() {
             count: pending.length,
             timeLabel: formatTime(minutes)
         }
-    }, [tasks, lists])
+    }, [tasks, lists, selectedDate])
 
     const visibleLists = showArchived ? archivedLists : lists
 
@@ -138,39 +136,28 @@ export function Dashboard() {
     return (
         <div className="flex flex-col h-full ambient-bg text-gray-300 overflow-hidden">
 
-            {/* HEADER */}
-
-            <header className="h-20 px-8 flex items-center justify-between border-b border-[var(--border-default)] bg-[var(--bg-secondary)]">
-
-                <div>
-                    <h2 className="text-2xl font-black text-[var(--text-primary)]">
-                        {getGreeting()}, {getUserName()}
-                    </h2>
-
-                    <p className="text-xs text-[var(--text-tertiary)] mt-1">
-                        Ready to blitz through your tasks?
-                    </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-
-                    <IconButton icon={<Search size={16} />} />
-                    <IconButton icon={<LayoutGrid size={16} />} />
-                    <IconButton icon={<Settings size={16} />} />
-
-                    <div className="w-9 h-9 rounded-xl bg-[var(--accent-primary)]/20 border border-[var(--accent-primary)]/20 flex items-center justify-center text-[var(--accent-primary)] font-bold">
-                        {user?.email?.charAt(0).toUpperCase()}
-                    </div>
-
-                </div>
-            </header>
-
             {/* CONTENT */}
+            <main className="flex-1 overflow-y-auto w-full">
+                {/* Header-like top section inside main */}
+                <div className="h-20 px-8 flex items-center justify-between border-b border-[var(--border-default)] bg-[var(--bg-secondary)] sticky top-0 z-30">
+                    <DateNavigator />
 
-            <main className="flex-1 overflow-y-auto p-8">
+                    <div className="flex items-center gap-4">
+                        <div className="hidden lg:flex flex-col items-end">
+                            <span className="text-[10px] font-black text-[var(--accent-primary)] uppercase tracking-widest">{allListsStats.count} TASKS</span>
+                            <span className="text-[9px] text-[var(--text-muted)] font-mono">{allListsStats.timeLabel}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 ml-2">
+                            <IconButton icon={<Search size={14} />} />
+                            <IconButton icon={<Settings size={14} />} />
+                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[var(--bg-tertiary)] to-[var(--bg-hover)] border border-[var(--border-default)] flex items-center justify-center text-[var(--text-primary)] font-black text-xs shadow-inner">
+                                {user?.email?.charAt(0).toUpperCase()}
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                <div className="max-w-7xl mx-auto">
-
+                <div className="max-w-7xl mx-auto p-8">
                     {/* TITLE */}
 
                     <div className="flex justify-between mb-8">
@@ -275,7 +262,7 @@ export function Dashboard() {
                                     onRestore={showArchived ? () => restoreList(list.id) : undefined}
                                     onDelete={showArchived ? () => {
                                         if (window.confirm('Permanently delete this list and all its tasks?')) {
-                                            useListStore.getState().permanentDeleteList(list.id)
+                                            permanentDeleteList(list.id)
                                         }
                                     } : undefined}
                                 />
@@ -323,9 +310,12 @@ export function Dashboard() {
 
 /* ================= COMPONENTS ================= */
 
-function IconButton({ icon }: { icon: React.ReactNode }) {
+export function IconButton({ icon, onClick, className = "" }: { icon: React.ReactNode, onClick?: () => void, className?: string }) {
     return (
-        <button className="p-2 rounded-xl text-gray-500 hover:text-white hover:bg-white/5">
+        <button
+            onClick={onClick}
+            className={`p-2 rounded-xl text-gray-500 hover:text-white hover:bg-white/5 ${className}`}
+        >
             {icon}
         </button>
     )

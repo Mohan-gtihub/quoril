@@ -9,6 +9,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { useSettingsStore } from '@/store/settingsStore'
 
 interface TodayColumnProps {
+    title?: string
     tasks: Task[]
     columnId: TaskColumn
     onTaskComplete: (taskId: string) => void
@@ -16,7 +17,7 @@ interface TodayColumnProps {
     onAddTask?: () => void
 }
 
-export function TodayColumn({ tasks, columnId, onTaskComplete, onStartNow, onAddTask }: TodayColumnProps) {
+export function TodayColumn({ title = "Today", tasks, columnId, onTaskComplete, onStartNow, onAddTask }: TodayColumnProps) {
     const { hideEstDoneTimes } = useSettingsStore()
 
     // Simple Stats
@@ -41,7 +42,7 @@ export function TodayColumn({ tasks, columnId, onTaskComplete, onStartNow, onAdd
                 <div className="flex items-center justify-between mb-3">
                     <h2 className="text-[var(--text-primary)] font-bold text-lg flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] shadow-[0_0_8px_var(--accent-glow)]"></span>
-                        Today
+                        {title}
                     </h2>
 
                     <div className="flex items-center gap-2">

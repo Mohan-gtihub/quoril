@@ -78,7 +78,7 @@ function createWindow() {
                     frame: false,
                     autoHideMenuBar: true,
                     alwaysOnTop: true,
-                    backgroundColor: '#1a1f2e',
+                    backgroundColor: '#00000000',
                     transparent: true, // Added transparency
                     hasShadow: false, // Added no shadow
                     resizable: false, // Set to non-resizable initially
@@ -121,7 +121,9 @@ function createTray() {
             icon = nativeImage
                 .createFromPath(iconPath)
                 .resize({ width: 16, height: 16 })
-        } catch { }
+        } catch {
+            // Ignore if icon fails to load
+        }
 
         tray = new Tray(icon)
 

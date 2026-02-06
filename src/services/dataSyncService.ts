@@ -161,7 +161,7 @@ class DataSyncService {
                     name: row.name,
                     color: row.color,
                     icon: row.icon,
-                    sort_order: row.sort_order || 0,
+                    sort_order: row.sort_order ?? 0,
                     is_system: Boolean(row.is_system),
                     created_at: row.created_at,
                     updated_at: row.updated_at,
@@ -193,8 +193,8 @@ class DataSyncService {
                         ? priority
                         : 'medium',
 
-                    estimated_minutes: row.estimate_m || 0,
-                    actual_minutes: Math.round((row.spent_s || 0) / 60),
+                    estimated_minutes: row.estimate_m ?? 0,
+                    actual_minutes: Math.round((row.spent_s ?? 0) / 60),
 
                     due_date: dDate || null,
                     due_time: dTime || null,
@@ -202,7 +202,7 @@ class DataSyncService {
                     completed_at: row.completed_at,
                     parent_task_id: row.parent_id,
 
-                    sort_order: row.sort_order || 0,
+                    sort_order: row.sort_order ?? 0,
 
                     created_at: row.created_at,
                     updated_at: row.updated_at,
@@ -219,7 +219,7 @@ class DataSyncService {
                     task_id: row.task_id,
                     title: row.title,
                     is_completed: Boolean(row.done),
-                    sort_order: row.sort_order || 0,
+                    sort_order: row.sort_order ?? 0,
                     created_at: row.created_at,
                     updated_at: row.updated_at
                 }
@@ -232,7 +232,9 @@ class DataSyncService {
 
                 try {
                     meta = JSON.parse(row.metadata || '{}')
-                } catch { }
+                } catch {
+                    // Ignore parse errors for malformed metadata
+                }
 
                 return {
                     id: row.id,
@@ -242,11 +244,11 @@ class DataSyncService {
                     started_at: row.start_time,
                     ended_at: row.end_time,
 
-                    duration_minutes: Math.round((row.seconds || 0) / 60),
+                    duration_minutes: Math.round((row.seconds ?? 0) / 60),
 
                     session_type: this.mapSessionType(row.type),
 
-                    interruptions: meta.interruptions_count || 0,
+                    interruptions: meta.interruptions_count ?? 0,
                     notes: meta.notes,
 
                     created_at: row.created_at
