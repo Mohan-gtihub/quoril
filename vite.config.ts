@@ -44,6 +44,9 @@ export default defineConfig({
     build: {
         outDir: 'dist',
         emptyOutDir: true,
+        rollupOptions: {
+            external: ['better-sqlite3'],
+        },
     },
     server: {
         port: 5173,

@@ -90,7 +90,6 @@ export function SuperFocusPill() {
             {/* Main Pill Row */}
             <div className="h-[48px] flex items-center gap-3 px-4">
                 {/* 1. RELIABLE DRAG HANDLE (Visual) */}
-                {/* 1. RELIABLE DRAG HANDLE (Visual) */}
                 <div
                     className="w-10 h-full flex items-center justify-center text-white/10 hover:text-white/40 transition-colors cursor-grab active:cursor-grabbing group/handle"
                     style={{ WebkitAppRegion: 'drag' } as any}

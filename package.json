@@ -15,7 +15,8 @@
     "dist": "npm run build",
     "dist:win": "npm run build -- --win",
     "dist:mac": "npm run build -- --mac",
-    "dist:linux": "npm run build -- --linux"
+    "dist:linux": "npm run build -- --linux",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

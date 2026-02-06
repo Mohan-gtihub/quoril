@@ -136,7 +136,7 @@ export function Dashboard() {
     /* ---------------- UI ---------------- */
 
     return (
-        <div className="flex flex-col h-full bg-[#0d0d0d] text-gray-300 overflow-hidden">
+        <div className="flex flex-col h-full ambient-bg text-gray-300 overflow-hidden">
 
             {/* HEADER */}
 
@@ -379,7 +379,7 @@ function ListCard({
     return (
         <div
             onClick={onClick}
-            className={`group h-[260px] bg-[var(--bg-card)] rounded-2xl border border-[var(--border-default)] p-6 flex flex-col cursor-pointer hover:border-[var(--accent-primary)]/40 transition ${isArchived ? 'opacity-70' : ''
+            className={`group h-[260px] glass card-glow rounded-2xl border border-[var(--border-default)] p-6 flex flex-col cursor-pointer hover:border-[var(--accent-primary)]/40 transition ${isArchived ? 'opacity-70' : ''
                 }`}
         >
 
