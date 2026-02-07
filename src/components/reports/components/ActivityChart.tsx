@@ -3,8 +3,7 @@ import {
     Bar,
     XAxis,
     Tooltip,
-    ResponsiveContainer,
-    Cell
+    ResponsiveContainer
 } from 'recharts'
 import { DailyChartData } from '../types/reports.types'
 
