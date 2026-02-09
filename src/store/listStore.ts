@@ -407,13 +407,8 @@ export const useListStore = create<ListState>()(
                     // 1. Soft Delete List to ensure sync works
                     await localService.lists.update(id, { deleted_at: now })
 
-                    // 2. Cascade delete tasks in this list locally
-                    if (window.electronAPI?.db) {
-                        await window.electronAPI.db.exec(
-                            'UPDATE tasks SET deleted_at = ?, synced = 0 WHERE list_id = ?',
-                            [now, id]
-                        )
-                    }
+                    // 2. Cascade delete tasks
+                    await localService.tasks.deleteByListId(id)
 
                     set(state => ({
                         archived: state.archived.filter(l => l.id !== id),

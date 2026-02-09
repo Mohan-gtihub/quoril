@@ -58,16 +58,103 @@ function formatTime(sec: number) {
 }
 
 /* ---------------------------------------------
+   TIME EDITOR COMPONENT
+--------------------------------------------- */
+
+interface TimeEditorProps {
+    initialSeconds: number
+    onSave: (seconds: number) => void
+}
+
+function TimeEditor({ initialSeconds, onSave }: TimeEditorProps) {
+    const [isEditing, setIsEditing] = useState(false)
+    const [timeValue, setTimeValue] = useState('')
+
+    useEffect(() => {
+        // Convert seconds to format H:MM:SS or MM:SS
+        const s = Math.abs(Math.floor(initialSeconds))
+        const h = Math.floor(s / 3600)
+        const m = Math.floor((s % 3600) / 60)
+        const r = s % 60
+
+        if (h > 0) {
+            setTimeValue(`${h}:${m.toString().padStart(2, '0')}:${r.toString().padStart(2, '0')}`)
+        } else {
+            setTimeValue(`${m.toString().padStart(2, '0')}:${r.toString().padStart(2, '0')}`)
+        }
+    }, [initialSeconds])
+
+    const handleSave = () => {
+        const parts = timeValue.split(':').map(p => parseInt(p) || 0)
+        let totalSeconds = 0
+
+        if (parts.length === 3) {
+            totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2]
+        } else if (parts.length === 2) {
+            totalSeconds = parts[0] * 60 + parts[1]
+        } else {
+            totalSeconds = parts[0] || 0
+        }
+
+        if (totalSeconds >= 0) {
+            onSave(totalSeconds)
+            setIsEditing(false)
+        }
+    }
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleSave()
+        } else if (e.key === 'Escape') {
+            setIsEditing(false)
+        }
+    }
+
+    if (isEditing) {
+        return (
+            <div className="flex items-center gap-2">
+                <input
+                    type="text"
+                    value={timeValue}
+                    onChange={(e) => setTimeValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handleSave}
+                    autoFocus
+                    placeholder="MM:SS"
+                    className="font-mono text-2xl font-bold text-white tracking-tight bg-white/10 border border-blue-500/50 rounded-lg px-3 py-1 w-36 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                />
+                <div className="flex flex-col gap-1 text-[9px] text-white/40">
+                    <span>↵ Save</span>
+                    <span>Esc Cancel</span>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <button
+            onClick={() => setIsEditing(true)}
+            className="font-mono text-2xl font-bold text-white tracking-tight hover:text-blue-400 transition-colors cursor-pointer group relative text-left"
+        >
+            {formatTime(initialSeconds)}
+            <span className="absolute -bottom-5 left-0 text-[9px] text-white/30 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                Click to edit
+            </span>
+        </button>
+    )
+}
+
+/* ---------------------------------------------
    COMPONENT
 --------------------------------------------- */
 
 export function FocusTimerPanel() {
     const focus = useFocusStore()
-    const { tasks, moveTaskToColumn, reorderTasks, createSubtask, toggleSubtask, fetchSubtasks, subtasks } = useTaskStore()
+    const { tasks, subtasks, createSubtask, fetchSubtasks, reorderTasks, toggleSubtask } = useTaskStore()
     const { selectedListId, lists } = useListStore()
 
     const [showCreateModal, setShowCreateModal] = useState(false)
-    const [showCelebration, setShowCelebration] = useState(false)
+    // Local celebration state replaced by global focus store state
 
     const celebrationGif = useMemo(() => {
         const gifs = [
@@ -77,7 +164,7 @@ export function FocusTimerPanel() {
             'https://media.giphy.com/media/l0HlHJGHe3yAMhdQY/giphy.gif'
         ]
         return gifs[Math.floor(Math.random() * gifs.length)]
-    }, [showCelebration])
+    }, [focus.showCelebration])
 
     const {
         isPaused,
@@ -88,7 +175,7 @@ export function FocusTimerPanel() {
         progress,
         isBreak,
         breakRemaining,
-        breakRemainingAtStart
+        breakRemainingAtStart,
     } = useTimerDisplay()
 
     const {
@@ -97,6 +184,7 @@ export function FocusTimerPanel() {
         endSession,
         skipToNext,
         setShowFocusPanel,
+        dismissCelebration // New action
     } = focus
 
     /* ---------- DROP ZONE ---------- */
@@ -124,6 +212,9 @@ export function FocusTimerPanel() {
             })
             .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     }, [tasks, taskId, selectedListId, lists])
+
+    // REMOVED: Conflicting useEffect that caused race conditions. 
+    // Now endSession handles persistence and celebration trigger atomically.
 
     /* ---------- DND ---------- */
     const [activeId, setActiveId] = useState<string | null>(null)
@@ -177,16 +268,16 @@ export function FocusTimerPanel() {
     }
 
     const handleDone = async () => {
-        if (focus.isBreak) {
-            await focus.stopBreak()
-            return
-        }
-        if (taskId) {
-            await moveTaskToColumn(taskId, 'done')
-            setShowCelebration(true)
-            // DO NOT endSession() yet, waiting for user action in celebration view
-        } else {
-            await endSession()
+        try {
+            if (focus.isBreak) {
+                await focus.stopBreak()
+                return
+            }
+            // ATOMIC UPDATE: End session, mark done, show celebration
+            // (notes, focusScore, energyLevel, shouldClosePanel, markCompleted)
+            await endSession(undefined, undefined, undefined, false, true)
+        } catch (error) {
+            console.error('Handle done failed:', error)
         }
     }
 
@@ -286,7 +377,7 @@ export function FocusTimerPanel() {
                 >
                     <div className="p-5 space-y-3">
                         {/* ACTIVE TASK - COMPACT TIMER CARD */}
-                        {activeTask && !showCelebration ? (
+                        {activeTask && !focus.showCelebration ? (
                             <div
                                 ref={setDropRef}
                                 className={cn(
@@ -297,7 +388,7 @@ export function FocusTimerPanel() {
                                 {/* Status Badge */}
                                 <div className="flex items-center justify-between mb-3">
                                     <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400">
-                                        {isBreak ? 'BREAK' : isPaused ? 'PAUSED' : isOvertime ? 'OVERTIME' : 'DOING'}
+                                        {isBreak ? 'BREAK' : (activeTask?.status === 'done' ? 'DONE' : isPaused ? 'PAUSED' : isOvertime ? 'OVERTIME' : 'DOING')}
                                     </span>
                                     <button
                                         onClick={() => endSession()}
@@ -312,13 +403,23 @@ export function FocusTimerPanel() {
                                     {activeTask.title}
                                 </h3>
 
-                                {/* Timer Display - Compact */}
+                                {/* Timer Display - Compact with Edit on Click */}
                                 <div className="flex items-center justify-between mb-4">
-                                    <div className="font-mono text-2xl font-bold text-white tracking-tight">
-                                        {isBreak && isPaused && breakRemaining === 0
-                                            ? "00:00:00"
-                                            : formatTime(isBreak ? breakRemaining : (isOvertime ? -remainingTime : remainingTime))}
-                                    </div>
+                                    {isPaused && !isBreak ? (
+                                        <TimeEditor
+                                            initialSeconds={isOvertime ? -remainingTime : remainingTime}
+                                            onSave={(newSeconds) => {
+                                                // Update the remaining time in focus store
+                                                focus.updateRemainingTime(newSeconds)
+                                            }}
+                                        />
+                                    ) : (
+                                        <div className="font-mono text-2xl font-bold text-white tracking-tight">
+                                            {isBreak && isPaused && breakRemaining === 0
+                                                ? "00:00:00"
+                                                : formatTime(isBreak ? breakRemaining : (isOvertime ? -remainingTime : remainingTime))}
+                                        </div>
+                                    )}
                                     {duration > 0 && !isBreak && (
                                         <div className="text-xs text-white/50 font-mono">
                                             / {formatTime(duration)}
@@ -390,7 +491,7 @@ export function FocusTimerPanel() {
                                 {/* Action Buttons - Minimal */}
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={isPaused ? resumeSession : pauseSession}
+                                        onClick={isPaused ? resumeSession : () => pauseSession()}
                                         className={cn(
                                             "flex-1 h-9 rounded-xl flex items-center justify-center gap-2 transition-all text-sm font-medium",
                                             isPaused
@@ -420,7 +521,7 @@ export function FocusTimerPanel() {
                                     </div>
                                 )}
                             </div>
-                        ) : showCelebration && activeTask ? (
+                        ) : focus.showCelebration && focus.celebratedTask ? (
                             // CELEBRATION CARD
                             <div className="relative rounded-2xl bg-[#0a0c10] border-2 border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.15)] p-5 text-center transition-all animate-in fade-in zoom-in-95 duration-300">
                                 <h3 className="text-lg font-bold text-white mb-4 flex items-center justify-center gap-2">
@@ -432,15 +533,14 @@ export function FocusTimerPanel() {
                                 </div>
 
                                 <div className="mb-6">
-                                    <p className="text-sm font-medium text-white/50 line-through mb-1">{activeTask.title}</p>
+                                    <p className="text-sm font-medium text-white/50 line-through mb-1">{focus.celebratedTask.title}</p>
                                     <p className="text-emerald-400 font-bold text-base">You finished the task!</p>
                                 </div>
 
                                 <div className="space-y-3">
                                     <button
                                         onClick={async () => {
-                                            setShowCelebration(false)
-                                            await endSession() // Clear current
+                                            dismissCelebration()
                                             const next = nextTasks[0]?.id
                                             if (next) {
                                                 focus.startSession(next)
@@ -454,8 +554,7 @@ export function FocusTimerPanel() {
 
                                     <button
                                         onClick={async () => {
-                                            setShowCelebration(false)
-                                            await endSession() // Clear task session
+                                            dismissCelebration()
                                             focus.startBreak()
                                         }}
                                         className="w-full py-2.5 rounded-xl border border-white/10 text-white/60 hover:bg-white/5 hover:text-white transition-all text-sm font-medium flex items-center justify-center gap-2"
@@ -466,8 +565,8 @@ export function FocusTimerPanel() {
                                 </div>
 
                                 <div className="mt-5 pt-4 border-t border-white/5 flex justify-between text-[11px] text-white/30 font-medium">
-                                    <span>Est: {activeTask.estimated_minutes ? `${activeTask.estimated_minutes}m` : 'None'}</span>
-                                    <span>Taken: {Math.floor(duration / 60)}min</span>
+                                    <span>Est: {focus.celebratedTask.estimated_minutes ? `${focus.celebratedTask.estimated_minutes}m` : 'None'}</span>
+                                    <span>Taken: {Math.floor(focus.celebratedDuration / 60)}min</span>
                                 </div>
                             </div>
                         ) : null}
@@ -582,7 +681,7 @@ export function FocusTimerPanel() {
                 <CreateTaskModal
                     isOpen={true}
                     onClose={() => setShowCreateModal(false)}
-                    listId={selectedListId && selectedListId !== 'all' ? selectedListId : (lists[0]?.id || '')}
+                    listId={(selectedListId && selectedListId !== 'all' ? selectedListId : lists.find(l => l.id !== 'all')?.id) || ''}
                 />
             )}
         </div>

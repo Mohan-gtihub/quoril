@@ -242,7 +242,7 @@ function BoardColumn({
 export function Planner() {
     const navigate = useNavigate()
     const { selectedListId, lists } = useListStore()
-    const { tasks, fetchTasks, moveTaskToColumn, reorderTasks, selectedTaskId } = useTaskStore()
+    const { tasks, fetchTasks, moveTaskToColumn, reorderTasks, selectedTaskId, toggleComplete } = useTaskStore()
     const { startSession, isActive, taskId: activeFocusId, setShowFocusPanel, endSession } = useFocusStore()
     const { selectedDate } = usePlannerStore()
 
@@ -416,7 +416,9 @@ export function Planner() {
         try {
             await moveTaskToColumn(taskId, targetColumn)
             if (targetColumn === 'done' && taskId === activeFocusId) {
-                await endSession()
+                // Trigger celebration logic without closing panel
+                // (notes, score, energy, shouldClosePanel, markCompleted)
+                await endSession(undefined, undefined, undefined, false, true)
             }
             const targetTitle = columns_def.find(c => c.id === targetColumn)?.title || targetColumn
             toast.success(`Moved to ${targetTitle}`)
@@ -427,16 +429,15 @@ export function Planner() {
 
     const handleTaskComplete = async (taskId: string, currentColumn: TaskColumn) => {
         try {
-            if (currentColumn === 'done') {
-                await moveTaskToColumn(taskId, 'today')
-                toast.success('Task moved to Today')
-            } else {
-                await moveTaskToColumn(taskId, 'done')
-                if (taskId === activeFocusId) {
-                    await endSession()
-                }
-                toast.success('Task completed! 🎉')
+            await toggleComplete(taskId)
+
+            // If task was active and is now completed, end session
+            if (currentColumn !== 'done' && taskId === activeFocusId) {
+                // Trigger celebration logic without closing panel
+                await endSession(undefined, undefined, undefined, false, true)
             }
+
+            toast.success(currentColumn === 'done' ? 'Task reopened' : 'Task completed! 🎉')
         } catch {
             toast.error('Failed to update task')
         }

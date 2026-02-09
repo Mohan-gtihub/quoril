@@ -191,7 +191,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                 <div className="pt-0.5">
                     <Checkbox
                         checked={isCompleted}
-                        onChange={onComplete || (() => { })}
+                        onChange={() => onComplete ? onComplete() : undefined}
                         size="sm"
                     />
                 </div>

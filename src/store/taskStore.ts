@@ -296,19 +296,22 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
         const isDone = task.status === 'done'
 
-        const updates: Partial<Task> = isDone
-            ? {
-                status: (task.prev_status ??
-                    'todo') as TaskStatus,
-                completed_at: null,
-            }
-            : {
-                status: 'done',
-                prev_status: task.status,
-                completed_at: new Date().toISOString(),
-            }
+        const status = isDone
+            ? (task.prev_status && task.prev_status !== 'done' ? (task.prev_status as TaskStatus) : 'todo')
+            : 'done'
+
+        const updates: Partial<Task> = {
+            status,
+            prev_status: isDone ? task.prev_status : task.status,
+            completed_at: isDone ? null : new Date().toISOString(),
+        }
 
         await get().updateTask(id, updates)
+
+        // Play sound if completing
+        if (!isDone && useSettingsStore.getState().successSoundEnabled) {
+            audioService.playSuccess()
+        }
     },
 
     /* ---------------- FOCUS ---------------- */

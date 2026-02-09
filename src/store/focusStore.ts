@@ -42,6 +42,11 @@ export interface FocusState {
 
     showFocusPanel: boolean
 
+    /* Celebration State */
+    showCelebration: boolean
+    celebratedTask: any | null
+    celebratedDuration: number
+
     /* History */
     sessions: FocusSession[]
     loading: boolean
@@ -68,14 +73,18 @@ export interface FocusState {
     startBreak: (durationMinutes?: number) => void
     stopBreak: () => void
 
-    pauseSession: () => Promise<void>
+    pauseSession: (updateStatus?: boolean) => Promise<void>
     resumeSession: () => Promise<void>
 
     endSession: (
         notes?: string,
         focusScore?: number,
-        energyLevel?: number
+        energyLevel?: number,
+        shouldClosePanel?: boolean,
+        markCompleted?: boolean
     ) => Promise<void>
+
+    dismissCelebration: () => void
 
     skipToNext: (nextTaskId?: string) => Promise<void>
 
@@ -86,6 +95,8 @@ export interface FocusState {
     reset: () => void
 
     setShowFocusPanel: (v: boolean) => void
+
+    updateRemainingTime: (newSeconds: number) => void
 }
 
 /* ---------------------------------------------
@@ -109,6 +120,10 @@ export const useFocusStore = create<FocusState>()(
 
             sessionType: 'regular',
             showFocusPanel: false,
+
+            showCelebration: false,
+            celebratedTask: null,
+            celebratedDuration: 0,
 
             sessions: [],
             loading: false,
@@ -166,7 +181,7 @@ export const useFocusStore = create<FocusState>()(
                             // 1. Log Session
                             await localService.focus.create({
                                 user_id: user.id,
-                                task_id: s.taskId ?? '',
+                                task_id: s.taskId,
                                 start_time: new Date(Date.now() - (totalBreak * 1000)).toISOString(),
                                 end_time: new Date().toISOString(),
                                 planned_seconds: s.breakRemainingAtStart,
@@ -243,9 +258,15 @@ export const useFocusStore = create<FocusState>()(
                         showFocusPanel: true,
                         isBreak: false,
                         pomodoroTotal: pTime,
+                        pomodoroRemaining: pTime,
+                        pomodoroRemainingAtStart: pTime,
                         breakRemaining: 0,
                         breakRemainingAtStart: 0,
-                        lastAlertTime: now
+                        lastAlertTime: now,
+                        // Clear celebration if starting new
+                        showCelebration: false,
+                        celebratedTask: null,
+                        celebratedDuration: 0
                     })
 
                     const user = (await localService.auth.getUser()).data?.user
@@ -271,7 +292,7 @@ export const useFocusStore = create<FocusState>()(
 
             /* ---------------- PAUSE ---------------- */
 
-            pauseSession: async () => {
+            pauseSession: async (updateStatus = true) => {
                 const s = get()
                 if (!s.startTime) return // Nothing running
 
@@ -287,7 +308,11 @@ export const useFocusStore = create<FocusState>()(
                     const pRem = s.pomodoroRemainingAtStart - delta
 
                     if (s.taskId) {
-                        await useTaskStore.getState().updateTask(s.taskId, { status: 'paused', actual_seconds: total })
+                        if (updateStatus) {
+                            await useTaskStore.getState().updateTask(s.taskId, { status: 'paused', actual_seconds: total, started_at: null })
+                        } else {
+                            await useTaskStore.getState().updateTask(s.taskId, { actual_seconds: total })
+                        }
                         backupService.save(s.taskId, total)
                     }
 
@@ -316,7 +341,7 @@ export const useFocusStore = create<FocusState>()(
 
             /* ---------------- END ---------------- */
 
-            endSession: async (notes, focusScore, energyLevel) => {
+            endSession: async (notes, focusScore, energyLevel, shouldClosePanel = true, markCompleted = false) => {
                 const s = get()
                 if (!s.taskId) {
                     get().reset()
@@ -328,6 +353,7 @@ export const useFocusStore = create<FocusState>()(
                     const total = s.elapsed + delta
                     const endISO = new Date().toISOString()
 
+                    // Close Focus Session Record
                     if (s.currentSessionId) {
                         await localService.focus.update(s.currentSessionId, {
                             end_time: endISO,
@@ -338,7 +364,30 @@ export const useFocusStore = create<FocusState>()(
                         })
                     }
 
-                    await useTaskStore.getState().updateTask(s.taskId, { actual_seconds: total })
+                    // Update Task
+                    const task = useTaskStore.getState().tasks.find(t => t.id === s.taskId)
+                    if (task) {
+                        const updates: any = {
+                            actual_seconds: total,
+                            started_at: null // Ensure backend knows it's stopped
+                        }
+
+                        if (markCompleted) {
+                            updates.status = 'done'
+                            updates.completed_at = endISO
+                            // Cache for celebration before clearing
+                            set({
+                                showCelebration: true,
+                                celebratedTask: task,
+                                celebratedDuration: total
+                            })
+                            // Play sound
+                            const { successSoundEnabled } = useSettingsStore.getState()
+                            if (successSoundEnabled) audioService.playSuccess()
+                        }
+
+                        await useTaskStore.getState().updateTask(s.taskId, updates)
+                    }
 
                     set({
                         currentSessionId: null,
@@ -347,7 +396,7 @@ export const useFocusStore = create<FocusState>()(
                         isPaused: false,
                         startTime: null,
                         elapsed: 0,
-                        showFocusPanel: false,
+                        showFocusPanel: shouldClosePanel ? false : s.showFocusPanel,
                         isBreak: false,
                         pomodoroRemaining: 0,
                         breakRemaining: 0
@@ -357,6 +406,15 @@ export const useFocusStore = create<FocusState>()(
                     console.error('[Focus] end failed', e)
                     get().reset()
                 }
+            },
+
+            dismissCelebration: () => {
+                set({
+                    showCelebration: false,
+                    celebratedTask: null,
+                    celebratedDuration: 0,
+                    showFocusPanel: false // Close panel when dismissed
+                })
             },
 
             /* ---------------- SKIP ---------------- */
@@ -440,11 +498,33 @@ export const useFocusStore = create<FocusState>()(
                     showFocusPanel: false,
                     isBreak: false,
                     pomodoroRemaining: 0,
-                    breakRemaining: 0
+                    breakRemaining: 0,
+                    showCelebration: false,
+                    celebratedTask: null,
+                    celebratedDuration: 0
                 })
             },
 
             setShowFocusPanel: (v) => set({ showFocusPanel: v }),
+
+            updateRemainingTime: (newSeconds) => {
+                const s = get()
+                if (!s.isActive || s.isBreak) return
+
+                // When we edit the timer, we're adjusting how much time has "elapsed"
+                // so that the display shows the desired time.
+                // Display logic: remainingTime = duration - elapsed
+                // So: elapsed = duration - newRemainingTime
+
+                // If it's a stopwatch (duration 0), remainingTime is -elapsed
+                // formatTime displays abs(remainingTime)
+                if (s.duration === 0) {
+                    set({ elapsed: newSeconds })
+                } else {
+                    // For countdown timers
+                    set({ elapsed: s.duration - newSeconds })
+                }
+            },
         }),
         {
             name: 'focus-storage',
@@ -453,7 +533,7 @@ export const useFocusStore = create<FocusState>()(
                 taskId: s.taskId,
                 isActive: s.isActive,
                 isPaused: s.isPaused,
-                startTime: s.startTime,
+                // DO NOT persist startTime - it should be set fresh on resume
                 elapsed: s.elapsed,
                 duration: s.duration,
                 sessionType: s.sessionType,

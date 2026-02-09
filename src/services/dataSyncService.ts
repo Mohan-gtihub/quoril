@@ -51,11 +51,17 @@ class DataSyncService {
     private async syncPendings() {
         if (this.syncing || !navigator.onLine) return
 
+        // Check Auth First
+        const { data: { session } } = await supabase.auth.getSession()
+        const user = session?.user
+
+        if (!user) return
+
         this.syncing = true
 
         try {
             for (const table of SYNC_ORDER) {
-                await this.syncTable(table)
+                await this.syncTable(table, user.id)
             }
         } finally {
             this.syncing = false
@@ -64,7 +70,7 @@ class DataSyncService {
 
     /* ================= PER TABLE ================= */
 
-    private async syncTable(table: SyncTable) {
+    private async syncTable(table: SyncTable, userId: string) {
 
         if (!window.electronAPI?.db) return
 
@@ -99,8 +105,9 @@ class DataSyncService {
 
                 /* ---------- Build payload ---------- */
 
+                // Overwrite user_id with current auth user
                 const payload =
-                    await this.buildPayload(table, row)
+                    await this.buildPayload(table, { ...row, user_id: userId })
 
                 if (!payload) {
                     await window.electronAPI.db.markSynced(table, row.id)
@@ -132,8 +139,10 @@ class DataSyncService {
                 if (
                     err?.code === '23514' ||
                     err?.code === '23503' || // Foreign Key Violation (e.g. List deleted)
+                    err?.code === '42501' || // RLS Policy Violation (Permission/Auth)
                     String(err).includes('violates') ||
-                    String(err).includes('constraint')
+                    String(err).includes('constraint') ||
+                    String(err).includes('policy')
                 ) {
                     console.warn('[Sync] Marking bad row as synced:', row.id)
 
@@ -157,7 +166,7 @@ class DataSyncService {
             case 'lists':
                 return {
                     id: row.id,
-                    user_id: row.user_id,
+                    user_id: row.user_id, // Now coming from correct auth
                     name: row.name,
                     color: row.color,
                     icon: row.icon,
@@ -170,7 +179,6 @@ class DataSyncService {
                 }
 
             /* ---------- TASKS ---------- */
-
             case 'tasks': {
 
                 const [dDate, dTime] = (row.due_at || 'T').split('T')
@@ -178,10 +186,14 @@ class DataSyncService {
                 const status = this.mapTaskStatus(row.status)
                 const priority = this.mapTaskPriority(row.priority)
 
+                // Sanitize UUIDs
+                const listId = (!row.list_id || row.list_id === 'all') ? null : row.list_id
+                const parentId = (!row.parent_id || row.parent_id === 'all') ? null : row.parent_id
+
                 return {
                     id: row.id,
                     user_id: row.user_id,
-                    list_id: row.list_id,
+                    list_id: listId,
                     title: row.title,
                     description: row.description,
 
@@ -200,7 +212,7 @@ class DataSyncService {
                     due_time: dTime || null,
 
                     completed_at: row.completed_at,
-                    parent_task_id: row.parent_id,
+                    parent_task_id: parentId,
 
                     sort_order: row.sort_order ?? 0,
 
@@ -236,10 +248,13 @@ class DataSyncService {
                     // Ignore parse errors for malformed metadata
                 }
 
+                // Sanitize Task ID
+                const taskId = (!row.task_id || row.task_id === '') ? null : row.task_id
+
                 return {
                     id: row.id,
                     user_id: row.user_id,
-                    task_id: row.task_id,
+                    task_id: taskId,
 
                     started_at: row.start_time,
                     ended_at: row.end_time,

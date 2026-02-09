@@ -4,7 +4,7 @@ import { ReportsHeader } from './components/ReportsHeader'
 import { StatsOverview } from './components/StatsOverview'
 import { ActivityChart } from './components/ActivityChart'
 import { SessionLog } from './components/SessionLog'
-import { ModuleDistribution } from './components/ModuleDistribution'
+
 
 export function Reports() {
     const navigate = useNavigate()
@@ -56,10 +56,10 @@ export function Reports() {
                         </div>
 
                         {/* Distribution By Module */}
-                        <div>
+                        {/* <div>
                             <h3 className="text-xs font-bold text-white/40 uppercase tracking-[0.2em] px-1 mb-6">Focus by Module</h3>
                             <ModuleDistribution listDist={stats.listDist} />
-                        </div>
+                        </div> */}
 
                     </div>
                 </div>

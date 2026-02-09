@@ -41,6 +41,21 @@ function App() {
         return () => dataSyncService.stop()
     }, [user])
 
+    // Hydrate timer state on app load (fix for production builds)
+    useEffect(() => {
+        const focus = useFocusStore.getState()
+        // If we have an active session but no startTime (loaded from localStorage),
+        // initialize it properly
+        if (focus.isActive && !focus.startTime) {
+            // Set startTime to now and pause the session
+            // User can click resume to continue
+            useFocusStore.setState({
+                startTime: Date.now(),
+                isPaused: true
+            })
+        }
+    }, [])
+
     // Keep store elapsed in sync for persistence and endSession; use getState() so effect doesn't re-run
     useEffect(() => {
         if (!isActive || (isPaused && !isBreak)) return
