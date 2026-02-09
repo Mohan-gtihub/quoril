@@ -7,6 +7,7 @@ import type { FocusSession } from '@/types/database'
 import { localService } from '@/services/localStorage'
 import { backupService } from '@/services/backupService'
 import { audioService } from '@/services/audioService'
+import { soundService } from '@/services/soundService'
 import { hydrateElapsed, getTaskEstimate } from '@/utils/sessionUtils'
 import { useTaskStore } from './taskStore'
 import { useSettingsStore } from './settingsStore'
@@ -59,7 +60,7 @@ export interface FocusState {
     pomodoroRemaining: number // seconds (live)
     pomodoroRemainingAtStart: number // seconds (base for delta)
     pomodoroTotal: number // seconds (progress denominator)
-    lastAlertTime: number | null // ms
+    lastAlertElapsed: number // seconds (at which last alert played)
 
     /* Actions */
     startSession: (
@@ -135,7 +136,7 @@ export const useFocusStore = create<FocusState>()(
             pomodoroRemaining: 0,
             pomodoroRemainingAtStart: 0,
             pomodoroTotal: 25 * 60,
-            lastAlertTime: null,
+            lastAlertElapsed: 0,
 
             /* ---------------- START ---------------- */
 
@@ -162,7 +163,7 @@ export const useFocusStore = create<FocusState>()(
                     breakRemainingAtStart: seconds,
                     breakElapsed: 0,
                     startTime: Date.now(),
-                    lastAlertTime: Date.now(),
+                    lastAlertElapsed: 0,
                     isPaused: false // Explicitly running
                 })
             },
@@ -262,7 +263,7 @@ export const useFocusStore = create<FocusState>()(
                         pomodoroRemainingAtStart: pTime,
                         breakRemaining: 0,
                         breakRemainingAtStart: 0,
-                        lastAlertTime: now,
+                        lastAlertElapsed: 0,
                         // Clear celebration if starting new
                         showCelebration: false,
                         celebratedTask: null,
@@ -462,11 +463,39 @@ export const useFocusStore = create<FocusState>()(
 
                     // ALERT LOGIC
                     const settings = useSettingsStore.getState()
-                    if (settings.timedAlertsEnabled && s.lastAlertTime) {
-                        const intervalMs = settings.alertInterval * 60 * 1000
-                        if (Date.now() - s.lastAlertTime >= intervalMs) {
-                            audioService.playAlert()
-                            set({ lastAlertTime: Date.now() })
+                    const currentElapsed = s.elapsed + delta
+                    if (settings.timedAlertsEnabled) {
+                        const intervalSeconds = settings.alertInterval * 60
+                        if (currentElapsed >= s.lastAlertElapsed + intervalSeconds) {
+                            // 1. Play Sound
+                            soundService.playAlert(settings.alertSound)
+
+                            // 2. Show Toast
+                            toast("Stay Focused! 🎯", {
+                                icon: '⚡',
+                                style: {
+                                    borderRadius: '12px',
+                                    background: '#1d4ed8',
+                                    color: '#fff',
+                                    fontWeight: 'bold',
+                                    fontSize: '14px'
+                                },
+                            })
+
+                            // 3. Show Notification
+                            if (settings.notificationAlertsEnabled && Notification.permission === 'granted') {
+                                try {
+                                    new Notification("Quoril Focus", {
+                                        body: "Stay Focused! 🎯 Task progress is being logged.",
+                                        icon: '/icon.png'
+                                    })
+                                } catch (e) {
+                                    console.warn('Notification failed', e)
+                                }
+                            }
+
+                            // 4. Update Time (store elapsed at trigger)
+                            set({ lastAlertElapsed: currentElapsed })
                         }
                     }
                 }

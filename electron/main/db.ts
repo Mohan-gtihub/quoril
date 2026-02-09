@@ -162,6 +162,20 @@ function autoMigrate() {
         version = 1
     }
 
+    if (version < 2) {
+        db.transaction(() => {
+            const taskCols = db.prepare(`PRAGMA table_info(tasks)`).all()
+            if (!taskCols.some((c: any) => (c as any).name === 'is_recurring')) {
+                db.exec(`ALTER TABLE tasks ADD COLUMN is_recurring INTEGER DEFAULT 0`)
+            }
+            if (!taskCols.some((c: any) => (c as any).name === 'last_reset_date')) {
+                db.exec(`ALTER TABLE tasks ADD COLUMN last_reset_date TEXT`)
+            }
+            db.prepare(`UPDATE db_meta SET value='2' WHERE key='version'`).run()
+        })()
+        version = 2
+    }
+
     /* Add archived_at if missing */
 
     const listCols = db.prepare(`PRAGMA table_info(lists)`).all()

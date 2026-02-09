@@ -32,7 +32,9 @@ const mapTask = (row: any): Task => {
         due_date: date,
         due_time: time?.split('.')[0] || null,
         parent_task_id: row.parent_id,
-        sync_status: row.synced ? 'synced' : 'pending'
+        sync_status: row.synced ? 'synced' : 'pending',
+        is_recurring: Boolean(row.is_recurring),
+        last_reset_date: row.last_reset_date
     }
 }
 
@@ -93,7 +95,9 @@ export const localService = {
                 created_at: now,
                 updated_at: now,
                 deleted_at: null,
-                synced: 0
+                synced: 0,
+                is_recurring: task.is_recurring ? 1 : 0,
+                last_reset_date: task.last_reset_date || null
             }
 
             if (!db()) {
@@ -110,6 +114,13 @@ export const localService = {
 
         update: async (id: string, updates: any) => {
             const row: any = { ...updates, updated_at: new Date().toISOString(), synced: 0 }
+
+            if (updates.is_recurring !== undefined) {
+                row.is_recurring = updates.is_recurring ? 1 : 0
+            }
+            if (updates.last_reset_date !== undefined) {
+                row.last_reset_date = updates.last_reset_date
+            }
 
             // Normalized Mapping
             if (updates.actual_seconds !== undefined) row.spent_s = updates.actual_seconds

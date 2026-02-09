@@ -282,6 +282,8 @@ export type Task = Database['public']['Tables']['tasks']['Row'] & {
     parent_task_id?: string | null
     sync_status?: 'synced' | 'pending'
     prev_status?: TaskStatus
+    is_recurring?: boolean
+    last_reset_date?: string | null
 }
 
 export type Subtask = Database['public']['Tables']['subtasks']['Row'] & {

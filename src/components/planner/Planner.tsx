@@ -306,6 +306,8 @@ export function Planner() {
                     cols.today.push(task)
                 } else if (taskDate && isSameDay(taskDate, selectedDate)) {
                     cols.today.push(task)
+                } else if (task.is_recurring && selectedDate >= startOfToday()) {
+                    cols.today.push(task)
                 }
             } else if (getColumnStatuses('done').includes(task.status)) {
                 // Done only shows tasks completed ON the selected date

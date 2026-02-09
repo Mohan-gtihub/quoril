@@ -14,7 +14,6 @@ import { TaskCard } from '../planner/TaskCard'
 import { CompletionCelebration } from '../ui/CompletionCelebration'
 import { HoldButton } from '../ui/HoldButton'
 import { cn } from '@/utils/helpers'
-import { soundService } from '@/services/soundService'
 import { SuperFocusPill } from './SuperFocusPill'
 import type { Task } from '@/types/database'
 
@@ -37,40 +36,8 @@ export function FocusMode() {
         stopBreak
     } = useFocusStore()
 
-    const { remainingTime, isOvertime, progress, elapsed, breakRemaining, pomodoroRemaining, pomodoroTotal } = useTimerDisplay()
+    const { remainingTime, isOvertime, progress, breakRemaining, pomodoroRemaining, pomodoroTotal } = useTimerDisplay()
 
-    const [shouldFlash, setShouldFlash] = useState(false)
-    const triggerFlash = useCallback(() => {
-        if (!settings.animatedFlash) return
-        setShouldFlash(true)
-        setTimeout(() => setShouldFlash(false), 500)
-    }, [settings.animatedFlash])
-
-    // Timed Alerts Logic
-    useEffect(() => {
-        if (!isActive || isPaused || isBreak || !settings.timedAlertsEnabled) return
-
-        const intervalSeconds = settings.alertInterval * 60
-        if (elapsed > 0 && elapsed % intervalSeconds === 0) {
-            triggerFlash()
-            soundService.playAlert(settings.alertSound)
-
-            if (settings.notificationAlertsEnabled && Notification.permission === 'granted') {
-                new Notification("Quoril Focus", { body: "Stay Focused! 🎯 Task progress is being logged.", icon: '/icon.png' })
-            }
-
-            toast("Stay Focused! 🎯", {
-                icon: '⚡',
-                style: {
-                    borderRadius: '12px',
-                    background: '#1d4ed8',
-                    color: '#fff',
-                    fontWeight: 'bold',
-                    fontSize: '14px'
-                },
-            })
-        }
-    }, [elapsed, isActive, isPaused, isBreak, settings.alertInterval, settings.timedAlertsEnabled, settings.alertSound, settings.notificationAlertsEnabled, triggerFlash])
 
     // Request Notification Permission
     useEffect(() => {
@@ -493,9 +460,6 @@ export function FocusMode() {
                     </div>
                 )}
 
-                {shouldFlash && (
-                    <div className="fixed inset-0 bg-blue-500/20 z-[200] pointer-events-none animate-in fade-in fill-mode-forwards duration-150" />
-                )}
             </div>
         </DndContext>
     )

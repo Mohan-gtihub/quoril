@@ -58,6 +58,9 @@ interface TaskState {
     setSelectedTask: (id: string | null) => void
     clearError: () => void
 
+    toggleTaskRecurring: (id: string) => Promise<void>
+    syncRecurringTasks: () => Promise<void>
+
     /* Subtasks */
 
     fetchSubtasks: (taskId: string) => Promise<void>
@@ -95,6 +98,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                 tasks: data || [],
                 loading: false,
             })
+
+            // Run daily reset check
+            await get().syncRecurringTasks()
         } catch (e) {
             set({
                 error: 'Failed to load tasks',
@@ -448,6 +454,34 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
     clearError: () => {
         set({ error: null })
+    },
+
+    toggleTaskRecurring: async (id) => {
+        const task = get().tasks.find(t => t.id === id)
+        if (!task) return
+
+        await get().updateTask(id, {
+            is_recurring: !task.is_recurring,
+            last_reset_date: !task.is_recurring ? new Date().toISOString().split('T')[0] : null
+        })
+    },
+
+    syncRecurringTasks: async () => {
+        const { tasks, updateTask } = get()
+        const today = new Date().toISOString().split('T')[0]
+
+        // Find tasks that are recurring but haven't been reset today
+        const toReset = tasks.filter(t => t.is_recurring && t.last_reset_date !== today)
+
+        if (toReset.length === 0) return
+
+        for (const task of toReset) {
+            await updateTask(task.id, {
+                status: 'active', // Move to Today column (active)
+                completed_at: null,
+                last_reset_date: today
+            })
+        }
     },
 
     /* ---------------- SUBTASKS ---------------- */

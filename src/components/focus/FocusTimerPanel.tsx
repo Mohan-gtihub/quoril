@@ -491,7 +491,7 @@ export function FocusTimerPanel() {
                                 {/* Action Buttons - Minimal */}
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={isPaused ? resumeSession : () => pauseSession()}
+                                        onClick={() => isPaused ? resumeSession() : pauseSession()}
                                         className={cn(
                                             "flex-1 h-9 rounded-xl flex items-center justify-center gap-2 transition-all text-sm font-medium",
                                             isPaused

@@ -1,7 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 /* --------------------------------------------- */
-import { Play, Pause, Square, MoreHorizontal, Plus, Trash2, ArrowRight, ArrowLeft, FileText, ListTodo, Zap } from 'lucide-react'
+import { Play, Pause, Square, MoreHorizontal, Plus, Trash2, ArrowRight, ArrowLeft, FileText, ListTodo, Zap, Repeat } from 'lucide-react'
 import { Checkbox } from '@/components/ui/Checkbox'
 import type { Task } from '@/types/database'
 import type { TaskColumn } from '@/types/list'
@@ -49,7 +49,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
         isDragging,
     } = useSortable({ id: task.id, disabled: !draggable })
 
-    const { updateTask, archiveTask, permanentDeleteTask, moveTaskToColumn, fetchSubtasks, subtasks, toggleSubtask, deleteSubtask, createSubtask } = useTaskStore()
+    const { updateTask, archiveTask, permanentDeleteTask, moveTaskToColumn, fetchSubtasks, subtasks, toggleSubtask, deleteSubtask, createSubtask, toggleTaskRecurring } = useTaskStore()
 
     // Focus Store – subscribe to what we need for active-timer display
     const timer = useTimerDisplay()
@@ -280,6 +280,18 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                             <Zap className="w-4 h-4 fill-current" />
                         </button>
                     )}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); toggleTaskRecurring(task.id); }}
+                        className={cn(
+                            "p-1.5 rounded-lg transition-all",
+                            task.is_recurring
+                                ? "bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.2)]"
+                                : "hover:bg-white/10 text-white/40 hover:text-white"
+                        )}
+                        title={task.is_recurring ? "Daily Recurrence On" : "Enable Daily Recurrence"}
+                    >
+                        <Repeat className={cn("w-4 h-4", task.is_recurring && "animate-pulse-slow")} />
+                    </button>
                     <button
                         onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
                         className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"

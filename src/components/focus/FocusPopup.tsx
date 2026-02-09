@@ -114,7 +114,7 @@ export function FocusPopup() {
                 {/* Controls */}
                 <div className="grid grid-cols-3 gap-3">
                     <button
-                        onClick={isPaused ? resumeSession : pauseSession}
+                        onClick={() => isPaused ? resumeSession() : pauseSession()}
                         className="flex flex-col items-center justify-center gap-2 py-4 rounded-lg transition-all"
                         style={{
                             backgroundColor: isPaused ? 'var(--accent-yellow-100)' : 'var(--accent-blue-100)',

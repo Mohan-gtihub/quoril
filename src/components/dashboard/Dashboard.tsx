@@ -114,7 +114,8 @@ export function Dashboard() {
             if (!activeListIds.has(t.list_id || '')) return false
 
             const taskDate = t.due_date ? new Date(t.due_date) : null
-            if (taskDate) return isSameDay(taskDate, selectedDate)
+            if (taskDate && isSameDay(taskDate, selectedDate)) return true
+            if (t.is_recurring && selectedDate >= startOfToday()) return true
             return isSameDay(selectedDate, startOfToday())
         })
 

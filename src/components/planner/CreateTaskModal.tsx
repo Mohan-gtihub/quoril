@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { X, Repeat } from 'lucide-react'
 import { useCreateTask } from '@/hooks/useCreateTask'
 
 interface Props {
@@ -16,6 +16,7 @@ export function CreateTaskModal({ isOpen, onClose, listId }: Props) {
     const [title, setTitle] = useState('')
     const [minutes, setMinutes] = useState(0)
     const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium')
+    const [isRecurring, setIsRecurring] = useState(false)
 
     /* Reset on close */
     useEffect(() => {
@@ -26,6 +27,7 @@ export function CreateTaskModal({ isOpen, onClose, listId }: Props) {
         setTitle('')
         setMinutes(0)
         setPriority('medium')
+        setIsRecurring(false)
     }
 
     async function handleSubmit(focusAfter = false) {
@@ -34,6 +36,7 @@ export function CreateTaskModal({ isOpen, onClose, listId }: Props) {
             minutes,
             priority,
             focusAfter,
+            isRecurring,
         })
 
         if (res) {
@@ -128,6 +131,28 @@ export function CreateTaskModal({ isOpen, onClose, listId }: Props) {
                         placeholder="Unlimited focus..."
                         className="w-full px-4 py-2 bg-[var(--bg-hover)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-xl outline-none focus:ring-1 focus:ring-[var(--accent-primary)]/50"
                     />
+                </div>
+
+                {/* Recurrence */}
+                <div className="mb-6">
+                    <button
+                        onClick={() => setIsRecurring(!isRecurring)}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${isRecurring
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]'
+                            : 'bg-[var(--bg-hover)] border-[var(--border-default)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                            }`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <Repeat className={`w-4 h-4 ${isRecurring ? 'animate-pulse-slow' : ''}`} />
+                            <span className="text-sm font-bold">Daily Recurrence</span>
+                        </div>
+                        <div className={`w-10 h-5 rounded-full relative transition-colors ${isRecurring ? 'bg-emerald-500' : 'bg-[var(--bg-tertiary)]'}`}>
+                            <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${isRecurring ? 'translate-x-5' : ''}`} />
+                        </div>
+                    </button>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-2 ml-1 font-medium italic">
+                        Task will automatically reappear in your list tomorrow morning.
+                    </p>
                 </div>
 
                 {/* Error */}

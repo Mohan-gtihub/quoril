@@ -18,6 +18,7 @@ export function useCreateTask(listId: string) {
         minutes: number
         priority: 'low' | 'medium' | 'high'
         focusAfter: boolean
+        isRecurring?: boolean
     }) {
         setError(null)
 
@@ -48,6 +49,8 @@ export function useCreateTask(listId: string) {
                     priority: data.priority,
                     estimated_minutes: data.minutes,
                     due_date: selectedDate.toISOString(),
+                    is_recurring: data.isRecurring,
+                    last_reset_date: data.isRecurring ? new Date().toISOString().split('T')[0] : null
                 },
                 'today' // DEFAULT COLUMN
             )
