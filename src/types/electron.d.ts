@@ -46,6 +46,9 @@ export interface ElectronAPI {
         getPending: (table: string) => Promise<any[]>
         markSynced: (table: string, id: string) => Promise<void>
     }
+    tracker: {
+        setContext: (taskId: string | null) => Promise<void>
+    }
 }
 
 declare global {

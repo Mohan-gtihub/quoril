@@ -176,6 +176,51 @@ function autoMigrate() {
         version = 2
     }
 
+    if (version < 3) {
+        db.transaction(() => {
+            /* APPS: Store unique app info */
+            db.exec(`
+                CREATE TABLE IF NOT EXISTS apps (
+                    id TEXT PRIMARY KEY,
+                    name TEXT,
+                    category TEXT,
+                    productive_score INTEGER DEFAULT 0,
+                    created_at TEXT
+                )
+            `)
+
+            /* CONTEXTS: Meta for what the user is doing */
+            db.exec(`
+                CREATE TABLE IF NOT EXISTS contexts (
+                    id TEXT PRIMARY KEY,
+                    type TEXT, -- 'global', 'task', 'meeting'
+                    ref_id TEXT, -- e.g. task_id
+                    created_at TEXT
+                )
+            `)
+
+            /* SESSIONS: Discrete app usage blocks */
+            db.exec(`
+                CREATE TABLE IF NOT EXISTS app_sessions (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT,
+                    app_id TEXT,
+                    context_id TEXT,
+                    start_time TEXT,
+                    end_time TEXT,
+                    duration_seconds INTEGER DEFAULT 0,
+                    idle_seconds INTEGER DEFAULT 0,
+                    window_title TEXT,
+                    synced INTEGER DEFAULT 0,
+                    created_at TEXT
+                )
+            `)
+
+            db.prepare(`UPDATE db_meta SET value='3' WHERE key='version'`).run()
+        })()
+        version = 3
+    }
+
     /* Add archived_at if missing */
 
     const listCols = db.prepare(`PRAGMA table_info(lists)`).all()

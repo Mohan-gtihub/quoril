@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTaskStore } from '@/store/taskStore'
-import { X, CheckCircle2, Circle, Trash2, Plus } from 'lucide-react'
+import { X, CheckCircle2, Circle, Trash2, Plus, Repeat } from 'lucide-react'
 
 export function TaskDetailsPanel() {
     const {
@@ -74,6 +74,22 @@ export function TaskDetailsPanel() {
                 >
                     <X className="w-5 h-5" />
                 </button>
+            </div>
+
+            {/* Bodies... wait, I need to insert the toggle below the header. */}
+            <div className="px-6 py-2 border-b border-gray-700/30 flex items-center justify-between bg-[var(--bg-hover)]/20">
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => updateTask(task.id, { is_recurring: !task.is_recurring })}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${task.is_recurring
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_15px_-3px_rgba(16,185,129,0.2)]'
+                            : 'bg-gray-800/50 text-gray-500 border-gray-700 hover:border-gray-600'
+                            }`}
+                    >
+                        <Repeat className={`w-3.5 h-3.5 ${task.is_recurring ? 'animate-pulse' : ''}`} />
+                        {task.is_recurring ? 'Daily Recurrence Active' : 'Enable Daily Recurrence'}
+                    </button>
+                </div>
             </div>
 
             {/* Body */}

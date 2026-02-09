@@ -69,6 +69,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
         getPending: (table: string) => ipcRenderer.invoke('db:getPending', table),
         markSynced: (table: string, id: string) => ipcRenderer.invoke('db:markSynced', table, id),
     },
+
+    // Tracker
+    tracker: {
+        setContext: (taskId: string | null) => ipcRenderer.invoke('tracker:setContext', taskId),
+    },
 })
 
 // Window Management (Special case for legacy/custom calls)
@@ -139,6 +144,9 @@ export interface ElectronAPI {
         exec: (sql: string, params: any[]) => Promise<any>
         getPending: (table: string) => Promise<any[]>
         markSynced: (table: string, id: string) => Promise<void>
+    }
+    tracker: {
+        setContext: (taskId: string | null) => Promise<void>
     }
 }
 

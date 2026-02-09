@@ -12,6 +12,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 import { initDatabase, dbOps } from './db'
+import { trackingEngine } from './core/core'
 
 /* ---------------- PATH ---------------- */
 
@@ -286,6 +287,12 @@ function setupIPC() {
     ipcMain.handle('db:exec', (_, sql, params) =>
         safe(() => dbOps.exec(sql, params))
     )
+
+    /* Tracker */
+
+    ipcMain.handle('tracker:setContext', (_, taskId: string | null) => {
+        trackingEngine.setTaskContext(taskId)
+    })
 }
 
 /* ---------------- SAFE WRAPPER ---------------- */
@@ -311,6 +318,7 @@ app.whenReady().then(async () => {
     createWindow()
     createTray()
     setupIPC()
+    trackingEngine.start()
 })
 
 app.on('window-all-closed', () => {
@@ -319,10 +327,11 @@ app.on('window-all-closed', () => {
     }
 })
 
-app.on('before-quit', () => {
+app.on('before-quit', async () => {
     quitting = true
 
     try {
+        await trackingEngine.stop()
         dbOps.pauseTask('__all__')
     } catch (e) {
         console.error('[Cleanup] Failed', e)

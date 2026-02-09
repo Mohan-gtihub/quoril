@@ -477,10 +477,24 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
         for (const task of toReset) {
             await updateTask(task.id, {
-                status: 'active', // Move to Today column (active)
+                status: 'active', // Keep in Today column but not 'done'
                 completed_at: null,
+                actual_seconds: 0,
                 last_reset_date: today
             })
+
+            // Reset Subtasks for this task
+            // We need to fetch them if they aren't in the state
+            if (!get().subtasks[task.id]) {
+                await get().fetchSubtasks(task.id)
+            }
+
+            const taskSubtasks = get().subtasks[task.id] || []
+            for (const sub of taskSubtasks) {
+                if (sub.done || sub.completed) {
+                    await get().toggleSubtask(sub.id)
+                }
+            }
         }
     },
 

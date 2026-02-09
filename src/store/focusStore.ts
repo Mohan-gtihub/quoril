@@ -286,6 +286,9 @@ export const useFocusStore = create<FocusState>()(
                     if (data) {
                         set({ currentSessionId: data.id })
                     }
+
+                    // Notify System Agent of Context change
+                    window.electronAPI.tracker.setContext(taskId)
                 } catch (e) {
                     console.error('[Focus] start failed', e)
                 }
@@ -402,6 +405,10 @@ export const useFocusStore = create<FocusState>()(
                         pomodoroRemaining: 0,
                         breakRemaining: 0
                     })
+
+                    // Clear Context in System Agent
+                    window.electronAPI.tracker.setContext(null)
+
                     await get().fetchSessions()
                 } catch (e) {
                     console.error('[Focus] end failed', e)

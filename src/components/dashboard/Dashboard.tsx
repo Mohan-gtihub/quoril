@@ -110,12 +110,20 @@ export function Dashboard() {
     const allListsStats = useMemo(() => {
         const activeListIds = new Set(lists.map(l => l.id))
         const pending = tasks.filter(t => {
-            if (t.status === 'done') return false
             if (!activeListIds.has(t.list_id || '')) return false
+
+            // RECURRING LOGIC: For future dates, recurring tasks are always "pending" 
+            // because they will be reset.
+            if (t.is_recurring && !isSameDay(selectedDate, startOfToday()) && selectedDate > startOfToday()) {
+                return true
+            }
+
+            if (t.status === 'done') return false
 
             const taskDate = t.due_date ? new Date(t.due_date) : null
             if (taskDate && isSameDay(taskDate, selectedDate)) return true
-            if (t.is_recurring && selectedDate >= startOfToday()) return true
+            if (t.is_recurring && isSameDay(selectedDate, startOfToday())) return true
+
             return isSameDay(selectedDate, startOfToday())
         })
 

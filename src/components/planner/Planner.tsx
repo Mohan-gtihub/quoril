@@ -281,6 +281,8 @@ export function Planner() {
         sortedTasks.forEach(task => {
             if (task.deleted_at) return
 
+            const { getColumnStatuses } = useTaskStore.getState()
+
             if (selectedListId === 'all') {
                 const isActiveList = lists.some(l => l.id === task.list_id)
                 if (!isActiveList) return
@@ -288,11 +290,15 @@ export function Planner() {
                 return
             }
 
-            const { getColumnStatuses } = useTaskStore.getState()
-
             // FILTERS BY DATE
             const taskDate = task.due_date ? new Date(task.due_date) : null
             const completedDate = task.completed_at ? new Date(task.completed_at) : null
+
+            // RECURRING LOGIC: Show in Today column for future dates as 'active' (Todo state)
+            if (task.is_recurring && !isSameDay(selectedDate, startOfToday()) && selectedDate > startOfToday()) {
+                cols.today.push({ ...task, status: 'active' as any, completed_at: null })
+                return
+            }
 
             if (getColumnStatuses('backlog').includes(task.status)) {
                 cols.backlog.push(task)
@@ -301,12 +307,10 @@ export function Planner() {
             } else if (getColumnStatuses('today').includes(task.status)) {
                 // TODAY LOGIC: 
                 // 1. If viewing actual today, show EVERYTHING currently active/paused.
-                // 2. If viewing a future/past day, show ONLY what was scheduled for that day.
+                // 2. If viewing a future/past day (fallback), show what's scheduled.
                 if (isSameDay(selectedDate, startOfToday())) {
                     cols.today.push(task)
                 } else if (taskDate && isSameDay(taskDate, selectedDate)) {
-                    cols.today.push(task)
-                } else if (task.is_recurring && selectedDate >= startOfToday()) {
                     cols.today.push(task)
                 }
             } else if (getColumnStatuses('done').includes(task.status)) {

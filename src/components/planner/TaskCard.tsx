@@ -13,6 +13,8 @@ import { formatTimeInput, parseTimeInput } from '@/utils/timeParser'
 import { useTimerDisplay } from '@/hooks/useTimerDisplay'
 import { cn } from '@/utils/helpers'
 import { useSettingsStore } from '@/store/settingsStore'
+import { usePlannerStore } from '@/store/plannerStore'
+import { isSameDay, startOfToday } from 'date-fns'
 
 interface TaskCardProps {
     task: Task
@@ -51,9 +53,10 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
 
     const { updateTask, archiveTask, permanentDeleteTask, moveTaskToColumn, fetchSubtasks, subtasks, toggleSubtask, deleteSubtask, createSubtask, toggleTaskRecurring } = useTaskStore()
 
+    const { selectedDate } = usePlannerStore()
     // Focus Store – subscribe to what we need for active-timer display
     const timer = useTimerDisplay()
-    const isTaskActive = timer.isActive && timer.taskId === task.id
+    const isTaskActive = timer.isActive && timer.taskId === task.id && isSameDay(selectedDate, startOfToday())
     const focus = useFocusStore()
 
     // Use synced timer if active, else fallback to static task calculation
