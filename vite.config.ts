@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react'
 import electron from 'vite-plugin-electron/simple'
 import path from 'path'
 
+import pkg from './package.json'
+
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [
@@ -14,7 +16,12 @@ export default defineConfig({
                     build: {
                         outDir: 'dist-electron',
                         rollupOptions: {
-                            external: ['better-sqlite3'],
+                            external: [
+                                ...Object.keys(pkg.dependencies || {}),
+                                'electron',
+                                'better-sqlite3',
+                                'active-win'
+                            ],
                         },
                     },
                 },

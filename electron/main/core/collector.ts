@@ -1,60 +1,140 @@
-import { exec } from 'child_process'
-import { promisify } from 'util'
+import activeWin from 'active-win'
 import { powerMonitor } from 'electron'
-
-const execAsync = promisify(exec)
 
 export interface ActiveWindow {
     appName: string
     title: string
+    rawApp: string
+    rawPath?: string
     isIdle: boolean
+    category: string
+}
+
+const BROWSERS = [
+    'chrome', 'msedge', 'firefox', 'brave', 'opera', 'safari', 'vivaldi', 'google chrome'
+]
+
+const SITE_PATTERNS = [
+    { name: 'YouTube', match: /youtube/i },
+    { name: 'ChatGPT', match: /chatgpt|openai/i },
+    { name: 'Claude', match: /claude|anthropic/i },
+    { name: 'GitHub', match: /github/i },
+    { name: 'WhatsApp Web', match: /whatsapp/i },
+    { name: 'Notion', match: /notion/i },
+    { name: 'Gmail', match: /gmail/i },
+    { name: 'LinkedIn', match: /linkedin/i },
+    { name: 'Twitter/X', match: /twitter|x\.com/i },
+    { name: 'Figma', match: /figma/i },
+    { name: 'Antigravity', match: /antigravity|quoril/i }
+]
+
+const DEV_KEYWORDS = [
+    'code', 'cursor', 'windsurf', 'idea', 'pycharm',
+    'webstorm', 'studio', 'atom', 'sublime'
+]
+
+function normalize(name: string) {
+    return name
+        .replace('.exe', '')
+        .replace('.app', '')
+        .toLowerCase()
+        .trim()
+}
+
+function isBrowser(app: string) {
+    return BROWSERS.includes(app.toLowerCase())
+}
+
+function detectSite(title: string) {
+    for (const s of SITE_PATTERNS) {
+        if (s.match.test(title)) return s.name
+    }
+    return null
+}
+
+function detectIDE(app: string, path?: string) {
+    const s = `${app} ${path || ''}`.toLowerCase()
+    return DEV_KEYWORDS.some(k => s.includes(k))
 }
 
 export async function getActiveWindow(): Promise<ActiveWindow | null> {
-    const idleTime = powerMonitor.getSystemIdleTime()
-    const isIdle = idleTime > 60 // 1 minute threshold
-
     try {
-        // PowerShell script to get foreground window property
-        const script = `
-            Add-Type @"
-              using System;
-              using System.Runtime.InteropServices;
-              using System.Text;
-              public class Win32 {
-                [DllImport("user32.dll")]
-                public static extern IntPtr GetForegroundWindow();
-                [DllImport("user32.dll")]
-                public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-                [DllImport("user32.dll")]
-                public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-              }
-"@
-            $hWnd = [Win32]::GetForegroundWindow()
-            $sb = New-Object System.Text.StringBuilder 256
-            [Win32]::GetWindowText($hWnd, $sb, $sb.Capacity) | Out-Null
-            $processId = 0
-            [Win32]::GetWindowThreadProcessId($hWnd, [ref]$processId) | Out-Null
-            $p = Get-Process -Id $processId
-            $name = $p.ProcessName
-            $title = $sb.ToString()
-            "@{appName='$name';title='$title'}"
-        `
+        const win = await activeWin()
+        if (!win) return null
 
-        const { stdout } = await execAsync(`powershell -Command "${script.replace(/\n/g, ' ')}"`)
+        const idleTime = powerMonitor.getSystemIdleTime()
+        const isIdle = idleTime > 60 // 1 minute threshold
 
-        // Very basic parse of the string returned
-        const match = stdout.match(/appName='(.*?)';title='(.*?)'/)
-        if (match) {
+        const rawApp = win.owner.name
+        const rawPath = win.owner.path
+        const title = win.title || ''
+
+        const normalizedApp = normalize(rawApp)
+        let category = 'Other'
+
+        // Idle check
+        if (isIdle) {
             return {
-                appName: match[1],
-                title: match[2],
-                isIdle
+                appName: 'Idle',
+                title: 'AFK',
+                rawApp,
+                rawPath,
+                isIdle: true,
+                category: 'Idle'
             }
         }
+
+        // 1. Browser sites
+        if (isBrowser(normalizedApp)) {
+            const site = detectSite(title)
+            if (site) {
+                return {
+                    appName: site,
+                    title,
+                    rawApp,
+                    rawPath,
+                    isIdle: false,
+                    category: 'Web'
+                }
+            }
+        }
+
+        // 2. IDE / Dev tools
+        if (detectIDE(normalizedApp, rawPath)) {
+            return {
+                appName: 'IDE',
+                title,
+                rawApp,
+                rawPath,
+                isIdle: false,
+                category: 'Development'
+            }
+        }
+
+        // 3. Messengers
+        if (/whatsapp|telegram|discord/i.test(normalizedApp + title)) {
+            return {
+                appName: 'Messenger',
+                title,
+                rawApp,
+                rawPath,
+                isIdle: false,
+                category: 'Communication'
+            }
+        }
+
+        // Default: Pure app name
+        return {
+            appName: rawApp.replace('.exe', ''),
+            title,
+            rawApp,
+            rawPath,
+            isIdle: false,
+            category
+        }
+
     } catch (e) {
         // console.error('[Collector] Window tracking failed:', e)
+        return null
     }
-
-    return null
 }

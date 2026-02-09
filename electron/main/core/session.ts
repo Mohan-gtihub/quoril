@@ -102,7 +102,7 @@ class SessionManager {
         }
 
         try {
-            await this.ensureAppExists(active.appName)
+            await this.ensureAppExists(active.appName, active.category)
             await dbOps.exec(`
                 INSERT INTO app_sessions (id, app_id, context_id, start_time, end_time, window_title, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -133,13 +133,12 @@ class SessionManager {
 
             try {
                 // Ensure the app exists in the 'apps' table
+                // Note: We don't have the category here, so we hope it was added at start
                 await this.ensureAppExists(this.currentSession.appName)
 
-                // Save session
-                // We'll need to add a specialized db method for this
-                // For now, use raw exec through dbOps if available or we add it
+                // Save session (using REPLACE because it was already inserted at start)
                 await dbOps.exec(`
-                    INSERT INTO app_sessions (id, app_id, context_id, start_time, end_time, duration_seconds, window_title, created_at)
+                    INSERT OR REPLACE INTO app_sessions (id, app_id, context_id, start_time, end_time, duration_seconds, window_title, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 `, [
                     session.id, session.app_id, session.context_id,
@@ -154,12 +153,15 @@ class SessionManager {
         this.currentSession = null
     }
 
-    private async ensureAppExists(appName: string) {
+    private async ensureAppExists(appName: string, category: string = 'Other') {
         try {
             await dbOps.exec(`
-                INSERT OR IGNORE INTO apps (id, name, created_at)
-                VALUES (?, ?, ?)
-            `, [appName, appName, new Date().toISOString()])
+                INSERT INTO apps (id, name, category, created_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    category = excluded.category,
+                    name = excluded.name
+            `, [appName, appName, category, new Date().toISOString()])
         } catch (e) { }
     }
 }

@@ -67,6 +67,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 // Validate session with our security layer
                 createSession(session.access_token, session.user.id)
 
+                // Notify main process for synchronization engine
+                if (window.electronAPI?.auth) {
+                    window.electronAPI.auth.setUser(session.user.id).catch(console.error)
+                }
+
                 set({
                     session,
                     user: session.user,
@@ -284,6 +289,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
             // 2. Stop session monitoring
             stopSessionMonitoring()
+
+            if (window.electronAPI?.auth) {
+                window.electronAPI.auth.setUser(null).catch(console.error)
+            }
 
             // 3. Sign out from Supabase
             await supabase.auth.signOut()

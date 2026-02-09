@@ -14,6 +14,7 @@ import { Settings } from '@/components/focus/Settings'
 import { Reports } from '@/components/reports/Reports'
 import { TitleBar } from '@/components/layout/TitleBar'
 import { useFocusStore } from '@/store/focusStore'
+import { useTaskStore } from '@/store/taskStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { SuperFocusPill } from '@/components/focus/SuperFocusPill'
 import { cn } from '@/utils/helpers'
@@ -76,7 +77,11 @@ function App() {
 
     // When user comes back to the app, sync store elapsed from real time
     useEffect(() => {
-        const onVisible = () => useFocusStore.getState().syncTimer()
+        const onVisible = () => {
+            useFocusStore.getState().syncTimer()
+            // Also sync recurring tasks if day has changed
+            useTaskStore.getState().syncRecurringTasks().catch(() => { })
+        }
         document.addEventListener('visibilitychange', onVisible)
         window.addEventListener('focus', onVisible)
         return () => {

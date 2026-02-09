@@ -1,25 +1,31 @@
-
 import { sessionManager } from './session'
 import { contextManager } from './context'
+import { syncManager } from './sync'
 
 class TrackingEngine {
     async start() {
         console.log('[TrackingEngine] Initializing System Agent...')
         await sessionManager.start()
+        syncManager.start()
         console.log('[TrackingEngine] Running.')
     }
 
     async stop() {
         console.log('[TrackingEngine] Stopping...')
         await sessionManager.stop()
+        syncManager.stop()
     }
 
-    setTaskContext(taskId: string | null) {
+    async setTaskContext(taskId: string | null) {
         if (taskId) {
-            contextManager.setContext('task', taskId)
+            await contextManager.setContext('task', taskId)
         } else {
-            contextManager.setContext('global')
+            await contextManager.setContext('global')
         }
+    }
+
+    setUserId(userId: string) {
+        syncManager.setUserId(userId)
     }
 }
 

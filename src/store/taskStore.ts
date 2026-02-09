@@ -460,15 +460,26 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         const task = get().tasks.find(t => t.id === id)
         if (!task) return
 
+        const now = new Date()
+        const year = now.getFullYear()
+        const month = String(now.getMonth() + 1).padStart(2, '0')
+        const day = String(now.getDate()).padStart(2, '0')
+        const today = `${year}-${month}-${day}`
+
         await get().updateTask(id, {
             is_recurring: !task.is_recurring,
-            last_reset_date: !task.is_recurring ? new Date().toISOString().split('T')[0] : null
+            last_reset_date: !task.is_recurring ? today : null
         })
     },
 
     syncRecurringTasks: async () => {
         const { tasks, updateTask } = get()
-        const today = new Date().toISOString().split('T')[0]
+        // FIX: Use local date instead of UTC ISO string to avoid timezone issues
+        const now = new Date()
+        const year = now.getFullYear()
+        const month = String(now.getMonth() + 1).padStart(2, '0')
+        const day = String(now.getDate()).padStart(2, '0')
+        const today = `${year}-${month}-${day}`
 
         // Find tasks that are recurring but haven't been reset today
         const toReset = tasks.filter(t => t.is_recurring && t.last_reset_date !== today)
@@ -491,10 +502,25 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
             const taskSubtasks = get().subtasks[task.id] || []
             for (const sub of taskSubtasks) {
-                if (sub.done || sub.completed) {
-                    await get().toggleSubtask(sub.id)
+                if (sub.completed || sub.done) {
+                    try {
+                        await localService.subtasks.update(sub.id, { completed: false })
+                    } catch (e) {
+                        console.error('Failed to reset subtask:', sub.id)
+                    }
                 }
             }
+            // Clear subtasks from state to force a re-fetch or manual update
+            set((s) => ({
+                subtasks: {
+                    ...s.subtasks,
+                    [task.id]: (s.subtasks[task.id] || []).map(st => ({
+                        ...st,
+                        completed: false,
+                        done: false
+                    }))
+                }
+            }))
         }
     },
 

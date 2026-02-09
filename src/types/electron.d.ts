@@ -38,7 +38,9 @@ export interface ElectronAPI {
         getSubtasks: (taskId: string) => Promise<any[]>
         saveSubtask: (subtask: any) => Promise<any>
         deleteSubtask: (id: string) => Promise<any>
-        getFocusSessions: (userId: string) => Promise<any[]>
+        getSessions: (userId: string) => Promise<any[]>
+        getAppUsage: (start: string, end: string) => Promise<any[]>
+        getAppUsageByTask: (taskId: string) => Promise<any[]>
         saveFocusSession: (session: any) => Promise<any>
         updateFocusSession: (id: string, updates: any) => Promise<any>
         genericUpdate: (table: string, id: string, updates: any) => Promise<any>
@@ -48,6 +50,9 @@ export interface ElectronAPI {
     }
     tracker: {
         setContext: (taskId: string | null) => Promise<void>
+    }
+    auth: {
+        setUser: (userId: string | null) => Promise<void>
     }
 }
 

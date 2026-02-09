@@ -8,7 +8,9 @@ import {
     Search,
     Settings,
     MoreVertical,
-    Zap
+    Zap,
+    Activity,
+    ChevronRight,
 } from 'lucide-react'
 
 import type { List, ListWithStats } from '@/types/list'
@@ -167,7 +169,40 @@ export function Dashboard() {
                 </div>
 
                 <div className="max-w-7xl mx-auto p-8">
-                    {/* TITLE */}
+                    {/* Intelligence status (Workfolio style) */}
+                    <div
+                        onClick={() => navigate('/reports')}
+                        className="bg-indigo-600/10 border border-indigo-500/20 p-5 rounded-3xl flex items-center justify-between mb-10 group cursor-pointer hover:border-indigo-500/40 transition-all hover:shadow-[0_0_30px_rgba(99,102,241,0.1)] relative overflow-hidden"
+                    >
+                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:rotate-12 transition-transform">
+                            <Zap size={120} />
+                        </div>
+
+                        <div className="flex items-center gap-5">
+                            <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-xl shadow-indigo-600/30 ring-4 ring-indigo-500/10">
+                                <Activity size={24} />
+                            </div>
+                            <div>
+                                <h4 className="text-lg font-black text-white flex items-center gap-2">
+                                    Intelligence Engine Active
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                                </h4>
+                                <p className="text-[11px] text-indigo-400 font-bold uppercase tracking-[0.2em]">
+                                    System-wide screentime & application tracking is operational
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 pr-2">
+                            <div className="hidden lg:block text-right">
+                                <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">Intelligence Report</p>
+                                <p className="text-xs font-bold text-white/60">View Activity Distribution</p>
+                            </div>
+                            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-white/40 group-hover:text-white group-hover:border-white/10 transition-all">
+                                <ChevronRight size={20} />
+                            </div>
+                        </div>
+                    </div>
 
                     <div className="flex justify-between mb-8">
 

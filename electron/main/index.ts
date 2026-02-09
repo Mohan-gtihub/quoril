@@ -98,7 +98,7 @@ function createWindow() {
     })
 
     mainWindow.on('close', e => {
-        if (process.platform === 'darwin' && !quitting) {
+        if (!quitting) {
             e.preventDefault()
             mainWindow?.hide()
         }
@@ -270,6 +270,14 @@ function setupIPC() {
         dbOps.getSessions(uid)
     )
 
+    ipcMain.handle('db:getAppUsage', (_, start, end) =>
+        dbOps.getAppUsage(start, end)
+    )
+
+    ipcMain.handle('db:getAppUsageByTask', (_, taskId) =>
+        dbOps.getAppUsageByTask(taskId)
+    )
+
     ipcMain.handle('db:saveSession', (_, s) =>
         safe(() => dbOps.saveSession(s))
     )
@@ -292,6 +300,10 @@ function setupIPC() {
 
     ipcMain.handle('tracker:setContext', (_, taskId: string | null) => {
         trackingEngine.setTaskContext(taskId)
+    })
+
+    ipcMain.handle('auth:setUser', (_, userId: string) => {
+        trackingEngine.setUserId(userId)
     })
 }
 
@@ -319,12 +331,18 @@ app.whenReady().then(async () => {
     createTray()
     setupIPC()
     trackingEngine.start()
+
+    // Auto-launch on startup (Safe production-grade implementation)
+    if (!isDev) {
+        app.setLoginItemSettings({
+            openAtLogin: true,
+            path: app.getPath('exe')
+        })
+    }
 })
 
 app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-        app.quit()
-    }
+    // Keep app running in background (tray active)
 })
 
 app.on('before-quit', async () => {

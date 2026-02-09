@@ -62,6 +62,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         saveSubtask: (subtask: any) => ipcRenderer.invoke('db:saveSubtask', subtask),
         deleteSubtask: (id: string) => ipcRenderer.invoke('db:deleteSubtask', id),
         getSessions: (userId: string) => ipcRenderer.invoke('db:getSessions', userId),
+        getAppUsage: (start: string, end: string) => ipcRenderer.invoke('db:getAppUsage', start, end),
+        getAppUsageByTask: (taskId: string) => ipcRenderer.invoke('db:getAppUsageByTask', taskId),
         saveSession: (session: any) => ipcRenderer.invoke('db:saveSession', session),
         updateFocusSession: (id: string, updates: any) => ipcRenderer.invoke('db:updateFocusSession', id, updates),
         genericUpdate: (table: string, id: string, updates: any) => ipcRenderer.invoke('db:genericUpdate', table, id, updates),
@@ -74,6 +76,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     tracker: {
         setContext: (taskId: string | null) => ipcRenderer.invoke('tracker:setContext', taskId),
     },
+
+    // Auth
+    auth: {
+        setUser: (userId: string) => ipcRenderer.invoke('auth:setUser', userId),
+    }
 })
 
 // Window Management (Special case for legacy/custom calls)
@@ -138,6 +145,8 @@ export interface ElectronAPI {
         saveSubtask: (subtask: any) => Promise<any>
         deleteSubtask: (id: string) => Promise<any>
         getSessions: (userId: string) => Promise<any[]>
+        getAppUsage: (start: string, end: string) => Promise<any[]>
+        getAppUsageByTask: (taskId: string) => Promise<any[]>
         saveSession: (session: any) => Promise<any>
         updateFocusSession: (id: string, updates: any) => Promise<any>
         genericUpdate: (table: string, id: string, updates: any) => Promise<any>
@@ -147,6 +156,9 @@ export interface ElectronAPI {
     }
     tracker: {
         setContext: (taskId: string | null) => Promise<void>
+    }
+    auth: {
+        setUser: (userId: string) => Promise<void>
     }
 }
 

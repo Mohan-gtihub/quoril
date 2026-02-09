@@ -502,6 +502,36 @@ export const dbOps = {
         `, [userId])
     },
 
+    /* ---------- APP TRACKING ---------- */
+
+    getAppUsage(startDate: string, endDate: string) {
+        return exec(`
+            SELECT 
+                s.app_id as appName,
+                SUM(s.duration_seconds) as totalSeconds,
+                MAX(s.window_title) as lastTitle,
+                a.category
+            FROM app_sessions s
+            LEFT JOIN apps a ON s.app_id = a.id
+            WHERE s.start_time >= ? AND s.start_time <= ?
+            GROUP BY s.app_id
+            ORDER BY totalSeconds DESC
+        `, [startDate, endDate])
+    },
+
+    getAppUsageByTask(taskId: string) {
+        return exec(`
+            SELECT 
+                s.app_id as appName,
+                SUM(s.duration_seconds) as totalSeconds
+            FROM app_sessions s
+            JOIN contexts c ON s.context_id = c.id
+            WHERE c.type = 'task' AND c.ref_id = ?
+            GROUP BY s.app_id
+            ORDER BY totalSeconds DESC
+        `, [taskId])
+    },
+
     saveSession(session: any) {
 
         session.synced = 0
