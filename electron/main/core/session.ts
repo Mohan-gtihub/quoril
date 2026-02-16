@@ -1,4 +1,4 @@
-
+import { powerMonitor } from 'electron'
 import { v4 as uuidv4 } from 'uuid'
 import { getActiveWindow, ActiveWindow } from './collector'
 import { contextManager } from './context'
@@ -11,14 +11,35 @@ interface SessionState {
     title: string
     start: number // timestamp
     contextId: string
+    pulses: number // number of checks
+    activePulses: number // number of checks where not idle
 }
 
 class SessionManager {
     private currentSession: SessionState | null = null
     private checkInterval: NodeJS.Timeout | null = null
     private lastPulseTime: number = Date.now()
+    private isInitialized = false
+    private userId: string | null = null
+
+    setUserId(id: string | null) {
+        this.userId = id
+    }
 
     async start() {
+        if (!this.isInitialized) {
+            powerMonitor.on('suspend', () => {
+                console.log('[SessionManager] System suspending, stopping tracking...')
+                this.stop()
+            })
+
+            powerMonitor.on('resume', () => {
+                console.log('[SessionManager] System resumed, restarting tracking...')
+                this.start()
+            })
+            this.isInitialized = true
+        }
+
         if (this.checkInterval) return
 
         // Immediate first check
@@ -26,7 +47,7 @@ class SessionManager {
 
         this.checkInterval = setInterval(() => {
             this.pulse()
-        }, 5000) // 5s budget as per senior level proposal
+        }, 5000)
     }
 
     stop() {
@@ -37,11 +58,28 @@ class SessionManager {
         this.endCurrentSession()
     }
 
+    getCurrentSession() {
+        return this.currentSession
+    }
+
     private async pulse() {
         const active = await getActiveWindow()
         const context = contextManager.getCurrentContext()
 
-        if (!active || active.isIdle) {
+        if (!active) {
+            this.endCurrentSession()
+            return
+        }
+
+        // Increment current session pulses
+        if (this.currentSession) {
+            this.currentSession.pulses++
+            if (!active.isIdle) {
+                this.currentSession.activePulses++
+            }
+        }
+
+        if (active.isIdle) {
             stateMachine.transition(TrackerState.IDLE)
             this.endCurrentSession()
             return
@@ -76,13 +114,16 @@ class SessionManager {
         if (!this.currentSession) return
         const end = Date.now()
         const duration = Math.round((end - this.currentSession.start) / 1000)
+        const intensity = this.currentSession.pulses > 0
+            ? Math.round((this.currentSession.activePulses / this.currentSession.pulses) * 100)
+            : 0
 
         try {
             await dbOps.exec(`
                 UPDATE app_sessions 
-                SET end_time = ?, duration_seconds = ?
+                SET end_time = ?, duration_seconds = ?, activity_level = ?
                 WHERE id = ?
-            `, [new Date(end).toISOString(), duration, this.currentSession.id])
+            `, [new Date(end).toISOString(), duration, intensity, this.currentSession.id])
         } catch (e) {
             console.error('[SessionManager] Checkpoint failed:', e)
         }
@@ -98,15 +139,17 @@ class SessionManager {
             appName: active.appName,
             title: active.title,
             start,
-            contextId
+            contextId,
+            pulses: 1,
+            activePulses: active.isIdle ? 0 : 1
         }
 
         try {
             await this.ensureAppExists(active.appName, active.category)
             await dbOps.exec(`
-                INSERT INTO app_sessions (id, app_id, context_id, start_time, end_time, window_title, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            `, [id, active.appName, contextId, startISO, startISO, active.title, startISO])
+                INSERT INTO app_sessions (id, user_id, app_id, context_id, start_time, end_time, window_title, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [id, this.userId, active.appName, contextId, startISO, startISO, active.title, startISO])
             this.lastPulseTime = start
         } catch (e) {
             console.error('[SessionManager] Initial save failed:', e)
@@ -118,16 +161,21 @@ class SessionManager {
 
         const end = Date.now()
         const duration = Math.round((end - this.currentSession.start) / 1000)
+        const intensity = this.currentSession.pulses > 0
+            ? Math.round((this.currentSession.activePulses / this.currentSession.pulses) * 100)
+            : 0
 
         if (duration > 0) {
             const session = {
                 id: this.currentSession.id,
+                user_id: this.userId,
                 app_id: this.currentSession.appName,
                 context_id: this.currentSession.contextId,
                 start_time: new Date(this.currentSession.start).toISOString(),
                 end_time: new Date(end).toISOString(),
                 duration_seconds: duration,
                 window_title: this.currentSession.title,
+                activity_level: intensity,
                 created_at: new Date().toISOString()
             }
 
@@ -138,10 +186,10 @@ class SessionManager {
 
                 // Save session (using REPLACE because it was already inserted at start)
                 await dbOps.exec(`
-                    INSERT OR REPLACE INTO app_sessions (id, app_id, context_id, start_time, end_time, duration_seconds, window_title, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT OR REPLACE INTO app_sessions (id, user_id, app_id, context_id, start_time, end_time, duration_seconds, window_title, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `, [
-                    session.id, session.app_id, session.context_id,
+                    session.id, session.user_id, session.app_id, session.context_id,
                     session.start_time, session.end_time, session.duration_seconds,
                     session.window_title, session.created_at
                 ])

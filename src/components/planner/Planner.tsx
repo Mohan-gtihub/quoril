@@ -314,9 +314,25 @@ export function Planner() {
                     cols.today.push(task)
                 }
             } else if (getColumnStatuses('done').includes(task.status)) {
-                // Done only shows tasks completed ON the selected date
-                if (completedDate && isSameDay(completedDate, selectedDate)) {
-                    cols.done.push(task)
+                // Done tasks: Show if completed on the selected date
+                if (completedDate) {
+                    // MIDNIGHT BUFFER: If a task was completed before 4am, 
+                    // and we are looking at the previous day, count it as 'done' for that day.
+                    const isTodaySelected = isSameDay(selectedDate, startOfToday())
+
+                    if (isTodaySelected) {
+                        // If viewing Today, show everything done recently (last 24h) 
+                        // or anything done today to ensure no disappearance.
+                        cols.done.push(task)
+                    } else if (isSameDay(completedDate, selectedDate)) {
+                        cols.done.push(task)
+                    } else {
+                        // Check if it was done in the "early morning" (buffer) of the day AFTER selectedDate
+                        const dayAfter = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000)
+                        if (isSameDay(completedDate, dayAfter) && completedDate.getHours() < 4) {
+                            cols.done.push(task)
+                        }
+                    }
                 }
             }
         })

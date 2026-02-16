@@ -1,45 +1,92 @@
-import { Task } from '@/types/database'
+export interface TaskCompletionStats {
+    completedToday: number
+    completionRatePercent: number
+    overdueTasks: number
+    completedByList: { listName: string; count: number; color: string }[]
+}
+
+export interface FocusTimeStats {
+    totalMinutesToday: number
+    totalMinutesWeek: number
+    focusPerTask: { taskTitle: string; minutes: number; taskId: string }[]
+    deepWorkSessionsCount: number
+}
+
+export interface StreakStats {
+    dailyFocusStreak: number
+    dailyCompletionStreak: number
+}
 
 export interface DailyChartData {
     date: Date
     label: string
-    focusHours: number
-    breakHours: number
-    totalMinutes: number
     focusMinutes: number
-    goalMet: boolean
+    tasksCompleted: number
+}
+
+export interface ListDistItem {
+    listName: string
+    count: number
+    color: string
+}
+
+export interface FocusDistributionByDay {
+    day: string
+    avgMinutes: number
+}
+
+export interface MostProductiveTimeOfDay {
+    hour: number
+    label: string
+    avgMinutes: number
+}
+
+export interface ProductivityTrends {
+    weeklyData: DailyChartData[]
+    monthlyData: DailyChartData[]
+    focusDistributionByDay: FocusDistributionByDay[]
+    mostProductiveTimeOfDay: MostProductiveTimeOfDay[]
+}
+
+export interface ComprehensiveReportStats {
+    focusTime: FocusTimeStats
+    taskCompletion: TaskCompletionStats
+    streaks: StreakStats
+    productivity: ProductivityTrends
+
+    // Legacy stats for compatibility
+    totalFocusDisplay: string
+    totalBreakDisplay: string
+    efficiencyScore: number
+    chartData: any[]
+    currentStreak: number
+    rangeConsistency: number
+    minutesToday: number
+    timelineData: any[]
+    activeTasks: any[]
+    listDist: any[]
 }
 
 export interface SessionItem {
     id: string
-    task_id: string | null
+    task_id: string
     start_time: string
     end_time: string | null
-    seconds: number | null
-    type: 'focus' | 'break' | 'long_break'
-    planned_seconds?: number // Optional for now
+    seconds: number
+    type: string
+    planned_seconds?: number
 }
 
 export interface TimelineGroup {
-    date: string // yyyy-MM-dd
+    date: string
     items: SessionItem[]
 }
 
-export interface ListDistItem {
-    name: string
-    value: number
-    color: string
+export type DateRange = {
+    start: Date
+    end: Date
+    label: string
 }
 
-export interface ReportStats {
-    totalFocusDisplay: string
-    totalBreakDisplay: string
-    efficiencyScore: number
-    chartData: DailyChartData[]
-    currentStreak: number
-    rangeConsistency: number
-    minutesToday: number
-    timelineData: TimelineGroup[]
-    activeTasks: Task[]
-    listDist: ListDistItem[]
-}
+// Alias for legacy compatibility
+export type ReportStats = ComprehensiveReportStats

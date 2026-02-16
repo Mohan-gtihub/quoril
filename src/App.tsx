@@ -17,7 +17,9 @@ import { useFocusStore } from '@/store/focusStore'
 import { useTaskStore } from '@/store/taskStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { SuperFocusPill } from '@/components/focus/SuperFocusPill'
+
 import { cn } from '@/utils/helpers'
+
 
 import { dataSyncService } from '@/services/dataSyncService'
 
@@ -46,12 +48,10 @@ function App() {
     useEffect(() => {
         const focus = useFocusStore.getState()
         // If we have an active session but no startTime (loaded from localStorage),
-        // initialize it properly
+        // initialize it properly by forcing a pause state.
         if (focus.isActive && !focus.startTime) {
-            // Set startTime to now and pause the session
-            // User can click resume to continue
             useFocusStore.setState({
-                startTime: Date.now(),
+                startTime: null,
                 isPaused: true
             })
         }
@@ -163,6 +163,7 @@ function App() {
                     </div>
                 </HashRouter>
             </QueryProvider>
+
         </ErrorBoundary>
     )
 }

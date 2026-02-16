@@ -47,7 +47,7 @@ export const useSettingsStore = create<SettingsState>()(
 
             timedAlertsEnabled: true,
             alertInterval: 10,
-            alertSound: 'Melodic',
+            alertSound: 'ping',
             animatedFlash: true,
 
             notificationAlertsEnabled: true,

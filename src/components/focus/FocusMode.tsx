@@ -55,6 +55,9 @@ export function FocusMode() {
     // Celebration State
     const [celebrationTask, setCelebrationTask] = useState<{ title: string; timeSpent: number } | null>(null)
 
+    // Right Panel Tab State
+    const [rightPanelTab, setRightPanelTab] = useState<'queue' | 'history'>('queue')
+
     // Load tasks
     const loadFocusTasks = useCallback(async () => {
         if (!selectedListId) return
@@ -356,37 +359,86 @@ export function FocusMode() {
                         </button>
                     </div>
 
-                    <div className="w-full">
-                        <div className="flex items-center justify-between mb-4 px-1">
-                            <div className="flex items-center gap-2">
-                                <ListTodo className="w-3 h-3 text-white/20" />
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 italic">Mission Buffer</span>
+                    <div className="w-full h-[400px] flex flex-col pt-4">
+                        <div className="flex items-center justify-between mb-4 px-1 shrink-0">
+                            <div className="flex items-center gap-4">
+                                <button
+                                    onClick={() => setRightPanelTab('queue')}
+                                    className={cn(
+                                        "flex items-center gap-2 pb-2 border-b-2 transition-all",
+                                        rightPanelTab === 'queue' ? "border-blue-500 text-white" : "border-transparent text-white/20 hover:text-white/40"
+                                    )}
+                                >
+                                    <ListTodo className="w-3 h-3" />
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] italic">Mission Buffer</span>
+                                </button>
+                                <button
+                                    onClick={() => setRightPanelTab('history')}
+                                    className={cn(
+                                        "flex items-center gap-2 pb-2 border-b-2 transition-all",
+                                        rightPanelTab === 'history' ? "border-amber-500 text-white" : "border-transparent text-white/20 hover:text-white/40"
+                                    )}
+                                >
+                                    <FileText className="w-3 h-3" />
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] italic">Intelligence</span>
+                                </button>
                             </div>
-                            <span className="text-[9px] font-mono text-white/20 uppercase tabular-nums">{tasks.filter(t => t.id !== activeTaskId).length} QUEUED</span>
+                            <span className="text-[9px] font-mono text-white/10 uppercase tabular-nums tracking-widest">Sector_01_Sync</span>
                         </div>
 
-                        <div className="space-y-2">
-                            <SortableContext
-                                items={tasks.filter(t => t.id !== activeTaskId).map(t => t.id)}
-                                strategy={verticalListSortingStrategy}
-                            >
-                                {tasks.filter(t => t.id !== activeTaskId).map(task => (
-                                    <TaskCard
-                                        key={task.id}
-                                        task={task}
-                                        column="today"
-                                        onComplete={() => handleCompleteTask(task.id)}
-                                    />
-                                ))}
-                            </SortableContext>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-8">
+                            {rightPanelTab === 'queue' ? (
+                                <div className="space-y-2 animate-in fade-in slide-in-from-right-4 duration-300">
+                                    <SortableContext
+                                        items={tasks.filter(t => t.id !== activeTaskId).map(t => t.id)}
+                                        strategy={verticalListSortingStrategy}
+                                    >
+                                        {tasks.filter(t => t.id !== activeTaskId).map(task => (
+                                            <TaskCard
+                                                key={task.id}
+                                                task={task}
+                                                column="today"
+                                                onComplete={() => handleCompleteTask(task.id)}
+                                            />
+                                        ))}
+                                    </SortableContext>
 
-                            <button
-                                onClick={() => setShowCreateModal(true)}
-                                className="w-full h-14 rounded-xl border border-dashed border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-all flex items-center justify-center gap-2 group mt-4"
-                            >
-                                <Plus className="w-4 h-4 text-white/20 group-hover:text-blue-400 transition-colors" />
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-white/60 transition-colors">Enlist New Mission</span>
-                            </button>
+                                    <button
+                                        onClick={() => setShowCreateModal(true)}
+                                        className="w-full h-14 rounded-xl border border-dashed border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-all flex items-center justify-center gap-2 group mt-4"
+                                    >
+                                        <Plus className="w-4 h-4 text-white/20 group-hover:text-blue-400 transition-colors" />
+                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-white/60 transition-colors">Enlist New Mission</span>
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-3 animate-in fade-in slide-in-from-left-4 duration-300">
+                                    {/* Mini Session Log for Focus Mode */}
+                                    {allStoreTasks.filter(t => t.status === 'done' && t.completed_at?.startsWith(new Date().toISOString().split('T')[0])).length === 0 && (
+                                        <div className="py-12 flex flex-col items-center justify-center opacity-20 text-center">
+                                            <Zap className="w-8 h-8 mb-2" />
+                                            <p className="text-[10px] uppercase font-bold tracking-widest">No achievements<br />recorded yet</p>
+                                        </div>
+                                    )}
+                                    {allStoreTasks
+                                        .filter(t => t.status === 'done' && t.completed_at?.startsWith(new Date().toISOString().split('T')[0]))
+                                        .sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || ''))
+                                        .map(t => (
+                                            <div key={t.id} className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-3 flex items-center justify-between group">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-1 h-6 rounded-full bg-green-500/40" />
+                                                    <div>
+                                                        <p className="text-[11px] font-bold text-white/60 truncate w-40">{t.title}</p>
+                                                        <p className="text-[9px] font-mono text-white/20 uppercase">{t.completed_at ? t.completed_at.split('T')[1].slice(0, 5) : 'DONE'}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[10px] font-mono text-green-500/60 font-bold">{Math.round((t.actual_seconds || 0) / 60)}m</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                            )}
                         </div>
                     </div>
 

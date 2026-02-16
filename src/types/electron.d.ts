@@ -19,6 +19,9 @@ export interface ElectronAPI {
     file: {
         openExternal: (url: string) => Promise<void>
     }
+    auth: {
+        setUser: (userId: string | null, accessToken?: string | null) => Promise<void>
+    }
     store: {
         get: (key: string) => Promise<any>
         set: (key: string, value: any) => Promise<boolean>
@@ -40,6 +43,7 @@ export interface ElectronAPI {
         deleteSubtask: (id: string) => Promise<any>
         getSessions: (userId: string) => Promise<any[]>
         getAppUsage: (start: string, end: string) => Promise<any[]>
+        getDailyActivity: (start: string, end: string) => Promise<any[]>
         getAppUsageByTask: (taskId: string) => Promise<any[]>
         saveFocusSession: (session: any) => Promise<any>
         updateFocusSession: (id: string, updates: any) => Promise<any>
@@ -50,9 +54,10 @@ export interface ElectronAPI {
     }
     tracker: {
         setContext: (taskId: string | null) => Promise<void>
+        getLiveSession: () => Promise<any>
     }
     auth: {
-        setUser: (userId: string | null) => Promise<void>
+        setUser: (userId: string | null, accessToken?: string | null) => Promise<void>
     }
 }
 

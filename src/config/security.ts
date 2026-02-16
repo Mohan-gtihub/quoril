@@ -74,7 +74,7 @@ export const VALIDATION_PATTERNS = {
     UPPERCASE: /[A-Z]/,
     LOWERCASE: /[a-z]/,
     NUMBER: /[0-9]/,
-    SPECIAL_CHAR: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/,
+    SPECIAL_CHAR: /[\!@#\$%\^&\*\(\)_\+\-=\[\]\{\};':"\\|,.<>\/\?]/,
     SQL_INJECTION: /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE|UNION|DECLARE)\b)|(-{2})|(\*\/)|(\bOR\b.*=.*)/i,
     XSS: /<script|javascript:|onerror=|onload=/i,
 } as const

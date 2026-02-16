@@ -69,7 +69,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
                 // Notify main process for synchronization engine
                 if (window.electronAPI?.auth) {
-                    window.electronAPI.auth.setUser(session.user.id).catch(console.error)
+                    window.electronAPI.auth.setUser(session.user.id, session.access_token).catch(console.error)
                 }
 
                 set({
@@ -103,6 +103,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                         loading: false,
                         lastActivity: Date.now(),
                     })
+                    if (window.electronAPI?.auth) {
+                        window.electronAPI.auth.setUser(session.user.id, session.access_token).catch(console.error)
+                    }
                     startSessionMonitoring()
                 } else if (event === 'SIGNED_OUT') {
                     const currentSession = get().session
@@ -182,6 +185,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 loading: false,
                 lastActivity: Date.now(),
             })
+
+            if (window.electronAPI?.auth) {
+                window.electronAPI.auth.setUser(data.user.id, data.session.access_token).catch(console.error)
+            }
 
             // 6. Start session monitoring
             startSessionMonitoring()
@@ -291,7 +298,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             stopSessionMonitoring()
 
             if (window.electronAPI?.auth) {
-                window.electronAPI.auth.setUser(null).catch(console.error)
+                window.electronAPI.auth.setUser(null, null).catch(console.error)
             }
 
             // 3. Sign out from Supabase

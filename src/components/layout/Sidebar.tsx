@@ -147,7 +147,7 @@ export function Sidebar() {
                         )}
                     >
                         <BarChart3 className="w-4 h-4 text-[var(--accent-primary)]" />
-                        Intelligence
+                        Reports
                     </button>
                     <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded-xl transition">
                         <Bell className="w-4 h-4 text-[var(--text-tertiary)]" />

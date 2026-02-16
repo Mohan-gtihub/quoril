@@ -7,42 +7,115 @@ export interface ActiveWindow {
     rawApp: string
     rawPath?: string
     isIdle: boolean
-    category: string
+    category: 'Work' | 'Web' | 'Development' | 'Communication' | 'Entertainment' | 'Other' | 'Idle'
 }
 
-const BROWSERS = [
-    'chrome', 'msedge', 'firefox', 'brave', 'opera', 'safari', 'vivaldi', 'google chrome'
-]
+/* ---------------- PATTERNS ---------------- */
+
+const CATEGORY_MAP: Record<string, ActiveWindow['category']> = {
+    'chrome': 'Web',
+    'msedge': 'Web',
+    'firefox': 'Web',
+    'brave': 'Web',
+    'safari': 'Web',
+    'opera': 'Web',
+    'code': 'Development',
+    'cursor': 'Development',
+    'windsurf': 'Development',
+    'intellij': 'Development',
+    'pycharm': 'Development',
+    'webstorm': 'Development',
+    'android studio': 'Development',
+    'discord': 'Communication',
+    'slack': 'Communication',
+    'whatsapp': 'Communication',
+    'telegram': 'Communication',
+    'zoom': 'Communication',
+    'teams': 'Communication',
+    'spotify': 'Entertainment',
+    'netflix': 'Entertainment',
+    'youtube': 'Entertainment',
+    'outlook': 'Work',
+    'excel': 'Work',
+    'word': 'Work',
+    'powerpoint': 'Work',
+    'acrobat': 'Work',
+    'adobe': 'Work',
+    'photoshop': 'Entertainment',
+    'illustrator': 'Work',
+    'figma': 'Work',
+    'canva': 'Work',
+    'monday': 'Work',
+    'asana': 'Work',
+    'clickup': 'Work',
+    'trello': 'Work',
+    'box': 'Work',
+    'dropbox': 'Work',
+    'slack.exe': 'Communication',
+    'huggingface': 'Development',
+    'copilot': 'Development',
+    'postgres': 'Development',
+    'tableplus': 'Development',
+    'postman': 'Development',
+    'terminal': 'Development',
+    'iterm': 'Development',
+    'powershell': 'Development',
+    'cmd': 'Development',
+}
+
+const SITE_TO_CATEGORY: Record<string, ActiveWindow['category']> = {
+    'YouTube': 'Entertainment',
+    'Netflix': 'Entertainment',
+    'Twitch': 'Entertainment',
+    'Spotify': 'Entertainment',
+    'ChatGPT': 'Development',
+    'Claude': 'Development',
+    'GitHub': 'Development',
+    'Stack Overflow': 'Development',
+    'GitLab': 'Development',
+    'Bitbucket': 'Development',
+    'Notion': 'Work',
+    'Figma': 'Work',
+    'Linear': 'Work',
+    'Jira': 'Work',
+    'Asana': 'Work',
+    'Monday': 'Work',
+    'Google Docs': 'Work',
+    'Google Sheets': 'Work',
+    'Google Slides': 'Work',
+    'LinkedIn': 'Web',
+    'Twitter': 'Web',
+    'X/Twitter': 'Web',
+    'Reddit': 'Entertainment',
+    'Amazon': 'Other',
+    'eBay': 'Other',
+}
 
 const SITE_PATTERNS = [
     { name: 'YouTube', match: /youtube/i },
+    { name: 'Netflix', match: /netflix/i },
     { name: 'ChatGPT', match: /chatgpt|openai/i },
     { name: 'Claude', match: /claude|anthropic/i },
     { name: 'GitHub', match: /github/i },
-    { name: 'WhatsApp Web', match: /whatsapp/i },
-    { name: 'Notion', match: /notion/i },
-    { name: 'Gmail', match: /gmail/i },
+    { name: 'Stack Overflow', match: /stackoverflow/i },
     { name: 'LinkedIn', match: /linkedin/i },
-    { name: 'Twitter/X', match: /twitter|x\.com/i },
+    { name: 'Notion', match: /notion/i },
     { name: 'Figma', match: /figma/i },
-    { name: 'Antigravity', match: /antigravity|quoril/i }
+    { name: 'Linear', match: /linear/i },
+    { name: 'WhatsApp', match: /whatsapp/i },
+    { name: 'Discord', match: /discord/i },
+    { name: 'Twitter/X', match: /twitter|x\.com/i },
+    { name: 'Gmail', match: /gmail|mail\.google/i },
+    { name: 'Meet', match: /meet\.google/i },
 ]
 
-const DEV_KEYWORDS = [
-    'code', 'cursor', 'windsurf', 'idea', 'pycharm',
-    'webstorm', 'studio', 'atom', 'sublime'
-]
+/* ---------------- HELPERS ---------------- */
 
 function normalize(name: string) {
     return name
-        .replace('.exe', '')
-        .replace('.app', '')
+        .replace(/(\.exe|\.app)$/i, '')
         .toLowerCase()
         .trim()
-}
-
-function isBrowser(app: string) {
-    return BROWSERS.includes(app.toLowerCase())
 }
 
 function detectSite(title: string) {
@@ -52,10 +125,7 @@ function detectSite(title: string) {
     return null
 }
 
-function detectIDE(app: string, path?: string) {
-    const s = `${app} ${path || ''}`.toLowerCase()
-    return DEV_KEYWORDS.some(k => s.includes(k))
-}
+/* ---------------- ENGINE ---------------- */
 
 export async function getActiveWindow(): Promise<ActiveWindow | null> {
     try {
@@ -63,20 +133,17 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
         if (!win) return null
 
         const idleTime = powerMonitor.getSystemIdleTime()
-        const isIdle = idleTime > 60 // 1 minute threshold
+        const isIdle = idleTime > 180 // 3 minutes for true idle
 
         const rawApp = win.owner.name
         const rawPath = win.owner.path
         const title = win.title || ''
-
         const normalizedApp = normalize(rawApp)
-        let category = 'Other'
 
-        // Idle check
         if (isIdle) {
             return {
                 appName: 'Idle',
-                title: 'AFK',
+                title: 'Away from Keyboard',
                 rawApp,
                 rawPath,
                 isIdle: true,
@@ -84,8 +151,11 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
             }
         }
 
-        // 1. Browser sites
-        if (isBrowser(normalizedApp)) {
+        // 1. Determine base category from App Name
+        let category: ActiveWindow['category'] = CATEGORY_MAP[normalizedApp] || 'Other'
+
+        // 2. Special handling for Browsers (Site Detection)
+        if (category === 'Web' || normalizedApp.includes('browser') || normalizedApp.includes('chrome')) {
             const site = detectSite(title)
             if (site) {
                 return {
@@ -94,36 +164,20 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
                     rawApp,
                     rawPath,
                     isIdle: false,
-                    category: 'Web'
+                    category: SITE_TO_CATEGORY[site] || 'Web'
                 }
             }
         }
 
-        // 2. IDE / Dev tools
-        if (detectIDE(normalizedApp, rawPath)) {
-            return {
-                appName: 'IDE',
-                title,
-                rawApp,
-                rawPath,
-                isIdle: false,
-                category: 'Development'
+        // 3. Title-based override (for apps with generic names)
+        if (category === 'Other') {
+            if (/visual studio|intellij|pycharm|webstorm|sublime|atom/i.test(title)) {
+                category = 'Development'
+            } else if (/word|excel|powerpoint|outlook|onenote|pdf/i.test(title)) {
+                category = 'Work'
             }
         }
 
-        // 3. Messengers
-        if (/whatsapp|telegram|discord/i.test(normalizedApp + title)) {
-            return {
-                appName: 'Messenger',
-                title,
-                rawApp,
-                rawPath,
-                isIdle: false,
-                category: 'Communication'
-            }
-        }
-
-        // Default: Pure app name
         return {
             appName: rawApp.replace('.exe', ''),
             title,
@@ -134,7 +188,7 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
         }
 
     } catch (e) {
-        // console.error('[Collector] Window tracking failed:', e)
+        // Quietly fail as tracking is background
         return null
     }
 }

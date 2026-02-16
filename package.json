@@ -77,6 +77,11 @@
     "directories": {
       "output": "release"
     },
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**/*",
+      "**/node_modules/active-win/**/*"
+    ],
     "files": [
       "dist/**/*",
       "dist-electron/**/*"

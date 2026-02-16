@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Bell, Zap, ShieldCheck, Palette, Sparkles } from 'lucide-react'
 import { useSettingsStore } from '@/store/settingsStore'
-import { audioService } from '@/services/audioService'
+import { soundService } from '@/services/soundService'
 import { cn } from '@/utils/helpers'
 
 export function Settings() {
@@ -51,15 +51,25 @@ export function Settings() {
     )
 
     const Select = ({ value, onChange, options, label }: { value: string, onChange: (v: string) => void, options: { label: string, value: string }[], label: string }) => (
-        <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--bg-hover)]/30 border border-[var(--border-default)]">
+        <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--bg-hover)]/30 border border-[var(--border-default)] hover:bg-[var(--bg-hover)] transition-all">
             <span className="text-sm font-bold text-[var(--text-secondary)]">{label}</span>
             <select
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className="bg-[var(--bg-primary)] border border-[var(--border-default)] text-[var(--text-primary)] text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]/50"
+                className="bg-[var(--bg-secondary)] border border-[var(--border-default)] text-[var(--text-primary)] text-xs rounded-lg px-3 py-2 cursor-pointer outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)]/20 transition-all hover:border-[var(--accent-primary)]/50"
+                style={{
+                    colorScheme: 'dark',
+                    appearance: 'auto'
+                }}
             >
                 {options.map(opt => (
-                    <option key={opt.value} value={opt.value} className="bg-[var(--bg-primary)] text-[var(--text-primary)]">{opt.label}</option>
+                    <option
+                        key={opt.value}
+                        value={opt.value}
+                        className="bg-[var(--bg-secondary)] text-[var(--text-primary)] py-2"
+                    >
+                        {opt.label}
+                    </option>
                 ))}
             </select>
         </div>
@@ -188,15 +198,22 @@ export function Settings() {
                             <Select
                                 label="Alert Signal"
                                 value={settings.alertSound}
-                                onChange={(v) => settings.updateSettings({ alertSound: v })}
+                                onChange={(v) => {
+                                    settings.updateSettings({ alertSound: v });
+                                    soundService.playAlert(v);
+                                }}
                                 options={[
-                                    { label: 'Subtle Beep', value: 'beep' },
                                     { label: 'Tactical Ping', value: 'ping' },
-                                    { label: 'Sonar Pulse', value: 'sonar' }
+                                    { label: 'Sonar Pulse', value: 'sonar' },
+                                    { label: 'Radar Sweep', value: 'radar' },
+                                    { label: 'Digital Blip', value: 'digital' },
+                                    { label: 'Crystal Chime', value: 'crystal' },
+                                    { label: 'Minimal Tick', value: 'minimal' },
+                                    { label: 'Classic Beep', value: 'beep' }
                                 ]}
                             />
                             <button
-                                onClick={() => audioService.playAlert()}
+                                onClick={() => soundService.playAlert(settings.alertSound)}
                                 className="w-full py-3 rounded-xl bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/30 text-[var(--accent-primary)] text-xs font-bold hover:bg-[var(--accent-primary)]/20 transition-all flex items-center justify-center gap-2"
                             >
                                 <Zap className="w-3.5 h-3.5" />
@@ -213,21 +230,40 @@ export function Settings() {
                         title="External Comms"
                         description="System-level notifications for session events."
                     />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Toggle
-                            label="Push Alerts"
-                            value={settings.notificationAlertsEnabled}
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Toggle
+                                label="Push Alerts"
+                                value={settings.notificationAlertsEnabled}
+                                onChange={(v) => {
+                                    if (v && Notification.permission !== 'granted') {
+                                        Notification.requestPermission()
+                                    }
+                                    settings.updateSettings({ notificationAlertsEnabled: v })
+                                }}
+                            />
+                            <Toggle
+                                label="Success Chime"
+                                value={settings.successSoundEnabled}
+                                onChange={(v) => settings.updateSettings({ successSoundEnabled: v })}
+                            />
+                        </div>
+
+                        <Select
+                            label="Success Signal"
+                            value={settings.successSound}
                             onChange={(v) => {
-                                if (v && Notification.permission !== 'granted') {
-                                    Notification.requestPermission()
-                                }
-                                settings.updateSettings({ notificationAlertsEnabled: v })
+                                settings.updateSettings({ successSound: v });
+                                soundService.playSuccess(v);
                             }}
-                        />
-                        <Toggle
-                            label="Success Chime"
-                            value={settings.successSoundEnabled}
-                            onChange={(v) => settings.updateSettings({ successSoundEnabled: v })}
+                            options={[
+                                { label: 'Victory Bell', value: 'Victory Bell' },
+                                { label: 'Futuristic', value: 'Futuristic' },
+                                { label: 'Mission Achievement', value: 'Achievement' },
+                                { label: 'Magic Reveal', value: 'Magic Reveal' },
+                                { label: 'Data Uplink', value: 'Data Uplink' },
+                                { label: 'Level Up', value: 'Level Up' }
+                            ]}
                         />
                     </div>
                 </section>

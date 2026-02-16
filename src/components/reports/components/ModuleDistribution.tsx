@@ -35,12 +35,12 @@ export function ModuleDistribution({ listDist }: ModuleDistributionProps) {
 
                     <div className="w-full space-y-3">
                         {listDist.map((item) => (
-                            <div key={item.name} className="flex items-center justify-between group">
+                            <div key={item.listName} className="flex items-center justify-between group">
                                 <div className="flex items-center gap-3">
                                     <div className="w-3 h-3 rounded-full shadow-lg" style={{ backgroundColor: item.color }} />
-                                    <span className="text-xs font-medium text-white/70">{item.name}</span>
+                                    <span className="text-xs font-medium text-white/70">{item.listName}</span>
                                 </div>
-                                <span className="text-xs font-bold text-white font-mono">{item.value}m</span>
+                                <span className="text-xs font-bold text-white font-mono">{item.count}m</span>
                             </div>
                         ))}
                     </div>

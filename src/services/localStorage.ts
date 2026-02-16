@@ -123,36 +123,62 @@ export const localService = {
             }
 
             // Normalized Mapping
-            if (updates.actual_seconds !== undefined) row.spent_s = updates.actual_seconds
             if (updates.estimated_minutes !== undefined) row.estimate_m = updates.estimated_minutes
             if (updates.parent_task_id !== undefined) row.parent_id = updates.parent_task_id
-
             delete row.actual_seconds
             delete row.estimated_minutes
             delete row.parent_task_id
 
-            if (updates.due_date || updates.due_time) {
-                // If DB is missing, we need to fetch the existing task to get current due_at components
-                // or just use what we have.
-                // For simplicity in fallback, we might default to 00:00 if one is missing, 
-                // but checking previous state is better.
-                // However, without DB, we do a read.
-                let d, t
-                if (db()) {
-                    const [old] = await db().exec('SELECT due_at FROM tasks WHERE id = ?', [id])
-                    const parts = (old?.due_at || 'T').split('T')
-                    d = parts[0]
-                    t = parts[1]
-                } else {
-                    // Fallback read
-                    const { data }: any = await supabase.from('tasks').select('due_at').eq('id', id).single()
-                    const parts = (data?.due_at || 'T').split('T')
-                    d = parts[0]
-                    t = parts[1]
-                }
+            // Helper function to safely get existing due date/time
+            const getExistingDueDateTime = async (taskId: string): Promise<{ due_date: string | null, due_time: string }> => {
+                try {
+                    const { data } = await supabase
+                        .from('tasks')
+                        .select('due_at')  // Only query the column that EXISTS
+                        .eq('id', taskId)
+                        .single<{ due_at: string | null }>()
 
-                row.due_at = `${updates.due_date || d}T${updates.due_time || t || '00:00:00'}`
+                    // Parse due_at into due_date and due_time
+                    const due_at = data?.due_at || null
+                    let due_date: string | null = null
+                    let due_time = '00:00:00'
+                    
+                    if (due_at) {
+                        const [date, time] = due_at.split('T')
+                        due_date = date
+                        due_time = time?.split('.')[0] || '00:00:00'
+                    }
+
+                    return {
+                        due_date,
+                        due_time
+                    }
+                } catch (error) {
+                    console.warn('[localStorage] Failed to fetch existing due date/time for task', taskId, error)
+                    return {
+                        due_date: null,
+                        due_time: '00:00:00'
+                    }
+                }
             }
+            // Helper function to safely update due date/time
+            const updateDueDateTime = async (row: any, updates: any): Promise<void> => {
+                if (updates.due_date || updates.due_time) {
+                    // Use a single query to get existing task data if needed
+                    const existing = await getExistingDueDateTime(row.id)
+                    
+                    // Combine due_date and due_time into due_at field
+                    const newDueDate = updates.due_date || existing.due_date
+                    const newDueTime = updates.due_time || existing.due_time
+                    row.due_at = newDueDate && newDueTime ? `${newDueDate}T${newDueTime}` : newDueDate || null
+                } else {
+                    // If no due date/time provided, keep existing values
+                    const existing = await getExistingDueDateTime(row.id)
+                    row.due_at = existing.due_date && existing.due_time ? `${existing.due_date}T${existing.due_time}` : existing.due_date || null
+                }
+            }
+
+            await updateDueDateTime(row, updates)
 
             if (!db()) {
                 row.synced = 1

@@ -24,9 +24,12 @@ export function AppUsageReport({ dateRange }: AppUsageReportProps) {
             setLoading(true)
             try {
                 // Fetch app usage from electron API
+                const end = new Date(dateRange.end)
+                end.setHours(23, 59, 59, 999)
+
                 const data = await window.electronAPI.db.getAppUsage(
                     dateRange.start.toISOString(),
-                    dateRange.end.toISOString()
+                    end.toISOString()
                 )
                 setUsage(data)
             } catch (e) {

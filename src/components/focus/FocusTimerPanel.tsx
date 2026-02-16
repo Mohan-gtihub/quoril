@@ -148,6 +148,15 @@ function TimeEditor({ initialSeconds, onSave }: TimeEditorProps) {
    COMPONENT
 --------------------------------------------- */
 
+const isToday = (dateStr: string | null | undefined) => {
+    if (!dateStr) return false
+    const d = new Date(dateStr)
+    const now = new Date()
+    return d.getDate() === now.getDate() &&
+        d.getMonth() === now.getMonth() &&
+        d.getFullYear() === now.getFullYear()
+}
+
 export function FocusTimerPanel() {
     const focus = useFocusStore()
     const { tasks, subtasks, createSubtask, fetchSubtasks, reorderTasks, toggleSubtask } = useTaskStore()
@@ -617,15 +626,31 @@ export function FocusTimerPanel() {
                         </button>
 
                         {/* COMPLETED SECTION */}
-                        {completedTasks > 0 && (
-                            <div className="pt-6 mt-6 border-t border-white/5">
-                                <div className="flex items-center justify-between mb-3">
-                                    <span className="text-xs font-medium text-white/40 uppercase tracking-wider">
-                                        {completedTasks} Done
+                        {tasks.filter(t => t.status === 'done' && isToday(t.completed_at) && !t.deleted_at).length > 0 && (
+                            <div className="pt-6 mt-6 border-t border-white/5 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-white/40 uppercase tracking-widest">
+                                        Achievements (Today)
                                     </span>
-                                    <span className="text-xs text-white/30">
-                                        {Math.floor(tasks.filter(t => t.status === 'done').reduce((acc, t) => acc + (t.estimated_minutes ?? 0), 0) / 60)}h {tasks.filter(t => t.status === 'done').reduce((acc, t) => acc + (t.estimated_minutes ?? 0), 0) % 60}min
+                                    <span className="text-xs text-white/30 font-mono">
+                                        {tasks.filter(t => t.status === 'done' && isToday(t.completed_at)).length} Done
                                     </span>
+                                </div>
+
+                                <div className="space-y-2 opacity-60 hover:opacity-100 transition-opacity">
+                                    {tasks
+                                        .filter(t => t.status === 'done' && isToday(t.completed_at) && !t.deleted_at)
+                                        .map(t => (
+                                            <div key={t.id} className="group relative">
+                                                <TaskCard
+                                                    task={t}
+                                                    column="done"
+                                                    disableTimer
+                                                    onComplete={() => { }}
+                                                />
+                                            </div>
+                                        ))
+                                    }
                                 </div>
                             </div>
                         )}

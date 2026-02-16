@@ -18,6 +18,9 @@ class DataSyncService {
 
     private syncing = false
     private timer: number | null = null
+    private schemaCacheWarned = false
+    private lastCacheErrorTime = 0
+    private cacheRecoveryAttempts = 0
 
     /* ================= START / STOP ================= */
 
@@ -82,6 +85,8 @@ class DataSyncService {
 
         for (const row of pendings) {
 
+            let payload: any = null
+
             try {
 
                 /* ---------- FK guard ---------- */
@@ -106,7 +111,7 @@ class DataSyncService {
                 /* ---------- Build payload ---------- */
 
                 // Overwrite user_id with current auth user
-                const payload =
+                payload =
                     await this.buildPayload(table, { ...row, user_id: userId })
 
                 if (!payload) {
@@ -131,9 +136,44 @@ class DataSyncService {
                     row.id
                 )
 
+                // Detect successful recovery from cache errors
+                if (this.cacheRecoveryAttempts > 0 && !this.schemaCacheWarned) {
+                    console.log(`✅ [Sync] Schema cache recovered! Full sync restored after ${this.cacheRecoveryAttempts} attempts.`)
+                    this.cacheRecoveryAttempts = 0
+                }
+
             } catch (err: any) {
 
-                console.error(`[Sync] ${table} ${row.id} failed`, err)
+                /* Schema Cache Error - Supabase needs manual refresh */
+                if (err?.code === 'PGRST204') {
+                    this.lastCacheErrorTime = Date.now()
+
+                    if (!this.schemaCacheWarned) {
+                        this.schemaCacheWarned = true
+                        console.warn(`\n⚠️  SUPABASE SCHEMA CACHE ISSUE DETECTED\n` +
+                            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+                            `The Supabase PostgREST schema cache is outdated.\n\n` +
+                            `To fix:\n` +
+                            `1. Go to your Supabase Dashboard\n` +
+                            `2. Navigate to: Settings → API\n` +
+                            `3. Click "Reload Schema"\n\n` +
+                            `Meanwhile, sync continues with reduced fields.\n` +
+                            `Full sync resumes automatically once cache updates.\n` +
+                            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`)
+                    }
+
+                    // Try full schema recovery every 2 minutes
+                    const timeSinceError = Date.now() - this.lastCacheErrorTime
+                    if (timeSinceError > 120000) { // 2 minutes
+                        this.cacheRecoveryAttempts++
+                        console.log(`[Sync] Attempting cache recovery (attempt ${this.cacheRecoveryAttempts})...`)
+                        this.schemaCacheWarned = false // Re-enable full fields for next sync
+                        this.lastCacheErrorTime = Date.now()
+                    }
+
+                    // Don't mark as synced, will retry later
+                    continue
+                }
 
                 /* Prevent infinite retry on bad rows */
                 if (
@@ -144,12 +184,27 @@ class DataSyncService {
                     String(err).includes('constraint') ||
                     String(err).includes('policy')
                 ) {
-                    console.warn('[Sync] Marking bad row as synced:', row.id)
+                    console.error(`❌ [Sync] ${table}/${row.id} REJECTED:`, {
+                        code: err?.code,
+                        message: err?.message,
+                        hint: err?.hint,
+                        details: err?.details,
+                        payload: payload
+                    })
+                    console.warn(`[Sync] Marking as synced to prevent retry loop`)
 
                     await window.electronAPI.db.markSynced(
                         table,
                         row.id
                     )
+                } else {
+                    // Log unexpected errors for debugging
+                    console.error(`[Sync] Unexpected error for ${table}/${row.id}:`, {
+                        code: err?.code,
+                        message: err?.message,
+                        hint: err?.hint,
+                        details: err?.details
+                    })
                 }
             }
         }
@@ -158,15 +213,12 @@ class DataSyncService {
     /* ================= PAYLOAD BUILDER ================= */
 
     private async buildPayload(table: SyncTable, row: any) {
-
         switch (table) {
-
             /* ---------- LISTS ---------- */
-
             case 'lists':
                 return {
                     id: row.id,
-                    user_id: row.user_id, // Now coming from correct auth
+                    user_id: row.user_id,
                     name: row.name,
                     color: row.color,
                     icon: row.icon,
@@ -180,9 +232,6 @@ class DataSyncService {
 
             /* ---------- TASKS ---------- */
             case 'tasks': {
-
-                const [dDate, dTime] = (row.due_at || 'T').split('T')
-
                 const status = this.mapTaskStatus(row.status)
                 const priority = this.mapTaskPriority(row.priority)
 
@@ -190,84 +239,71 @@ class DataSyncService {
                 const listId = (!row.list_id || row.list_id === 'all') ? null : row.list_id
                 const parentId = (!row.parent_id || row.parent_id === 'all') ? null : row.parent_id
 
-                return {
+                const payload: any = {
                     id: row.id,
                     user_id: row.user_id,
                     list_id: listId,
                     title: row.title,
                     description: row.description,
-
-                    status: ['todo', 'planned', 'active', 'paused', 'done'].includes(status)
-                        ? status
-                        : 'todo',
-
-                    priority: ['critical', 'high', 'medium', 'low'].includes(priority)
-                        ? priority
-                        : 'medium',
-
-                    estimated_minutes: row.estimate_m ?? 0,
-                    actual_minutes: Math.round((row.spent_s ?? 0) / 60),
-
-                    due_date: dDate || null,
-                    due_time: dTime || null,
-
+                    status: status,
+                    priority: priority,
+                    estimate_m: row.estimate_m ?? 0,
+                    spent_s: row.spent_s ?? 0,
+                    started_at: row.started_at,
                     completed_at: row.completed_at,
-                    parent_task_id: parentId,
-
+                    parent_id: parentId,
                     sort_order: row.sort_order ?? 0,
-
                     created_at: row.created_at,
                     updated_at: row.updated_at,
-                    deleted_at: row.deleted_at
+                    deleted_at: row.deleted_at,
                 }
+
+                // TEMPORARY: Add due_at only if not in cache-error mode
+                // This prevents PGRST204 errors while Supabase schema cache updates
+                if (!this.schemaCacheWarned && row.due_at) {
+                    payload.due_at = row.due_at
+                }
+
+                return payload
             }
 
             /* ---------- SUBTASKS ---------- */
-
             case 'subtasks':
                 return {
                     id: row.id,
                     user_id: row.user_id,
                     task_id: row.task_id,
                     title: row.title,
-                    is_completed: Boolean(row.done),
+                    done: Boolean(row.done),
                     sort_order: row.sort_order ?? 0,
                     created_at: row.created_at,
-                    updated_at: row.updated_at
+                    updated_at: row.updated_at,
+                    deleted_at: row.deleted_at
                 }
 
             /* ---------- FOCUS ---------- */
-
             case 'focus_sessions': {
-
-                let meta: any = {}
-
-                try {
-                    meta = JSON.parse(row.metadata || '{}')
-                } catch {
-                    // Ignore parse errors for malformed metadata
-                }
-
                 // Sanitize Task ID
                 const taskId = (!row.task_id || row.task_id === '') ? null : row.task_id
 
-                return {
+                const payload: any = {
                     id: row.id,
                     user_id: row.user_id,
                     task_id: taskId,
-
-                    started_at: row.start_time,
-                    ended_at: row.end_time,
-
-                    duration_minutes: Math.round((row.seconds ?? 0) / 60),
-
-                    session_type: this.mapSessionType(row.type),
-
-                    interruptions: meta.interruptions_count ?? 0,
-                    notes: meta.notes,
-
+                    type: this.mapSessionType(row.type),
+                    seconds: row.seconds ?? 0,
+                    start_time: row.start_time,
+                    metadata: row.metadata,
                     created_at: row.created_at
                 }
+
+                // TEMPORARY: Add end_time only if not in cache-error mode
+                // This prevents PGRST204 errors while Supabase schema cache updates
+                if (!this.schemaCacheWarned && row.end_time) {
+                    payload.end_time = row.end_time
+                }
+
+                return payload
             }
 
             default:
@@ -279,32 +315,26 @@ class DataSyncService {
 
     private mapTaskStatus(local: string) {
         const s = (local || '').toLowerCase();
-
         switch (s) {
             case 'active':
-                return 'in_progress';
-
+            case 'in_progress':
+                return 'in_progress'; // Matches DB 'in_progress'
             case 'paused':
-                return 'in_review';
-
+            case 'in_review':
+                return 'in_review'; // Matches DB 'in_review'
             case 'done':
             case 'completed':
-                return 'done';
-
+                return 'done'; // Matches DB 'done'
             case 'planned':
-                return 'todo';
-
+                return 'todo'; // 'planned' not in strict DB constraint
             case 'todo':
             default:
                 return 'todo';
         }
     }
 
-
     private mapTaskPriority(local: string) {
-
         const p = (local || '').toLowerCase()
-
         switch (p) {
             case 'critical':
                 return 'critical'
@@ -319,25 +349,19 @@ class DataSyncService {
     }
 
     private mapSessionType(local: string) {
-
         const t = (local || '').toLowerCase()
-
         switch (t) {
-
             case 'focus':
             case 'work':
             case 'deep':
             case 'pomodoro':
                 return 'focus'
-
             case 'break':
             case 'short_break':
                 return 'break'
-
             case 'long_break':
             case 'long':
                 return 'long_break'
-
             default:
                 return 'focus'
         }

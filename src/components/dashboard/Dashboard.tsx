@@ -9,8 +9,6 @@ import {
     Settings,
     MoreVertical,
     Zap,
-    Activity,
-    ChevronRight,
 } from 'lucide-react'
 
 import type { List, ListWithStats } from '@/types/list'
@@ -150,18 +148,26 @@ export function Dashboard() {
             {/* CONTENT */}
             <main className="flex-1 overflow-y-auto w-full">
                 {/* Header-like top section inside main */}
-                <div className="h-20 px-8 flex items-center justify-between border-b border-[var(--border-default)] bg-[var(--bg-secondary)] sticky top-0 z-30">
-                    <DateNavigator />
-
-                    <div className="flex items-center gap-4">
-                        <div className="hidden lg:flex flex-col items-end">
-                            <span className="text-[10px] font-black text-[var(--accent-primary)] uppercase tracking-widest">{allListsStats.count} TASKS</span>
-                            <span className="text-[9px] text-[var(--text-muted)] font-mono">{allListsStats.timeLabel}</span>
+                <div className="h-24 px-8 flex items-center justify-between border-b border-white/5 bg-black/40 backdrop-blur-3xl sticky top-0 z-30">
+                    <div className="flex items-center gap-12">
+                        <div>
+                            <h1 className="text-2xl font-black tracking-tighter bg-gradient-to-br from-white to-white/40 bg-clip-text text-transparent leading-none">
+                                Mission Command
+                            </h1>
+                            <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.4em] leading-none mt-2">
+                                Strategic Intel Layer
+                            </p>
                         </div>
-                        <div className="flex items-center gap-1.5 ml-2">
-                            <IconButton icon={<Search size={14} />} />
-                            <IconButton icon={<Settings size={14} />} />
-                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[var(--bg-tertiary)] to-[var(--bg-hover)] border border-[var(--border-default)] flex items-center justify-center text-[var(--text-primary)] font-black text-xs shadow-inner">
+
+                        <DateNavigator />
+                    </div>
+
+                    <div className="flex items-center gap-6">
+                        <LiveTrackingBar />
+                        <div className="flex items-center gap-2">
+                            <IconButton icon={<Search size={18} />} />
+                            <IconButton icon={<Settings size={18} />} onClick={() => navigate('/settings')} />
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-white/[0.05] to-transparent border border-white/10 flex items-center justify-center text-white font-black text-sm shadow-2xl">
                                 {user?.email?.charAt(0).toUpperCase()}
                             </div>
                         </div>
@@ -170,39 +176,7 @@ export function Dashboard() {
 
                 <div className="max-w-7xl mx-auto p-8">
                     {/* Intelligence status (Workfolio style) */}
-                    <div
-                        onClick={() => navigate('/reports')}
-                        className="bg-indigo-600/10 border border-indigo-500/20 p-5 rounded-3xl flex items-center justify-between mb-10 group cursor-pointer hover:border-indigo-500/40 transition-all hover:shadow-[0_0_30px_rgba(99,102,241,0.1)] relative overflow-hidden"
-                    >
-                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:rotate-12 transition-transform">
-                            <Zap size={120} />
-                        </div>
 
-                        <div className="flex items-center gap-5">
-                            <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-xl shadow-indigo-600/30 ring-4 ring-indigo-500/10">
-                                <Activity size={24} />
-                            </div>
-                            <div>
-                                <h4 className="text-lg font-black text-white flex items-center gap-2">
-                                    Intelligence Engine Active
-                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                                </h4>
-                                <p className="text-[11px] text-indigo-400 font-bold uppercase tracking-[0.2em]">
-                                    System-wide screentime & application tracking is operational
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-4 pr-2">
-                            <div className="hidden lg:block text-right">
-                                <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">Intelligence Report</p>
-                                <p className="text-xs font-bold text-white/60">View Activity Distribution</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-white/40 group-hover:text-white group-hover:border-white/10 transition-all">
-                                <ChevronRight size={20} />
-                            </div>
-                        </div>
-                    </div>
 
                     <div className="flex justify-between mb-8">
 
@@ -556,5 +530,51 @@ function MenuItem({
         >
             {label}
         </button>
+    )
+}
+
+/* ================= LIVE TRACKING ================= */
+
+function LiveTrackingBar() {
+    const [session, setSession] = useState<any>(null)
+
+    useEffect(() => {
+        const update = async () => {
+            try {
+                const live = await window.electronAPI.tracker.getLiveSession()
+                setSession(live)
+            } catch (e) { }
+        }
+
+        update()
+        const interval = setInterval(update, 5000)
+        return () => clearInterval(interval)
+    }, [])
+
+    if (!session) return null
+
+    return (
+        <div className="hidden lg:flex items-center gap-4 px-5 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-xl group transition-all duration-500 hover:bg-white/[0.05] hover:border-white/10">
+            <div className="relative">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                <div className="absolute inset-0 w-2 h-2 rounded-full bg-blue-500 blur-[4px] animate-pulse" />
+            </div>
+
+            <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none">
+                        Pulse Detect
+                    </span>
+                    <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] leading-none">
+                        &bull; {session.appName}
+                    </span>
+                </div>
+                <div className="max-w-[200px] truncate">
+                    <span className="text-[11px] font-bold text-white/50 leading-tight">
+                        {session.title || 'Observing Environment...'}
+                    </span>
+                </div>
+            </div>
+        </div>
     )
 }

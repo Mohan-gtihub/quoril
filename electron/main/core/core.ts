@@ -16,6 +16,10 @@ class TrackingEngine {
         syncManager.stop()
     }
 
+    getLiveSession() {
+        return sessionManager.getCurrentSession()
+    }
+
     async setTaskContext(taskId: string | null) {
         if (taskId) {
             await contextManager.setContext('task', taskId)
@@ -24,8 +28,9 @@ class TrackingEngine {
         }
     }
 
-    setUserId(userId: string) {
-        syncManager.setUserId(userId)
+    setUserId(userId: string | null, accessToken?: string | null) {
+        sessionManager.setUserId(userId)
+        syncManager.setUserId(userId, accessToken)
     }
 }
 

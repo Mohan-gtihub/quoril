@@ -6,9 +6,9 @@ import type { FocusSession } from '@/types/database'
 
 import { localService } from '@/services/localStorage'
 import { backupService } from '@/services/backupService'
-import { audioService } from '@/services/audioService'
 import { soundService } from '@/services/soundService'
 import { hydrateElapsed, getTaskEstimate } from '@/utils/sessionUtils'
+import { sanitizeTaskData, sanitizeSessionData } from '@/utils/dataValidation'
 import { useTaskStore } from './taskStore'
 import { useSettingsStore } from './settingsStore'
 import { useListStore } from './listStore'
@@ -180,15 +180,16 @@ export const useFocusStore = create<FocusState>()(
                         const user = (await localService.auth.getUser()).data?.user
                         if (user) {
                             // 1. Log Session
-                            await localService.focus.create({
+                            const sessionData = sanitizeSessionData({
                                 user_id: user.id,
                                 task_id: s.taskId,
                                 start_time: new Date(Date.now() - (totalBreak * 1000)).toISOString(),
                                 end_time: new Date().toISOString(),
                                 planned_seconds: s.breakRemainingAtStart,
                                 session_type: 'break',
-                                actual_seconds: totalBreak,
+                                seconds: totalBreak,
                             })
+                            await localService.focus.create(sessionData)
 
                             // 2. Create Completed Task (Artifact) for Kanban Board
                             const { selectedListId } = useListStore.getState()
@@ -263,7 +264,7 @@ export const useFocusStore = create<FocusState>()(
                         pomodoroRemainingAtStart: pTime,
                         breakRemaining: 0,
                         breakRemainingAtStart: 0,
-                        lastAlertElapsed: 0,
+                        lastAlertElapsed: previous,
                         // Clear celebration if starting new
                         showCelebration: false,
                         celebratedTask: null,
@@ -273,15 +274,16 @@ export const useFocusStore = create<FocusState>()(
                     const user = (await localService.auth.getUser()).data?.user
                     if (!user) return
 
-                    const { data } = await localService.focus.create({
+                    const sessionData = sanitizeSessionData({
                         user_id: user.id,
                         task_id: taskId,
                         start_time: new Date(now).toISOString(),
                         planned_seconds: goal,
                         session_type: type,
-                        actual_seconds: 0,
+                        seconds: 0,
                         end_time: null,
                     })
+                    const { data } = await localService.focus.create(sessionData)
 
                     if (data) {
                         set({ currentSessionId: data.id })
@@ -313,9 +315,11 @@ export const useFocusStore = create<FocusState>()(
 
                     if (s.taskId) {
                         if (updateStatus) {
-                            await useTaskStore.getState().updateTask(s.taskId, { status: 'paused', actual_seconds: total, started_at: null })
+                            const taskUpdates = sanitizeTaskData({ status: 'paused', actual_seconds: total, started_at: null })
+                            await useTaskStore.getState().updateTask(s.taskId, taskUpdates)
                         } else {
-                            await useTaskStore.getState().updateTask(s.taskId, { actual_seconds: total })
+                            const taskUpdates = sanitizeTaskData({ actual_seconds: total })
+                            await useTaskStore.getState().updateTask(s.taskId, taskUpdates)
                         }
                         backupService.save(s.taskId, total)
                     }
@@ -359,26 +363,27 @@ export const useFocusStore = create<FocusState>()(
 
                     // Close Focus Session Record
                     if (s.currentSessionId) {
-                        await localService.focus.update(s.currentSessionId, {
+                        const sessionUpdateData = sanitizeSessionData({
                             end_time: endISO,
-                            actual_seconds: delta,
+                            seconds: delta,
                             notes: notes ?? null,
                             focus_score: focusScore ?? null,
                             energy_level: energyLevel ?? null,
                         })
+                        await localService.focus.update(s.currentSessionId, sessionUpdateData)
                     }
 
                     // Update Task
                     const task = useTaskStore.getState().tasks.find(t => t.id === s.taskId)
                     if (task) {
-                        const updates: any = {
+                        const taskUpdates = sanitizeTaskData({
                             actual_seconds: total,
                             started_at: null // Ensure backend knows it's stopped
-                        }
+                        })
 
                         if (markCompleted) {
-                            updates.status = 'done'
-                            updates.completed_at = endISO
+                            taskUpdates.status = 'done'
+                            taskUpdates.completed_at = endISO
                             // Cache for celebration before clearing
                             set({
                                 showCelebration: true,
@@ -386,11 +391,11 @@ export const useFocusStore = create<FocusState>()(
                                 celebratedDuration: total
                             })
                             // Play sound
-                            const { successSoundEnabled } = useSettingsStore.getState()
-                            if (successSoundEnabled) audioService.playSuccess()
+                            const { successSoundEnabled, successSound } = useSettingsStore.getState()
+                            if (successSoundEnabled) soundService.playSuccess(successSound)
                         }
 
-                        await useTaskStore.getState().updateTask(s.taskId, updates)
+                        await useTaskStore.getState().updateTask(s.taskId, taskUpdates)
                     }
 
                     set({
@@ -439,7 +444,15 @@ export const useFocusStore = create<FocusState>()(
                 const s = get()
                 if (!s.isActive || !s.startTime) return
 
-                const delta = Math.floor((Date.now() - s.startTime) / 1000)
+                // DEFENSIVE CHECK: If task was marked 'done' externally, kill session
+                const activeTask = useTaskStore.getState().tasks.find(t => t.id === s.taskId)
+                if (activeTask && activeTask.status === 'done') {
+                    get().endSession()
+                    return
+                }
+
+                const now = Date.now()
+                const delta = Math.floor((now - s.startTime) / 1000)
 
                 if (s.isBreak) {
                     const rem = Math.max(0, s.breakRemainingAtStart - delta)

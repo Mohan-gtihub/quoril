@@ -36,7 +36,7 @@ export function StatsOverview({ stats, dailyFocusGoalMinutes }: StatsOverviewPro
                 <div className="flex flex-col items-center justify-center h-full gap-4 relative z-10">
                     <h3 className="text-xs font-bold text-white/40 uppercase tracking-[0.2em]">Daily Focus Goal</h3>
                     <DailyGoalRing
-                        currentMinutes={stats.minutesToday}
+                        currentMinutes={stats.focusTime.totalMinutesToday}
                         goalMinutes={dailyFocusGoalMinutes}
                         size={160}
                     />

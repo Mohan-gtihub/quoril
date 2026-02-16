@@ -302,14 +302,14 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
         const isDone = task.status === 'done'
 
-        const status = isDone
-            ? (task.prev_status && task.prev_status !== 'done' ? (task.prev_status as TaskStatus) : 'todo')
-            : 'done'
+        // If task is already done, don't toggle it back to todo
+        if (isDone) return
 
+        const status = 'done'
         const updates: Partial<Task> = {
             status,
-            prev_status: isDone ? task.prev_status : task.status,
-            completed_at: isDone ? null : new Date().toISOString(),
+            prev_status: task.status,
+            completed_at: new Date().toISOString(),
         }
 
         await get().updateTask(id, updates)
@@ -376,17 +376,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             const updates: Partial<Task> = {
                 status,
                 sort_order: max + 1,
-            }
-
-            if (column === 'done') {
-                updates.completed_at = new Date().toISOString()
-
-                // Play success sound
-                if (useSettingsStore.getState().successSoundEnabled) {
-                    audioService.playSuccess()
-                }
-            } else {
-                updates.completed_at = null
+                // Set completion timestamp when moving to done column
+                completed_at: column === 'done' ? new Date().toISOString() : undefined,
+                // Don't try to update due_date/due_time - they don't exist as separate columns
             }
 
             await get().updateTask(taskId, updates)

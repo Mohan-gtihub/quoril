@@ -32,6 +32,24 @@ let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let quitting = false
 
+/* ---------------- SINGLE INSTANCE ---------------- */
+
+const gotTheLock = app.requestSingleInstanceLock()
+
+if (!gotTheLock) {
+    app.quit()
+} else {
+    app.on('second-instance', () => {
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore()
+            if (!mainWindow.isVisible()) mainWindow.show()
+            mainWindow.setAlwaysOnTop(true)
+            mainWindow.setAlwaysOnTop(false)
+            mainWindow.focus()
+        }
+    })
+}
+
 /* ---------------- WINDOW ---------------- */
 
 function createWindow() {
@@ -100,13 +118,52 @@ function createWindow() {
     mainWindow.on('close', e => {
         if (!quitting) {
             e.preventDefault()
-            mainWindow?.hide()
+            // Properly hide the window instead of closing it
+            if (mainWindow) {
+                mainWindow.hide()
+                // On Windows, also blur to ensure it releases focus
+                if (process.platform === 'win32') {
+                    mainWindow.blur()
+                }
+            }
         }
     })
 
     mainWindow.on('closed', () => {
         mainWindow = null
     })
+}
+
+/* ---------------- WINDOW RESTORATION ---------------- */
+
+function restoreWindow() {
+    if (!mainWindow) {
+        createWindow()
+        return
+    }
+
+    // Ensure window is not minimized
+    if (mainWindow.isMinimized()) {
+        mainWindow.restore()
+    }
+
+    // Show the window
+    mainWindow.show()
+
+    // Focus the window
+    mainWindow.focus()
+
+    // Force window to foreground (Windows-specific technique)
+    mainWindow.setAlwaysOnTop(true)
+    mainWindow.setAlwaysOnTop(false)
+
+    // Additional Windows-specific fix for ghost windows
+    if (process.platform === 'win32') {
+        // Force a repaint
+        const bounds = mainWindow.getBounds()
+        mainWindow.setBounds({ ...bounds, width: bounds.width + 1 })
+        mainWindow.setBounds(bounds)
+    }
 }
 
 /* ---------------- TRAY ---------------- */
@@ -132,7 +189,9 @@ function createTray() {
             Menu.buildFromTemplate([
                 {
                     label: 'Show App',
-                    click: () => mainWindow?.show()
+                    click: () => {
+                        restoreWindow()
+                    }
                 },
                 { type: 'separator' },
                 {
@@ -274,6 +333,10 @@ function setupIPC() {
         dbOps.getAppUsage(start, end)
     )
 
+    ipcMain.handle('db:getDailyActivity', (_, start, end) =>
+        dbOps.getDailyActivity(start, end)
+    )
+
     ipcMain.handle('db:getAppUsageByTask', (_, taskId) =>
         dbOps.getAppUsageByTask(taskId)
     )
@@ -302,8 +365,12 @@ function setupIPC() {
         trackingEngine.setTaskContext(taskId)
     })
 
-    ipcMain.handle('auth:setUser', (_, userId: string) => {
-        trackingEngine.setUserId(userId)
+    ipcMain.handle('tracker:getLiveSession', () => {
+        return trackingEngine.getLiveSession()
+    })
+
+    ipcMain.handle('auth:setUser', (_, userId: string | null, accessToken?: string | null) => {
+        trackingEngine.setUserId(userId, accessToken)
     })
 }
 
@@ -339,6 +406,10 @@ app.whenReady().then(async () => {
             path: app.getPath('exe')
         })
     }
+})
+
+app.on('activate', () => {
+    restoreWindow()
 })
 
 app.on('window-all-closed', () => {
