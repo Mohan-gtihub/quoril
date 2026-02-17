@@ -90,6 +90,45 @@ function App() {
         }
     }, [])
 
+    // DEEP LINK HANDLING (Email Verification)
+    useEffect(() => {
+        if (!window.electronAPI?.auth?.onDeepLink) return
+
+        const unsubscribe = window.electronAPI.auth.onDeepLink(async (url) => {
+            console.log('[DeepLink] Received:', url)
+
+            try {
+                // Parse URL: quoril://auth/callback#access_token=...
+                // We need to work with the hash part
+                const hashIndex = url.indexOf('#')
+                if (hashIndex !== -1) {
+                    const hash = url.substring(hashIndex + 1)
+                    const params = new URLSearchParams(hash)
+
+                    const access_token = params.get('access_token')
+                    const refresh_token = params.get('refresh_token')
+
+                    if (access_token && refresh_token) {
+                        const { supabase } = await import('@/services/supabase')
+                        const { error } = await supabase.auth.setSession({
+                            access_token,
+                            refresh_token
+                        })
+
+                        if (!error) {
+                            // Manual reload to ensure state sync
+                            window.location.reload()
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('[DeepLink] Error parsing URL:', e)
+            }
+        })
+
+        return () => unsubscribe()
+    }, [])
+
     if (!initialized) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">

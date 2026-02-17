@@ -82,6 +82,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Auth
     auth: {
         setUser: (userId: string | null, accessToken?: string | null) => ipcRenderer.invoke('auth:setUser', userId, accessToken),
+        onDeepLink: (callback: (url: string) => void) => {
+            const subscription = (_: any, url: string) => callback(url)
+            ipcRenderer.on('deep-link', subscription)
+            return () => ipcRenderer.removeListener('deep-link', subscription)
+        }
     },
 })
 

@@ -105,6 +105,14 @@
         "AppImage"
       ],
       "category": "Office"
-    }
+    },
+    "protocols": [
+      {
+        "name": "Quoril URL Scheme",
+        "schemes": [
+          "quoril"
+        ]
+      }
+    ]
   }
 }

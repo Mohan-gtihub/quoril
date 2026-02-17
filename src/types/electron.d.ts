@@ -21,6 +21,7 @@ export interface ElectronAPI {
     }
     auth: {
         setUser: (userId: string | null, accessToken?: string | null) => Promise<void>
+        onDeepLink: (callback: (url: string) => void) => () => void
     }
     store: {
         get: (key: string) => Promise<any>
@@ -56,9 +57,7 @@ export interface ElectronAPI {
         setContext: (taskId: string | null) => Promise<void>
         getLiveSession: () => Promise<any>
     }
-    auth: {
-        setUser: (userId: string | null, accessToken?: string | null) => Promise<void>
-    }
+
 }
 
 declare global {

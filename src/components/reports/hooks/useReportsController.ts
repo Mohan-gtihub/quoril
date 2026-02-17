@@ -132,33 +132,38 @@ export function useReportsController() {
             const dayEnd = endOfDay(day)
             const dayStr = format(day, 'yyyy-MM-dd')
 
-            // Use task data for focus time (more accurate)
-            let focusSec = activeTasks
-                .filter(t => {
-                    if (!t.actual_seconds || t.actual_seconds <= 0) return false
+            // Use SESSION data for accurate daily focus time
+            let focusSec = 0
 
-                    // Check if task has activity on this day
-                    const taskStart = t.created_at ? parseISO(t.created_at) : new Date()
-                    const taskEnd = t.completed_at ? parseISO(t.completed_at) : new Date()
+            // Get all focus sessions that occurred on this day
+            filteredSessions.forEach(s => {
+                if (s.type === 'break') return
 
-                    return taskStart <= dayEnd && taskEnd >= dayStart
-                })
-                .reduce((acc, t) => {
-                    // For active task, use live elapsed time
-                    let taskSeconds = t.actual_seconds || 0
-                    if (isActive && activeTaskId === t.id) {
-                        taskSeconds = elapsed
+                const sessionStart = parseISO(s.start_time)
+                const sessionEnd = s.end_time ? parseISO(s.end_time) : new Date()
+
+                // Check if session overlaps with this day
+                if (sessionStart <= dayEnd && sessionEnd >= dayStart) {
+                    // Calculate only the portion that falls within this day
+                    const overlapStart = sessionStart > dayStart ? sessionStart : dayStart
+                    const overlapEnd = sessionEnd < dayEnd ? sessionEnd : dayEnd
+
+                    const secs = Math.max(0, Math.floor((overlapEnd.getTime() - overlapStart.getTime()) / 1000))
+                    focusSec += secs
+                }
+            })
+
+            // If there's an active session today, add its elapsed time
+            if (isActive && activeTaskId && isToday(day)) {
+                const activeTask = activeTasks.find(t => t.id === activeTaskId)
+                if (activeTask?.started_at) {
+                    const sessionStart = parseISO(activeTask.started_at)
+                    // Only add if the active session started today
+                    if (sessionStart >= dayStart && sessionStart <= dayEnd) {
+                        focusSec += elapsed
                     }
-
-                    // VALIDATION: Cap unreasonably high values
-                    const MAX_REASONABLE_SECONDS = 4 * 60 * 60 // 4 hours max per task
-                    if (taskSeconds > MAX_REASONABLE_SECONDS) {
-
-                        taskSeconds = MAX_REASONABLE_SECONDS
-                    }
-
-                    return acc + taskSeconds
-                }, 0)
+                }
+            }
 
             // Still use session data for break time (since tasks don't track breaks)
             let breakSec = 0
@@ -348,35 +353,46 @@ export function useReportsController() {
                 return acc + taskSeconds
             }, 0) / 60)
 
-        // TODAY focus time - Use task data with proper day allocation
+        // TODAY focus time - Use SESSION data for accurate daily calculation
         const todayStart_for_calc = startOfDay(new Date())
         const todayEnd_for_calc = endOfDay(new Date())
-        const totalMinutesToday = Math.round(activeTasks
-            .filter(t => {
-                if (!t.actual_seconds || t.actual_seconds <= 0) return false
 
-                // Check if task has activity today
-                const taskStart = t.created_at ? parseISO(t.created_at) : new Date()
-                const taskEnd = t.completed_at ? parseISO(t.completed_at) : new Date()
+        // Get all sessions that occurred today
+        const todaySessions = filteredSessions.filter(s => {
+            if (s.type === 'break') return false
+            const sessionStart = parseISO(s.start_time)
+            const sessionEnd = s.end_time ? parseISO(s.end_time) : new Date()
 
-                return taskStart <= todayEnd_for_calc && taskEnd >= todayStart_for_calc
-            })
-            .reduce((acc: number, t) => {
-                // For active task, use live elapsed time
-                let taskSeconds = t.actual_seconds || 0
-                if (isActive && activeTaskId === t.id) {
-                    taskSeconds = elapsed
+            // Session must overlap with today
+            return sessionStart <= todayEnd_for_calc && sessionEnd >= todayStart_for_calc
+        })
+
+        let totalSecondsTodayFromSessions = todaySessions.reduce((acc, s) => {
+            const sessionStart = parseISO(s.start_time)
+            const sessionEnd = s.end_time ? parseISO(s.end_time) : new Date()
+
+            // Calculate only the portion that falls within today
+            const actualStart = sessionStart > todayStart_for_calc ? sessionStart : todayStart_for_calc
+            const actualEnd = sessionEnd < todayEnd_for_calc ? sessionEnd : todayEnd_for_calc
+
+            const seconds = Math.max(0, Math.floor((actualEnd.getTime() - actualStart.getTime()) / 1000))
+            return acc + seconds
+        }, 0)
+
+        // If there's an active session, include its current elapsed time for LIVE updates
+        if (isActive && activeTaskId) {
+            const activeTask = activeTasks.find(t => t.id === activeTaskId)
+            if (activeTask?.started_at) {
+                const sessionStart = parseISO(activeTask.started_at)
+                // Only add if the active session started today
+                if (sessionStart >= todayStart_for_calc && sessionStart <= todayEnd_for_calc) {
+                    // Add the live elapsed time
+                    totalSecondsTodayFromSessions += elapsed
                 }
+            }
+        }
 
-                // VALIDATION: Cap unreasonably high values
-                const MAX_REASONABLE_SECONDS = 4 * 60 * 60 // 4 hours max per task
-                if (taskSeconds > MAX_REASONABLE_SECONDS) {
-
-                    taskSeconds = MAX_REASONABLE_SECONDS
-                }
-
-                return acc + taskSeconds
-            }, 0) / 60)
+        const totalMinutesToday = Math.round(totalSecondsTodayFromSessions / 60)
 
         // Focus per task (top 10) - Use task data for accuracy
         const focusPerTask = activeTasks

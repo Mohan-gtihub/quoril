@@ -222,7 +222,17 @@ export function Reports() {
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="text-sm font-mono font-bold text-white">
-                                                        {Math.floor(item.seconds / 60)}m {item.seconds % 60}s
+                                                        {(() => {
+                                                            // For ongoing sessions, calculate live duration
+                                                            const durationSeconds = item.end_time
+                                                                ? item.seconds
+                                                                : Math.floor((new Date().getTime() - new Date(item.start_time).getTime()) / 1000)
+
+                                                            const minutes = Math.floor(durationSeconds / 60)
+                                                            const seconds = durationSeconds % 60
+
+                                                            return `${minutes}m ${seconds}s`
+                                                        })()}
                                                     </div>
                                                 </div>
                                             </div>

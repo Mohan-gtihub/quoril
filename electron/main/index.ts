@@ -50,6 +50,27 @@ if (!gotTheLock) {
     })
 }
 
+
+/* ---------------- DEEP LINKS ---------------- */
+
+if (process.defaultApp) {
+    if (process.argv.length >= 2) {
+        app.setAsDefaultProtocolClient('quoril', process.execPath, [path.resolve(process.argv[1])])
+    }
+} else {
+    app.setAsDefaultProtocolClient('quoril')
+}
+
+app.on('open-url', (event, url) => {
+    event.preventDefault()
+    // Send URL to renderer to handle auth callback
+    if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore()
+        mainWindow.focus()
+        mainWindow.webContents.send('deep-link', url)
+    }
+})
+
 /* ---------------- WINDOW ---------------- */
 
 function createWindow() {

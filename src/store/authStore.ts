@@ -237,7 +237,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 email: email.toLowerCase().trim(),
                 password,
                 options: {
-                    emailRedirectTo: `${window.location.origin}/auth/callback`,
+                    emailRedirectTo: 'quoril://auth/callback',
                 },
             })
 
