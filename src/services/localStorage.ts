@@ -142,7 +142,7 @@ export const localService = {
                     const due_at = data?.due_at || null
                     let due_date: string | null = null
                     let due_time = '00:00:00'
-                    
+
                     if (due_at) {
                         const [date, time] = due_at.split('T')
                         due_date = date
@@ -162,23 +162,23 @@ export const localService = {
                 }
             }
             // Helper function to safely update due date/time
-            const updateDueDateTime = async (row: any, updates: any): Promise<void> => {
+            const updateDueDateTime = async (taskId: string, row: any, updates: any): Promise<void> => {
                 if (updates.due_date || updates.due_time) {
                     // Use a single query to get existing task data if needed
-                    const existing = await getExistingDueDateTime(row.id)
-                    
+                    const existing = await getExistingDueDateTime(taskId)
+
                     // Combine due_date and due_time into due_at field
                     const newDueDate = updates.due_date || existing.due_date
                     const newDueTime = updates.due_time || existing.due_time
                     row.due_at = newDueDate && newDueTime ? `${newDueDate}T${newDueTime}` : newDueDate || null
                 } else {
                     // If no due date/time provided, keep existing values
-                    const existing = await getExistingDueDateTime(row.id)
+                    const existing = await getExistingDueDateTime(taskId)
                     row.due_at = existing.due_date && existing.due_time ? `${existing.due_date}T${existing.due_time}` : existing.due_date || null
                 }
             }
 
-            await updateDueDateTime(row, updates)
+            await updateDueDateTime(id, row, updates)
 
             if (!db()) {
                 row.synced = 1
@@ -256,6 +256,23 @@ export const localService = {
             }
             // Use Soft Delete for Sync compatibility
             await db().exec('UPDATE tasks SET deleted_at = ?, synced = 0 WHERE list_id = ?', [new Date().toISOString(), listId])
+            dataSyncService.trigger()
+            return { error: null }
+        },
+
+        resetAllTimes: async () => {
+            const user = await getUser()
+            if (!user) return { error: 'No user' }
+
+            if (!db()) {
+                const { error } = await (supabase.from('tasks') as any)
+                    .update({ spent_s: 0, synced: 0 })
+                    .eq('user_id', user.id)
+                return { error: error?.message || null }
+            }
+
+            // SQLite
+            await db().exec('UPDATE tasks SET spent_s = 0, synced = 0 WHERE user_id = ?', [user.id])
             dataSyncService.trigger()
             return { error: null }
         }
@@ -560,6 +577,25 @@ export const localService = {
             await db().exec(`UPDATE focus_sessions SET ${keys.map(k => `${k}=?`).join(',')} WHERE id=?`, [...Object.values(row), id])
             dataSyncService.trigger()
 
+            return { error: null }
+        },
+
+        deleteAll: async () => {
+            const user = await getUser()
+            if (!user) return { error: 'No user' }
+
+            if (!db()) {
+                const { error } = await (supabase.from('focus_sessions') as any)
+                    .delete()
+                    .eq('user_id', user.id)
+
+                if (error) return { error: error.message }
+                return { error: null }
+            }
+
+            // SQLite
+            await db().exec('DELETE FROM focus_sessions WHERE user_id = ?', [user.id])
+            dataSyncService.trigger()
             return { error: null }
         }
     }

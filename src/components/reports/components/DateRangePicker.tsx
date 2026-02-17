@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { format, subDays, startOfMonth, endOfMonth, startOfToday } from 'date-fns'
+import { format, subDays, startOfMonth, endOfMonth, startOfToday, endOfToday, endOfDay } from 'date-fns'
 import { Calendar as CalendarIcon, ChevronDown, Check } from 'lucide-react'
 import { cn } from '@/utils/helpers'
 
@@ -15,10 +15,10 @@ interface DateRangePickerProps {
 }
 
 const PRESETS = [
-    { label: 'Today', getValue: () => ({ start: startOfToday(), end: startOfToday() }) },
-    { label: 'Yesterday', getValue: () => ({ start: subDays(startOfToday(), 1), end: subDays(startOfToday(), 1) }) },
-    { label: 'Last 7 Days', getValue: () => ({ start: subDays(startOfToday(), 6), end: startOfToday() }) },
-    { label: 'Last 30 Days', getValue: () => ({ start: subDays(startOfToday(), 29), end: startOfToday() }) },
+    { label: 'Today', getValue: () => ({ start: startOfToday(), end: endOfToday() }) },
+    { label: 'Yesterday', getValue: () => ({ start: subDays(startOfToday(), 1), end: endOfDay(subDays(startOfToday(), 1)) }) },
+    { label: 'Last 7 Days', getValue: () => ({ start: subDays(startOfToday(), 6), end: endOfToday() }) },
+    { label: 'Last 30 Days', getValue: () => ({ start: subDays(startOfToday(), 29), end: endOfToday() }) },
     { label: 'This Month', getValue: () => ({ start: startOfMonth(startOfToday()), end: endOfMonth(startOfToday()) }) },
 ]
 

@@ -1,636 +1,205 @@
-import { useMemo, useEffect, useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { endOfMonth, startOfWeek, endOfWeek, subMonths, subWeeks, eachDayOfInterval, format } from 'date-fns'
 import { useFocusStore } from '@/store/focusStore'
 import { useTaskStore } from '@/store/taskStore'
 import { useListStore } from '@/store/listStore'
-import { useSettingsStore } from '@/store/settingsStore'
 import {
-    format,
-    subDays,
-    subMonths,
-    parseISO,
-    startOfDay,
-    eachDayOfInterval,
-    endOfDay,
-    startOfWeek,
-    endOfWeek,
-    startOfMonth,
-    endOfMonth,
-    isToday
-} from 'date-fns'
-import type { DateRange, ComprehensiveReportStats } from '../types/reports.types'
+    calculateRangeFocus,
+    calculateMultiDayStats,
+    calculateFocusDistribution,
+    calculateStreak,
+    formatTime
+} from '@/utils/timeCalculations'
+import type { FocusSession } from '@/types/database'
+import type { DateRange } from '../components/DateRangePicker'
 
-export function useReportsController() {
-    const { sessions, fetchSessions } = useFocusStore()
-    const { tasks, fetchTasks } = useTaskStore()
-    const { lists, fetchLists } = useListStore()
-    const { dailyFocusGoalMinutes } = useSettingsStore()
+export type ViewMode = 'week' | 'month'
 
+export const useReportsController = () => {
+    // 1. STORE HOOKS
+    // Removed 'elapsed' dependency as it's not needed for active session calculation (we use Date.now() - startTime)
+    const { sessions, loading: sessionsLoading, fetchSessions, isActive, startTime, taskId, sessionType } = useFocusStore()
+    const { tasks } = useTaskStore()
+    const { lists } = useListStore()
+
+    // 2. LOCAL STATE
+    const [viewMode, setViewMode] = useState<ViewMode>('week')
     const [dateRange, setDateRange] = useState<DateRange>({
-        start: subDays(startOfDay(new Date()), 6),
-        end: startOfDay(new Date()),
-        label: 'Last 7 Days'
+        start: startOfWeek(new Date(), { weekStartsOn: 1 }),
+        end: endOfWeek(new Date(), { weekStartsOn: 1 }),
+        label: 'This Week'
     })
 
-    const [dailyActivity, setDailyActivity] = useState<any[]>([])
-    const [loading, setLoading] = useState(true)
+    // LIVE TICKER STATE: Force re-render every second when active
+    const [tick, setTick] = useState(0)
+
+    // 3. INITIAL DATA FETCH & LIVE TICKER
+    useEffect(() => {
+        fetchSessions()
+    }, [fetchSessions])
 
     useEffect(() => {
-        const load = async () => {
-            setLoading(true)
-            try {
-                await Promise.all([
-                    fetchSessions(),
-                    fetchTasks(),
-                    fetchLists()
-                ])
-
-                const start = dateRange.start.toISOString()
-                const end = endOfDay(dateRange.end).toISOString()
-                const activity = await window.electronAPI.db.getDailyActivity(start, end)
-                setDailyActivity(activity)
-            } catch (e) {
-                console.error('[ReportsController] Load failed:', e)
-            } finally {
-                setLoading(false)
-            }
+        let interval: NodeJS.Timeout
+        if (isActive) {
+            interval = setInterval(() => {
+                setTick(t => t + 1)
+            }, 1000)
         }
-        load()
-    }, [fetchSessions, fetchTasks, fetchLists, dateRange])
-
-    const stats = useMemo<ComprehensiveReportStats>(() => {
-        const { isActive, taskId: activeTaskId, elapsed } = useFocusStore.getState()
-
-        // --- SIMPLIFIED APPROACH: Use Task Time as Source of Truth ---
-        // Reports should ALWAYS match "Task Time Spent" - no complex normalization needed
-
-        // Filter sessions within range for display purposes only (timeline, etc.)
-        const filteredSessions = sessions.filter(s => {
-            const start = parseISO(s.start_time)
-            const end = s.end_time ? parseISO(s.end_time) : new Date()
-
-            // Filter out corrupted sessions (>24h)
-            if (s.seconds && s.seconds > 86400) return false
-            // Filter out sessions with negative durations
-            if (s.seconds && s.seconds < 0) return false
-
-            return start <= endOfDay(dateRange.end) && end >= startOfDay(dateRange.start)
-        })
-
-        // Filter valid tasks
-        const activeTasks = tasks.filter(t => !t.deleted_at)
-
-        // --- 1. Total Stats Based on Task Data ---
-        const totalFocusSeconds = activeTasks
-            .filter(t => {
-                // Only include tasks that have activity within the date range
-                if (!t.actual_seconds || t.actual_seconds <= 0) return false
-
-                // Check if task has any activity in the date range
-                const taskStart = t.created_at ? parseISO(t.created_at) : new Date()
-                const taskEnd = t.completed_at ? parseISO(t.completed_at) : new Date()
-
-                return taskStart <= endOfDay(dateRange.end) && taskEnd >= startOfDay(dateRange.start)
-            })
-            .reduce((acc, t) => {
-                // For active task, use live elapsed time
-                let taskSeconds = t.actual_seconds || 0
-                if (isActive && activeTaskId === t.id) {
-                    taskSeconds = elapsed
-                }
-
-                // VALIDATION: Cap unreasonably high values
-                const MAX_REASONABLE_SECONDS = 4 * 60 * 60 // 4 hours max per task
-                if (taskSeconds > MAX_REASONABLE_SECONDS) {
-
-                    taskSeconds = MAX_REASONABLE_SECONDS
-                }
-
-                return acc + taskSeconds
-            }, 0)
-
-        const totalBreakSeconds = filteredSessions
-            .filter(s => s.type === 'break')
-            .reduce((acc, s) => {
-                const sStart = parseISO(s.start_time)
-                const sEnd = s.end_time ? parseISO(s.end_time) : new Date()
-                const actualStart = sStart < dateRange.start ? dateRange.start : sStart
-                const actualEnd = sEnd > endOfDay(dateRange.end) ? endOfDay(dateRange.end) : sEnd
-                const secs = Math.max(0, Math.floor((actualEnd.getTime() - actualStart.getTime()) / 1000))
-                return acc + secs
-            }, 0)
-
-        const totalSeconds = totalFocusSeconds + totalBreakSeconds
-        const efficiencyScore = totalSeconds > 0
-            ? Math.round((totalFocusSeconds / totalSeconds) * 100)
-            : 0
-
-        // --- 2. Chart Data (Daily) - Use task data for focus time ---
-        const days = eachDayOfInterval({ start: dateRange.start, end: dateRange.end })
-
-        const chartData = days.map(day => {
-            const dayStart = startOfDay(day)
-            const dayEnd = endOfDay(day)
-            const dayStr = format(day, 'yyyy-MM-dd')
-
-            // Use SESSION data for accurate daily focus time
-            let focusSec = 0
-
-            // Get all focus sessions that occurred on this day
-            filteredSessions.forEach(s => {
-                if (s.type === 'break') return
-
-                const sessionStart = parseISO(s.start_time)
-                const sessionEnd = s.end_time ? parseISO(s.end_time) : new Date()
-
-                // Check if session overlaps with this day
-                if (sessionStart <= dayEnd && sessionEnd >= dayStart) {
-                    // Calculate only the portion that falls within this day
-                    const overlapStart = sessionStart > dayStart ? sessionStart : dayStart
-                    const overlapEnd = sessionEnd < dayEnd ? sessionEnd : dayEnd
-
-                    const secs = Math.max(0, Math.floor((overlapEnd.getTime() - overlapStart.getTime()) / 1000))
-                    focusSec += secs
-                }
-            })
-
-            // If there's an active session today, add its elapsed time
-            if (isActive && activeTaskId && isToday(day)) {
-                const activeTask = activeTasks.find(t => t.id === activeTaskId)
-                if (activeTask?.started_at) {
-                    const sessionStart = parseISO(activeTask.started_at)
-                    // Only add if the active session started today
-                    if (sessionStart >= dayStart && sessionStart <= dayEnd) {
-                        focusSec += elapsed
-                    }
-                }
-            }
-
-            // Still use session data for break time (since tasks don't track breaks)
-            let breakSec = 0
-            filteredSessions.forEach(s => {
-                if (s.type !== 'break') return
-                const sStart = parseISO(s.start_time)
-                const sEnd = s.end_time ? parseISO(s.end_time) : new Date()
-
-                // Check if session overlaps with this day
-                if (sStart <= dayEnd && sEnd >= dayStart) {
-                    // Calculate overlap - critical for sessions crossing midnight (11pm-1am)
-                    const overlapStart = sStart > dayStart ? sStart : dayStart
-                    const overlapEnd = sEnd < dayEnd ? sEnd : dayEnd
-
-                    const secs = Math.max(0, Math.floor((overlapEnd.getTime() - overlapStart.getTime()) / 1000))
-                    breakSec += secs
-                }
-            })
-
-            // Count tasks completed on this day
-            const tasksCompletedCount = activeTasks.filter(t => {
-                if (!t.completed_at) return false
-                const completedDate = format(parseISO(t.completed_at), 'yyyy-MM-dd')
-                return completedDate === dayStr
-            }).length
-
-            const dayActivity = dailyActivity.find(a => a.day === dayStr)
-            const activitySeconds = dayActivity ? dayActivity.totalSeconds : 0
-
-            return {
-                date: day,
-                label: format(day, 'MMM dd'),
-                focusHours: Number((focusSec / 3600).toFixed(1)),
-                breakHours: Number((breakSec / 3600).toFixed(1)),
-                totalMinutes: Math.round((focusSec + breakSec) / 60),
-                focusMinutes: Math.round(focusSec / 60),
-                activityMinutes: Math.round(activitySeconds / 60),
-                goalMet: Math.round(focusSec / 60) >= dailyFocusGoalMinutes,
-                tasksCompleted: tasksCompletedCount
-            }
-        })
-
-        // --- 3. Streak Logic - Use task data for consistency ---
-        const allDaysWithActivity = new Set<string>()
-
-        // Use task data to determine days with activity
-        activeTasks.forEach(t => {
-            if (!t.actual_seconds || t.actual_seconds <= 0) return
-
-            const taskStart = t.created_at ? parseISO(t.created_at) : new Date()
-            const taskEnd = t.completed_at ? parseISO(t.completed_at) : new Date()
-
-            // Add all days between task start and end
-            let currentDay = startOfDay(taskStart)
-            const endDay = startOfDay(taskEnd)
-
-            while (currentDay <= endDay) {
-                allDaysWithActivity.add(format(currentDay, 'yyyy-MM-dd'))
-                currentDay = subDays(currentDay, -1) // Add 1 day
-            }
-        })
-
-        let currentStreak = 0
-        let checkDate = startOfDay(new Date())
-
-        if (allDaysWithActivity.has(format(checkDate, 'yyyy-MM-dd'))) {
-            currentStreak++
-            checkDate = subDays(checkDate, 1)
-            while (allDaysWithActivity.has(format(checkDate, 'yyyy-MM-dd'))) {
-                currentStreak++
-                checkDate = subDays(checkDate, 1)
-            }
-        } else {
-            checkDate = subDays(checkDate, 1)
-            while (allDaysWithActivity.has(format(checkDate, 'yyyy-MM-dd'))) {
-                currentStreak++
-                checkDate = subDays(checkDate, 1)
-            }
-        }
-
-        // Task completion streak
-        const allDaysWithCompletions = new Set<string>()
-        activeTasks.forEach(t => {
-            if (t.completed_at) {
-                allDaysWithCompletions.add(format(startOfDay(parseISO(t.completed_at)), 'yyyy-MM-dd'))
-            }
-        })
-
-        let completionStreak = 0
-        checkDate = startOfDay(new Date())
-        if (allDaysWithCompletions.has(format(checkDate, 'yyyy-MM-dd'))) {
-            completionStreak++
-            checkDate = subDays(checkDate, 1)
-            while (allDaysWithCompletions.has(format(checkDate, 'yyyy-MM-dd'))) {
-                completionStreak++
-                checkDate = subDays(checkDate, 1)
-            }
-        } else {
-            checkDate = subDays(checkDate, 1)
-            while (allDaysWithCompletions.has(format(checkDate, 'yyyy-MM-dd'))) {
-                completionStreak++
-                checkDate = subDays(checkDate, 1)
-            }
-        }
-
-        // Consistency
-        const daysWithFocus = chartData.filter(d => d.focusMinutes > 0).length
-        const rangeConsistency = days.length > 0 ? Math.round((daysWithFocus / days.length) * 100) : 0
-
-        // --- 4. Timeline / Session Log ---
-        const sessionsByDay = filteredSessions.reduce((acc, s) => {
-            const dKey = format(parseISO(s.start_time), 'yyyy-MM-dd')
-            if (!acc[dKey]) acc[dKey] = []
-
-            acc[dKey].push({
-                id: s.id,
-                task_id: s.task_id,
-                start_time: s.start_time,
-                end_time: s.end_time || null,
-                seconds: s.seconds,
-                type: s.type,
-                planned_seconds: (s as any).planned_seconds
-            })
-            return acc
-        }, {} as Record<string, any[]>)
-
-        const timelineData = Object.entries(sessionsByDay)
-            .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
-            .map(([date, items]) => ({
-                date,
-                items: items.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
-            }))
-
-        // --- 5. Today's Progress ---
-        const todayStr = format(new Date(), 'yyyy-MM-dd')
-        const todayStats = chartData.find(d => format(d.date, 'yyyy-MM-dd') === todayStr)
-        const minutesToday = todayStats ? todayStats.focusMinutes : 0
-
-        // --- 6. Distribution Pie ---
-        const listDist = lists.map(l => {
-            const listSec = filteredSessions
-                .filter(s => {
-                    if (s.type === 'break') return false
-                    const task = activeTasks.find(t => t.id === s.task_id)
-                    return task?.list_id === l.id
-                })
-                .reduce((acc, s) => acc + (s.seconds ?? 0), 0)
-
-            return {
-                name: l.name,
-                value: Math.round(listSec / 60),
-                color: l.color
-            }
-        }).filter(item => item.value > 0).sort((a, b) => b.value - a.value)
-
-        // --- NEW: Comprehensive Stats ---
-
-        // A. Focus Time Stats
-        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
-        const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 })
-
-        // THIS WEEK - Simple task-based calculation with validation
-        const totalMinutesWeek = Math.round(activeTasks
-            .filter(t => {
-                if (!t.actual_seconds || t.actual_seconds <= 0) return false
-
-                // Check if task has activity this week
-                const taskStart = t.created_at ? parseISO(t.created_at) : new Date()
-                const taskEnd = t.completed_at ? parseISO(t.completed_at) : new Date()
-
-                return taskStart <= weekEnd && taskEnd >= weekStart
-            })
-            .reduce((acc: number, t) => {
-                // For active task, use live elapsed time
-                let taskSeconds = t.actual_seconds || 0
-                if (isActive && activeTaskId === t.id) {
-                    taskSeconds = elapsed
-                }
-
-                // VALIDATION: Cap unreasonably high values
-                const MAX_REASONABLE_SECONDS = 4 * 60 * 60 // 4 hours max per task
-                if (taskSeconds > MAX_REASONABLE_SECONDS) {
-
-                    taskSeconds = MAX_REASONABLE_SECONDS
-                }
-
-                return acc + taskSeconds
-            }, 0) / 60)
-
-        // TODAY focus time - Use SESSION data for accurate daily calculation
-        const todayStart_for_calc = startOfDay(new Date())
-        const todayEnd_for_calc = endOfDay(new Date())
-
-        // Get all sessions that occurred today
-        const todaySessions = filteredSessions.filter(s => {
-            if (s.type === 'break') return false
-            const sessionStart = parseISO(s.start_time)
-            const sessionEnd = s.end_time ? parseISO(s.end_time) : new Date()
-
-            // Session must overlap with today
-            return sessionStart <= todayEnd_for_calc && sessionEnd >= todayStart_for_calc
-        })
-
-        let totalSecondsTodayFromSessions = todaySessions.reduce((acc, s) => {
-            const sessionStart = parseISO(s.start_time)
-            const sessionEnd = s.end_time ? parseISO(s.end_time) : new Date()
-
-            // Calculate only the portion that falls within today
-            const actualStart = sessionStart > todayStart_for_calc ? sessionStart : todayStart_for_calc
-            const actualEnd = sessionEnd < todayEnd_for_calc ? sessionEnd : todayEnd_for_calc
-
-            const seconds = Math.max(0, Math.floor((actualEnd.getTime() - actualStart.getTime()) / 1000))
-            return acc + seconds
-        }, 0)
-
-        // If there's an active session, include its current elapsed time for LIVE updates
-        if (isActive && activeTaskId) {
-            const activeTask = activeTasks.find(t => t.id === activeTaskId)
-            if (activeTask?.started_at) {
-                const sessionStart = parseISO(activeTask.started_at)
-                // Only add if the active session started today
-                if (sessionStart >= todayStart_for_calc && sessionStart <= todayEnd_for_calc) {
-                    // Add the live elapsed time
-                    totalSecondsTodayFromSessions += elapsed
-                }
-            }
-        }
-
-        const totalMinutesToday = Math.round(totalSecondsTodayFromSessions / 60)
-
-        // Focus per task (top 10) - Use task data for accuracy
-        const focusPerTask = activeTasks
-            .filter(t => {
-                if (!t.actual_seconds || t.actual_seconds <= 0) return false
-                // Only include tasks that are actually active (not completed/done)
-                if (t.status === 'done' || t.completed_at) return false
-                return true
-            })
-            .map(t => {
-                // For active task, use live elapsed time
-                let taskSeconds = t.actual_seconds || 0
-                if (isActive && activeTaskId === t.id) {
-                    taskSeconds = elapsed
-                }
-
-                // VALIDATION: Cap unreasonably high values
-                const MAX_REASONABLE_SECONDS = 4 * 60 * 60 // 4 hours max per task
-                if (taskSeconds > MAX_REASONABLE_SECONDS) {
-
-                    taskSeconds = MAX_REASONABLE_SECONDS
-                }
-
-                return {
-                    taskId: t.id,
-                    taskTitle: t.title,
-                    minutes: Math.round(taskSeconds / 60)
-                }
-            })
-            .sort((a, b) => b.minutes - a.minutes)
-            .slice(0, 10)
-
-        const deepWorkSessionsCount = activeTasks
-            .filter(t => {
-                if (!t.actual_seconds || t.actual_seconds <= 0) return false
-                // Count tasks with 25+ minutes as deep work sessions
-                let taskSeconds = t.actual_seconds || 0
-                if (isActive && activeTaskId === t.id) {
-                    taskSeconds = elapsed
-                }
-
-                // VALIDATION: Cap unreasonably high values
-                const MAX_REASONABLE_SECONDS = 4 * 60 * 60 // 4 hours max per task
-                if (taskSeconds > MAX_REASONABLE_SECONDS) {
-
-                    taskSeconds = MAX_REASONABLE_SECONDS
-                }
-
-                return taskSeconds >= 25 * 60
-            }).length
-
-        // B. Task Completion Stats
-        const completedToday = activeTasks.filter(t => {
-            if (!t.completed_at) return false
-            return isToday(parseISO(t.completed_at))
-        }).length
-
-        const completedByList = lists.map(l => ({
-            listName: l.name,
-            count: activeTasks.filter(t => t.list_id === l.id && t.completed_at).length,
-            color: l.color
-        })).filter(item => item.count > 0).sort((a, b) => b.count - a.count)
-
-        const totalTasks = activeTasks.length
-        const completedTasks = activeTasks.filter(t => t.completed_at).length
-        const completionRatePercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
-
-        const overdueTasks = activeTasks.filter(t => {
-            if (t.completed_at || !t.due_at) return false
-            return parseISO(t.due_at) < new Date()
-        }).length
-
-        // C. Productivity Trends
-
-        // Weekly data (last 4 weeks) - Use task data with proper week allocation
-        const weeklyData = []
-        for (let i = 3; i >= 0; i--) {
-            const weekStart = startOfWeek(subDays(new Date(), i * 7), { weekStartsOn: 1 })
-            const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
-
-            // Use task data with proper week boundary calculation
-            const weekFocusMinutes = Math.round(activeTasks
-                .filter(t => {
-                    if (!t.actual_seconds || t.actual_seconds <= 0) return false
-
-                    // Check if task has activity in this specific week
-                    const taskStart = t.created_at ? parseISO(t.created_at) : new Date()
-                    const taskEnd = t.completed_at ? parseISO(t.completed_at) : new Date()
-
-                    // Only include if task overlaps with this week
-                    return taskStart <= weekEnd && taskEnd >= weekStart
-                })
-                .reduce((acc: number, t) => {
-                    // For active task, use live elapsed time
-                    let taskSeconds = t.actual_seconds || 0
-                    if (isActive && activeTaskId === t.id) {
-                        taskSeconds = elapsed
-                    }
-
-                    // VALIDATION: Cap unreasonably high values
-                    const MAX_REASONABLE_SECONDS = 4 * 60 * 60 // 4 hours max per task
-                    if (taskSeconds > MAX_REASONABLE_SECONDS) {
-
-                        taskSeconds = MAX_REASONABLE_SECONDS
-                    }
-
-                    return acc + taskSeconds
-                }, 0) / 60)
-
-            const weekTasks = activeTasks.filter(t => {
-                if (!t.completed_at) return false
-                const completed = parseISO(t.completed_at)
-                return completed >= weekStart && completed <= weekEnd
-            })
-
-            weeklyData.push({
-                date: weekStart,
-                label: `Week ${format(weekStart, 'MMM dd')}`,
-                focusMinutes: weekFocusMinutes,
-                tasksCompleted: weekTasks.length
-            })
-        }
-
-        // Monthly data (last 6 months) - Use task data with proper month allocation
-        const monthlyData = []
-        for (let i = 5; i >= 0; i--) {
-            const monthStart = startOfMonth(subMonths(new Date(), i))
-            const monthEnd = endOfMonth(monthStart)
-
-            // Use task data with proper month boundary calculation
-            const monthFocusMinutes = Math.round(activeTasks
-                .filter(t => {
-                    if (!t.actual_seconds || t.actual_seconds <= 0) return false
-
-                    // Check if task has activity in this specific month
-                    const taskStart = t.created_at ? parseISO(t.created_at) : new Date()
-
-                    // For this debug version, only include tasks created in this month
-                    return taskStart >= monthStart && taskStart <= monthEnd
-                })
-                .reduce((acc: number, t) => {
-                    // For active task, use live elapsed time
-                    let taskSeconds = t.actual_seconds || 0
-                    if (isActive && activeTaskId === t.id) {
-                        taskSeconds = elapsed
-                    }
-
-                    // VALIDATION: Cap unreasonably high values
-                    const MAX_REASONABLE_SECONDS = 4 * 60 * 60 // 4 hours max per task
-                    if (taskSeconds > MAX_REASONABLE_SECONDS) {
-
-                        taskSeconds = MAX_REASONABLE_SECONDS
-                    }
-
-
-                    return acc + taskSeconds
-                }, 0) / 60)
-
-
-
-            const monthTasks = activeTasks.filter(t => {
-                if (!t.completed_at) return false
-                const completed = parseISO(t.completed_at)
-                return completed >= monthStart && completed <= monthEnd
-            })
-
-            monthlyData.push({
-                date: monthStart,
-                label: format(monthStart, 'MMM yyyy'),
-                focusMinutes: monthFocusMinutes,
-                tasksCompleted: monthTasks.length
-            })
-        }
+        return () => clearInterval(interval)
+    }, [isActive])
+
+    // helper to avoid duplication
+    const activeVirtualSession = useMemo<FocusSession | null>(() => {
+        if (!isActive || !startTime || !taskId) return null
+
+        const now = Date.now()
+        const activeBonus = Math.floor((now - startTime) / 1000)
+
+        const dbType = (sessionType === 'focus' || sessionType === 'break' || sessionType === 'long_break')
+            ? sessionType
+            : 'focus'
 
         return {
-            // New comprehensive stats
-            focusTime: {
-                totalMinutesToday,
-                totalMinutesWeek,
-                focusPerTask,
-                deepWorkSessionsCount
-            },
-            taskCompletion: {
-                completedToday,
-                completionRatePercent,
-                overdueTasks,
-                completedByList
-            },
-            streaks: {
-                dailyFocusStreak: currentStreak,
-                dailyCompletionStreak: completionStreak
-            },
-            productivity: {
-                weeklyData,
-                monthlyData,
-                focusDistributionByDay: [], // Simplified for now
-                mostProductiveTimeOfDay: [] // Simplified for now
-            },
+            id: 'virtual-active',
+            user_id: 'current',
+            task_id: taskId,
+            type: dbType,
+            seconds: activeBonus,
+            start_time: new Date(startTime).toISOString(),
+            end_time: null,
+            created_at: new Date(startTime).toISOString(),
+            synced: 0,
+            metadata: null
+        }
+    }, [isActive, startTime, taskId, sessionType, tick])
 
-            // Legacy stats for backward compatibility
-            totalFocusDisplay: `${Math.floor(totalFocusSeconds / 3600)}h ${Math.floor((totalFocusSeconds % 3600) / 60)}m`,
-            totalBreakDisplay: `${Math.floor(totalBreakSeconds / 3600)}h ${Math.floor((totalBreakSeconds % 3600) / 60)}m`,
-            efficiencyScore,
-            chartData,
+    // 4. MEMOIZED STATS CALCULATION
+    const stats = useMemo(() => {
+        // 1. Prepare Lists
+        // Full list (for lifetime stats) - Prepend active session so it's fresh
+        const allSessions = activeVirtualSession ? [activeVirtualSession, ...sessions] : sessions
+
+        // Range list (for charts, distribution, period stats)
+        const sessionsInWindow = allSessions.filter(s => {
+            if (!s.start_time) return false
+            const start = new Date(s.start_time)
+            return start >= dateRange.start && start <= dateRange.end
+        })
+
+        // 2. Total Focus Time (Lifetime - All Sessions)
+        const totalFocusSeconds = allSessions.reduce((sum, s) => sum + (s.seconds || 0), 0)
+
+        // 3. Date Range Calculations (Period Focus - Windows Sessions)
+        const rangeFocusSeconds = sessionsInWindow.reduce((sum, s) => sum + (s.seconds || 0), 0)
+
+        const currentPeriodLabel = viewMode === 'week' ? 'This Week' : 'This Month'
+
+        // 4. Comparison (Trend)
+        let prevStart: Date, prevEnd: Date
+        if (viewMode === 'week') {
+            prevStart = subWeeks(dateRange.start, 1)
+            prevEnd = endOfWeek(prevStart, { weekStartsOn: 1 })
+        } else {
+            prevStart = subMonths(dateRange.start, 1)
+            prevEnd = endOfMonth(prevStart)
+        }
+
+        // Prev range uses full list but filtered internally by helper
+        // Removed 'activeElapsed' arg (0) as it was dead logic
+        const prevRangeSeconds = calculateRangeFocus(sessions, prevStart, prevEnd)
+
+        const trendPercentage = prevRangeSeconds > 0
+            ? Math.round(((rangeFocusSeconds - prevRangeSeconds) / prevRangeSeconds) * 100)
+            : 0
+
+        // 5. Daily Breakdown (Chart Data)
+        // Removed 'activeElapsed' arg (0)
+        const daysInInterval = eachDayOfInterval({ start: dateRange.start, end: dateRange.end })
+        const dailyStats = calculateMultiDayStats(sessionsInWindow, tasks, daysInInterval)
+
+        // 6. Focus Distribution (Per Task) - NOW RESPECTS RANGE
+        const focusPerTask = calculateFocusDistribution(sessionsInWindow)
+            .map(item => {
+                const task = tasks.find(t => t.id === item.taskId)
+                return {
+                    ...item,
+                    taskTitle: task?.title || 'Unknown Task',
+                }
+            })
+            .slice(0, 10)
+
+        // 7. Streak (Use allSessions because streak looks back in time beyond window)
+        const currentStreak = calculateStreak(allSessions)
+
+        // 8. Deep Work 
+        // Correct logic: Type is 'deep_work' OR 'focus' > 25m
+        const deepWorkSeconds = sessionsInWindow
+            .filter(s => (s.type === 'focus' && (s.seconds || 0) > 25 * 60))
+            .reduce((sum, s) => sum + (s.seconds || 0), 0)
+
+        return {
+            totalFocus: formatTime(totalFocusSeconds), // Lifetime
+            periodFocus: formatTime(rangeFocusSeconds), // Window
+            periodLabel: currentPeriodLabel,
+            trend: {
+                percentage: trendPercentage,
+                isPositive: trendPercentage >= 0
+            },
+            chartData: dailyStats.map(d => ({
+                day: format(d.date, 'EEE'),
+                fullDate: format(d.date, 'yyyy-MM-dd'),
+                minutes: d.focusMinutes,
+                tasks: d.tasksCompleted
+            })),
+            focusPerTask,
             currentStreak,
-            rangeConsistency,
-            minutesToday,
-            timelineData,
-            activeTasks,
-            listDist
-        }
-    }, [sessions, tasks, lists, dateRange, dailyFocusGoalMinutes, dailyActivity])
+            deepWorkHours: Math.round(deepWorkSeconds / 3600 * 10) / 10,
 
-    const refreshData = async () => {
-        setLoading(true)
-        try {
-            await Promise.all([
-                fetchSessions(),
-                fetchTasks(),
-                fetchLists()
-            ])
-            const start = dateRange.start.toISOString()
-            const end = endOfDay(dateRange.end).toISOString()
-            const activity = await window.electronAPI.db.getDailyActivity(start, end)
-            setDailyActivity(activity)
-        } catch (e) {
-            console.error('[ReportsController] Refresh failed:', e)
-        } finally {
-            setLoading(false)
+            rawTotalSeconds: totalFocusSeconds,
+            rawPeriodSeconds: rangeFocusSeconds
         }
-    }
+
+    }, [sessions, tasks, lists, dateRange, viewMode, activeVirtualSession])
+
+    // 5. TIMELINE DATA (Session Log)
+    const timelineItems = useMemo(() => {
+        const sourceList = activeVirtualSession ? [activeVirtualSession, ...sessions] : sessions
+
+        return sourceList
+            .filter(s => {
+                if (!s.start_time) return false
+                const start = new Date(s.start_time)
+                return start >= dateRange.start && start <= dateRange.end
+            })
+            .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+            .map(s => {
+                const task = tasks.find(t => t.id === s.task_id)
+                let notes = null;
+                try {
+                    const meta = typeof s.metadata === 'string' ? JSON.parse(s.metadata) : s.metadata;
+                    notes = meta?.notes || null
+                } catch (e) { /* ignore */ }
+
+                return {
+                    id: s.id,
+                    title: task?.title || 'Untitled Session',
+                    duration: formatTime(s.seconds),
+                    startTime: format(new Date(s.start_time), 'h:mm a'),
+                    type: s.type,
+                    notes: notes,
+                    isRunning: s.id === 'virtual-active'
+                }
+            })
+    }, [sessions, tasks, dateRange, activeVirtualSession])
+
 
     return {
-        stats,
+        viewMode,
+        setViewMode,
         dateRange,
         setDateRange,
-        dailyFocusGoalMinutes,
-        loading,
-        refreshData
+        stats,
+        timelineItems,
+        isLoading: sessionsLoading
     }
 }

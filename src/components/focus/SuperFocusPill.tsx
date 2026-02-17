@@ -20,8 +20,9 @@ export function SuperFocusPill() {
     } = useFocusStore()
     const { updateSettings } = useSettingsStore()
     const { tasks, subtasks, fetchSubtasks, toggleSubtask, moveTaskToColumn } = useTaskStore()
-    const { remainingTime, breakRemaining, pomodoroRemaining, isOvertime } = useTimerDisplay()
+    const { isOvertime, displayTime, pomodoroRemaining } = useTimerDisplay()
     const settings = useSettingsStore()
+
     const [isHovered, setIsHovered] = useState(false)
     const [isExpanded, setIsExpanded] = useState(false)
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
@@ -40,10 +41,11 @@ export function SuperFocusPill() {
             const performResize = () => {
                 window.electron.closeDevTools()
                 window.electron.setResizable(true)
-                // Precise height: Pill(48) + Gap(8) + Container
+                // Precise height: Badge(12) + Pill(48) + Gap(8) + Container
                 const itemsCount = currentSubtasks.length
                 const containerHeight = (12 + 20 + (Math.max(1, itemsCount) * 32) + 48 + 12)
-                const height = isExpanded ? (48 + 8 + containerHeight) : 48
+                const baseHeight = 48 + 12 // 48 pill + 12 badge space
+                const height = isExpanded ? (baseHeight + 8 + containerHeight) : baseHeight
 
                 window.electron.resizeWindow(340, height, 40, 40)
                 window.electron.setAlwaysOnTop(true)
@@ -71,7 +73,7 @@ export function SuperFocusPill() {
         return `${mins}:${secs.toString().padStart(2, '0')}`
     }
 
-    const time = isBreak ? breakRemaining : (settings.pomodorosEnabled ? pomodoroRemaining : remainingTime)
+    const time = displayTime
 
     const handleDone = async () => {
         if (taskId) await moveTaskToColumn(taskId, 'done')
@@ -86,11 +88,11 @@ export function SuperFocusPill() {
     }
 
     return (
-        <div className="w-full h-full flex flex-col gap-2 pointer-events-none">
+        <div className="w-full h-full flex flex-col gap-2 pointer-events-none pt-3">
             {/* Main Pill Row */}
             <div
                 className={cn(
-                    "w-[340px] h-[48px] flex items-center gap-3 px-4 shadow-2xl transition-all duration-300 pointer-events-auto shrink-0",
+                    "w-[340px] h-[48px] flex items-center gap-3 px-4 shadow-2xl transition-all duration-300 pointer-events-auto shrink-0 relative",
                     "bg-[#0d1117] border border-white/10 rounded-full group hover:border-white/20",
                     isHovered && "scale-[1.01]"
                 )}
@@ -98,6 +100,15 @@ export function SuperFocusPill() {
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
             >
+                {/* POMODORO BADGE: Half-on-air, Centered Top */}
+                {!isBreak && settings.pomodorosEnabled && (
+                    <div className="absolute -top-px left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center pointer-events-none">
+                        <div className="bg-[#0a0a0a] border border-red-500/30 text-red-500 text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg tracking-widest uppercase">
+                            POMO {formatShortTime(pomodoroRemaining)}
+                        </div>
+                    </div>
+                )}
+
                 {/* 1. RELIABLE DRAG HANDLE (Visual) */}
                 <div
                     className="w-10 h-full flex items-center justify-center text-white/10 hover:text-white/40 transition-colors cursor-grab active:cursor-grabbing group/handle"
@@ -109,12 +120,14 @@ export function SuperFocusPill() {
 
                 {!isHovered ? (
                     /* DEFAULT STATE: [Name] [Time] */
-                    <div className="flex items-center justify-between flex-1 animate-in fade-in duration-300 pr-5 pl-1">
-                        <span className="text-sm font-bold text-white tracking-wide truncate flex-1 drop-shadow-md">
-                            {isBreak ? 'Taking a Break' : (activeTask?.title || 'No Active Mission')}
-                        </span>
+                    <div className="flex items-center justify-between flex-1 animate-in fade-in duration-300 pr-5 pl-1 overflow-hidden">
+                        <div className="flex flex-col min-w-0 pr-2 justify-center h-full">
+                            <span className="text-sm font-bold text-white tracking-wide truncate drop-shadow-md leading-tight">
+                                {isBreak ? 'Taking a Break' : (activeTask?.title || 'No Active Mission')}
+                            </span>
+                        </div>
                         <span className={cn(
-                            "font-mono font-bold text-sm tabular-nums tracking-tight ml-4 shrink-0",
+                            "font-mono font-bold text-sm tabular-nums tracking-tight shrink-0",
                             isOvertime ? "text-red-400" : (isBreak ? "text-amber-400" : "text-emerald-400")
                         )}>
                             {formatShortTime(time)}

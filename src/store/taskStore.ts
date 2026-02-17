@@ -67,6 +67,8 @@ interface TaskState {
     createSubtask: (taskId: string, title: string) => Promise<void>
     toggleSubtask: (subtaskId: string) => Promise<void>
     deleteSubtask: (subtaskId: string) => Promise<void>
+
+    resetAllTaskTimes: () => Promise<void>
 }
 
 export const useTaskStore = create<TaskState>((set, get) => ({
@@ -641,4 +643,16 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             set({ error: 'Subtask delete failed' })
         }
     },
+
+    resetAllTaskTimes: async () => {
+        try {
+            // Optimistic update
+            set((s) => ({
+                tasks: s.tasks.map(t => ({ ...t, actual_seconds: 0 }))
+            }))
+            await localService.tasks.resetAllTimes()
+        } catch {
+            set({ error: 'Failed to reset task times' })
+        }
+    }
 }))

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useFocusStore } from '@/store/focusStore'
 
+
 /**
  * Custom hook to derive a real-time timer display for the current focus session.
  * - Shows elapsed, remaining time, and progress.
@@ -9,6 +10,7 @@ import { useFocusStore } from '@/store/focusStore'
  * - Uses FocusStore.elapsed as the single source of truth for base time.
  */
 export function useTimerDisplay() {
+
     const {
         isActive,
         isPaused,
@@ -28,8 +30,6 @@ export function useTimerDisplay() {
 
     // When session is running (or in break), tick every second
     useEffect(() => {
-        // Tick if (active AND !paused) OR (isBreak AND !paused)
-        // Since isPaused now reflects the *current mode's* state, we just check !isPaused
         if (!isActive || isPaused || startTime == null) return
         const id = setInterval(() => setTick(t => t + 1), 1000)
         return () => clearInterval(id)
@@ -41,8 +41,6 @@ export function useTimerDisplay() {
             ? Math.floor((Date.now() - startTime) / 1000)
             : 0
 
-    // If Break: Main task elapsed is FROZEN at storeElapsed
-    // If Task: Main task elapsed = storeElapsed + liveDelta
     const elapsed = isBreak ? storeElapsed : (storeElapsed + liveDelta)
 
     // Remaining time, progress, overtime
@@ -51,6 +49,12 @@ export function useTimerDisplay() {
     const isOvertime = duration > 0 && remainingTime < 0
     const progress =
         duration > 0 && totalSeconds > 0 ? (elapsed / totalSeconds) * 100 : 0
+
+    // Centralized Display Time Logic
+    // User explicitly requested strict "Task Timer" (remainingTime), ignoring separate Pomodoro overlay
+    const displayTime = isBreak
+        ? Math.max(0, breakRemainingAtStart - (breakElapsed + liveDelta))
+        : remainingTime
 
     return {
         isActive,
@@ -68,6 +72,7 @@ export function useTimerDisplay() {
             : 0,
         breakRemainingAtStart,
         pomodoroRemaining: isBreak ? 0 : pomodoroRemaining,
-        pomodoroTotal
+        pomodoroTotal,
+        displayTime
     }
 }

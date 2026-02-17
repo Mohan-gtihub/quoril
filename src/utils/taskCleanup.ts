@@ -58,7 +58,7 @@ export function identifyCorruptedTasks(tasks: Task[]): CorruptedTask[] {
             }
 
             // Check for tasks with random characters in title
-            if (/[^a-zA-Z0-9\s\-\(\)\[\].]/.test(t.title)) {
+            if (/[^a-zA-Z0-9\s\-()[].]/.test(t.title)) {
                 issues.push('Contains special characters')
             }
 
@@ -88,7 +88,7 @@ export function identifyCorruptedTasks(tasks: Task[]): CorruptedTask[] {
             }
 
             // Check for tasks with random characters in title
-            if (/[^a-zA-Z0-9\s\-\(\)\[\].]/.test(t.title)) {
+            if (/[^a-zA-Z0-9\s\-()[].]/.test(t.title)) {
                 taskIssues.push('Contains special characters')
             }
 

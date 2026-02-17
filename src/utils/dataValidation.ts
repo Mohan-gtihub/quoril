@@ -165,3 +165,12 @@ export function sanitizeSessionData(session: any): any {
 
     return sanitized
 }
+
+/**
+ * Maps internal session types to database types
+ */
+export function mapSessionTypeToDB(type: string): 'focus' | 'break' | 'long_break' {
+    if (type === 'break') return 'break'
+    if (type === 'long_break') return 'long_break'
+    return 'focus' // Default everything else (regular, deep_work, pomodoro, quick_sprint) to 'focus'
+}

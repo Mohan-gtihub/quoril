@@ -36,7 +36,7 @@ export function FocusMode() {
         stopBreak
     } = useFocusStore()
 
-    const { remainingTime, isOvertime, progress, breakRemaining, pomodoroRemaining, pomodoroTotal } = useTimerDisplay()
+    const { isOvertime, progress, breakRemaining, pomodoroRemaining, pomodoroTotal, displayTime } = useTimerDisplay()
 
 
     // Request Notification Permission
@@ -235,6 +235,15 @@ export function FocusMode() {
                         </button>
                     </div>
 
+                    {/* POMODORO BADGE: Half-on-air, Centered Top */}
+                    {!isBreak && settings.pomodorosEnabled && (
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center pointer-events-none">
+                            <div className="bg-[#0a0a0a] border border-red-500/30 text-red-500 text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg tracking-widest uppercase">
+                                POMO {formatTimerTime(pomodoroRemaining)}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => navigate('/settings')}
@@ -259,7 +268,7 @@ export function FocusMode() {
                             {!isBreak && settings.pomodorosEnabled && <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">Focus Session</span>}
                         </div>
                         <div className={`font-mono font-black text-[64px] leading-none mb-2 tabular-nums tracking-tighter ${isOvertime && !isBreak && !settings.pomodorosEnabled ? 'text-red-500' : 'text-white'}`}>
-                            {formatTimerTime(isBreak ? breakRemaining : (settings.pomodorosEnabled ? pomodoroRemaining : remainingTime))}
+                            {formatTimerTime(displayTime)}
                         </div>
                         <div className="h-1.5 w-64 mx-auto bg-white/5 rounded-full overflow-hidden border border-white/5 p-[1px]">
                             <div

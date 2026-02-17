@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Bell, Zap, ShieldCheck, Palette, Sparkles } from 'lucide-react'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useFocusStore } from '@/store/focusStore'
 import { soundService } from '@/services/soundService'
 import { cn } from '@/utils/helpers'
 
@@ -140,6 +141,35 @@ export function Settings() {
                             onChange={(v) => settings.updateSettings({ pomodorosEnabled: v })}
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Select
+                                label="Focus Duration"
+                                value={(settings.pomodoroLength || 25).toString()}
+                                onChange={(v) => {
+                                    const newLength = parseInt(v)
+                                    settings.updateSettings({ pomodoroLength: newLength })
+
+                                    // Aggressively update current focus store if not actively counting
+                                    // so the UI reflects the change immediately
+                                    const focus = useFocusStore.getState()
+                                    if (!focus.isActive || focus.isPaused) {
+                                        const newSeconds = newLength * 60
+                                        useFocusStore.setState({
+                                            pomodoroTotal: newSeconds,
+                                            pomodoroRemaining: newSeconds,
+                                            pomodoroRemainingAtStart: newSeconds
+                                        })
+                                    }
+                                }}
+                                options={[
+                                    { label: '5 Minutes', value: '5' },
+                                    { label: '15 Minutes', value: '15' },
+                                    { label: '25 Minutes', value: '25' },
+                                    { label: '30 Minutes', value: '30' },
+                                    { label: '45 Minutes', value: '45' },
+                                    { label: '50 Minutes', value: '50' },
+                                    { label: '60 Minutes', value: '60' }
+                                ]}
+                            />
                             <Select
                                 label="Default Break Length"
                                 value={settings.defaultBreakLength.toString()}

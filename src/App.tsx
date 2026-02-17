@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { Toaster } from 'react-hot-toast'
+import toast, { Toaster } from 'react-hot-toast'
 import { QueryProvider } from '@/providers/QueryProvider'
 import { useAuthStore } from '@/store/authStore'
 import { LoginScreen } from '@/components/auth/LoginScreen'
@@ -60,10 +60,28 @@ function App() {
     // Keep store elapsed in sync for persistence and endSession; use getState() so effect doesn't re-run
     useEffect(() => {
         if (!isActive || (isPaused && !isBreak)) return
-        const sync = () => useFocusStore.getState().syncTimer()
-        sync()
-        const interval = setInterval(sync, 1000)
-        return () => clearInterval(interval)
+
+        let intervalId: NodeJS.Timeout | null = null
+
+        const sync = () => {
+            const state = useFocusStore.getState()
+            if (!state.isActive || state.isPaused || !state.startTime) {
+                if (intervalId) {
+                    clearInterval(intervalId)
+                    intervalId = null
+                }
+                return
+            }
+            state.syncTimer()
+        }
+
+        intervalId = setInterval(sync, 1000)
+        return () => {
+            if (intervalId) {
+                clearInterval(intervalId)
+                intervalId = null
+            }
+        }
     }, [isActive, isPaused, isBreak])
 
     // TRICK: Force HTML/BODY background to transparent in Super Focus Mode
@@ -99,7 +117,19 @@ function App() {
 
             try {
                 // Parse URL: quoril://auth/callback#access_token=...
-                // We need to work with the hash part
+                // OR: quoril://resume
+
+                // RESUME LOGIC
+                if (url.includes('resume') || url.includes('focus')) {
+                    const store = useFocusStore.getState()
+                    if (store.isActive && store.isPaused) {
+                        toast("Resuming Mission... 🚀", { icon: '▶️' })
+                        store.resumeSession()
+                    }
+                    return
+                }
+
+                // AUTH LOGIC
                 const hashIndex = url.indexOf('#')
                 if (hashIndex !== -1) {
                     const hash = url.substring(hashIndex + 1)

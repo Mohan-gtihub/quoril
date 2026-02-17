@@ -1,246 +1,152 @@
-import { useState, useEffect } from 'react'
 import { useReportsController } from './hooks/useReportsController'
-import { ReportCalendar } from './components/ReportCalendar'
-import { format, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns'
-import { BarChart3, Clock, CheckCircle2, Zap } from 'lucide-react'
+import { ReportsHeader } from './components/ReportsHeader'
+import { FocusTimeReport } from './components/FocusTimeReport'
+import { Clock, Activity, Flame, Box } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { useNavigate } from 'react-router-dom'
 
 export function Reports() {
-    const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-    const [viewMode, setViewMode] = useState<'day' | 'month'>('day')
-
+    const navigate = useNavigate()
     const {
         stats,
+        dateRange,
         setDateRange,
-        loading
+        timelineItems
     } = useReportsController()
 
-    // Update date range when selection changes
-    useEffect(() => {
-        if (viewMode === 'day') {
-            setDateRange({
-                start: startOfDay(selectedDate),
-                end: endOfDay(selectedDate),
-                label: format(selectedDate, 'MMM dd, yyyy')
-            })
-        } else {
-            setDateRange({
-                start: startOfMonth(selectedDate),
-                end: endOfMonth(selectedDate),
-                label: format(selectedDate, 'MMMM yyyy')
-            })
-        }
-    }, [selectedDate, viewMode, setDateRange])
-
-    const handleSelectDate = (date: Date) => {
-        setSelectedDate(date)
-        setViewMode('day')
-    }
-
-    const handleSelectMonth = (date: Date) => {
-        setSelectedDate(date)
-        setViewMode('month')
-    }
-
-    // Get stats for display
-    // For Day View: stats.chartData[0] (should correspond to the selected day)
-    // For Month View: stats.chartData (array of days)
-    const currentStats = viewMode === 'day'
-        ? (stats.chartData && stats.chartData.length > 0 ? stats.chartData[0] : null)
-        : null
-
-    const totalFocusMinutes = viewMode === 'month'
-        ? (stats.chartData || []).reduce((acc, d) => acc + (d.focusMinutes || 0), 0)
-        : (currentStats?.focusMinutes || 0)
-
-    const totalTasksCompleted = viewMode === 'month'
-        ? (stats.chartData || []).reduce((acc, d) => acc + (d.tasksCompleted || 0), 0)
-        : (currentStats?.tasksCompleted || 0)
-
-    // Timeline items for the selected day
-    const dayTimeline = viewMode === 'day' && stats.timelineData
-        ? stats.timelineData.find(d => d.date === format(selectedDate, 'yyyy-MM-dd'))
-        : null
-
-    const timelineItems = dayTimeline ? dayTimeline.items : []
-
     return (
-        <div className="h-full bg-[#050505] p-8 overflow-y-auto custom-scrollbar">
-            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="h-full bg-[#050505] p-6 md:p-12 overflow-y-auto custom-scrollbar">
+            <div className="max-w-6xl mx-auto">
 
-                {/* LEFT SIDEBAR - CALENDAR */}
-                <div className="lg:col-span-4 space-y-6">
-                    <div>
-                        <h1 className="text-2xl font-black text-white mb-1">Reports</h1>
-                        <p className="text-white/40 text-sm font-medium">
-                            {viewMode === 'day' ? 'Daily Intelligence' : 'Monthly Analysis'}
-                        </p>
-                    </div>
+                <ReportsHeader
+                    navigate={navigate}
+                    dateRange={dateRange}
+                    setDateRange={setDateRange}
+                />
 
-                    <ReportCalendar
-                        selectedDate={selectedDate}
-                        onSelectDate={handleSelectDate}
-                        onSelectMonth={handleSelectMonth}
-                        selectionType={viewMode}
+                {/* KPI Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <StatCard
+                        label="Total Focus"
+                        value={stats.periodFocus}
+                        subLabel={stats.periodLabel}
+                        icon={<Clock size={16} />}
+                        trend={stats.trend.percentage}
                     />
-
-                    {/* Quick Stats Summary for Sidebar */}
-                    <div className="bg-[#0b0e14] border border-white/5 rounded-2xl p-6 space-y-4">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-white/40 uppercase tracking-widest">Efficiency</span>
-                            <span className="text-xl font-mono font-bold text-indigo-400">{stats.efficiencyScore || 0}%</span>
-                        </div>
-                        <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
-                                style={{ width: `${stats.efficiencyScore || 0}%` }}
-                            />
-                        </div>
-                    </div>
+                    <StatCard
+                        label="Deep Work"
+                        value={`${stats.deepWorkHours}h`}
+                        subLabel="High Quality Focus"
+                        icon={<Activity size={16} />}
+                        color="indigo"
+                    />
+                    <StatCard
+                        label="Current Streak"
+                        value={String(stats.currentStreak)}
+                        subLabel="Consecutive Days"
+                        icon={<Flame size={16} />}
+                        color="orange"
+                    />
+                    <StatCard
+                        label="Total Sessions"
+                        value={String(timelineItems.length)}
+                        subLabel="In Selected Range"
+                        icon={<Box size={16} />}
+                        color="zinc"
+                    />
                 </div>
 
-                {/* MAIN CONTENT */}
-                <div className="lg:col-span-8 space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                    {/* Header Card */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-[#0b0e14] border border-white/5 rounded-2xl p-6 gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-white/40 shrink-0">
-                                {viewMode === 'day' ? <Zap size={24} /> : <BarChart3 size={24} />}
+                    {/* Main Chart Column */}
+                    <div className="lg:col-span-2 space-y-8">
+                        {/* Daily Activity Chart */}
+                        <div className="bg-[#09090b] border border-white/5 rounded-xl p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">Activity Trend</h3>
                             </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-white">
-                                    {viewMode === 'day'
-                                        ? format(selectedDate, 'eeee, MMMM do, yyyy')
-                                        : format(selectedDate, 'MMMM yyyy')
-                                    }
-                                </h2>
-                                <p className="text-xs font-bold text-white/30 uppercase tracking-widest">
-                                    {loading ? 'Synchronizing...' : (viewMode === 'day' ? 'Daily Overview' : 'Monthly Overview')}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="text-left sm:text-right">
-                            <div className="text-2xl font-mono font-bold text-white whitespace-nowrap">
-                                {Math.floor(totalFocusMinutes / 60)}<span className="text-sm text-white/30 ml-1">h</span>
-                                {' '}
-                                {totalFocusMinutes % 60}<span className="text-sm text-white/30 ml-1">m</span>
-                            </div>
-                            <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Total Focus Time</p>
-                        </div>
-                    </div>
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <StatCard
-                            label="Tasks Completed"
-                            value={totalTasksCompleted}
-                            icon={<CheckCircle2 size={18} />}
-                            color="emerald"
-                        />
-                        <StatCard
-                            label="Focus Sessions"
-                            value={viewMode === 'day'
-                                ? timelineItems.length
-                                : (stats.timelineData || []).reduce((acc: number, g: any) => acc + g.items.length, 0)
-                            }
-                            icon={<Zap size={18} />}
-                            color="amber"
-                        />
-                        <StatCard
-                            label="Break Time"
-                            value={`${currentStats?.breakHours || 0}h`}
-                            icon={<Clock size={18} />}
-                            color="blue"
-                        />
-                    </div>
-
-                    {/* Chart / Log Area */}
-                    <div className="bg-[#0b0e14] border border-white/5 rounded-2xl p-6 min-h-[400px]">
-                        {viewMode === 'month' ? (
-                            <div className="h-[350px] w-full">
-                                <h3 className="text-xs font-bold text-white/40 uppercase tracking-[0.2em] mb-6">Daily Breakdown</h3>
+                            <div className="h-[300px] w-full">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={stats.chartData || []}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
                                         <XAxis
-                                            dataKey="label"
-                                            stroke="#ffffff30"
+                                            dataKey="day"
+                                            stroke="#52525b"
                                             fontSize={10}
                                             tickLine={false}
                                             axisLine={false}
-                                            interval={viewMode === 'month' ? 2 : 0}
                                         />
                                         <YAxis
-                                            stroke="#ffffff30"
+                                            stroke="#52525b"
                                             fontSize={10}
                                             tickLine={false}
                                             axisLine={false}
                                             tickFormatter={(value) => `${Math.round(value / 60)}h`}
                                         />
                                         <Tooltip
+                                            cursor={{ fill: 'rgba(255,255,255,0.03)' }}
                                             contentStyle={{
-                                                backgroundColor: '#111',
+                                                backgroundColor: '#09090b',
                                                 border: '1px solid rgba(255, 255, 255, 0.1)',
-                                                borderRadius: '8px'
+                                                borderRadius: '8px',
+                                                boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
                                             }}
-                                            itemStyle={{ fontSize: '12px', color: '#fff' }}
-                                            labelStyle={{ color: '#fff', fontWeight: 'bold', marginBottom: '4px' }}
+                                            itemStyle={{ fontSize: '12px', color: '#e4e4e7', fontFamily: 'monospace' }}
+                                            labelStyle={{ color: '#a1a1aa', fontSize: '11px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
                                             formatter={(value: number) => [`${Math.floor(value / 60)}h ${value % 60}m`, 'Focus Time']}
                                         />
                                         <Bar
-                                            dataKey="focusMinutes"
+                                            dataKey="minutes"
                                             fill="#6366f1"
-                                            radius={[4, 4, 0, 0]}
+                                            radius={[2, 2, 0, 0]}
+                                            maxBarSize={40}
                                         />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
-                        ) : (
-                            <div className="space-y-4">
-                                <h3 className="text-xs font-bold text-white/40 uppercase tracking-[0.2em] mb-6">Session Log</h3>
-                                {timelineItems.length === 0 ? (
-                                    <div className="h-64 flex flex-col items-center justify-center text-white/20">
-                                        <Clock size={48} className="mb-4 opacity-20" />
-                                        <p className="text-sm font-medium">No activity recorded for this day.</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {timelineItems.map((item: any) => (
-                                            <div key={item.id} className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/[0.04] transition-colors">
-                                                <div className="flex items-center gap-4">
-                                                    <div className={`w-2 h-2 rounded-full shrink-0 ${item.type === 'break' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
-                                                    <div>
-                                                        <div className="text-sm font-bold text-white/80">
-                                                            {item.type === 'break' ? 'Break Session' : 'Focus Session'}
-                                                        </div>
-                                                        <div className="text-[10px] text-white/40 font-mono mt-1">
-                                                            {format(new Date(item.start_time), 'hh:mm a')} - {item.end_time ? format(new Date(item.end_time), 'hh:mm a') : 'Now'}
-                                                        </div>
-                                                    </div>
+                        </div>
+
+                        <FocusTimeReport stats={stats} />
+                    </div>
+
+                    {/* Sidebar Column: Session Log */}
+                    <div className="space-y-6">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                            <Activity size={14} />
+                            Session Log
+                        </h3>
+
+                        <div className="bg-[#09090b] border border-white/5 rounded-xl overflow-hidden min-h-[500px]">
+                            {timelineItems.length === 0 ? (
+                                <div className="h-64 flex flex-col items-center justify-center text-zinc-700">
+                                    <Clock size={32} className="mb-3 opacity-20" />
+                                    <p className="text-xs font-medium">No sessions recorded</p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-white/5">
+                                    {timelineItems.map((item: any) => (
+                                        <div key={item.id} className="p-4 hover:bg-white/[0.02] transition-colors group">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <div className="text-xs font-mono text-zinc-500">
+                                                    {item.startTime}
                                                 </div>
-                                                <div className="text-right">
-                                                    <div className="text-sm font-mono font-bold text-white">
-                                                        {(() => {
-                                                            // For ongoing sessions, calculate live duration
-                                                            const durationSeconds = item.end_time
-                                                                ? item.seconds
-                                                                : Math.floor((new Date().getTime() - new Date(item.start_time).getTime()) / 1000)
-
-                                                            const minutes = Math.floor(durationSeconds / 60)
-                                                            const seconds = durationSeconds % 60
-
-                                                            return `${minutes}m ${seconds}s`
-                                                        })()}
-                                                    </div>
+                                                <div className={`text-xs font-mono font-bold ${item.type === 'break' ? 'text-blue-400' : 'text-emerald-400'}`}>
+                                                    {item.duration}
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                                            <div className="font-medium text-zinc-300 text-sm group-hover:text-white transition-colors">
+                                                {item.title}
+                                            </div>
+                                            {item.notes && (
+                                                <div className="mt-2 text-xs text-zinc-500 italic bg-white/[0.02] p-2 rounded">
+                                                    "{item.notes}"
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                 </div>
@@ -249,34 +155,32 @@ export function Reports() {
     )
 }
 
-function StatCard({ label, value, icon, color }: { label: string, value: string | number, icon: React.ReactNode, color: string }) {
-
-    // Simple color mapping
-    const getColors = (c: string) => {
-        switch (c) {
-            case 'indigo': return 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20'
-            case 'emerald': return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-            case 'amber': return 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-            case 'blue': return 'text-blue-400 bg-blue-500/10 border-blue-500/20'
-            default: return 'text-white bg-white/10 border-white/20'
-        }
-    }
-
-    const colorClasses = getColors(color)
-    const textColor = colorClasses.split(' ')[0]
-    const iconBg = colorClasses.split(' ').slice(0, 2).join(' ')
-
+function StatCard({ label, value, subLabel, icon, trend, color = 'indigo' }: any) {
+    // Minimalist color handling
     return (
-        <div className={`p-5 rounded-2xl border ${colorClasses.split(' ')[2].replace('border-', 'border-')} bg-[#0b0e14]`}>
-            <div className="flex items-center gap-3 mb-2">
-                <div className={`p-2 rounded-lg ${iconBg}`}>
-                    {icon}
-                </div>
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{label}</span>
+        <div className="bg-[#09090b] border border-white/5 rounded-xl p-5 hover:border-white/10 transition-colors">
+            <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{label}</span>
+                <div className={`opacity-50 ${getColorText(color)}`}>{icon}</div>
             </div>
-            <div className={`text-2xl font-mono font-bold ${textColor}`}>
-                {value}
+            <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-mono font-bold text-zinc-100">{value}</span>
+                {trend !== undefined && (
+                    <span className={`text-xs font-bold ${trend >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {trend > 0 ? '+' : ''}{trend}%
+                    </span>
+                )}
+            </div>
+            <div className="mt-1 text-xs text-zinc-600 font-medium">
+                {subLabel}
             </div>
         </div>
     )
+}
+
+function getColorText(color: string) {
+    if (color === 'orange') return 'text-orange-500'
+    if (color === 'emerald') return 'text-emerald-500'
+    if (color === 'blue') return 'text-blue-500'
+    return 'text-indigo-500'
 }

@@ -543,7 +543,7 @@ function LiveTrackingBar() {
             try {
                 const live = await window.electronAPI.tracker.getLiveSession()
                 setSession(live)
-            } catch (e) { }
+            } catch (e) { /* ignore */ }
         }
 
         update()

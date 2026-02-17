@@ -8,6 +8,7 @@ interface SettingsState {
 
     // Blitz mode / Focus Settings
     pomodorosEnabled: boolean
+    pomodoroLength: number // minutes
     defaultBreakLength: number // minutes
     scrollingTitle: boolean
     dailyFocusGoalMinutes: number // minutes
@@ -40,6 +41,7 @@ export const useSettingsStore = create<SettingsState>()(
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 
             pomodorosEnabled: false,
+            pomodoroLength: 25,
             defaultBreakLength: 10,
             scrollingTitle: true,
             dailyFocusGoalMinutes: 240,
