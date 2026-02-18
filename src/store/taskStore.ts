@@ -5,7 +5,7 @@ import type { TaskColumn } from '@/types/list'
 
 import { localService } from '@/services/localStorage'
 import { backupService } from '@/services/backupService'
-import { audioService } from '@/services/audioService'
+import { soundService } from '@/services/soundService'
 import { useSettingsStore } from './settingsStore'
 import { parseTitleForTime } from '@/utils/timeParser'
 
@@ -299,26 +299,24 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
     toggleComplete: async (id) => {
         const task = get().tasks.find((t) => t.id === id)
-
         if (!task) return
 
-        const isDone = task.status === 'done'
+        // If already done, we might want to move back to 'today'?
+        // For now, adhering to previous one-way logic but using the requested drag handler.
+        if (task.status === 'done') return
 
-        // If task is already done, don't toggle it back to todo
-        if (isDone) return
+        try {
+            // Reuse the "perfect" drag logic
+            await get().moveTaskToColumn(id, 'done')
 
-        const status = 'done'
-        const updates: Partial<Task> = {
-            status,
-            prev_status: task.status,
-            completed_at: new Date().toISOString(),
-        }
-
-        await get().updateTask(id, updates)
-
-        // Play sound if completing
-        if (!isDone && useSettingsStore.getState().successSoundEnabled) {
-            audioService.playSuccess()
+            // Play sound if completing
+            const { successSoundEnabled, successSound } = useSettingsStore.getState()
+            if (successSoundEnabled) {
+                soundService.playSuccess(successSound)
+            }
+        } catch (e) {
+            console.error('Failed to toggle complete:', e)
+            set({ error: 'Failed to complete task' })
         }
     },
 

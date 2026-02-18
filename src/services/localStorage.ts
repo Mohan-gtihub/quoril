@@ -6,12 +6,12 @@ import { dataSyncService } from './dataSyncService'
 /* ---------------- HELPERS ---------------- */
 
 const getUser = async () => {
-    const { data } = await supabase.auth.getSession()
-    if (data.session?.user) return data.session.user
-
-    // Double check with getUser (JWT verification)
-    const { data: userData } = await supabase.auth.getUser()
-    return userData.user || null
+    const { data, error } = await supabase.auth.getSession()
+    if (error || !data.session) {
+        // Check if we can recover or just return null
+        return null
+    }
+    return data.session.user
 }
 
 const db = () => (window as any).electronAPI?.db
