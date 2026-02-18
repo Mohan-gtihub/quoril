@@ -216,7 +216,7 @@ export interface Database {
                     user_id: string
                     task_id: string | null
 
-                    type: 'focus' | 'break' | 'long_break'
+                    type: 'focus' | 'break' | 'long_break' | 'deep_work'
 
                     seconds: number
 
@@ -235,7 +235,7 @@ export interface Database {
                     user_id: string
                     task_id?: string | null
 
-                    type: 'focus' | 'break' | 'long_break'
+                    type: 'focus' | 'break' | 'long_break' | 'deep_work'
 
                     seconds?: number
 
@@ -254,7 +254,7 @@ export interface Database {
                     user_id?: string
                     task_id?: string | null
 
-                    type?: 'focus' | 'break' | 'long_break'
+                    type?: 'focus' | 'break' | 'long_break' | 'deep_work'
 
                     seconds?: number
 

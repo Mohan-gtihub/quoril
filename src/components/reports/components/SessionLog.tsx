@@ -50,10 +50,10 @@ export function SessionLog({ timelineData, activeTasks }: SessionLogProps) {
                                                     isLive ? "text-white" : isBreak ? "text-emerald-300" : "text-indigo-300"
                                                 )}>
                                                     {isLive && <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping mr-2"></span>}
-                                                    {isBreak ? 'Break' : (task?.title || 'Unknown Task')}
+                                                    {isBreak ? 'Break' : ((s as any).title || task?.title || 'Unknown Task')}
                                                 </p>
                                                 <p className="text-[10px] text-white/30 font-mono mt-0.5 uppercase tracking-tighter">
-                                                    {isLive ? 'Active Uplink' : `${format(parseISO(s.start_time), 'HH:mm')} • ${s.type}`}
+                                                    {isLive ? 'Active Uplink' : `${format(parseISO(s.rawStartTime), 'HH:mm')} • ${s.type}`}
                                                 </p>
                                             </div>
                                         </div>
@@ -62,7 +62,7 @@ export function SessionLog({ timelineData, activeTasks }: SessionLogProps) {
                                                 "text-xs font-bold font-mono",
                                                 isLive ? "text-indigo-400" : "text-white/80"
                                             )}>
-                                                {formatSeconds(s.seconds || 0)}
+                                                {s.duration}
                                             </span>
                                         </div>
                                     </div>
@@ -76,9 +76,4 @@ export function SessionLog({ timelineData, activeTasks }: SessionLogProps) {
     )
 }
 
-function formatSeconds(s: number): string {
-    const m = Math.floor(s / 60)
-    const sec = s % 60
-    if (m > 0) return `${m}m ${sec}s`
-    return `${sec}s`
-}
+

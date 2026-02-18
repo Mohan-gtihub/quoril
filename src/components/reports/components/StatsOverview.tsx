@@ -1,26 +1,9 @@
 import { TrendingUp, Clock, Zap } from 'lucide-react'
 import { DailyGoalRing } from './DailyGoalRing'
 import { HabitConsistencyCard } from './HabitConsistencyCard'
-import type { ReportStats } from '../types/reports.types'
+import type { ComprehensiveReportStats as ReportStats } from '../types/reports.types'
 
-interface SimpleStatCardProps {
-    title: string
-    value: string | number
-    icon?: React.ReactNode
-    trend?: string
-}
 
-function SimpleStatCard({ title, value, icon }: SimpleStatCardProps) {
-    return (
-        <div className="bg-[#111111] border border-white/[0.05] rounded-2xl p-4 flex flex-col justify-between hover:border-white/10 transition-colors group">
-            <div className="flex items-start justify-between mb-2">
-                <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-wider">{title}</h4>
-                {icon && <div className="text-white/20 group-hover:text-white/40 transition-colors">{icon}</div>}
-            </div>
-            <div className="text-xl font-bold text-white font-mono tracking-tight">{value}</div>
-        </div>
-    )
-}
 
 interface StatsOverviewProps {
     stats: ReportStats
@@ -55,43 +38,51 @@ export function StatsOverview({ stats, dailyFocusGoalMinutes }: StatsOverviewPro
                 />
             </div>
 
-            {/* 3. Key Metrics (Top Right) */}
-            <div className="col-span-12 lg:col-span-4 grid grid-rows-3 gap-4 h-full">
-                <div className="bg-[#111111] border border-white/[0.05] rounded-2xl p-5 flex items-center justify-between relative overflow-hidden group hover:border-white/10 transition-colors">
-                    <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-indigo-500/5 to-transparent pointer-events-none" />
-                    <div>
-                        <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1 flex items-center gap-2">
-                            <TrendingUp size={12} /> Efficiency
+            {/* 3. Key Metrics & Daily Summary (Right Column) */}
+            <div className="col-span-12 lg:col-span-4 flex flex-col gap-4 h-full">
+
+                {/* Completed Tasks Card */}
+                <div className="bg-[#111111] border border-white/[0.05] rounded-2xl p-5 flex flex-col justify-between group hover:border-white/10 transition-colors flex-1 min-h-[140px]">
+                    <div className="flex items-start justify-between">
+                        <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1 flex items-center gap-2">
+                            <Zap size={12} className="fill-emerald-400" /> Completed
                         </h4>
-                        <div className="text-3xl font-bold text-white font-mono">{stats.efficiencyScore}%</div>
+                        <div className="text-3xl font-bold text-white font-mono">
+                            {stats.taskCompletion.completedToday}
+                        </div>
                     </div>
-                    <div className="w-16 h-16 rounded-full border-4 border-white/5 flex items-center justify-center relative">
-                        <span className="text-xs text-white/30 font-bold">%</span>
-                        <svg className="absolute inset-0 w-full h-full -rotate-90">
-                            <circle
-                                cx="32" cy="32" r="28"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                                className="text-indigo-500"
-                                strokeDasharray={`${2 * Math.PI * 28}`}
-                                strokeDashoffset={`${2 * Math.PI * 28 * (1 - stats.efficiencyScore / 100)}`}
-                            />
-                        </svg>
+
+                    <div className="mt-4">
+                        <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden mb-2">
+                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: '60%' }}></div>
+                        </div>
+                        <p className="text-xs text-white/40 font-medium">
+                            {stats.taskCompletion.completedToday > 0
+                                ? `You crushed ${stats.taskCompletion.completedToday} tasks today. Strong pace.`
+                                : "No tasks finished yet. Pick one and start."}
+                        </p>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 row-span-2">
-                    <SimpleStatCard
-                        title="Total Focus"
-                        value={stats.totalFocusDisplay}
-                        icon={<Zap size={14} />}
-                    />
-                    <SimpleStatCard
-                        title="Total Break"
-                        value={stats.totalBreakDisplay}
-                        icon={<Clock size={14} />}
-                    />
+                {/* Efficiency & Total Focus Grid */}
+                <div className="grid grid-cols-2 gap-4 flex-1">
+                    <div className="bg-[#111111] border border-white/[0.05] rounded-2xl p-4 flex flex-col justify-between hover:border-white/10 transition-colors">
+                        <div className="flex items-center gap-2 mb-2 text-indigo-400">
+                            <TrendingUp size={14} />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Efficiency</span>
+                        </div>
+                        <div className="text-2xl font-bold text-white font-mono">{stats.efficiencyScore}%</div>
+                    </div>
+
+                    <div className="bg-[#111111] border border-white/[0.05] rounded-2xl p-4 flex flex-col justify-between hover:border-white/10 transition-colors">
+                        <div className="flex items-center gap-2 mb-2 text-amber-400">
+                            <Clock size={14} />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Focus</span>
+                        </div>
+                        <div className="text-xl font-bold text-white font-mono truncate" title={stats.totalFocusDisplay}>
+                            {stats.totalFocusDisplay}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -244,6 +244,12 @@ export const useFocusStore = create<FocusState>()(
                     // The issue was setting isActive=true then failing.
 
                     const state = get()
+
+                    // FIX: Prevent double-start / double-logging for the same task
+                    if (state.isActive && state.taskId === taskId && !state.isPaused) {
+                        return
+                    }
+
                     if (state.isActive) {
                         await state.endSession()
                     }

@@ -49,21 +49,26 @@ export function HabitConsistencyCard({
                     <span className="text-[10px] font-bold text-white/60 font-mono">{consistencyScore}% Consistency</span>
                 </div>
 
-                <div className="flex gap-1.5 overflow-hidden">
-                    {dates.slice(-14).map((d, i) => ( // Show last 14 days max for this condensed view
-                        <div
-                            key={i}
-                            className={cn(
-                                "flex-1 h-8 rounded-md transition-all duration-500",
-                                d.goalMet
-                                    ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"
-                                    : d.minutes > 0
-                                        ? "bg-emerald-500/20"
-                                        : "bg-white/5"
-                            )}
-                            title={`${format(d.date, 'MMM d')}: ${d.minutes}m`}
-                        />
-                    ))}
+                <div className="flex gap-2 justify-between">
+                    {dates.slice(-7).map((d, i) => {
+                        const dayLabel = format(d.date, 'EEEEEE') // 'Mo', 'Tu', etc.
+                        return (
+                            <div key={i} className="flex flex-col items-center gap-2 flex-1">
+                                <span className="text-[10px] font-bold text-white/20 uppercase">{dayLabel}</span>
+                                <div
+                                    className={cn(
+                                        "w-full aspect-[4/5] rounded-md transition-all duration-500",
+                                        d.goalMet
+                                            ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
+                                            : d.minutes > 0
+                                                ? "bg-emerald-500/20 border border-emerald-500/20"
+                                                : "bg-white/5 border border-white/5"
+                                    )}
+                                    title={`${format(d.date, 'MMM d')}: ${d.minutes}m`}
+                                />
+                            </div>
+                        )
+                    })}
                 </div>
             </div>
         </div>

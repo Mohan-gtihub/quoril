@@ -5,63 +5,52 @@ import { useFocusStore } from '@/store/focusStore'
 import { soundService } from '@/services/soundService'
 import { cn } from '@/utils/helpers'
 
-export function Settings() {
-    const navigate = useNavigate()
-    const settings = useSettingsStore()
-
-    const handleBack = () => {
-        navigate('/planner')
-    }
-
-    const SectionHeader = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => (
-        <div className="flex items-start gap-4 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)]">
-                <Icon className="w-5 h-5" />
-            </div>
-            <div>
-                <h3 className="text-lg font-bold text-[var(--text-primary)] mb-1">{title}</h3>
-                <p className="text-sm text-[var(--text-tertiary)]">{description}</p>
-            </div>
+const SectionHeader = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => (
+    <div className="flex items-start gap-4 mb-8">
+        <div className="w-10 h-10 rounded-xl bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)]">
+            <Icon className="w-5 h-5" />
         </div>
-    )
+        <div>
+            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-1">{title}</h3>
+            <p className="text-sm text-[var(--text-tertiary)]">{description}</p>
+        </div>
+    </div>
+)
 
-    const Toggle = ({ value, onChange, label, description }: { value: boolean, onChange: (v: boolean) => void, label: string, description?: string }) => (
+const Toggle = ({ value, onChange, label, description }: { value: boolean, onChange: (v: boolean) => void, label: string, description?: string }) => (
+    <div
+        onClick={(e) => {
+            e.preventDefault()
+            onChange(!value)
+        }}
+        className="flex items-center justify-between p-4 rounded-xl bg-[var(--bg-hover)]/30 border border-[var(--border-default)] hover:bg-[var(--bg-hover)] transition-all cursor-pointer group"
+    >
+        <div className="flex-1">
+            <div className="text-sm font-bold text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">{label}</div>
+            {description && <div className="text-[11px] text-[var(--text-muted)] mt-0.5">{description}</div>}
+        </div>
         <div
-            onClick={(e) => {
-                e.preventDefault()
-                onChange(!value)
-            }}
-            className="flex items-center justify-between p-4 rounded-xl bg-[var(--bg-hover)]/30 border border-[var(--border-default)] hover:bg-[var(--bg-hover)] transition-all cursor-pointer group"
+            className={cn(
+                "w-12 h-6 rounded-full relative transition-all duration-300 pointer-events-none",
+                value ? "bg-[var(--accent-primary)] shadow-[0_0_15px_var(--accent-glow)]" : "bg-[var(--bg-tertiary)]"
+            )}
         >
-            <div className="flex-1">
-                <div className="text-sm font-bold text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">{label}</div>
-                {description && <div className="text-[11px] text-[var(--text-muted)] mt-0.5">{description}</div>}
-            </div>
-            <div
-                className={cn(
-                    "w-12 h-6 rounded-full relative transition-all duration-300 pointer-events-none",
-                    value ? "bg-[var(--accent-primary)] shadow-[0_0_15px_var(--accent-glow)]" : "bg-[var(--bg-tertiary)]"
-                )}
-            >
-                <div className={cn(
-                    "absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-300 shadow-sm",
-                    value ? "left-7" : "left-1"
-                )} />
-            </div>
+            <div className={cn(
+                "absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-300 shadow-sm",
+                value ? "left-7" : "left-1"
+            )} />
         </div>
-    )
+    </div>
+)
 
-    const Select = ({ value, onChange, options, label }: { value: string, onChange: (v: string) => void, options: { label: string, value: string }[], label: string }) => (
-        <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--bg-hover)]/30 border border-[var(--border-default)] hover:bg-[var(--bg-hover)] transition-all">
-            <span className="text-sm font-bold text-[var(--text-secondary)]">{label}</span>
+const Select = ({ value, onChange, options, label }: { value: string, onChange: (v: string) => void, options: { label: string, value: string }[], label: string }) => (
+    <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--bg-hover)]/30 border border-[var(--border-default)] hover:bg-[var(--bg-hover)] transition-all">
+        <span className="text-sm font-bold text-[var(--text-secondary)]">{label}</span>
+        <div className="relative">
             <select
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className="bg-[var(--bg-secondary)] border border-[var(--border-default)] text-[var(--text-primary)] text-xs rounded-lg px-3 py-2 cursor-pointer outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)]/20 transition-all hover:border-[var(--accent-primary)]/50"
-                style={{
-                    colorScheme: 'dark',
-                    appearance: 'auto'
-                }}
+                className="bg-[var(--bg-secondary)] border border-[var(--border-default)] text-[var(--text-primary)] text-xs rounded-lg px-3 py-2 pr-8 cursor-pointer outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)]/20 transition-all hover:border-[var(--accent-primary)]/50 appearance-none"
             >
                 {options.map(opt => (
                     <option
@@ -73,8 +62,22 @@ export function Settings() {
                     </option>
                 ))}
             </select>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-tertiary)]">
+                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            </div>
         </div>
-    )
+    </div>
+)
+
+export function Settings() {
+    const navigate = useNavigate()
+    const settings = useSettingsStore()
+
+    const handleBack = () => {
+        navigate('/planner')
+    }
 
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col font-sans select-none transition-colors duration-500">

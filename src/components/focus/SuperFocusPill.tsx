@@ -42,8 +42,11 @@ export function SuperFocusPill() {
                 window.electron.closeDevTools()
                 window.electron.setResizable(true)
                 // Precise height: Badge(12) + Pill(48) + Gap(8) + Container
+                // Precise height: Badge(12) + Pill(48) + Gap(8) + Container
                 const itemsCount = currentSubtasks.length
-                const containerHeight = (12 + 20 + (Math.max(1, itemsCount) * 32) + 48 + 12)
+                // If 0 items, allocate 60px for the "Target is locked" message
+                const contentHeight = itemsCount === 0 ? 60 : (itemsCount * 32) + 40 // +40 for add button space
+                const containerHeight = (12 + 20 + contentHeight + 48 + 12)
                 const baseHeight = 48 + 12 // 48 pill + 12 badge space
                 const height = isExpanded ? (baseHeight + 8 + containerHeight) : baseHeight
 

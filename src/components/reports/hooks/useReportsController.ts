@@ -1,26 +1,28 @@
 import { useState, useEffect, useMemo } from 'react'
-import { endOfMonth, startOfWeek, endOfWeek, subMonths, subWeeks, eachDayOfInterval, format } from 'date-fns'
+import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay } from 'date-fns'
 import { useFocusStore } from '@/store/focusStore'
 import { useTaskStore } from '@/store/taskStore'
 import { useListStore } from '@/store/listStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import {
-    calculateRangeFocus,
     calculateMultiDayStats,
     calculateFocusDistribution,
     calculateStreak,
-    formatTime
+    formatTime,
+    calculateDayFocus
 } from '@/utils/timeCalculations'
 import type { FocusSession } from '@/types/database'
 import type { DateRange } from '../components/DateRangePicker'
+import type { ComprehensiveReportStats, DailyChartData } from '../types/reports.types'
 
 export type ViewMode = 'week' | 'month'
 
 export const useReportsController = () => {
     // 1. STORE HOOKS
-    // Removed 'elapsed' dependency as it's not needed for active session calculation (we use Date.now() - startTime)
-    const { sessions, loading: sessionsLoading, fetchSessions, isActive, startTime, taskId, sessionType } = useFocusStore()
-    const { tasks } = useTaskStore()
+    const { sessions, loading: sessionsLoading, fetchSessions, isActive, startTime, taskId, sessionType, currentSessionId } = useFocusStore()
+    const { tasks, fetchTasks } = useTaskStore()
     const { lists } = useListStore()
+    const { dailyFocusGoalMinutes } = useSettingsStore()
 
     // 2. LOCAL STATE
     const [viewMode, setViewMode] = useState<ViewMode>('week')
@@ -30,13 +32,14 @@ export const useReportsController = () => {
         label: 'This Week'
     })
 
-    // LIVE TICKER STATE: Force re-render every second when active
+    // LIVE TICKER STATE
     const [tick, setTick] = useState(0)
 
     // 3. INITIAL DATA FETCH & LIVE TICKER
     useEffect(() => {
         fetchSessions()
-    }, [fetchSessions])
+        fetchTasks()
+    }, [fetchSessions, fetchTasks])
 
     useEffect(() => {
         let interval: NodeJS.Timeout
@@ -73,11 +76,16 @@ export const useReportsController = () => {
         }
     }, [isActive, startTime, taskId, sessionType, tick])
 
+    // UNIFIED SESSION LIST (Fixes Double Logging)
+    const allSessions = useMemo(() => {
+        // Filter out the currently active session from the store list to avoid duplicates
+        // when we add the virtual active session
+        const storedSessions = sessions.filter(s => s.id !== currentSessionId)
+        return activeVirtualSession ? [activeVirtualSession, ...storedSessions] : storedSessions
+    }, [sessions, currentSessionId, activeVirtualSession])
+
     // 4. MEMOIZED STATS CALCULATION
-    const stats = useMemo(() => {
-        // 1. Prepare Lists
-        // Full list (for lifetime stats) - Prepend active session so it's fresh
-        const allSessions = activeVirtualSession ? [activeVirtualSession, ...sessions] : sessions
+    const stats = useMemo<ComprehensiveReportStats>(() => {
 
         // Range list (for charts, distribution, period stats)
         const sessionsInWindow = allSessions.filter(s => {
@@ -86,86 +94,111 @@ export const useReportsController = () => {
             return start >= dateRange.start && start <= dateRange.end
         })
 
-        // 2. Total Focus Time (Lifetime - All Sessions)
-        const totalFocusSeconds = allSessions.reduce((sum, s) => sum + (s.seconds || 0), 0)
+        // A. Basic Totals
+        // Re-implementing logic similar to calculateRangeFocus but using our sessionsInWindow
+        const rangeFocusSeconds = sessionsInWindow
+            .filter(s => {
+                const t = s.type as string
+                return t === 'focus' || t === 'deep_work'
+            })
+            .reduce((sum, s) => sum + (s.seconds || 0), 0)
 
-        // 3. Date Range Calculations (Period Focus - Windows Sessions)
-        const rangeFocusSeconds = sessionsInWindow.reduce((sum, s) => sum + (s.seconds || 0), 0)
+        const totalBreakSeconds = sessionsInWindow
+            .filter(s => {
+                const t = s.type as string
+                return t === 'break' || t === 'long_break'
+            })
+            .reduce((sum, s) => sum + (s.seconds || 0), 0)
 
-        const currentPeriodLabel = viewMode === 'week' ? 'This Week' : 'This Month'
-
-        // 4. Comparison (Trend)
-        let prevStart: Date, prevEnd: Date
-        if (viewMode === 'week') {
-            prevStart = subWeeks(dateRange.start, 1)
-            prevEnd = endOfWeek(prevStart, { weekStartsOn: 1 })
-        } else {
-            prevStart = subMonths(dateRange.start, 1)
-            prevEnd = endOfMonth(prevStart)
-        }
-
-        // Prev range uses full list but filtered internally by helper
-        // Removed 'activeElapsed' arg (0) as it was dead logic
-        const prevRangeSeconds = calculateRangeFocus(sessions, prevStart, prevEnd)
-
-        const trendPercentage = prevRangeSeconds > 0
-            ? Math.round(((rangeFocusSeconds - prevRangeSeconds) / prevRangeSeconds) * 100)
+        // Efficiency Score: Focus / (Focus + Break)
+        const totalActivity = rangeFocusSeconds + totalBreakSeconds
+        const efficiencyScore = totalActivity > 0
+            ? Math.round((rangeFocusSeconds / totalActivity) * 100)
             : 0
 
-        // 5. Daily Breakdown (Chart Data)
-        // Removed 'activeElapsed' arg (0)
+        // B. Today's Focus
+        const todayFocusSeconds = calculateDayFocus(allSessions, new Date())
+
+        // C. Daily Breakdown (Chart Data)
         const daysInInterval = eachDayOfInterval({ start: dateRange.start, end: dateRange.end })
         const dailyStats = calculateMultiDayStats(sessionsInWindow, tasks, daysInInterval)
 
-        // 6. Focus Distribution (Per Task) - NOW RESPECTS RANGE
+        // Consistency: Days with focus >= goal
+        const daysWithFocus = dailyStats.filter(d => d.focusMinutes >= (dailyFocusGoalMinutes || 1)).length
+        const totalDays = dailyStats.length
+        const rangeConsistency = totalDays > 0 ? Math.round((daysWithFocus / totalDays) * 100) : 0
+
+        // D. Focus Distribution
         const focusPerTask = calculateFocusDistribution(sessionsInWindow)
             .map(item => {
                 const task = tasks.find(t => t.id === item.taskId)
                 return {
                     ...item,
                     taskTitle: task?.title || 'Unknown Task',
+                    taskId: item.taskId
                 }
             })
             .slice(0, 10)
 
-        // 7. Streak (Use allSessions because streak looks back in time beyond window)
+        // E. Streak
         const currentStreak = calculateStreak(allSessions)
 
-        // 8. Deep Work 
-        // Correct logic: Type is 'deep_work' OR 'focus' > 25m
-        const deepWorkSeconds = sessionsInWindow
-            .filter(s => (s.type === 'focus' && (s.seconds || 0) > 25 * 60))
-            .reduce((sum, s) => sum + (s.seconds || 0), 0)
+        // F. Deep Work
+
+
+        const chartData: DailyChartData[] = dailyStats.map(d => ({
+            date: d.date,
+            label: d.label,
+            focusMinutes: d.focusMinutes,
+            breakMinutes: d.breakMinutes,
+            tasksCompleted: d.tasksCompleted,
+            goalMet: d.focusMinutes >= (dailyFocusGoalMinutes || 1)
+        }))
 
         return {
-            totalFocus: formatTime(totalFocusSeconds), // Lifetime
-            periodFocus: formatTime(rangeFocusSeconds), // Window
-            periodLabel: currentPeriodLabel,
-            trend: {
-                percentage: trendPercentage,
-                isPositive: trendPercentage >= 0
+            focusTime: {
+                totalMinutesToday: Math.round(todayFocusSeconds / 60),
+                totalMinutesWeek: Math.round(rangeFocusSeconds / 60), // Approximation for window
+                focusPerTask,
+                deepWorkSessionsCount: sessionsInWindow.filter(s => s.seconds > 25 * 60).length
             },
-            chartData: dailyStats.map(d => ({
-                day: format(d.date, 'EEE'),
-                fullDate: format(d.date, 'yyyy-MM-dd'),
-                minutes: d.focusMinutes,
-                tasks: d.tasksCompleted
-            })),
-            focusPerTask,
-            currentStreak,
-            deepWorkHours: Math.round(deepWorkSeconds / 3600 * 10) / 10,
+            taskCompletion: {
+                completedToday: tasks.filter(t => t.completed_at && isSameDay(new Date(t.completed_at), new Date())).length,
+                completionRatePercent: 0, // TODO: Calculate if needed
+                overdueTasks: 0,
+                completedByList: []
+            },
+            streaks: {
+                dailyFocusStreak: currentStreak,
+                dailyCompletionStreak: 0
+            },
+            productivity: {
+                weeklyData: chartData,
+                monthlyData: [],
+                focusDistributionByDay: [],
+                mostProductiveTimeOfDay: []
+            },
 
-            rawTotalSeconds: totalFocusSeconds,
-            rawPeriodSeconds: rangeFocusSeconds
+            // Legacy / Flat Props
+            totalFocusDisplay: formatTime(rangeFocusSeconds),
+            totalBreakDisplay: formatTime(totalBreakSeconds),
+            efficiencyScore,
+            chartData,
+            currentStreak,
+            rangeConsistency,
+            // FIX: Use dateRange.label directly
+            periodLabel: dateRange.label,
+            minutesToday: Math.round(todayFocusSeconds / 60),
+            timelineData: [], // Not used here directly
+            activeTasks: [],
+            listDist: []
         }
 
-    }, [sessions, tasks, lists, dateRange, viewMode, activeVirtualSession])
+    }, [allSessions, tasks, lists, dateRange, dailyFocusGoalMinutes])
 
     // 5. TIMELINE DATA (Session Log)
     const timelineItems = useMemo(() => {
-        const sourceList = activeVirtualSession ? [activeVirtualSession, ...sessions] : sessions
-
-        return sourceList
+        return allSessions
             .filter(s => {
                 if (!s.start_time) return false
                 const start = new Date(s.start_time)
@@ -182,15 +215,17 @@ export const useReportsController = () => {
 
                 return {
                     id: s.id,
-                    title: task?.title || 'Untitled Session',
+                    task_id: s.task_id,
+                    title: task?.title || 'Unknown Task', // Handle deleted tasks
                     duration: formatTime(s.seconds),
                     startTime: format(new Date(s.start_time), 'h:mm a'),
+                    rawStartTime: s.start_time,
                     type: s.type,
                     notes: notes,
                     isRunning: s.id === 'virtual-active'
                 }
             })
-    }, [sessions, tasks, dateRange, activeVirtualSession])
+    }, [allSessions, tasks, dateRange])
 
 
     return {
@@ -200,6 +235,7 @@ export const useReportsController = () => {
         setDateRange,
         stats,
         timelineItems,
-        isLoading: sessionsLoading
+        isLoading: sessionsLoading,
+        dailyFocusGoalMinutes
     }
 }

@@ -21,7 +21,9 @@ export interface DailyChartData {
     date: Date
     label: string
     focusMinutes: number
+    breakMinutes?: number
     tasksCompleted: number
+    goalMet?: boolean
 }
 
 export interface ListDistItem {
@@ -55,6 +57,7 @@ export interface ComprehensiveReportStats {
     productivity: ProductivityTrends
 
     // Legacy stats for compatibility
+    periodLabel: string
     totalFocusDisplay: string
     totalBreakDisplay: string
     efficiencyScore: number
@@ -70,11 +73,13 @@ export interface ComprehensiveReportStats {
 export interface SessionItem {
     id: string
     task_id: string
-    start_time: string
-    end_time: string | null
-    seconds: number
+    title: string
+    duration: string
+    startTime: string
+    rawStartTime: string
     type: string
-    planned_seconds?: number
+    notes: string | null
+    isRunning: boolean
 }
 
 export interface TimelineGroup {

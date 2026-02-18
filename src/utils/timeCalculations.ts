@@ -36,7 +36,13 @@ export function calculateDayFocus(
 
     // Sum all focus session seconds for this day
     const focusSec = sessions
-        .filter(s => s.type === 'focus' && format(parseISO(s.start_time), 'yyyy-MM-dd') === dayStr)
+        .filter(s => {
+            const dateMatch = format(parseISO(s.start_time), 'yyyy-MM-dd') === dayStr
+            // Broaden check for robustness
+            const type = s.type as string
+            const isFocus = ['focus', 'deep_work', 'regular', 'pomodoro'].includes(type)
+            return isFocus && dateMatch
+        })
         .reduce((sum, s) => sum + (s.seconds || 0), 0)
 
     return focusSec
@@ -52,7 +58,11 @@ export function calculateDayBreak(sessions: FocusSession[], targetDate: Date): n
     const dayStr = format(targetDate, 'yyyy-MM-dd')
 
     return sessions
-        .filter(s => s.type === 'break' && format(parseISO(s.start_time), 'yyyy-MM-dd') === dayStr)
+        .filter(s => {
+            const dateMatch = format(parseISO(s.start_time), 'yyyy-MM-dd') === dayStr
+            const type = s.type as string
+            return ['break', 'long_break'].includes(type) && dateMatch
+        })
         .reduce((sum, s) => sum + (s.seconds || 0), 0)
 }
 
@@ -67,7 +77,8 @@ export function calculateRangeFocus(
     sessions: FocusSession[], startDate: Date, endDate: Date): number {
     return sessions
         .filter(s => {
-            if (s.type !== 'focus') return false
+            const type = s.type as string
+            if (!['focus', 'deep_work', 'regular', 'pomodoro'].includes(type)) return false
             const sessionStart = parseISO(s.start_time)
             return sessionStart >= startDate && sessionStart <= endDate
         })

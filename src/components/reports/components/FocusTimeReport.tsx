@@ -5,6 +5,8 @@ interface FocusTimeReportProps {
 }
 
 export function FocusTimeReport({ stats }: FocusTimeReportProps) {
+    const focusPerTask = stats.focusTime?.focusPerTask || []
+
     return (
         <div className="space-y-6">
             <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
@@ -14,15 +16,15 @@ export function FocusTimeReport({ stats }: FocusTimeReportProps) {
 
             {/* Focus Per Task */}
             <div className="bg-[#09090b] border border-white/5 rounded-xl p-6">
-                {stats.focusPerTask.length === 0 ? (
+                {focusPerTask.length === 0 ? (
                     <div className="text-center py-12">
                         <Clock className="w-10 h-10 text-zinc-800 mx-auto mb-4" />
                         <p className="text-sm text-zinc-600 font-medium">No activity recorded yet</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {stats.focusPerTask.map((task: any, index: number) => {
-                            const maxMinutes = Math.max(...stats.focusPerTask.map((t: any) => t.minutes))
+                        {focusPerTask.map((task: any, index: number) => {
+                            const maxMinutes = Math.max(...focusPerTask.map((t: any) => t.minutes))
                             const widthPercent = (task.minutes / maxMinutes) * 100
 
                             return (

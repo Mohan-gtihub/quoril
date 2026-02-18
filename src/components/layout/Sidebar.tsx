@@ -104,8 +104,8 @@ export function Sidebar() {
             <div className="flex items-center justify-between">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
-                        <div className="w-8 h-8 bg-transparent rounded-lg flex items-center justify-center">
-                            <img src="/icon.png" alt="Quoril" className="w-8 h-8 object-contain" />
+                        <div className="w-8 h-8 bg-[var(--accent-primary)]/10 rounded-lg flex items-center justify-center border border-[var(--accent-primary)]/20 shadow-inner">
+                            <LayoutGrid className="w-5 h-5 text-[var(--accent-primary)]" />
                         </div>
                         <h1 className="text-xl font-bold text-[var(--text-primary)]">
                             Quoril <span className="text-[10px] text-[var(--accent-primary)] font-normal px-1 border border-[var(--accent-primary)]/30 rounded uppercase tracking-tighter ml-1">BETA</span>
