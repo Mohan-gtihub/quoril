@@ -57,6 +57,7 @@ interface ListState {
 
     duplicate: (id: string) => Promise<void>
 
+    reorderLists: (updates: { id: string; sort_order: number }[]) => Promise<void>
     select: (id: string | null) => void
 }
 
@@ -367,8 +368,32 @@ export const useListStore = create<ListState>()(
             /* ================= UI ================= */
 
             select: (id) => {
-
                 set({ selectedListId: id })
+            },
+
+            reorderLists: async (updates) => {
+                // 1. Optimistic update
+                set(state => {
+                    const newLists = [...state.lists]
+                    updates.forEach(u => {
+                        const list = newLists.find(l => l.id === u.id)
+                        if (list) list.sort_order = u.sort_order
+                    })
+                    // Sort by new order
+                    newLists.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+                    return { lists: newLists }
+                })
+
+                try {
+                    // 2. Persist to DB
+                    await Promise.all(updates.map(u =>
+                        localService.lists.update(u.id, { sort_order: u.sort_order })
+                    ))
+                } catch (err: any) {
+                    console.error('[ListStore] reorder failed', err)
+                    // Revert is complex here, relying on reload for now if needed
+                    toast.error('Failed to save list order')
+                }
             },
 
 

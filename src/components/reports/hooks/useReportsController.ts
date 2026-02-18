@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay } from 'date-fns'
+import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, parseISO } from 'date-fns'
 import { useFocusStore } from '@/store/focusStore'
 import { useTaskStore } from '@/store/taskStore'
 import { useListStore } from '@/store/listStore'
@@ -227,6 +227,58 @@ export const useReportsController = () => {
             })
     }, [allSessions, tasks, dateRange])
 
+    // 6. COMPLETED TASKS LOG (Grouped by Day)
+    const completedTasksGrouped = useMemo(() => {
+        // 1. Filter tasks completed in range
+        const completedInRange = tasks.filter(t => {
+            if (!t.completed_at) return false
+            const completedDate = new Date(t.completed_at)
+            return completedDate >= dateRange.start && completedDate <= dateRange.end
+        })
+
+        // 2. Group by Date
+        const groups: Record<string, any[]> = {}
+
+        // Pre-calculate session sums for ALL tasks (needed for total duration)
+        // We use ALL sessions here, not just window sessions, to get accurate task effort
+        const taskDurations = new Map<string, number>()
+        allSessions.forEach(s => {
+            if (s.task_id && (s.seconds || 0) > 0) {
+                const current = taskDurations.get(s.task_id) || 0
+                taskDurations.set(s.task_id, current + s.seconds)
+            }
+        })
+
+        completedInRange.forEach(task => {
+            const dateStr = format(parseISO(task.completed_at!), 'yyyy-MM-dd')
+            if (!groups[dateStr]) groups[dateStr] = []
+
+            const totalSeconds = taskDurations.get(task.id) || 0
+
+            // Find list info
+            const list = lists.find(l => l.id === task.list_id)
+
+            groups[dateStr].push({
+                id: task.id,
+                title: task.title,
+                completedAt: task.completed_at!,
+                totalSeconds,
+                totalDurationFormatted: formatTime(totalSeconds),
+                listName: list?.name,
+                listColor: list?.color
+            })
+        })
+
+        // 3. Convert to array and sort
+        return Object.entries(groups)
+            .map(([date, items]) => ({
+                date,
+                items: items.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
+            }))
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+    }, [tasks, allSessions, dateRange, lists])
+
 
     return {
         viewMode,
@@ -235,6 +287,7 @@ export const useReportsController = () => {
         setDateRange,
         stats,
         timelineItems,
+        completedTasksGrouped,
         isLoading: sessionsLoading,
         dailyFocusGoalMinutes
     }

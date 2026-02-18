@@ -61,16 +61,14 @@ function BoardColumn({
     return (
         <div
             ref={setNodeRef}
-            className={`flex flex-col h-full rounded-xl border shadow-xl ${isToday ? 'w-96 min-w-[384px] ring-1' : 'w-72 min-w-[288px]'
-                }`}
+            className={`flex flex-col h-full rounded-xl transition-all duration-300 ${isToday ? 'w-96 min-w-[384px] ring-1 ring-white/10' : 'w-72 min-w-[288px]'
+                } glass-regular`}
             style={{
-                backgroundColor: 'var(--bg-card)',
                 borderColor: 'var(--border-default)',
-                ...(isToday && { boxShadow: '0 0 0 1px rgba(59, 130, 246, 0.2)' })
             }}
         >
             {/* Column Header */}
-            <div className="p-4 border-b rounded-t-xl" style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--bg-hover)' }}>
+            <div className="p-4 border-b rounded-t-xl glass-thin" style={{ borderColor: 'var(--border-default)' }}>
                 <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">

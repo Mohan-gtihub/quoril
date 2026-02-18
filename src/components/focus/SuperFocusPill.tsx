@@ -96,8 +96,7 @@ export function SuperFocusPill() {
             <div
                 className={cn(
                     "w-[340px] h-[48px] flex items-center gap-3 px-4 shadow-2xl transition-all duration-300 pointer-events-auto shrink-0 relative",
-                    "bg-[#0d1117] border border-white/10 rounded-full group hover:border-white/20",
-                    isHovered && "scale-[1.01]"
+                    "glass-regular rounded-full group hover:border-[var(--border-hover)]"
                 )}
                 style={{ WebkitAppRegion: 'no-drag' } as any}
                 onMouseEnter={() => setIsHovered(true)}
@@ -106,7 +105,7 @@ export function SuperFocusPill() {
                 {/* POMODORO BADGE: Half-on-air, Centered Top */}
                 {!isBreak && settings.pomodorosEnabled && (
                     <div className="absolute -top-px left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center pointer-events-none">
-                        <div className="bg-[#0a0a0a] border border-red-500/30 text-red-500 text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg tracking-widest uppercase">
+                        <div className="bg-[var(--bg-primary)] border border-red-500/30 text-red-500 text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg tracking-widest uppercase">
                             POMO {formatShortTime(pomodoroRemaining)}
                         </div>
                     </div>
@@ -114,18 +113,18 @@ export function SuperFocusPill() {
 
                 {/* 1. RELIABLE DRAG HANDLE (Visual) */}
                 <div
-                    className="w-10 h-full flex items-center justify-center text-white/10 hover:text-white/40 transition-colors cursor-grab active:cursor-grabbing group/handle"
+                    className="w-10 h-full flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors cursor-grab active:cursor-grabbing group/handle"
                     style={{ WebkitAppRegion: 'drag' } as any}
                     title="Drag to move"
                 >
-                    <GripVertical size={16} className="group-hover/handle:text-white/60 transition-colors" />
+                    <GripVertical size={16} className="group-hover/handle:text-[var(--text-primary)] transition-colors" />
                 </div>
 
                 {!isHovered ? (
                     /* DEFAULT STATE: [Name] [Time] */
                     <div className="flex items-center justify-between flex-1 animate-in fade-in duration-300 pr-5 pl-1 overflow-hidden">
                         <div className="flex flex-col min-w-0 pr-2 justify-center h-full">
-                            <span className="text-sm font-bold text-white tracking-wide truncate drop-shadow-md leading-tight">
+                            <span className="text-sm font-bold text-[var(--text-primary)] tracking-wide truncate drop-shadow-md leading-tight">
                                 {isBreak ? 'Taking a Break' : (activeTask?.title || 'No Active Mission')}
                             </span>
                         </div>
@@ -144,7 +143,7 @@ export function SuperFocusPill() {
                                 onClick={() => isBreak ? stopBreak() : startBreak()}
                                 className={cn(
                                     "p-2 rounded-lg transition-colors",
-                                    isBreak ? "text-amber-400 bg-amber-400/10" : "text-white/60 hover:text-white hover:bg-white/10"
+                                    isBreak ? "text-amber-400 bg-amber-400/10" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
                                 )}
                                 title="Break"
                             >
@@ -155,7 +154,7 @@ export function SuperFocusPill() {
                                 onClick={() => setIsExpanded(!isExpanded)}
                                 className={cn(
                                     "p-2 rounded-lg transition-colors",
-                                    isExpanded ? "text-blue-400 bg-blue-400/10" : "text-white/60 hover:text-white hover:bg-white/10"
+                                    isExpanded ? "text-blue-400 bg-blue-400/10" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
                                 )}
                                 title="Subtasks"
                             >
@@ -167,7 +166,7 @@ export function SuperFocusPill() {
                             onClick={() => isPaused ? resumeSession() : pauseSession()}
                             className={cn(
                                 "flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wide transition-all shadow-sm",
-                                isPaused ? "bg-blue-500 text-white shadow-blue-500/20" : "bg-white/10 text-white hover:bg-white/20"
+                                isPaused ? "bg-blue-500 text-white shadow-blue-500/20" : "bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
                             )}
                         >
                             {isPaused ? <Play size={10} className="fill-current" /> : <Pause size={10} className="fill-current" />}
@@ -175,7 +174,7 @@ export function SuperFocusPill() {
                         </button>
 
                         <div className="flex items-center gap-1">
-                            <button onClick={() => skipToNext()} className="p-2 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors" title="Skip">
+                            <button onClick={() => skipToNext()} className="p-2 rounded-lg hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors" title="Skip">
                                 <SkipForward size={16} />
                             </button>
                             <button onClick={handleDone} className="p-2 rounded-lg hover:bg-emerald-500/20 text-emerald-500 transition-colors" title="Done">
@@ -186,7 +185,7 @@ export function SuperFocusPill() {
                                     useFocusStore.getState().setShowFocusPanel(true);
                                     updateSettings({ superFocusMode: false });
                                 }}
-                                className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                                className="p-1.5 rounded-lg hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
                                 title="Return to Focus Mode"
                             >
                                 <Maximize2 size={16} />
@@ -199,12 +198,12 @@ export function SuperFocusPill() {
             {/* Subtasks Panel (Floating Accordion) */}
             {isExpanded && (
                 <div
-                    className="mx-2 w-[324px] bg-[#0d1117] border border-white/10 rounded-2xl p-3 shadow-2xl animate-in slide-in-from-top-4 fade-in duration-300 pointer-events-auto overflow-hidden shrink-0"
+                    className="mx-2 w-[324px] bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl p-3 shadow-2xl animate-in slide-in-from-top-4 fade-in duration-300 pointer-events-auto overflow-hidden shrink-0"
                     style={{ WebkitAppRegion: 'no-drag' } as any}
                 >
                     <div className="flex items-center justify-between mb-2 px-1">
-                        <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Mission Objectives</span>
-                        <span className="text-[9px] text-[var(--accent-primary)]/60 font-mono font-bold">
+                        <span className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">Mission Objectives</span>
+                        <span className="text-[9px] text-[var(--accent-primary)]/80 font-mono font-bold">
                             {currentSubtasks.filter(s => s.completed).length}/{currentSubtasks.length}
                         </span>
                     </div>
@@ -213,26 +212,26 @@ export function SuperFocusPill() {
                         {currentSubtasks.map(subtask => (
                             <div
                                 key={subtask.id}
-                                className="flex items-center gap-3 px-2 py-1.5 rounded-xl hover:bg-white/5 transition-all cursor-pointer group/sub"
+                                className="flex items-center gap-3 px-2 py-1.5 rounded-xl hover:bg-[var(--bg-hover)] transition-all cursor-pointer group/sub"
                                 onClick={() => toggleSubtask(subtask.id)}
                             >
                                 <div className={cn(
-                                    "w-4 h-4 rounded border border-white/10 flex items-center justify-center transition-all shrink-0",
-                                    subtask.completed ? "bg-emerald-500 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "group-hover/sub:border-white/30"
+                                    "w-4 h-4 rounded border border-[var(--border-default)] flex items-center justify-center transition-all shrink-0",
+                                    subtask.completed ? "bg-emerald-500 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "group-hover/sub:border-[var(--border-hover)]"
                                 )}>
                                     {subtask.completed && <Check size={11} className="text-white" />}
                                 </div>
                                 <span className={cn(
                                     "text-xs truncate transition-all flex-1",
-                                    subtask.completed ? "text-white/20 line-through" : "text-white/70 group-hover/sub:text-white"
+                                    subtask.completed ? "text-[var(--text-muted)] line-through" : "text-[var(--text-secondary)] group-hover/sub:text-[var(--text-primary)]"
                                 )}>
                                     {subtask.title}
                                 </span>
                             </div>
                         ))}
                         {currentSubtasks.length === 0 && (
-                            <div className="py-4 text-center border border-dashed border-white/5 rounded-xl bg-white/5">
-                                <span className="text-[10px] text-white/20 uppercase font-bold tracking-widest">Target is locked. No sub-missions.</span>
+                            <div className="py-4 text-center border border-dashed border-[var(--border-default)] rounded-xl bg-[var(--bg-tertiary)]">
+                                <span className="text-[10px] text-[var(--text-muted)] uppercase font-bold tracking-widest">Target is locked. No sub-missions.</span>
                             </div>
                         )}
                     </div>
@@ -244,9 +243,9 @@ export function SuperFocusPill() {
                             placeholder="Add mission objective..."
                             value={newSubtaskTitle}
                             onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                            className="w-full h-10 bg-white/5 border border-white/10 rounded-xl px-4 text-xs text-white/80 outline-none focus:border-[var(--accent-primary)]/40 focus:bg-white/10 focus:ring-1 focus:ring-[var(--accent-primary)]/20 transition-all placeholder:text-white/20"
+                            className="w-full h-10 bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-xl px-4 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]/40 focus:bg-[var(--bg-secondary)] focus:ring-1 focus:ring-[var(--accent-primary)]/20 transition-all placeholder:text-[var(--text-muted)]"
                         />
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg bg-white/5 text-white/20">
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg bg-[var(--bg-tertiary)] text-[var(--text-muted)]">
                             <Plus size={14} />
                         </div>
                     </form>

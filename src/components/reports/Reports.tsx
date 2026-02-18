@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
 import { useReportsController } from './hooks/useReportsController'
@@ -5,8 +6,10 @@ import { ReportsHeader } from './components/ReportsHeader'
 import { StatsOverview } from './components/StatsOverview'
 import { ActivityChart } from './components/ActivityChart'
 import { SessionLog } from './components/SessionLog'
+import { CompletedTasksLog } from './components/CompletedTasksLog'
 import { FocusTimeReport } from './components/FocusTimeReport'
 import { TimelineGroup } from './types/reports.types'
+import { List, CheckCircle2 } from 'lucide-react'
 
 export function Reports() {
     const navigate = useNavigate()
@@ -15,8 +18,11 @@ export function Reports() {
         dateRange,
         setDateRange,
         timelineItems,
+        completedTasksGrouped,
         dailyFocusGoalMinutes
     } = useReportsController()
+
+    const [logView, setLogView] = useState<'sessions' | 'tasks'>('tasks')
 
     // TRANSFORM: Chart Data
     const chartData = stats.productivity.weeklyData.map((d: any) => ({
@@ -30,7 +36,7 @@ export function Reports() {
     const sessionLogGroups = groupSessionsByDay(timelineItems)
 
     return (
-        <div className="h-full bg-[#050505] p-6 md:p-12 overflow-y-auto custom-scrollbar">
+        <div className="h-full bg-transparent p-6 md:p-12 overflow-y-auto custom-scrollbar">
             <div className="max-w-7xl mx-auto space-y-8">
 
                 <ReportsHeader
@@ -51,10 +57,40 @@ export function Reports() {
                     </div>
 
                     <div className="space-y-6">
-                        <SessionLog
-                            timelineData={sessionLogGroups as any}
-                            activeTasks={[]} // Tasks are integrated in title
-                        />
+                        {/* Toggle Header */}
+                        <div className="flex bg-[var(--bg-card)] p-1 rounded-xl border border-[var(--border-default)]">
+                            <button
+                                onClick={() => setLogView('tasks')}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${logView === 'tasks'
+                                        ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] shadow-sm'
+                                        : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                                    }`}
+                            >
+                                <CheckCircle2 size={14} />
+                                Tasks
+                            </button>
+                            <button
+                                onClick={() => setLogView('sessions')}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${logView === 'sessions'
+                                        ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] shadow-sm'
+                                        : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                                    }`}
+                            >
+                                <List size={14} />
+                                Sessions
+                            </button>
+                        </div>
+
+                        {logView === 'sessions' ? (
+                            <SessionLog
+                                timelineData={sessionLogGroups as any}
+                                activeTasks={[]} // Tasks are integrated in title
+                            />
+                        ) : (
+                            <CompletedTasksLog
+                                taskGroups={completedTasksGrouped}
+                            />
+                        )}
                     </div>
                 </div>
             </div>

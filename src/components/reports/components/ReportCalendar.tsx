@@ -35,27 +35,27 @@ export function ReportCalendar({ selectedDate, onSelectDate, onSelectMonth, sele
     const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
 
     return (
-        <div className="bg-[#0b0e14] border border-white/5 rounded-2xl p-6 shadow-xl">
+        <div className="glass-panel rounded-2xl p-6 shadow-xl">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
                         <CalendarIcon size={18} />
                     </div>
-                    <span className="font-bold text-white text-sm">
+                    <span className="font-bold text-[var(--text-primary)] text-sm">
                         {format(currentMonth, 'MMMM yyyy')}
                     </span>
                 </div>
                 <div className="flex gap-1">
                     <button
                         onClick={handlePrevMonth}
-                        className="p-1.5 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors"
+                        className="p-1.5 hover:bg-[var(--bg-hover)] rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                     >
                         <ChevronLeft size={16} />
                     </button>
                     <button
                         onClick={handleNextMonth}
-                        className="p-1.5 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors"
+                        className="p-1.5 hover:bg-[var(--bg-hover)] rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                     >
                         <ChevronRight size={16} />
                     </button>
@@ -65,7 +65,7 @@ export function ReportCalendar({ selectedDate, onSelectDate, onSelectMonth, sele
             {/* Week Days */}
             <div className="grid grid-cols-7 mb-2">
                 {weekDays.map(day => (
-                    <div key={day} className="text-center text-[10px] font-bold text-white/20 uppercase tracking-widest py-2">
+                    <div key={day} className="text-center text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest py-2">
                         {day}
                     </div>
                 ))}
@@ -84,10 +84,10 @@ export function ReportCalendar({ selectedDate, onSelectDate, onSelectMonth, sele
                             onClick={() => onSelectDate(day)}
                             className={`
                                 h-9 rounded-lg flex items-center justify-center text-xs font-medium transition-all relative
-                                ${!isCurrentMonth ? 'text-white/5 opacity-50' : 'text-white/60'}
+                                ${!isCurrentMonth ? 'text-[var(--text-muted)] opacity-50' : 'text-[var(--text-secondary)]'}
                                 ${isSelected
                                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 z-10 scale-110 font-bold'
-                                    : 'hover:bg-white/5 hover:text-white'
+                                    : 'hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
                                 }
                                 ${isTodayDate && !isSelected ? 'text-indigo-400 font-bold border border-indigo-500/30' : ''}
                             `}
@@ -107,8 +107,8 @@ export function ReportCalendar({ selectedDate, onSelectDate, onSelectMonth, sele
                     onClick={() => onSelectMonth(currentMonth)}
                     className={`w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all
                         ${selectionType === 'month' && isSameMonth(currentMonth, selectedDate || new Date())
-                            ? 'bg-white text-black shadow-lg shadow-white/10'
-                            : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'
+                            ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)] shadow-lg'
+                            : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
                         }
                     `}
                 >

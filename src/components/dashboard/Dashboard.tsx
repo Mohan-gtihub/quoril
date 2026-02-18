@@ -9,7 +9,29 @@ import {
     Settings,
     MoreVertical,
     Zap,
+    GripVertical
 } from 'lucide-react'
+
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragOverlay,
+    defaultDropAnimationSideEffects,
+    DragStartEvent,
+    DragEndEvent
+} from '@dnd-kit/core'
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    rectSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 import type { List, ListWithStats } from '@/types/list'
 import type { Task } from '@/types/database'
@@ -33,7 +55,8 @@ export function Dashboard() {
         duplicateList,
         deleteList,
         restoreList,
-        permanentDeleteList
+        permanentDeleteList,
+        reorderLists
     } = useListStore((state) => state)
 
     const { tasks, fetchTasks } = useTaskStore((state) => state)
@@ -140,34 +163,57 @@ export function Dashboard() {
 
     const visibleLists = showArchived ? archivedLists : lists
 
+    /* ---------------- DND ---------------- */
+    const [activeId, setActiveId] = useState<string | null>(null)
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    )
+
+    const handleDragStart = (event: DragStartEvent) => {
+        setActiveId(event.active.id as string)
+    }
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event
+        setActiveId(null)
+
+        if (over && active.id !== over.id) {
+            const oldIndex = visibleLists.findIndex((l) => l.id === active.id)
+            const newIndex = visibleLists.findIndex((l) => l.id === over.id)
+
+            // Optimistic UI update via store
+            const newOrder = arrayMove(visibleLists, oldIndex, newIndex)
+            const updates = newOrder.map((l, index) => ({
+                id: l.id,
+                sort_order: index
+            }))
+
+            await reorderLists(updates)
+        }
+    }
+
     /* ---------------- UI ---------------- */
 
     return (
-        <div className="flex flex-col h-full ambient-bg text-gray-300 overflow-hidden">
+        <div className="flex flex-col h-full text-[var(--text-secondary)] overflow-hidden transition-colors duration-500">
 
             {/* CONTENT */}
             <main className="flex-1 overflow-y-auto w-full">
                 {/* Header-like top section inside main */}
-                <div className="h-24 px-8 flex items-center justify-between border-b border-white/5 bg-black/40 backdrop-blur-3xl sticky top-0 z-30">
-                    <div className="flex items-center gap-12">
-                        <div>
-                            <h1 className="text-2xl font-black tracking-tighter bg-gradient-to-br from-white to-white/40 bg-clip-text text-transparent leading-none">
-                                Mission Command
-                            </h1>
-                            <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.4em] leading-none mt-2">
-                                Strategic Intel Layer
-                            </p>
-                        </div>
-
+                <div className="h-20 px-8 flex items-center justify-between border-b border-[var(--border-default)] bg-[var(--bg-secondary)] sticky top-0 z-30">
+                    <div className="flex items-center gap-6">
+                        <h1 className="text-xl font-bold text-[var(--text-primary)] tracking-tight">
+                            Dashboard
+                        </h1>
                         <DateNavigator />
                     </div>
 
-                    <div className="flex items-center gap-6">
-                        <LiveTrackingBar />
+                    <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
                             <IconButton icon={<Search size={18} />} />
                             <IconButton icon={<Settings size={18} />} onClick={() => navigate('/settings')} />
-                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-white/[0.05] to-transparent border border-white/10 flex items-center justify-center text-white font-black text-sm shadow-2xl">
+                            <div className="w-9 h-9 rounded-xl bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20 flex items-center justify-center text-[var(--accent-primary)] font-bold text-sm">
                                 {user?.email?.charAt(0).toUpperCase()}
                             </div>
                         </div>
@@ -225,87 +271,97 @@ export function Dashboard() {
 
                     {/* GRID */}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-                        {/* ALL TASKS */}
+                            {/* ALL TASKS */}
 
-                        {!showArchived && (
-
-                            <ListCard
-                                title="All Lists"
-                                icon={<Zap size={16} className="text-blue-500" />}
-                                tasks={tasks.filter(t => {
-                                    if (t.status === 'done') return false
-                                    return lists.some(l => l.id === t.list_id)
-                                }).slice(0, 4)}
-                                stats={{
-                                    count: allListsStats.count,
-                                    time: allListsStats.timeLabel
-                                }}
-                                onClick={() => handleListClick('all')}
-                            />
-
-                        )}
-
-                        {/* LISTS */}
-
-                        {visibleLists.map((list: List) => {
-
-                            const stats = listStats[list.id]
-
-                            return (
-
+                            {/* ALL TASKS (Static) */}
+                            {!showArchived && (
                                 <ListCard
-                                    key={list.id}
-                                    title={list.name}
-                                    icon={
-                                        <div
-                                            className="w-2 h-2 rounded-full"
-                                            style={{ background: list.color || '#3b82f6' }}
-                                        />
-                                    }
-                                    tasks={(tasksByList[list.id] || [])
-                                        .filter(t => t.status !== 'done')
-                                        .slice(0, 4)
-                                    }
+                                    title="All Lists"
+                                    icon={<Zap size={16} className="text-blue-500" />}
+                                    tasks={tasks.filter(t => {
+                                        if (t.status === 'done') return false
+                                        return lists.some(l => l.id === t.list_id)
+                                    }).slice(0, 4)}
                                     stats={{
-                                        count: stats?.pendingCount || 0,
-                                        time: formatTime(stats?.estimatedMinutes || 0)
+                                        count: allListsStats.count,
+                                        time: allListsStats.timeLabel
                                     }}
-                                    isArchived={showArchived}
-                                    onClick={() => !showArchived && handleListClick(list.id)}
-                                    onDuplicate={!showArchived ? () => duplicateList(list.id) : undefined}
-                                    onEdit={!showArchived ? () => setEditingList(list) : undefined}
-                                    onArchive={!showArchived ? () => deleteList(list.id) : undefined}
-                                    onRestore={showArchived ? () => restoreList(list.id) : undefined}
-                                    onDelete={showArchived ? () => {
-                                        if (window.confirm('Permanently delete this list and all its tasks?')) {
-                                            permanentDeleteList(list.id)
-                                        }
-                                    } : undefined}
+                                    onClick={() => handleListClick('all')}
                                 />
+                            )}
 
-                            )
-                        })}
+                            {/* DRAGGABLE LISTS GRID */}
+                            <SortableContext items={visibleLists.map(l => l.id)} strategy={rectSortingStrategy}>
+                                {visibleLists.map((list: List) => {
+                                    const stats = listStats[list.id]
+                                    return (
+                                        <SortableListCard
+                                            key={list.id}
+                                            list={list}
+                                            stats={stats}
+                                            tasks={(tasksByList[list.id] || []).filter(t => t.status !== 'done').slice(0, 4)}
+                                            isArchived={showArchived}
+                                            onClick={() => !showArchived && handleListClick(list.id)}
+                                            onDuplicate={!showArchived ? () => duplicateList(list.id) : undefined}
+                                            onEdit={!showArchived ? () => setEditingList(list) : undefined}
+                                            onArchive={!showArchived ? () => deleteList(list.id) : undefined}
+                                            onRestore={showArchived ? () => restoreList(list.id) : undefined}
+                                            onDelete={showArchived ? () => {
+                                                if (window.confirm('Permanently delete this list?')) {
+                                                    permanentDeleteList(list.id)
+                                                }
+                                            } : undefined}
+                                        />
+                                    )
+                                })}
+                            </SortableContext>
 
-                        {/* CREATE */}
+                            {/* CREATE */}
 
-                        {!showArchived && (
+                            {!showArchived && (
 
-                            <button
-                                onClick={() => setShowCreateModal(true)}
-                                className="h-[260px] rounded-2xl border-2 border-dashed border-white/10 hover:border-blue-500/40 flex flex-col items-center justify-center gap-3"
-                            >
-                                <Plus size={22} />
+                                <button
+                                    onClick={() => setShowCreateModal(true)}
+                                    className="h-[260px] rounded-2xl border border-dashed border-[var(--border-default)] hover:border-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/5 flex flex-col items-center justify-center gap-3 transition-colors"
+                                >
+                                    <Plus size={22} className="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]" />
 
-                                <span className="text-xs font-bold tracking-widest">
-                                    CREATE LIST
-                                </span>
-                            </button>
+                                    <span className="text-xs font-bold tracking-widest text-[var(--text-muted)] group-hover:text-[var(--text-primary)]">
+                                        CREATE LIST
+                                    </span>
+                                </button>
 
-                        )}
+                            )}
 
-                    </div>
+                        </div>
+
+                        <DragOverlay dropAnimation={{
+                            sideEffects: defaultDropAnimationSideEffects({
+                                styles: { active: { opacity: '0.5' } }
+                            })
+                        }}>
+                            {activeId ? (
+                                <div className="opacity-80 rotate-2 scale-105">
+                                    <ListCard
+                                        title={lists.find(l => l.id === activeId)?.name || ''}
+                                        icon={<div className="w-2 h-2 rounded-full bg-blue-500" />}
+                                        tasks={[]}
+                                        stats={{ count: 0, time: '' }}
+                                        onClick={() => { }}
+                                        dragHandle
+                                    />
+                                </div>
+                            ) : null}
+                        </DragOverlay>
+                    </DndContext>
 
                 </div>
 
@@ -351,6 +407,56 @@ interface ListCardProps {
     onArchive?: () => void
     onRestore?: () => void
     onDelete?: () => void
+    dragHandleProps?: any
+    dragHandle?: boolean
+}
+
+function SortableListCard(props: any) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: props.list.id })
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.3 : 1,
+        zIndex: isDragging ? 999 : 1
+    }
+
+    const formatTime = (minutes: number) => {
+        if (minutes < 60) return `${minutes}min`
+        const h = Math.floor(minutes / 60)
+        const m = minutes % 60
+        return `${h}hr ${m}min`
+    }
+
+    return (
+        <div ref={setNodeRef} style={style} {...attributes}>
+            <ListCard
+                title={props.list.name}
+                icon={<div className="w-2 h-2 rounded-full" style={{ background: props.list.color || '#3b82f6' }} />}
+                tasks={props.tasks}
+                stats={{
+                    count: props.stats?.pendingCount || 0,
+                    time: formatTime(props.stats?.estimatedMinutes || 0)
+                }}
+                isArchived={props.isArchived}
+                onClick={props.onClick}
+                onDuplicate={props.onDuplicate}
+                onEdit={props.onEdit}
+                onArchive={props.onArchive}
+                onRestore={props.onRestore}
+                onDelete={props.onDelete}
+                dragHandleProps={listeners}
+                dragHandle={!props.isArchived}
+            />
+        </div>
+    )
 }
 
 function ListCard({
@@ -364,7 +470,8 @@ function ListCard({
     onEdit,
     onArchive,
     onRestore,
-    onDelete
+    onDelete,
+    ...props
 }: ListCardProps) {
 
     const [open, setOpen] = useState(false)
@@ -387,7 +494,7 @@ function ListCard({
     return (
         <div
             onClick={onClick}
-            className={`group h-[260px] glass card-glow rounded-2xl border border-[var(--border-default)] p-6 flex flex-col cursor-pointer hover:border-[var(--accent-primary)]/40 transition ${isArchived ? 'opacity-70' : ''
+            className={`group h-[260px] bg-[var(--bg-card)] rounded-2xl border border-[var(--border-default)] p-6 flex flex-col cursor-pointer hover:border-[var(--accent-primary)]/40 hover:shadow-lg transition-all ${isArchived ? 'opacity-70' : ''
                 }`}
         >
 
@@ -397,11 +504,22 @@ function ListCard({
 
                 <div className="flex gap-3 items-center">
 
+                    {/* Drag Handle */}
+                    {hasMenu && props.dragHandle && (
+                        <div
+                            className="text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-grab active:cursor-grabbing p-1 -ml-1"
+                            onClick={(e) => e.stopPropagation()}
+                            {...props.dragHandleProps}
+                        >
+                            <GripVertical size={14} />
+                        </div>
+                    )}
+
                     <div className="p-2 rounded bg-[var(--bg-hover)]">
                         {icon}
                     </div>
 
-                    <h4 className="text-sm font-bold">
+                    <h4 className="text-sm font-bold truncate max-w-[120px]">
                         {title}
                     </h4>
 
@@ -533,48 +651,4 @@ function MenuItem({
     )
 }
 
-/* ================= LIVE TRACKING ================= */
 
-function LiveTrackingBar() {
-    const [session, setSession] = useState<any>(null)
-
-    useEffect(() => {
-        const update = async () => {
-            try {
-                const live = await window.electronAPI.tracker.getLiveSession()
-                setSession(live)
-            } catch (e) { /* ignore */ }
-        }
-
-        update()
-        const interval = setInterval(update, 5000)
-        return () => clearInterval(interval)
-    }, [])
-
-    if (!session) return null
-
-    return (
-        <div className="hidden lg:flex items-center gap-4 px-5 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-xl group transition-all duration-500 hover:bg-white/[0.05] hover:border-white/10">
-            <div className="relative">
-                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                <div className="absolute inset-0 w-2 h-2 rounded-full bg-blue-500 blur-[4px] animate-pulse" />
-            </div>
-
-            <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none">
-                        Pulse Detect
-                    </span>
-                    <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] leading-none">
-                        &bull; {session.appName}
-                    </span>
-                </div>
-                <div className="max-w-[200px] truncate">
-                    <span className="text-[11px] font-bold text-white/50 leading-tight">
-                        {session.title || 'Observing Environment...'}
-                    </span>
-                </div>
-            </div>
-        </div>
-    )
-}

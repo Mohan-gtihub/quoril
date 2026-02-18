@@ -187,17 +187,17 @@ export function FocusMode() {
         >
             <div className={cn(
                 "h-full flex flex-col font-sans select-none overflow-hidden transition-colors duration-700",
-                settings.theme === 'blue' ? "bg-[#050b1a]" : settings.theme === 'red' ? "bg-[#1a0505]" : "bg-[#0a0c10]",
+                settings.theme === 'blue' ? "bg-[#050b1a]" : settings.theme === 'red' ? "bg-[#1a0505]" : "bg-transparent",
                 "text-white"
             )}>
                 <header className={cn(
                     "h-14 flex items-center justify-between px-6 border-b border-white/5",
-                    settings.theme === 'blue' ? "bg-[#0a1630]" : settings.theme === 'red' ? "bg-[#300a0a]" : "bg-[#0d0f14]"
+                    settings.theme === 'blue' ? "bg-[#0a1630]" : settings.theme === 'red' ? "bg-[#300a0a]" : "glass-thick"
                 )}>
                     <div className="flex items-center gap-3">
                         <div className={cn(
                             "w-2 h-2 rounded-full animate-pulse",
-                            settings.theme === 'blue' ? "bg-blue-400 shadow-[0_0_8px_#3b82f6]" : settings.theme === 'red' ? "bg-red-400 shadow-[0_0_8px_#ef4444]" : "bg-green-500"
+                            settings.theme === 'blue' ? "bg-blue-400 shadow-[0_0_8px_#3b82f6]" : settings.theme === 'red' ? "bg-red-400 shadow-[0_0_8px_#ef4444]" : settings.theme === 'nebula' ? "bg-violet-400 shadow-[0_0_8px_#8b5cf6]" : "bg-green-500"
                         )} />
                         <div className="flex flex-col">
                             <span className="text-[10px] uppercase font-black tracking-[0.2em] text-white/40">Focus Terminal</span>
@@ -278,7 +278,9 @@ export function FocusMode() {
                                         ? "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]"
                                         : settings.theme === 'red'
                                             ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"
-                                            : "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                                            : settings.theme === 'nebula'
+                                                ? "bg-violet-500 shadow-[0_0_10px_rgba(139,92,246,0.5)]"
+                                                : "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                                 )}
                                 style={{
                                     width: `${Math.min(100, isBreak

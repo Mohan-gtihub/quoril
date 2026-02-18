@@ -26,8 +26,8 @@ export const SECURITY_CONFIG = {
 
     // Session Management
     SESSION: {
-        TIMEOUT_MS: 30 * 60 * 1000, // 30 minutes of inactivity
-        MAX_DURATION_MS: 12 * 60 * 60 * 1000, // 12 hours max session
+        TIMEOUT_MS: 7 * 24 * 60 * 60 * 1000, // 7 days of inactivity (Desktop app standard)
+        MAX_DURATION_MS: 30 * 24 * 60 * 60 * 1000, // 30 days max session
         REFRESH_THRESHOLD_MS: 5 * 60 * 1000, // Refresh 5 min before expiry
         REQUIRE_REAUTH_FOR_SENSITIVE: true,
     },

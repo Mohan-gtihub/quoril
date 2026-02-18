@@ -9,41 +9,41 @@ interface ProductivityTrendsReportProps {
 export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProps) {
     return (
         <div className="space-y-6">
-            <h2 className="text-sm font-black uppercase tracking-[0.3em] text-white/60 flex items-center gap-3">
+            <h2 className="text-sm font-black uppercase tracking-[0.3em] text-[var(--text-secondary)] flex items-center gap-3">
                 <TrendingUp className="w-4 h-4" />
                 Productivity Trends
             </h2>
 
             {/* Weekly Graph */}
-            <div className="bg-[#111] border border-white/5 rounded-2xl p-6">
-                <h3 className="text-xs font-bold text-white/40 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+            <div className="glass-panel rounded-2xl p-6">
+                <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
                     Weekly Progress (Last 4 Weeks)
                 </h3>
 
                 <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={stats.weeklyData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" />
                         <XAxis
                             dataKey="label"
-                            stroke="#ffffff40"
+                            stroke="var(--text-muted)"
                             fontSize={11}
                             fontFamily="monospace"
                         />
                         <YAxis
-                            stroke="#ffffff40"
+                            stroke="var(--text-muted)"
                             fontSize={11}
                             fontFamily="monospace"
                         />
                         <Tooltip
                             contentStyle={{
-                                backgroundColor: '#111',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                backgroundColor: 'var(--bg-card)',
+                                border: '1px solid var(--border-default)',
                                 borderRadius: '12px',
                                 padding: '12px'
                             }}
-                            labelStyle={{ color: '#fff', fontWeight: 'bold', marginBottom: '8px' }}
-                            itemStyle={{ color: '#fff', fontSize: '12px' }}
+                            labelStyle={{ color: 'var(--text-primary)', fontWeight: 'bold', marginBottom: '8px' }}
+                            itemStyle={{ color: 'var(--text-secondary)', fontSize: '12px' }}
                         />
                         <Legend
                             wrapperStyle={{ paddingTop: '20px' }}
@@ -66,35 +66,35 @@ export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProp
             </div>
 
             {/* Monthly Graph */}
-            <div className="bg-[#111] border border-white/5 rounded-2xl p-6">
-                <h3 className="text-xs font-bold text-white/40 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+            <div className="glass-panel rounded-2xl p-6">
+                <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
                     <BarChart3 className="w-4 h-4" />
                     Monthly Trends (Last 6 Months)
                 </h3>
 
                 <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={stats.monthlyData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-default)" />
                         <XAxis
                             dataKey="label"
-                            stroke="#ffffff40"
+                            stroke="var(--text-muted)"
                             fontSize={11}
                             fontFamily="monospace"
                         />
                         <YAxis
-                            stroke="#ffffff40"
+                            stroke="var(--text-muted)"
                             fontSize={11}
                             fontFamily="monospace"
                         />
                         <Tooltip
                             contentStyle={{
-                                backgroundColor: '#111',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                backgroundColor: 'var(--bg-card)',
+                                border: '1px solid var(--border-default)',
                                 borderRadius: '12px',
                                 padding: '12px'
                             }}
-                            labelStyle={{ color: '#fff', fontWeight: 'bold', marginBottom: '8px' }}
-                            itemStyle={{ color: '#fff', fontSize: '12px' }}
+                            labelStyle={{ color: 'var(--text-primary)', fontWeight: 'bold', marginBottom: '8px' }}
+                            itemStyle={{ color: 'var(--text-secondary)', fontSize: '12px' }}
                         />
                         <Legend
                             wrapperStyle={{ paddingTop: '20px' }}
@@ -124,8 +124,8 @@ export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProp
 
             {/* Focus Distribution by Day */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-[#111] border border-white/5 rounded-2xl p-6">
-                    <h3 className="text-xs font-bold text-white/40 uppercase tracking-[0.2em] mb-6">
+                <div className="glass-panel rounded-2xl p-6">
+                    <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-[0.2em] mb-6">
                         Focus Distribution by Day
                     </h3>
 
@@ -137,7 +137,7 @@ export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProp
                             return (
                                 <div key={day.day} className="group">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm text-white/60 font-medium w-12">
+                                        <span className="text-sm text-[var(--text-secondary)] font-medium w-12">
                                             {day.day}
                                         </span>
                                         <span className="text-xs font-mono font-bold text-indigo-400 tabular-nums">
@@ -157,16 +157,16 @@ export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProp
                 </div>
 
                 {/* Most Productive Time of Day */}
-                <div className="bg-[#111] border border-white/5 rounded-2xl p-6">
-                    <h3 className="text-xs font-bold text-white/40 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                <div className="glass-panel rounded-2xl p-6">
+                    <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
                         <Clock className="w-4 h-4" />
                         Most Productive Hours
                     </h3>
 
                     {stats.mostProductiveTimeOfDay.length === 0 ? (
                         <div className="text-center py-12">
-                            <Clock className="w-12 h-12 text-white/10 mx-auto mb-4" />
-                            <p className="text-sm text-white/30">No data available yet</p>
+                            <Clock className="w-12 h-12 text-[var(--text-muted)]/30 mx-auto mb-4" />
+                            <p className="text-sm text-[var(--text-muted)]">No data available yet</p>
                         </div>
                     ) : (
                         <div className="space-y-3">
@@ -178,10 +178,10 @@ export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProp
                                     <div key={time.hour} className="group">
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-3">
-                                                <span className="text-xs font-bold text-white/30 tabular-nums w-6">
+                                                <span className="text-xs font-bold text-[var(--text-muted)] tabular-nums w-6">
                                                     #{index + 1}
                                                 </span>
-                                                <span className="text-sm text-white/60 font-mono">
+                                                <span className="text-sm text-[var(--text-secondary)] font-mono">
                                                     {time.label}
                                                 </span>
                                             </div>

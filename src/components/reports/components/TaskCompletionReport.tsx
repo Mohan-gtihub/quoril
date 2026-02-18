@@ -8,68 +8,68 @@ interface TaskCompletionReportProps {
 export function TaskCompletionReport({ stats }: TaskCompletionReportProps) {
     return (
         <div className="space-y-6">
-            <h2 className="text-sm font-black uppercase tracking-[0.3em] text-white/60 flex items-center gap-3">
+            <h2 className="text-sm font-black uppercase tracking-[0.3em] text-[var(--text-secondary)] flex items-center gap-3">
                 <CheckCircle2 className="w-4 h-4" />
                 Task Completion Metrics
             </h2>
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-[#111] border border-white/5 rounded-2xl p-6 hover:border-emerald-500/30 transition-all group">
+                <div className="glass-regular rounded-2xl p-6 hover:border-emerald-500/30 transition-all group">
                     <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-xs font-bold text-white/40 uppercase">Completed Today</h3>
+                        <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase">Completed Today</h3>
                         <CheckCircle2 className="w-4 h-4 text-emerald-400 group-hover:text-emerald-300 transition-colors" />
                     </div>
-                    <div className="text-3xl font-black text-white font-mono">
+                    <div className="text-3xl font-black text-[var(--text-primary)] font-mono">
                         {stats.completedToday}
                     </div>
-                    <p className="text-[10px] text-white/30 mt-2 uppercase tracking-widest">Tasks Done</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-2 uppercase tracking-widest">Tasks Done</p>
                 </div>
 
-                <div className="bg-[#111] border border-white/5 rounded-2xl p-6 hover:border-indigo-500/30 transition-all group">
+                <div className="glass-regular rounded-2xl p-6 hover:border-indigo-500/30 transition-all group">
                     <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-xs font-bold text-white/40 uppercase">Completion Rate</h3>
+                        <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase">Completion Rate</h3>
                         <TrendingUp className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
                     </div>
-                    <div className="text-3xl font-black text-white font-mono">
+                    <div className="text-3xl font-black text-[var(--text-primary)] font-mono">
                         {stats.completionRatePercent}%
                     </div>
-                    <p className="text-[10px] text-white/30 mt-2 uppercase tracking-widest">Overall</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-2 uppercase tracking-widest">Overall</p>
                 </div>
 
-                <div className="bg-[#111] border border-white/5 rounded-2xl p-6 hover:border-red-500/30 transition-all group">
+                <div className="glass-regular rounded-2xl p-6 hover:border-red-500/30 transition-all group">
                     <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-xs font-bold text-white/40 uppercase">Overdue</h3>
+                        <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase">Overdue</h3>
                         <AlertCircle className="w-4 h-4 text-red-400 group-hover:text-red-300 transition-colors" />
                     </div>
-                    <div className="text-3xl font-black text-white font-mono">
+                    <div className="text-3xl font-black text-[var(--text-primary)] font-mono">
                         {stats.overdueTasks}
                     </div>
-                    <p className="text-[10px] text-white/30 mt-2 uppercase tracking-widest">Tasks Past Due</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-2 uppercase tracking-widest">Tasks Past Due</p>
                 </div>
 
-                <div className="bg-[#111] border border-white/5 rounded-2xl p-6 hover:border-purple-500/30 transition-all group">
+                <div className="glass-regular rounded-2xl p-6 hover:border-purple-500/30 transition-all group">
                     <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-xs font-bold text-white/40 uppercase">Active Lists</h3>
+                        <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase">Active Lists</h3>
                         <ListChecks className="w-4 h-4 text-purple-400 group-hover:text-purple-300 transition-colors" />
                     </div>
-                    <div className="text-3xl font-black text-white font-mono">
+                    <div className="text-3xl font-black text-[var(--text-primary)] font-mono">
                         {stats.completedByList.length}
                     </div>
-                    <p className="text-[10px] text-white/30 mt-2 uppercase tracking-widest">With Completions</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-2 uppercase tracking-widest">With Completions</p>
                 </div>
             </div>
 
             {/* Completions Per List */}
-            <div className="bg-[#111] border border-white/5 rounded-2xl p-6">
-                <h3 className="text-xs font-bold text-white/40 uppercase tracking-[0.2em] mb-6">
+            <div className="glass-regular rounded-2xl p-6">
+                <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-[0.2em] mb-6">
                     Tasks Completed Per List
                 </h3>
 
                 {stats.completedByList.length === 0 ? (
                     <div className="text-center py-12">
-                        <CheckCircle2 className="w-12 h-12 text-white/10 mx-auto mb-4" />
-                        <p className="text-sm text-white/30">No completed tasks yet</p>
+                        <CheckCircle2 className="w-12 h-12 text-[var(--text-muted)]/30 mx-auto mb-4" />
+                        <p className="text-sm text-[var(--text-muted)]">No completed tasks yet</p>
                     </div>
                 ) : (
                     <div className="space-y-3">
@@ -85,7 +85,7 @@ export function TaskCompletionReport({ stats }: TaskCompletionReportProps) {
                                                 className="w-3 h-3 rounded-full flex-shrink-0"
                                                 style={{ backgroundColor: list.color }}
                                             />
-                                            <span className="text-sm text-white font-medium truncate">
+                                            <span className="text-sm text-[var(--text-primary)] font-medium truncate">
                                                 {list.listName}
                                             </span>
                                         </div>

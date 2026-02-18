@@ -95,3 +95,18 @@ export type DateRange = {
 
 // Alias for legacy compatibility
 export type ReportStats = ComprehensiveReportStats
+
+export interface CompletedTaskItem {
+    id: string
+    title: string
+    completedAt: string // ISO
+    totalSeconds: number
+    totalDurationFormatted: string
+    listName?: string
+    listColor?: string
+}
+
+export interface CompletedTaskGroup {
+    date: string
+    items: CompletedTaskItem[]
+}

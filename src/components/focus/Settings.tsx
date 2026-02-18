@@ -81,7 +81,7 @@ export function Settings() {
 
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col font-sans select-none transition-colors duration-500">
-            <header className="h-16 flex items-center justify-between px-8 border-b border-[var(--border-default)] bg-[var(--bg-secondary)] sticky top-0 z-50 backdrop-blur-md">
+            <header className="h-16 flex items-center justify-between px-8 border-b border-[var(--border-default)] glass-thick sticky top-0 z-50">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={handleBack}
@@ -100,7 +100,7 @@ export function Settings() {
                 </div>
             </header>
 
-            <main className="flex-1 max-w-4xl w-full mx-auto p-8 pb-24 space-y-16">
+            <main className="flex-1 max-w-4xl w-full mx-auto p-8 pb-32 space-y-16">
                 {/* General */}
                 <section>
                     <SectionHeader
@@ -123,7 +123,8 @@ export function Settings() {
                                 { label: 'Onyx Black', value: 'dark' },
                                 { label: 'Lunar Light', value: 'light' },
                                 { label: 'Arcade Blue', value: 'blue' },
-                                { label: 'Sunset Red', value: 'red' }
+                                { label: 'Sunset Red', value: 'red' },
+                                { label: 'Cosmic Nebula', value: 'nebula' }
                             ]}
                         />
                     </div>
@@ -324,7 +325,7 @@ export function Settings() {
             </main>
 
             {/* Sticky Save / Factory Reset Bar */}
-            <div className="fixed bottom-0 left-0 right-0 h-20 bg-[var(--bg-secondary)]/80 backdrop-blur-xl border-t border-[var(--border-default)] flex items-center justify-center px-8">
+            <div className="fixed bottom-0 left-0 right-0 h-20 glass-thick border-t border-[var(--border-default)] flex items-center justify-center px-8">
                 <div className="max-w-4xl w-full flex items-center justify-between">
                     <p className="text-[10px] font-mono text-[var(--text-muted)] uppercase">All changes are synchronized across your neural link.</p>
                     <div className="flex gap-4">

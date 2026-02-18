@@ -83,7 +83,7 @@ export function CreateListModal({ isOpen, onClose, listToEdit }: CreateListModal
 
     return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-[var(--bg-card)] rounded-2xl p-8 w-full max-w-md border border-[var(--border-default)] shadow-2xl">
+            <div className="glass-thick rounded-2xl p-8 w-full max-w-md shadow-2xl animate-scale-in">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-[var(--text-primary)]">
@@ -167,7 +167,7 @@ export function CreateListModal({ isOpen, onClose, listToEdit }: CreateListModal
                         <button
                             type="submit"
                             disabled={!name.trim() || loading}
-                            className="flex-1 px-4 py-3 bg-[var(--accent-primary)] text-white rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[var(--accent-primary)]/20"
+                            className="flex-1 btn-glass-primary py-3 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? (listToEdit ? 'Updating...' : 'Deploying...') : (listToEdit ? 'Save Changes' : 'Deploy Module')}
                         </button>

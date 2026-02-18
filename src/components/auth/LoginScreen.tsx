@@ -139,7 +139,7 @@ export function LoginScreen() {
                 backgroundSize: '50px 50px'
             }} />
 
-            <div className="max-w-md w-full space-y-8 bg-[#0d0f14]/80 backdrop-blur-xl p-10 rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(59,130,246,0.1)] relative z-10">
+            <div className="max-w-md w-full space-y-8 glass-thick p-10 rounded-3xl relative z-10">
                 {/* Security Badge */}
                 <div className="absolute -top-6 left-1/2 -translate-x-1/2">
                     <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full shadow-lg shadow-blue-500/30">
@@ -216,10 +216,10 @@ export function LoginScreen() {
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         className={`w-full px-5 py-4 bg-white/[0.03] border ${emailError
-                                                ? 'border-red-500/50 focus:border-red-500'
-                                                : email && !emailError
-                                                    ? 'border-emerald-500/50 focus:border-emerald-500'
-                                                    : 'border-white/10 focus:border-blue-500/50'
+                                            ? 'border-red-500/50 focus:border-red-500'
+                                            : email && !emailError
+                                                ? 'border-emerald-500/50 focus:border-emerald-500'
+                                                : 'border-white/10 focus:border-blue-500/50'
                                             } rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 ${emailError
                                                 ? 'focus:ring-red-500/20'
                                                 : email && !emailError
@@ -262,10 +262,10 @@ export function LoginScreen() {
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         className={`w-full px-5 py-4 pr-12 bg-white/[0.03] border ${passwordError
-                                                ? 'border-red-500/50 focus:border-red-500'
-                                                : isSignUp && password && !passwordError
-                                                    ? 'border-emerald-500/50 focus:border-emerald-500'
-                                                    : 'border-white/10 focus:border-blue-500/50'
+                                            ? 'border-red-500/50 focus:border-red-500'
+                                            : isSignUp && password && !passwordError
+                                                ? 'border-emerald-500/50 focus:border-emerald-500'
+                                                : 'border-white/10 focus:border-blue-500/50'
                                             } rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 ${passwordError
                                                 ? 'focus:ring-red-500/20'
                                                 : isSignUp && password && !passwordError
@@ -293,9 +293,9 @@ export function LoginScreen() {
                                         <div className="flex items-center justify-between text-xs">
                                             <span className="text-white/40">Password Strength</span>
                                             <span className={`font-semibold ${passwordStrength.strength === 'very-strong' ? 'text-emerald-400' :
-                                                    passwordStrength.strength === 'strong' ? 'text-green-400' :
-                                                        passwordStrength.strength === 'medium' ? 'text-yellow-400' :
-                                                            'text-red-400'
+                                                passwordStrength.strength === 'strong' ? 'text-green-400' :
+                                                    passwordStrength.strength === 'medium' ? 'text-yellow-400' :
+                                                        'text-red-400'
                                                 }`}>
                                                 {getStrengthText(passwordStrength.strength)}
                                             </span>

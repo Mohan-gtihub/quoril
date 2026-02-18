@@ -179,6 +179,7 @@ function App() {
                         settings.theme === 'light' && "theme-light",
                         settings.theme === 'blue' && "theme-blue",
                         settings.theme === 'red' && "theme-red",
+                        settings.theme === 'nebula' && "theme-nebula",
                         !settings.superFocusMode ? "bg-[var(--bg-primary)]" : "bg-transparent",
                         "text-[var(--text-primary)]"
                     )}>

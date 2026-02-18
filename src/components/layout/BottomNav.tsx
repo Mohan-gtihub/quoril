@@ -4,7 +4,7 @@ import { cn } from '@/utils/helpers'
 
 export function BottomNav() {
     return (
-        <div className="h-14 bg-[#0d0d0d] border-t border-white/5 flex items-center px-6 justify-between shrink-0">
+        <div className="h-14 glass-thick border-t border-white/5 flex items-center px-6 justify-between shrink-0 md:hidden">
             <div className="flex items-center gap-6">
                 <BottomLink to="/dashboard" icon={<Home className="w-4 h-4" />} label="Home" />
                 <BottomLink to="/reports" icon={<BarChart3 className="w-4 h-4" />} label="Reports" />

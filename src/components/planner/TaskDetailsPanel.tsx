@@ -48,7 +48,7 @@ export function TaskDetailsPanel() {
     }
 
     return (
-        <div className="fixed inset-y-0 right-0 w-96 bg-[var(--bg-card)] border-l border-[var(--border-default)] shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col z-50">
+        <div className="glass-thick fixed inset-y-0 right-0 w-96 border-l border-[var(--border-default)] shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col z-50">
             {/* Header */}
             <div className="p-6 border-b border-gray-700/50 flex items-start justify-between">
                 <div className="flex-1">

@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 
 interface SettingsState {
     hideEstDoneTimes: boolean
-    theme: 'system' | 'dark' | 'light' | 'blue' | 'red'
+    theme: 'system' | 'dark' | 'light' | 'blue' | 'red' | 'nebula'
     timezone: string
 
     // Blitz mode / Focus Settings

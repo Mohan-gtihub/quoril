@@ -58,7 +58,7 @@ export function CreateTaskModal({ isOpen, onClose, listId }: Props) {
             onClick={onClose}
         >
             <div
-                className="bg-[var(--bg-card)] w-full max-w-md rounded-2xl p-8 border border-[var(--border-default)] shadow-2xl animate-scale-in"
+                className="glass-thick w-full max-w-md rounded-2xl p-8 shadow-2xl animate-scale-in"
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={onKeyDown}
                 tabIndex={0}
@@ -175,7 +175,7 @@ export function CreateTaskModal({ isOpen, onClose, listId }: Props) {
                         <button
                             disabled={loading}
                             onClick={() => handleSubmit(false)}
-                            className="flex-1 bg-[var(--accent-primary)] text-white py-3 rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-[var(--accent-primary)]/20"
+                            className="flex-1 btn-glass-primary py-3 rounded-xl font-bold disabled:opacity-50"
                         >
                             Create
                         </button>
@@ -184,7 +184,7 @@ export function CreateTaskModal({ isOpen, onClose, listId }: Props) {
                     <button
                         disabled={loading}
                         onClick={() => handleSubmit(true)}
-                        className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-500 transition-all disabled:opacity-50 shadow-lg shadow-emerald-600/20"
+                        className="w-full bg-emerald-500/80 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold backdrop-blur-md border border-emerald-400/30 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all disabled:opacity-50"
                     >
                         Create & Focus Now
                     </button>

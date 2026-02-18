@@ -54,7 +54,7 @@ function GithubContributionChart({ tasks }: { tasks: any[] }) {
                 </div>
             </div>
 
-            <div className="bg-[#0b0e14] border border-[var(--border-default)] p-3 rounded-2xl shadow-inner">
+            <div className="glass-regular p-3 rounded-2xl shadow-inner">
                 <div className="grid grid-cols-12 gap-1.5">
                     {dates.map((date, i) => {
                         const count = completedDates.filter(d => isSameDay(d, date)).length
@@ -99,7 +99,7 @@ export function Sidebar() {
     }
 
     return (
-        <aside className="w-72 bg-[var(--bg-secondary)] border-r border-[var(--border-default)] flex flex-col p-6 space-y-8 shrink-0 hidden lg:flex">
+        <aside className="w-72 bg-[var(--bg-secondary)] border-r border-[var(--border-default)] flex flex-col p-6 space-y-8 shrink-0 hidden lg:flex backdrop-blur-2xl transition-colors duration-500">
             {/* Logo Section */}
             <div className="flex items-center justify-between">
                 <div>

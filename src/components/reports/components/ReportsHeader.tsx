@@ -25,13 +25,13 @@ export function ReportsHeader({ navigate, dateRange, setDateRange }: ReportsHead
             <div className="flex items-center gap-4">
                 <button
                     onClick={() => navigate('/')}
-                    className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors group"
+                    className="w-10 h-10 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-tertiary)] flex items-center justify-center transition-colors group border border-[var(--border-default)]"
                 >
-                    <ChevronLeft size={20} className="text-zinc-400 group-hover:text-white" />
+                    <ChevronLeft size={20} className="text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]" />
                 </button>
                 <div>
-                    <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">Analytics</h1>
-                    <p className="text-xs text-zinc-500 font-medium mt-0.5">Performance & History</p>
+                    <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">Analytics</h1>
+                    <p className="text-xs text-[var(--text-tertiary)] font-medium mt-0.5">Performance & History</p>
                 </div>
             </div>
 

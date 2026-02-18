@@ -21,7 +21,7 @@ export function ReflectionModal({ isOpen, onSubmit, onSkip }: ReflectionModalPro
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="w-full max-w-md bg-[#232936] rounded-2xl shadow-2xl border border-gray-700 p-6 transform scale-100 transition-all">
+            <div className="w-full max-w-md glass-thick rounded-2xl shadow-2xl p-6 transform scale-100 transition-all">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-bold text-white">Session Reflection</h2>
                     <button onClick={onSkip} className="text-gray-500 hover:text-white transition-colors">

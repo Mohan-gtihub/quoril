@@ -50,7 +50,7 @@ export function DailyGoalRing({
                     stroke="currentColor"
                     strokeWidth={strokeWidth}
                     fill="transparent"
-                    className="text-white/5"
+                    className="text-[var(--text-muted)]/20"
                 />
 
                 {/* Progress Ring */}
@@ -75,11 +75,11 @@ export function DailyGoalRing({
             <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
                 <span className={cn(
                     "text-2xl font-black tracking-tighter",
-                    isCompleted ? "text-emerald-400" : "text-white"
+                    isCompleted ? "text-emerald-400" : "text-[var(--text-primary)]"
                 )}>
                     {timeLabel}
                 </span>
-                <span className="text-xs font-bold text-white/30 uppercase tracking-wider mt-0.5">
+                <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mt-0.5">
                     {goalLabel}
                 </span>
                 {isCompleted && (

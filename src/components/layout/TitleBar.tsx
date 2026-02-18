@@ -15,7 +15,7 @@ export function TitleBar() {
 
     return (
         <div
-            className="h-8 bg-[#151921] flex items-center justify-between px-3 select-none z-50 border-b border-gray-800"
+            className="h-8 glass-thick flex items-center justify-between px-3 select-none z-50 border-b border-gray-800"
             style={{ WebkitAppRegion: 'drag' } as any}
         >
             <div className="flex items-center gap-2">
