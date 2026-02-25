@@ -65,12 +65,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
         getAppUsage: (start: string, end: string) => ipcRenderer.invoke('db:getAppUsage', start, end),
         getDailyActivity: (start: string, end: string) => ipcRenderer.invoke('db:getDailyActivity', start, end),
         getAppUsageByTask: (taskId: string) => ipcRenderer.invoke('db:getAppUsageByTask', taskId),
+        getDailyAppUsage: (date: string) => ipcRenderer.invoke('db:getDailyAppUsage', date),
+        getDailyDomainUsage: (date: string) => ipcRenderer.invoke('db:getDailyDomainUsage', date),
         saveSession: (session: any) => ipcRenderer.invoke('db:saveSession', session),
         updateFocusSession: (id: string, updates: any) => ipcRenderer.invoke('db:updateFocusSession', id, updates),
         genericUpdate: (table: string, id: string, updates: any) => ipcRenderer.invoke('db:genericUpdate', table, id, updates),
         exec: (sql: string, params: any[]) => ipcRenderer.invoke('db:exec', sql, params),
         getPending: (table: string) => ipcRenderer.invoke('db:getPending', table),
         markSynced: (table: string, id: string) => ipcRenderer.invoke('db:markSynced', table, id),
+        getWorkspaces: (userId: string) => ipcRenderer.invoke('db:getWorkspaces', userId),
+        saveWorkspace: (ws: any) => ipcRenderer.invoke('db:saveWorkspace', ws),
+        deleteWorkspace: (id: string) => ipcRenderer.invoke('db:deleteWorkspace', id),
+        moveListToWorkspace: (listId: string, workspaceId: string | null) => ipcRenderer.invoke('db:moveListToWorkspace', listId, workspaceId),
     },
 
     // Tracker
@@ -154,6 +160,8 @@ export interface ElectronAPI {
         getSessions: (userId: string) => Promise<any[]>
         getAppUsage: (start: string, end: string) => Promise<any[]>
         getDailyActivity: (start: string, end: string) => Promise<any[]>
+        getDailyAppUsage: (date: string) => Promise<any[]>
+        getDailyDomainUsage: (date: string) => Promise<any[]>
         getAppUsageByTask: (taskId: string) => Promise<any[]>
         saveSession: (session: any) => Promise<any>
         updateFocusSession: (id: string, updates: any) => Promise<any>
@@ -161,6 +169,10 @@ export interface ElectronAPI {
         exec: (sql: string, params: any[]) => Promise<any>
         getPending: (table: string) => Promise<any[]>
         markSynced: (table: string, id: string) => Promise<void>
+        getWorkspaces: (userId: string) => Promise<any[]>
+        saveWorkspace: (ws: any) => Promise<any>
+        deleteWorkspace: (id: string) => Promise<any>
+        moveListToWorkspace: (listId: string, workspaceId: string | null) => Promise<any>
     }
     tracker: {
         setContext: (taskId: string | null) => Promise<void>

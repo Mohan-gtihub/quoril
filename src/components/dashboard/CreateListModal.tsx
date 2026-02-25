@@ -7,6 +7,7 @@ interface CreateListModalProps {
     isOpen: boolean
     onClose: () => void
     listToEdit?: List | null
+    defaultWorkspaceId?: string
 }
 
 const PRESET_COLORS = [
@@ -20,7 +21,7 @@ const PRESET_COLORS = [
 
 const PRESET_ICONS = ['📋', '💼', '🎯', '📚', '💡', '🚀', '✨', '🔥']
 
-export function CreateListModal({ isOpen, onClose, listToEdit }: CreateListModalProps) {
+export function CreateListModal({ isOpen, onClose, listToEdit, defaultWorkspaceId }: CreateListModalProps) {
     const { createList, updateList } = useListStore()
     const [name, setName] = useState('')
     const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0])
@@ -64,7 +65,8 @@ export function CreateListModal({ isOpen, onClose, listToEdit }: CreateListModal
                     name: name.trim(),
                     color: selectedColor,
                     icon: selectedIcon,
-                })
+                    ...(defaultWorkspaceId ? { workspace_id: defaultWorkspaceId } : {}),
+                } as any)
 
                 if (result) {
                     const { fetchLists } = useListStore.getState()

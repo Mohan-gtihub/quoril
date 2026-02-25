@@ -79,9 +79,16 @@ export const dbOps = {
         exec("UPDATE tasks SET started_at = NULL, status = 'paused' WHERE started_at IS NOT NULL AND CAST(strftime('%s', 'now') - strftime('%s', started_at) AS INTEGER) > 86400")
     },
 
-    getLists(userId: string, archived = false) {
+    getLists(userId: string, archived = false, workspaceId?: string) {
         const cond = archived ? "archived_at IS NOT NULL AND deleted_at IS NULL" : "archived_at IS NULL AND deleted_at IS NULL"
-        return exec(`SELECT * FROM lists WHERE user_id =? AND ${cond} ORDER BY sort_order ASC`, [userId])
+        if (workspaceId) {
+            return exec(`SELECT * FROM lists WHERE user_id=? AND ${cond} AND workspace_id=? ORDER BY sort_order ASC`, [userId, workspaceId])
+        }
+        return exec(`SELECT * FROM lists WHERE user_id=? AND ${cond} ORDER BY sort_order ASC`, [userId])
+    },
+
+    moveListToWorkspace(listId: string, workspaceId: string | null) {
+        exec("UPDATE lists SET workspace_id=?, updated_at=?, synced=0 WHERE id=?", [workspaceId, now(), listId])
     },
 
     saveList(list: any) {
@@ -130,8 +137,47 @@ export const dbOps = {
         return exec("SELECT strftime('%Y-%m-%d', start_time) as day, SUM(duration_seconds) as totalSeconds FROM app_sessions WHERE start_time >= ? AND start_time <= ? GROUP BY day", [startDate, endDate])
     },
 
+    getDailyAppUsage(date: string) {
+        // date format: YYYY-MM-DD
+        // We need to match the start_time derived day
+        return exec(`
+            SELECT app_id, SUM(duration_seconds) as total_seconds 
+            FROM app_sessions 
+            WHERE strftime('%Y-%m-%d', start_time) = ? 
+            GROUP BY app_id
+        `, [date])
+    },
+
+    getDailyDomainUsage(date: string) {
+        return exec(`
+            SELECT domain, SUM(duration_seconds) as total_seconds 
+            FROM domain_sessions 
+            WHERE strftime('%Y-%m-%d', start_time) = ? 
+            GROUP BY domain
+        `, [date])
+    },
+
     getAppUsageByTask(taskId: string) {
         return exec("SELECT s.app_id as appName, SUM(s.duration_seconds) as totalSeconds FROM app_sessions s JOIN contexts c ON s.context_id = c.id WHERE c.type = 'task' AND c.ref_id = ? GROUP BY s.app_id ORDER BY totalSeconds DESC", [taskId])
+    },
+
+    /* ---- Workspaces ---- */
+
+    getWorkspaces(userId: string) {
+        return exec("SELECT * FROM workspaces WHERE user_id=? AND deleted_at IS NULL ORDER BY sort_order ASC", [userId])
+    },
+
+    saveWorkspace(ws: any) {
+        ws.updated_at = now()
+        ws.synced = 0
+        if (!ws.created_at) ws.created_at = now()
+        const cols = Object.keys(ws)
+        const vals = sanitize(Object.values(ws))
+        exec(`INSERT OR REPLACE INTO workspaces (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')})`, vals)
+    },
+
+    deleteWorkspace(id: string) {
+        exec("UPDATE workspaces SET deleted_at=?, synced=0 WHERE id=?", [now(), id])
     },
 
     saveSession(session: any) {
@@ -151,15 +197,35 @@ export const dbOps = {
     },
 
     cleanupCorruptedSessions() {
-        // Remove sessions with impossible durations (>24 hours or negative)
-        const corrupted = exec(`SELECT id, seconds FROM focus_sessions WHERE seconds > 86400 OR seconds < 0`) as any[]
-        if (corrupted && corrupted.length > 0) {
-            console.warn(`[DB] Found ${corrupted.length} corrupted sessions, removing...`)
-            corrupted.forEach(s => {
-                console.warn(`[DB] Removing session ${s.id} with ${s.seconds}s (${Math.round(s.seconds / 3600)}h)`)
-            })
+        // 1. Clean Focus Sessions (>24h or negative)
+        const focusCorrupted = exec(`SELECT id, seconds FROM focus_sessions WHERE seconds > 86400 OR seconds < 0`) as any[]
+        if (focusCorrupted?.length > 0) {
+            console.warn(`[DB] Removing ${focusCorrupted.length} corrupted focus sessions`)
             exec(`DELETE FROM focus_sessions WHERE seconds > 86400 OR seconds < 0`)
-            console.log(`[DB] Cleanup complete`)
+        }
+
+        // 2. Clean App Sessions (>24h or negative or end < start)
+        const appCorrupted = exec(`
+            SELECT id FROM app_sessions 
+            WHERE duration_seconds > 86400 
+            OR duration_seconds < 0 
+            OR end_time < start_time
+        `) as any[]
+        if (appCorrupted?.length > 0) {
+            console.warn(`[DB] Removing ${appCorrupted.length} corrupted app sessions`)
+            exec(`DELETE FROM app_sessions WHERE duration_seconds > 86400 OR duration_seconds < 0 OR end_time < start_time`)
+        }
+
+        // 3. Clean Domain Sessions
+        const domainCorrupted = exec(`
+            SELECT id FROM domain_sessions 
+            WHERE duration_seconds > 86400 
+            OR duration_seconds < 0 
+            OR end_time < start_time
+        `) as any[]
+        if (domainCorrupted?.length > 0) {
+            console.warn(`[DB] Removing ${domainCorrupted.length} corrupted domain sessions`)
+            exec(`DELETE FROM domain_sessions WHERE duration_seconds > 86400 OR duration_seconds < 0 OR end_time < start_time`)
         }
     }
 }
@@ -207,6 +273,7 @@ function autoMigrate() {
     const listCols = db.prepare("PRAGMA table_info(lists)").all()
     if (!listCols.some((c: any) => c.name === 'archived_at')) db.exec("ALTER TABLE lists ADD COLUMN archived_at TEXT")
     if (!listCols.some((c: any) => c.name === 'deleted_at')) db.exec("ALTER TABLE lists ADD COLUMN deleted_at TEXT")
+    if (!listCols.some((c: any) => c.name === 'workspace_id')) db.exec("ALTER TABLE lists ADD COLUMN workspace_id TEXT")
     const taskCols = db.prepare("PRAGMA table_info(tasks)").all()
     if (!taskCols.some((c: any) => c.name === 'deleted_at')) db.exec("ALTER TABLE tasks ADD COLUMN deleted_at TEXT")
     const subtaskCols = db.prepare("PRAGMA table_info(subtasks)").all()
@@ -217,6 +284,69 @@ function autoMigrate() {
     if (sessionCols.length > 0 && !sessionCols.some((c: any) => c.name === 'activity_level')) {
         db.exec("ALTER TABLE app_sessions ADD COLUMN activity_level INTEGER DEFAULT 0")
     }
+
+    if (version < 4) {
+        db.transaction(() => {
+            db.exec(`CREATE TABLE IF NOT EXISTS domain_sessions (id TEXT PRIMARY KEY, user_id TEXT, domain TEXT, start_time TEXT, end_time TEXT, duration_seconds INTEGER DEFAULT 0, created_at TEXT, synced INTEGER DEFAULT 0)`)
+            db.exec(`CREATE TABLE IF NOT EXISTS app_categories (id TEXT PRIMARY KEY, name TEXT, productivity_score INTEGER DEFAULT 0, created_at TEXT, synced INTEGER DEFAULT 0)`)
+            db.exec(`CREATE TABLE IF NOT EXISTS domain_categories (id TEXT PRIMARY KEY, domain TEXT, category TEXT, productivity_score INTEGER DEFAULT 0, created_at TEXT, synced INTEGER DEFAULT 0)`)
+
+            // Add column to apps table if it doesn't exist (it was created in v3 but might lack some fields)
+            const appCols = db.prepare("PRAGMA table_info(apps)").all()
+            if (!appCols.some((c: any) => c.name === 'icon')) db.exec("ALTER TABLE apps ADD COLUMN icon TEXT")
+
+            // Indexes for performance
+            db.exec("CREATE INDEX IF NOT EXISTS idx_app_sessions_start_time ON app_sessions(start_time)")
+            db.exec("CREATE INDEX IF NOT EXISTS idx_domain_sessions_start_time ON domain_sessions(start_time)")
+            db.exec("CREATE INDEX IF NOT EXISTS idx_app_sessions_app_id ON app_sessions(app_id)")
+            db.exec("CREATE INDEX IF NOT EXISTS idx_domain_sessions_domain ON domain_sessions(domain)")
+
+            db.prepare("UPDATE db_meta SET value='4' WHERE key='version'").run()
+        })()
+        version = 4
+    }
+
+    if (version < 5) {
+        db.transaction(() => {
+            db.exec(`CREATE TABLE IF NOT EXISTS workspaces (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                color TEXT DEFAULT '#6366f1',
+                icon TEXT DEFAULT 'briefcase',
+                sort_order INTEGER DEFAULT 0,
+                created_at TEXT,
+                updated_at TEXT,
+                deleted_at TEXT,
+                synced INTEGER DEFAULT 0
+            )`)
+            db.exec("CREATE INDEX IF NOT EXISTS idx_workspaces_user_id ON workspaces(user_id)")
+            db.prepare("UPDATE db_meta SET value='5' WHERE key='version'").run()
+        })()
+        version = 5
+    }
+
+    if (version < 6) {
+        db.transaction(() => {
+            // Add workspace_id to lists (safe for existing rows — NULL = unassigned)
+            const listCols = db.prepare("PRAGMA table_info(lists)").all()
+            if (!listCols.some((c: any) => c.name === 'workspace_id')) {
+                db.exec("ALTER TABLE lists ADD COLUMN workspace_id TEXT")
+                db.exec("CREATE INDEX IF NOT EXISTS idx_lists_workspace_id ON lists(workspace_id)")
+            }
+            db.prepare("UPDATE db_meta SET value='6' WHERE key='version'").run()
+        })()
+        version = 6
+    }
+
+    if (version < 7) {
+        db.transaction(() => {
+            db.exec(`UPDATE workspaces SET synced = 0`)
+            db.exec(`UPDATE lists SET synced = 0`)
+            db.prepare("UPDATE db_meta SET value='7' WHERE key='version'").run()
+        })()
+        version = 7
+    }
 }
 
 /* ---------------- INIT ---------------- */
@@ -226,7 +356,7 @@ export async function initDatabase() {
     const file = path.join(dir, 'quoril_v2.sqlite')
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
     try {
-        db = new Database(file)
+        db = new Database(file, { timeout: 5000 }) // 5 second busy-timeout to prevent SQLITE_BUSY crashes
         db.pragma('journal_mode = WAL')
         db.pragma('synchronous = NORMAL')
         autoMigrate()

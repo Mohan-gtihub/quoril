@@ -46,12 +46,22 @@ export interface ElectronAPI {
         getAppUsage: (start: string, end: string) => Promise<any[]>
         getDailyActivity: (start: string, end: string) => Promise<any[]>
         getAppUsageByTask: (taskId: string) => Promise<any[]>
+        getDailyAppUsage: (date: string) => Promise<any[]>
+        getDailyDomainUsage: (date: string) => Promise<any[]>
         saveFocusSession: (session: any) => Promise<any>
+        saveSession: (session: any) => Promise<any>
         updateFocusSession: (id: string, updates: any) => Promise<any>
         genericUpdate: (table: string, id: string, updates: any) => Promise<any>
         exec: (sql: string, params: any[]) => Promise<any>
         getPending: (table: string) => Promise<any[]>
         markSynced: (table: string, id: string) => Promise<void>
+        /* Workspaces */
+        getWorkspaces: (userId: string) => Promise<any[]>
+        saveWorkspace: (ws: any) => Promise<any>
+        deleteWorkspace: (id: string) => Promise<any>
+        moveListToWorkspace: (listId: string, workspaceId: string | null) => Promise<any>
+        /* Orphan recovery */
+        recoverOrphans?: (userId: string) => Promise<any>
     }
     tracker: {
         setContext: (taskId: string | null) => Promise<void>

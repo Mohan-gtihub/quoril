@@ -59,6 +59,7 @@ interface ListState {
 
     reorderLists: (updates: { id: string; sort_order: number }[]) => Promise<void>
     select: (id: string | null) => void
+    moveListToWorkspace: (listId: string, workspaceId: string | null) => Promise<void>
 }
 
 /* ================= STORE ================= */
@@ -162,13 +163,19 @@ export const useListStore = create<ListState>()(
 
                         const db = window.electronAPI.db
 
-                        for (const item of data as List[]) {
-
+                        for (const item of data as any[]) {
                             const [local] =
                                 await db.exec(
                                     'SELECT * FROM lists WHERE id=?',
                                     [item.id]
                                 )
+
+                            // If Supabase doesn't have workspace_id yet (due to cache/missing column)
+                            // DO NOT overwrite the local SQLite workspace_id with undefined/null.
+                            // Preserve it so it can sync up later.
+                            if (local && item.workspace_id === undefined) {
+                                item.workspace_id = local.workspace_id
+                            }
 
                             if (
                                 !local ||
@@ -499,7 +506,23 @@ export const useListStore = create<ListState>()(
 
                     return null
                 }
-            }
+            },
+
+            moveListToWorkspace: async (listId: string, workspaceId: string | null) => {
+                const prev = get().lists
+                // Optimistic update
+                set(state => ({
+                    lists: state.lists.map(l =>
+                        l.id === listId ? { ...l, workspace_id: workspaceId } as any : l
+                    )
+                }))
+                try {
+                    await localService.lists.update(listId, { workspace_id: workspaceId })
+                } catch (err) {
+                    set({ lists: prev })
+                    console.error('[ListStore] moveListToWorkspace failed', err)
+                }
+            },
 
         }),
 

@@ -311,6 +311,7 @@ export const localService = {
             const data = {
                 id: uuidv4(),
                 user_id: user.id,
+                workspace_id: list.workspace_id || null,
                 name: list.name || 'Untitled',
                 color: list.color || '#3b82f6',
                 icon: list.icon || 'list',
@@ -318,6 +319,7 @@ export const localService = {
                 is_system: false,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
+                archived_at: null,
                 deleted_at: null,
                 synced: 0
             }

@@ -4,8 +4,9 @@ import { supabase } from './supabase'
 
 const SYNC_INTERVAL = 10000
 
-/* FK-safe order */
+/* FK-safe order — workspaces must come before lists */
 const SYNC_ORDER = [
+    'workspaces',
     'lists',
     'tasks',
     'subtasks',
@@ -119,6 +120,11 @@ class DataSyncService {
                     continue
                 }
 
+                // Log workspace uploads for easier debugging
+                if (table === 'workspaces') {
+                    console.log(`[Sync] Pushing workspace ${row.id} (${row.name}) to Supabase...`)
+                }
+
 
                 /* ---------- Push to Supabase ---------- */
 
@@ -175,13 +181,57 @@ class DataSyncService {
                     continue
                 }
 
-                /* Prevent infinite retry on bad rows */
+                /* Handle Foreign Key Violations gracefully */
+                if (err?.code === '23503') {
+                    if (table === 'lists' && payload.workspace_id) {
+                        // Check if the workspace exists locally at all
+                        const wsRows = await window.electronAPI.db.exec(
+                            'SELECT id, synced FROM workspaces WHERE id=? AND deleted_at IS NULL',
+                            [payload.workspace_id]
+                        ).catch(() => [])
+
+                        if (wsRows?.length) {
+                            // Workspace exists locally but not in Supabase yet.
+                            // Reset it to synced=0 so it gets pushed on the next cycle.
+                            console.warn(`[Sync] Workspace ${payload.workspace_id} not yet in Supabase. Re-queuing workspace & will retry list next cycle.`)
+                            await window.electronAPI.db.exec(
+                                'UPDATE workspaces SET synced=0 WHERE id=?',
+                                [payload.workspace_id]
+                            ).catch(() => { })
+                            // Also force a fresh sync pass after a short delay
+                            setTimeout(() => this.syncPendings(), 3000)
+                        } else {
+                            // Workspace does NOT exist locally (deleted or orphaned).
+                            // Sync the list without workspace_id to avoid infinite loop.
+                            console.warn(`[Sync] Workspace ${payload.workspace_id} not found locally for list ${row.id}. Syncing without workspace_id.`)
+                            delete payload.workspace_id
+                            const { error: retryErr } = await (supabase.from(table) as any)
+                                .upsert(payload, { onConflict: 'id' })
+                            if (!retryErr) {
+                                await window.electronAPI.db.markSynced(table, row.id)
+                            }
+                        }
+                        continue
+                    } else if (table === 'tasks' && payload.list_id) {
+                        console.warn(`[Sync] List missing in cloud for task ${row.id}. Retrying without list_id...`)
+                        payload.list_id = null
+                        const { error: retryErr } = await (supabase.from(table) as any)
+                            .upsert(payload, { onConflict: 'id' })
+
+                        if (!retryErr) {
+                            await window.electronAPI.db.markSynced(table, row.id)
+                            continue
+                        } else {
+                            err = retryErr
+                        }
+                    }
+                }
+
+                /* Prevent infinite retry on truly unrecoverable rows */
                 if (
                     err?.code === '23514' ||
-                    err?.code === '23503' || // Foreign Key Violation (e.g. List deleted)
                     err?.code === '42501' || // RLS Policy Violation (Permission/Auth)
-                    String(err).includes('violates') ||
-                    String(err).includes('constraint') ||
+                    String(err).includes('violates check') ||
                     String(err).includes('policy')
                 ) {
                     console.error(`❌ [Sync] ${table}/${row.id} REJECTED:`, {
@@ -214,9 +264,24 @@ class DataSyncService {
 
     private async buildPayload(table: SyncTable, row: any) {
         switch (table) {
-            /* ---------- LISTS ---------- */
-            case 'lists':
+            /* ---------- WORKSPACES ---------- */
+            case 'workspaces':
+                // Workspaces must always sync — lists have a FK dependency on them
                 return {
+                    id: row.id,
+                    user_id: row.user_id,
+                    name: row.name,
+                    color: row.color,
+                    icon: row.icon,
+                    sort_order: row.sort_order ?? 0,
+                    created_at: row.created_at,
+                    updated_at: row.updated_at,
+                    deleted_at: row.deleted_at,
+                }
+
+            /* ---------- LISTS ---------- */
+            case 'lists': {
+                const listPayload: any = {
                     id: row.id,
                     user_id: row.user_id,
                     name: row.name,
@@ -229,6 +294,12 @@ class DataSyncService {
                     archived_at: row.archived_at,
                     deleted_at: row.deleted_at
                 }
+                // Only include workspace_id after column has been added to Supabase
+                if (!this.schemaCacheWarned && row.workspace_id !== undefined) {
+                    listPayload.workspace_id = row.workspace_id ?? null
+                }
+                return listPayload
+            }
 
             /* ---------- TASKS ---------- */
             case 'tasks': {

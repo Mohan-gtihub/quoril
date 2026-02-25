@@ -12,6 +12,7 @@ import { FocusPopup } from '@/components/focus/FocusPopup'
 import { FocusMode } from '@/components/focus/FocusMode'
 import { Settings } from '@/components/focus/Settings'
 import { Reports } from '@/components/reports/Reports'
+import { ActivityDashboard } from '@/components/dashboard/ActivityDashboard'
 import { TitleBar } from '@/components/layout/TitleBar'
 import { useFocusStore } from '@/store/focusStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -22,6 +23,9 @@ import { cn } from '@/utils/helpers'
 
 
 import { dataSyncService } from '@/services/dataSyncService'
+import { useWorkspaceStore } from '@/store/workspaceStore'
+import { useListStore } from '@/store/listStore'
+import { supabase } from '@/services/supabase'
 
 function App() {
     const { initialize, initialized, user } = useAuthStore()
@@ -34,14 +38,39 @@ function App() {
         }
     }, [initialize, initialized])
 
-    // Start background sync when user is logged in
+    // Start background sync + realtime subscriptions when user is logged in
     useEffect(() => {
-        if (user) {
-            dataSyncService.start()
-        } else {
+        if (!user) {
             dataSyncService.stop()
+            return
         }
-        return () => dataSyncService.stop()
+
+        dataSyncService.start()
+
+        // Load workspaces from local + cloud
+        const { loadWorkspaces, subscribeRealtime } = useWorkspaceStore.getState()
+        loadWorkspaces()
+        const unsubWs = subscribeRealtime()
+
+        // Realtime for lists (workspace_id changes from other devices)
+        const listChannel = supabase
+            .channel(`lists:${user.id}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'lists',
+                filter: `user_id=eq.${user.id}`,
+            }, () => {
+                // Re-fetch lists when any change comes in from cloud
+                useListStore.getState().fetchLists()
+            })
+            .subscribe()
+
+        return () => {
+            dataSyncService.stop()
+            unsubWs()
+            supabase.removeChannel(listChannel)
+        }
     }, [user])
 
     // Hydrate timer state on app load (fix for production builds)
@@ -199,6 +228,7 @@ function App() {
                                                     <Route path="/focus" element={<FocusMode />} />
                                                     <Route path="/settings" element={<Settings />} />
                                                     <Route path="/reports" element={<Reports />} />
+                                                    <Route path="/activity" element={<ActivityDashboard />} />
                                                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                                                 </Routes>
                                             </Layout>

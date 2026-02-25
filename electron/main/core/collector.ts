@@ -8,6 +8,7 @@ export interface ActiveWindow {
     rawPath?: string
     isIdle: boolean
     category: 'Work' | 'Web' | 'Development' | 'Communication' | 'Entertainment' | 'Other' | 'Idle'
+    domain?: string
 }
 
 /* ---------------- PATTERNS ---------------- */
@@ -153,19 +154,14 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
 
         // 1. Determine base category from App Name
         let category: ActiveWindow['category'] = CATEGORY_MAP[normalizedApp] || 'Other'
+        let domain: string | undefined
 
         // 2. Special handling for Browsers (Site Detection)
         if (category === 'Web' || normalizedApp.includes('browser') || normalizedApp.includes('chrome')) {
             const site = detectSite(title)
             if (site) {
-                return {
-                    appName: site,
-                    title,
-                    rawApp,
-                    rawPath,
-                    isIdle: false,
-                    category: SITE_TO_CATEGORY[site] || 'Web'
-                }
+                domain = site
+                category = SITE_TO_CATEGORY[site] || 'Web'
             }
         }
 
@@ -179,12 +175,13 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
         }
 
         return {
-            appName: rawApp.replace('.exe', ''),
+            appName: rawApp.replace('.exe', ''), // Keep original app name
             title,
             rawApp,
             rawPath,
             isIdle: false,
-            category
+            category,
+            domain
         }
 
     } catch (e) {

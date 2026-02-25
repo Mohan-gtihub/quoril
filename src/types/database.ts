@@ -112,6 +112,7 @@ export interface Database {
 
                     archived_at: string | null
                     deleted_at: string | null
+                    workspace_id: string | null
 
                     synced: number
                 }
@@ -132,6 +133,7 @@ export interface Database {
 
                     archived_at?: string | null
                     deleted_at?: string | null
+                    workspace_id?: string | null
 
                     synced?: number
                 }
@@ -152,6 +154,7 @@ export interface Database {
 
                     archived_at?: string | null
                     deleted_at?: string | null
+                    workspace_id?: string | null
 
                     synced?: number
                 }

@@ -334,6 +334,24 @@ function setupIPC() {
         safe(() => dbOps.archiveList(id))
     )
 
+    /* Workspaces */
+
+    ipcMain.handle('db:getWorkspaces', (_, uid) =>
+        safe(() => dbOps.getWorkspaces(uid))
+    )
+
+    ipcMain.handle('db:saveWorkspace', (_, ws) =>
+        safe(() => dbOps.saveWorkspace(ws))
+    )
+
+    ipcMain.handle('db:deleteWorkspace', (_, id) =>
+        safe(() => dbOps.deleteWorkspace(id))
+    )
+
+    ipcMain.handle('db:moveListToWorkspace', (_, listId, workspaceId) =>
+        safe(() => dbOps.moveListToWorkspace(listId, workspaceId))
+    )
+
     /* Subtasks */
 
     ipcMain.handle('db:getSubtasks', (_, taskId) =>
@@ -360,6 +378,14 @@ function setupIPC() {
 
     ipcMain.handle('db:getAppUsageByTask', (_, taskId) =>
         dbOps.getAppUsageByTask(taskId)
+    )
+
+    ipcMain.handle('db:getDailyAppUsage', (_, date) =>
+        dbOps.getDailyAppUsage(date)
+    )
+
+    ipcMain.handle('db:getDailyDomainUsage', (_, date) =>
+        dbOps.getDailyDomainUsage(date)
     )
 
     ipcMain.handle('db:saveSession', (_, s) =>
@@ -448,10 +474,23 @@ app.on('before-quit', async () => {
     }
 })
 
-process.on('uncaughtException', e =>
-    console.error('[Crash]', e)
-)
+import fs from 'fs'
+const logCrash = (type: string, error: any) => {
+    try {
+        const desktopPath = path.join(app.getPath('desktop'), 'quoril-crash.log')
+        const errorMessage = `\n\n[${new Date().toISOString()}] ${type}\n${error?.stack || error}`
+        fs.appendFileSync(desktopPath, errorMessage)
+    } catch (_) { }
+}
 
-process.on('unhandledRejection', e =>
+process.on('uncaughtException', e => {
+    console.error('[Crash]', e)
+    logCrash('uncaughtException', e)
+})
+
+process.on('unhandledRejection', e => {
     console.error('[Promise]', e)
-)
+    logCrash('unhandledRejection', e)
+})
+
+

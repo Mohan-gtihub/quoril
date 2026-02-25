@@ -13,6 +13,11 @@ interface SessionState {
     contextId: string
     pulses: number // number of checks
     activePulses: number // number of checks where not idle
+
+    // Domain tracking
+    domainId?: string
+    domain?: string
+    domainStart?: number
 }
 
 class SessionManager {
@@ -92,12 +97,22 @@ class SessionManager {
             stateMachine.transition(TrackerState.ACTIVE)
         }
 
-        const isDifferent = !this.currentSession ||
+        const isDifferentApp = !this.currentSession ||
             this.currentSession.appName !== active.appName ||
-            this.currentSession.title !== active.title ||
             this.currentSession.contextId !== context.id
 
-        if (isDifferent) {
+        // For domains, we treat them as sub-sessions or parallel sessions
+        // If app changes, everything changes. 
+        // If same app but domain changes (e.g. Chrome tab switch), we end old domain session and start new one?
+        // OR we just end the whole session and start new one to keep it simple.
+
+        // Let's keep it simple: any change involves a new session segment.
+        // It simplifies aggregation.
+
+        const isDifferentTitle = this.currentSession && this.currentSession.title !== active.title
+        const isDifferentDomain = this.currentSession && this.currentSession.domain !== active.domain
+
+        if (isDifferentApp || isDifferentTitle || isDifferentDomain) {
             await this.endCurrentSession()
             this.startNewSession(active, context.id)
         } else if (this.currentSession) {
@@ -119,11 +134,21 @@ class SessionManager {
             : 0
 
         try {
+            // Update App Session
             await dbOps.exec(`
                 UPDATE app_sessions 
                 SET end_time = ?, duration_seconds = ?, activity_level = ?
                 WHERE id = ?
             `, [new Date(end).toISOString(), duration, intensity, this.currentSession.id])
+
+            // Update Domain Session if exists
+            if (this.currentSession.domainId) {
+                await dbOps.exec(`
+                    UPDATE domain_sessions 
+                    SET end_time = ?, duration_seconds = ?
+                    WHERE id = ?
+                `, [new Date(end).toISOString(), duration, this.currentSession.domainId])
+            }
         } catch (e) {
             console.error('[SessionManager] Checkpoint failed:', e)
         }
@@ -134,6 +159,8 @@ class SessionManager {
         const start = Date.now()
         const startISO = new Date(start).toISOString()
 
+        const domainId = active.domain ? uuidv4() : undefined
+
         this.currentSession = {
             id,
             appName: active.appName,
@@ -141,15 +168,30 @@ class SessionManager {
             start,
             contextId,
             pulses: 1,
-            activePulses: active.isIdle ? 0 : 1
+            activePulses: active.isIdle ? 0 : 1,
+            domain: active.domain,
+            domainId,
+            domainStart: start
         }
 
         try {
             await this.ensureAppExists(active.appName, active.category)
+
+            // Start App Session
             await dbOps.exec(`
                 INSERT INTO app_sessions (id, user_id, app_id, context_id, start_time, end_time, window_title, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `, [id, this.userId, active.appName, contextId, startISO, startISO, active.title, startISO])
+
+            // Start Domain Session
+            if (active.domain && domainId) {
+                await this.ensureDomainCategoryExists(active.domain, active.category)
+                await dbOps.exec(`
+                    INSERT INTO domain_sessions (id, user_id, domain, start_time, end_time, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                `, [domainId, this.userId, active.domain, startISO, startISO, startISO])
+            }
+
             this.lastPulseTime = start
         } catch (e) {
             console.error('[SessionManager] Initial save failed:', e)
@@ -161,41 +203,55 @@ class SessionManager {
 
         const end = Date.now()
         const duration = Math.round((end - this.currentSession.start) / 1000)
+
+        // Ignore very short sessions (< 5s) to reduce noise? User said < 10s.
+        if (duration < 10) {
+            // Delete the started sessions to keep DB clean
+            try {
+                await dbOps.exec('DELETE FROM app_sessions WHERE id = ?', [this.currentSession.id])
+                if (this.currentSession.domainId) {
+                    await dbOps.exec('DELETE FROM domain_sessions WHERE id = ?', [this.currentSession.domainId])
+                }
+            } catch (e) { }
+            this.currentSession = null
+            return
+        }
+
         const intensity = this.currentSession.pulses > 0
             ? Math.round((this.currentSession.activePulses / this.currentSession.pulses) * 100)
             : 0
 
-        if (duration > 0) {
-            const session = {
-                id: this.currentSession.id,
-                user_id: this.userId,
-                app_id: this.currentSession.appName,
-                context_id: this.currentSession.contextId,
-                start_time: new Date(this.currentSession.start).toISOString(),
-                end_time: new Date(end).toISOString(),
-                duration_seconds: duration,
-                window_title: this.currentSession.title,
-                activity_level: intensity,
-                created_at: new Date().toISOString()
-            }
+        const session = {
+            id: this.currentSession.id,
+            user_id: this.userId,
+            app_id: this.currentSession.appName,
+            context_id: this.currentSession.contextId,
+            start_time: new Date(this.currentSession.start).toISOString(),
+            end_time: new Date(end).toISOString(),
+            duration_seconds: duration,
+            window_title: this.currentSession.title,
+            activity_level: intensity,
+            created_at: new Date().toISOString()
+        }
 
-            try {
-                // Ensure the app exists in the 'apps' table
-                // Note: We don't have the category here, so we hope it was added at start
-                await this.ensureAppExists(this.currentSession.appName)
+        try {
+            // Finalize App Session
+            await dbOps.exec(`
+                UPDATE app_sessions 
+                SET end_time = ?, duration_seconds = ?, activity_level = ?
+                WHERE id = ?
+            `, [session.end_time, session.duration_seconds, session.activity_level, session.id])
 
-                // Save session (using REPLACE because it was already inserted at start)
+            // Finalize Domain Session
+            if (this.currentSession.domainId) {
                 await dbOps.exec(`
-                    INSERT OR REPLACE INTO app_sessions (id, user_id, app_id, context_id, start_time, end_time, duration_seconds, window_title, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                `, [
-                    session.id, session.user_id, session.app_id, session.context_id,
-                    session.start_time, session.end_time, session.duration_seconds,
-                    session.window_title, session.created_at
-                ])
-            } catch (e) {
-                console.error('[SessionManager] Failed to save session:', e)
+                    UPDATE domain_sessions 
+                    SET end_time = ?, duration_seconds = ?
+                    WHERE id = ?
+                `, [session.end_time, session.duration_seconds, this.currentSession.domainId])
             }
+        } catch (e) {
+            console.error('[SessionManager] Failed to save session:', e)
         }
 
         this.currentSession = null
@@ -210,6 +266,17 @@ class SessionManager {
                     category = excluded.category,
                     name = excluded.name
             `, [appName, appName, category, new Date().toISOString()])
+        } catch (e) { }
+    }
+
+    private async ensureDomainCategoryExists(domain: string, category: string = 'Web') {
+        try {
+            await dbOps.exec(`
+                INSERT INTO domain_categories (id, domain, category, created_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    category = excluded.category
+            `, [domain, domain, category, new Date().toISOString()])
         } catch (e) { }
     }
 }
