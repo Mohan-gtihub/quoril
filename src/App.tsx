@@ -137,7 +137,7 @@ function App() {
         }
     }, [])
 
-    // DEEP LINK HANDLING (Email Verification)
+    // DEEP LINK HANDLING (Email Verification + Password Reset)
     useEffect(() => {
         if (!window.electronAPI?.auth?.onDeepLink) return
 
@@ -145,10 +145,7 @@ function App() {
             console.log('[DeepLink] Received:', url)
 
             try {
-                // Parse URL: quoril://auth/callback#access_token=...
-                // OR: quoril://resume
-
-                // RESUME LOGIC
+                // RESUME LOGIC — quoril://resume or quoril://focus
                 if (url.includes('resume') || url.includes('focus')) {
                     const store = useFocusStore.getState()
                     if (store.isActive && store.isPaused) {
@@ -159,11 +156,29 @@ function App() {
                 }
 
                 // AUTH LOGIC
+                // Re-parse as a proper URL so URL() can parse query params correctly
+                const parsableUrl = url.replace(/^quoril:\/\//, 'https://quoril.app/')
+                const parsed = new URL(parsableUrl)
+
+                // --- PKCE flow: ?code=xxxx (Supabase default) ---
+                const code = parsed.searchParams.get('code')
+                if (code) {
+                    const { supabase } = await import('@/services/supabase')
+                    const { error } = await supabase.auth.exchangeCodeForSession(code)
+                    if (error) {
+                        console.error('[DeepLink] PKCE exchange failed:', error.message)
+                        toast.error('Verification failed. Please try again.')
+                    } else {
+                        window.location.reload()
+                    }
+                    return
+                }
+
+                // --- Legacy implicit flow: #access_token=xxxx ---
                 const hashIndex = url.indexOf('#')
                 if (hashIndex !== -1) {
                     const hash = url.substring(hashIndex + 1)
                     const params = new URLSearchParams(hash)
-
                     const access_token = params.get('access_token')
                     const refresh_token = params.get('refresh_token')
 
@@ -173,9 +188,10 @@ function App() {
                             access_token,
                             refresh_token
                         })
-
-                        if (!error) {
-                            // Manual reload to ensure state sync
+                        if (error) {
+                            console.error('[DeepLink] setSession failed:', error.message)
+                            toast.error('Verification failed. Please try again.')
+                        } else {
                             window.location.reload()
                         }
                     }

@@ -19,7 +19,11 @@ export function TitleBar() {
             style={{ WebkitAppRegion: 'drag' } as any}
         >
             <div className="flex items-center gap-2">
-                <img src="/icon.png" alt="" className="w-4 h-4 opacity-70" onError={(e) => e.currentTarget.style.display = 'none'} />
+                {/* Inline SVG logo — works in both Electron dev and production (no file:// path issues) */}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="opacity-80">
+                    <circle cx="12" cy="12" r="10" stroke="#6366f1" strokeWidth="2.5" />
+                    <path d="M12 7v5l3 3" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" />
+                </svg>
                 <span className="text-xs text-gray-400 font-medium">Quoril</span>
             </div>
 

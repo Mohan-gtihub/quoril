@@ -5,7 +5,6 @@ import {
     validateEmail,
     validatePassword,
     checkLoginRateLimit,
-    checkSignupRateLimit,
     clearRateLimit,
     getSecureErrorMessage,
     createSession,
@@ -28,6 +27,7 @@ interface AuthState {
     initialize: () => Promise<void>
     signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
     signUp: (email: string, password: string) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean }>
+    signInWithGoogle: () => Promise<{ success: boolean; error?: string }>
     signOut: () => Promise<void>
     checkSessionValidity: () => boolean
     updateActivity: () => void
@@ -225,14 +225,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 }
             }
 
-            // 3. Check signup rate limiting (using IP would be better, but using email for now)
-            const rateLimit = checkSignupRateLimit(email.toLowerCase())
-            if (!rateLimit.allowed) {
-                set({ loading: false })
-                return { success: false, error: rateLimit.message }
-            }
-
-            // 4. Attempt sign up
+            // 3. Attempt sign up
             const { data, error } = await supabase.auth.signUp({
                 email: email.toLowerCase().trim(),
                 password,
@@ -249,13 +242,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 }
             }
 
-            // 5. Check if email confirmation is required
+            // 4. Check if email confirmation is required
             const requiresVerification = !data.session
 
             if (data.session && data.user) {
-                // Auto-signed in (email confirmation disabled)
+                // Auto-signed in (email confirmation disabled in Supabase)
                 createSession(data.session.access_token, data.user.id)
-                clearRateLimit(`signup:${email.toLowerCase()}`)
 
                 set({
                     session: data.session,
@@ -263,6 +255,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     loading: false,
                     lastActivity: Date.now(),
                 })
+
+                if (window.electronAPI?.auth) {
+                    window.electronAPI.auth.setUser(data.user.id, data.session.access_token).catch(console.error)
+                }
 
                 startSessionMonitoring()
             } else {
@@ -281,6 +277,48 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 success: false,
                 error: getSecureErrorMessage(error, 'signup'),
             }
+        }
+    },
+
+    signInWithGoogle: async () => {
+        try {
+            set({ loading: true })
+
+            // skipBrowserRedirect: true → get the OAuth URL without navigating
+            // This is critical for Electron: we must NOT navigate the main window
+            // away from the app. Instead we open the URL in the system browser.
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: 'quoril://auth/callback',
+                    skipBrowserRedirect: true,
+                },
+            })
+
+            if (error) {
+                set({ loading: false })
+                return { success: false, error: error.message }
+            }
+
+            if (data?.url) {
+                // Open Google OAuth in the system browser
+                // The PKCE code_verifier stays in this app's localStorage
+                // so when the deep link callback arrives, we can exchange it
+                if (window.electronAPI?.file?.openExternal) {
+                    await window.electronAPI.file.openExternal(data.url)
+                } else {
+                    // Fallback: window.open() is caught by setWindowOpenHandler
+                    window.open(data.url, '_blank')
+                }
+            }
+
+            // Loading stays true until the deep link callback fires
+            // and onAuthStateChange sets the session
+            return { success: true }
+        } catch (error) {
+            console.error('[Auth] Google sign-in error:', error)
+            set({ loading: false })
+            return { success: false, error: 'Google sign-in failed. Please try again.' }
         }
     },
 

@@ -6,13 +6,13 @@
 export const SECURITY_CONFIG = {
     // Password Requirements
     PASSWORD: {
-        MIN_LENGTH: 12,
+        MIN_LENGTH: 8,
         REQUIRE_UPPERCASE: true,
         REQUIRE_LOWERCASE: true,
         REQUIRE_NUMBERS: true,
-        REQUIRE_SPECIAL_CHARS: true,
+        REQUIRE_SPECIAL_CHARS: false,
         MAX_LENGTH: 128,
-        COMMON_PASSWORDS_CHECK: true,
+        COMMON_PASSWORDS_CHECK: false,    // disabled — too aggressive
     },
 
     // Rate Limiting

@@ -22,12 +22,13 @@ class DataSyncService {
     private schemaCacheWarned = false
     private lastCacheErrorTime = 0
     private cacheRecoveryAttempts = 0
+    private aborted = false
 
     /* ================= START / STOP ================= */
 
     start() {
         if (this.timer) return
-
+        this.aborted = false
 
         this.timer = window.setInterval(
             () => this.syncPendings(),
@@ -38,6 +39,7 @@ class DataSyncService {
     }
 
     stop() {
+        this.aborted = true
         if (this.timer) {
             clearInterval(this.timer)
             this.timer = null
@@ -65,6 +67,8 @@ class DataSyncService {
 
         try {
             for (const table of SYNC_ORDER) {
+                // Abort mid-loop if user signed out
+                if (this.aborted) break
                 await this.syncTable(table, user.id)
             }
         } finally {
@@ -127,6 +131,17 @@ class DataSyncService {
 
 
                 /* ---------- Push to Supabase ---------- */
+
+                // Abort if user signed out mid-loop (prevents RLS 403)
+                if (this.aborted) break
+
+                // Re-verify session is still valid before each upsert
+                const { data: { session: currentSession } } = await supabase.auth.getSession()
+                if (!currentSession?.user) {
+                    console.warn('[Sync] Session lost mid-sync, aborting remaining rows')
+                    this.aborted = true
+                    break
+                }
 
                 const { error } = await (supabase.from(table) as any)
                     .upsert(payload, {

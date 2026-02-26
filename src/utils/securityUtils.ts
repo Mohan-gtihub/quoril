@@ -83,12 +83,6 @@ export function validateEmail(email: string): { valid: boolean; error?: string }
         return { valid: false, error: 'Email is too long' }
     }
 
-    // Check for malicious patterns
-    const inputCheck = validateInput(email, SECURITY_CONFIG.INPUT.MAX_EMAIL_LENGTH)
-    if (!inputCheck.valid) {
-        return { valid: false, error: 'Invalid email format' }
-    }
-
     if (!VALIDATION_PATTERNS.EMAIL.test(email)) {
         return { valid: false, error: 'Invalid email format' }
     }
@@ -160,15 +154,9 @@ export function validatePassword(password: string): {
         score = Math.min(score, 30)
     }
 
-    // Check for repeated characters
-    if (/(.)\1{2,}/.test(password)) {
-        errors.push('Password should not contain repeated characters')
-        score -= 10
-    }
-
-    // Check for sequential characters
+    // Check for sequential characters (informational, doesn't block)
     if (/(?:abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz|012|123|234|345|456|567|678|789)/i.test(password)) {
-        score -= 10
+        score -= 5
     }
 
     // Determine strength

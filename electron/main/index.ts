@@ -26,6 +26,21 @@ process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
 const isDev = !app.isPackaged
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 
+/* ---------------- ICON PATH (works in dev + production) ---------------- */
+function getIconPath() {
+    if (app.isPackaged) {
+        // In production: resources/app/public/icon.png or resources/icon.png
+        return path.join(process.resourcesPath, 'app', 'public', 'icon.png')
+    }
+    // In dev: project root / public / icon.png
+    return path.join(__dirname, '../../public/icon.png')
+}
+
+/* Set App User Model ID so Windows Search can find the app */
+if (process.platform === 'win32') {
+    app.setAppUserModelId('com.quoril.app')
+}
+
 /* ---------------- STATE ---------------- */
 
 let mainWindow: BrowserWindow | null = null
@@ -39,7 +54,14 @@ const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {
     app.quit()
 } else {
-    app.on('second-instance', () => {
+    app.on('second-instance', (_event, argv) => {
+        // On Windows, deep link URLs arrive as a command-line argument in the second instance.
+        // We must forward it to the renderer BEFORE restoring the window.
+        const deepLinkUrl = argv.find(arg => arg.startsWith('quoril://'))
+        if (deepLinkUrl && mainWindow) {
+            mainWindow.webContents.send('deep-link', deepLinkUrl)
+        }
+
         if (mainWindow) {
             if (mainWindow.isMinimized()) mainWindow.restore()
             if (!mainWindow.isVisible()) mainWindow.show()
@@ -81,8 +103,12 @@ function createWindow() {
         minHeight: 600,
         show: false,
         frame: false,
-        transparent: true,
-        hasShadow: false,
+        // FIX: transparent:true causes ghost/invisible window on Windows.
+        // Use backgroundColor instead — supports CSS transparency via the renderer.
+        transparent: false,
+        backgroundColor: '#0f0f13',
+        hasShadow: true,
+        icon: getIconPath(),  // FIX: required for Windows taskbar icon
 
         webPreferences: {
             preload: path.join(__dirname, 'index.mjs'),
@@ -191,8 +217,7 @@ function restoreWindow() {
 
 function createTray() {
     try {
-        const iconPath =
-            path.join(__dirname, '../../public/icon.png')
+        const iconPath = getIconPath()
 
         let icon = nativeImage.createEmpty()
 
@@ -418,6 +443,14 @@ function setupIPC() {
 
     ipcMain.handle('auth:setUser', (_, userId: string | null, accessToken?: string | null) => {
         trackingEngine.setUserId(userId, accessToken)
+    })
+
+    /* External URLs (Google OAuth, etc.) */
+
+    ipcMain.handle('file:openExternal', (_, url: string) => {
+        if (url && (url.startsWith('https://') || url.startsWith('http://'))) {
+            shell.openExternal(url)
+        }
     })
 }
 

@@ -91,7 +91,7 @@ export function SuperFocusPill() {
     }
 
     return (
-        <div className="w-full h-full flex flex-col gap-2 pointer-events-none pt-3">
+        <div className="w-full h-full flex flex-col gap-2 pointer-events-none pt-4">
             {/* Main Pill Row */}
             <div
                 className={cn(
@@ -104,7 +104,7 @@ export function SuperFocusPill() {
             >
                 {/* POMODORO BADGE: Half-on-air, Centered Top */}
                 {!isBreak && settings.pomodorosEnabled && (
-                    <div className="absolute -top-px left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center pointer-events-none">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center pointer-events-none">
                         <div className="bg-[var(--bg-primary)] border border-red-500/30 text-red-500 text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg tracking-widest uppercase">
                             POMO {formatShortTime(pomodoroRemaining)}
                         </div>
