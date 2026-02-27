@@ -444,7 +444,8 @@ export const useListStore = create<ListState>()(
 
                     set(state => ({
                         archived: state.archived.filter(l => l.id !== id),
-                        archivedLists: state.archivedLists.filter(l => l.id !== id)
+                        archivedLists: state.archivedLists.filter(l => l.id !== id),
+                        lists: state.lists.filter(l => l.id !== id)
                     }))
                     toast.success('List and its tasks deleted')
                 } catch {

@@ -15,6 +15,7 @@ This is **GOOD NEWS** - it means Row Level Security is working! However, the pol
 
 ### Step 1: Open Supabase Dashboard
 
+
 1. Go to [https://app.supabase.com](https://app.supabase.com)
 2. Select your project: `izxoyfydqsopvaywrtuz`
 3. Click on **SQL Editor** in the left sidebar
