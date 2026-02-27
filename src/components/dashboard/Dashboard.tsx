@@ -9,7 +9,7 @@ import {
     Plus, Search, CheckCircle2, Circle,
     Layers, MoreHorizontal, Archive, Copy, Edit3,
     Flame, ListPlus, FolderKanban, X, RotateCcw, Trash2,
-    Zap, TrendingUp, Target, AlarmClock, GripVertical
+    Zap, Target, GripVertical, AlarmClock, ChevronDown, Check
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -23,6 +23,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { CreateListModal } from './CreateListModal'
 import { ManageWorkspacesModal } from '@/components/sidebar/ManageWorkspacesModal'
+import { HomeOverview } from './HomeOverview'
 import type { List, Task } from '@/types/database'
 import { cn } from '@/utils/helpers'
 import { format, isToday, isTomorrow } from 'date-fns'
@@ -74,8 +75,8 @@ export function Dashboard() {
         restoreList, permanentDeleteList, reorderLists, loadArchived
     } = useListStore()
     const { tasks, fetchTasks } = useTaskStore()
-    const { workspaces, loadWorkspaces, activeWorkspaceId, setActiveWorkspace } = useWorkspaceStore()
-    const { isActive, taskId: activeTaskId, elapsed } = useFocusStore()
+    const { workspaces, loadWorkspaces, activeWorkspaceId } = useWorkspaceStore()
+    const { isActive, taskId: activeTaskId, elapsed, fetchSessions } = useFocusStore()
     const navigate = useNavigate()
 
     const [search, setSearch] = useState('')
@@ -84,17 +85,15 @@ export function Dashboard() {
     const [editingList, setEditingList] = useState<List | null>(null)
     const [movingList, setMovingList] = useState<List | null>(null)
     const [showWsModal, setShowWsModal] = useState(false)
+    const [showWsMenu, setShowWsMenu] = useState(false)
     const [sortedIds, setSortedIds] = useState<string[]>([])
     const [activeDragId, setActiveDragId] = useState<string | null>(null)
 
     const isArchived = activeWorkspaceId === 'archived'
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
-    useEffect(() => { fetchLists(); fetchTasks(); if (user) loadWorkspaces() }, [user])
+    useEffect(() => { fetchLists(); fetchTasks(); fetchSessions(); if (user) loadWorkspaces() }, [user])
     useEffect(() => { if (isArchived) loadArchived() }, [isArchived])
-    useEffect(() => {
-        if (!activeWorkspaceId && workspaces.length > 0) setActiveWorkspace(workspaces[0].id)
-    }, [workspaces, activeWorkspaceId])
 
     const tasksByList = useMemo(() => {
         const map: Record<string, Task[]> = {}
@@ -159,154 +158,234 @@ export function Dashboard() {
     return (
         <div className="flex flex-col h-full overflow-hidden" onClick={() => setMenuListId(null)}>
 
-            {/* ── TOP BAR ── */}
-            <div className="h-13 px-6 py-3 flex items-center justify-between border-b border-[var(--border-default)] bg-[var(--bg-secondary)] sticky top-0 z-30 shrink-0">
-                <div className="flex items-center gap-3">
-                    {ws && <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: ws.color }} />}
-                    <span className="text-sm font-bold">
-                        {isArchived ? 'Archived' : activeWorkspaceId === 'unassigned' ? 'Unassigned' : ws?.name || 'Dashboard'}
-                    </span>
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--bg-hover)] text-[var(--text-muted)] tabular-nums">
-                        {orderedLists.length}
-                    </span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="relative">
-                        <Search size={11} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-                        <input
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            placeholder="Search…"
-                            className="w-40 pl-8 pr-3 py-1.5 text-xs bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-lg placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
-                        />
-                    </div>
-                    {!isArchived && (
-                        <button
-                            onClick={() => setShowCreateList(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/90 text-white text-xs font-semibold rounded-lg transition-all active:scale-95"
-                        >
-                            <ListPlus size={12} /> New List
-                        </button>
-                    )}
-                </div>
-            </div>
+            {!activeWorkspaceId ? (
+                <HomeOverview />
+            ) : (
+                <>
+                    {/* ── TOP BAR ── */}
+                    <div className="px-5 py-3 border-b border-[var(--border-default)] bg-[var(--bg-secondary)] sticky top-0 z-30 shrink-0 space-y-3">
+                        {/* Row 1: workspace title switcher + actions */}
+                        <div className="flex items-center justify-between gap-3 relative">
 
-            {/* ── BODY ── */}
-            <main className="flex-1 overflow-y-auto p-5">
+                            {/* NEW Workspace Switcher Dropdown */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowWsMenu(!showWsMenu)}
+                                    className="flex items-center gap-2 group hover:opacity-80 transition-opacity outline-none"
+                                >
+                                    <h1 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">
+                                        {isArchived ? 'Archived' : activeWorkspaceId === 'unassigned' ? 'Unassigned' : ws?.name}
+                                    </h1>
+                                    <ChevronDown size={18} className="text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors mt-1" />
+                                </button>
 
-                {/* ── HERO STATS ROW ── */}
-                {!isArchived && (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-                        <StatTile
-                            icon={<Target size={16} />}
-                            label="Active Tasks"
-                            value={String(stats.active)}
-                            color="#6366f1"
-                            sub={`${stats.totalEst ? fmtMin(stats.totalEst) + ' est.' : 'No estimate'}`}
-                        />
-                        <StatTile
-                            icon={<CheckCircle2 size={16} />}
-                            label="Done Today"
-                            value={String(stats.doneToday)}
-                            color="#10b981"
-                            sub="tasks completed"
-                        />
-                        <StatTile
-                            icon={<Zap size={16} />}
-                            label="Focus Time"
-                            value={fmtMin(stats.focusMin)}
-                            color="#f59e0b"
-                            sub={isActive ? '● Live session' : 'today'}
-                        />
-                        <StatTile
-                            icon={<TrendingUp size={16} />}
-                            label="Lists"
-                            value={String(orderedLists.length)}
-                            color="#8b5cf6"
-                            sub={`in ${ws?.name || 'workspace'}`}
-                        />
-                    </div>
-                )}
+                                <AnimatePresence>
+                                    {showWsMenu && (
+                                        <>
+                                            <div className="fixed inset-0 z-40" onClick={() => setShowWsMenu(false)} />
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                                transition={{ duration: 0.15 }}
+                                                className="absolute left-0 top-full mt-3 w-64 glass-thick border border-[var(--border-default)] rounded-2xl z-50 shadow-2xl py-2 overflow-hidden"
+                                            >
+                                                <div className="px-3 pb-2 mb-2 border-b border-[var(--border-default)]">
+                                                    <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Switch Workspace</p>
+                                                </div>
 
-                {/* ── BENTO GRID ── */}
-                {!activeWorkspaceId && workspaces.length === 0 ? (
-                    <EmptyState kind="no-workspace" onCreate={() => setShowWsModal(true)} search="" />
-                ) : orderedLists.length === 0 ? (
-                    <EmptyState kind={isArchived ? 'archived' : search ? 'search' : 'empty'} onCreate={() => setShowCreateList(true)} search={search} />
-                ) : (
-                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-                        <SortableContext items={sortedIds} strategy={rectSortingStrategy}>
-                            <div className="grid grid-cols-2 xl:grid-cols-4 auto-rows-[minmax(180px,auto)] gap-3">
-                                {orderedLists.map(list => {
-                                    const lt = (tasksByList[list.id] || []).filter(t => !t.deleted_at)
-                                    const pending = lt.filter(t => t.status !== 'done')
-                                    const done = lt.filter(t => t.status === 'done')
-                                    const progress = lt.length ? Math.round((done.length / lt.length) * 100) : 0
-                                    const hasActive = lt.some(t => t.id === activeTaskId && isActive)
-                                    const size = getBentoSize(lt.length)
+                                                <div className="max-h-[300px] overflow-y-auto custom-scrollbar px-1">
+                                                    {/* Workspaces */}
+                                                    {workspaces.map(w => (
+                                                        <button
+                                                            key={w.id}
+                                                            onClick={() => { useWorkspaceStore.getState().setActiveWorkspace(w.id); setShowWsMenu(false) }}
+                                                            className={cn("w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm transition-all", activeWorkspaceId === w.id ? "bg-[var(--accent-primary)]/10 text-[var(--text-primary)] font-bold" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]")}
+                                                        >
+                                                            <div className="flex items-center gap-2 truncate">
+                                                                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: w.color }} />
+                                                                <span className="truncate">{w.name}</span>
+                                                            </div>
+                                                            {activeWorkspaceId === w.id && <Check size={14} className="text-[var(--accent-primary)] shrink-0" />}
+                                                        </button>
+                                                    ))}
 
-                                    return (
-                                        <SortableBentoCard key={list.id} id={list.id} size={size} disabled={isArchived} isDragging={activeDragId === list.id}>
-                                            <BentoListCard
-                                                list={list}
-                                                tasks={lt}
-                                                pending={pending}
-                                                done={done}
-                                                progress={progress}
-                                                hasActive={hasActive}
-                                                size={size}
-                                                isMenuOpen={menuListId === list.id}
-                                                isArchived={isArchived}
-                                                onOpenMenu={e => { e.stopPropagation(); setMenuListId(menuListId === list.id ? null : list.id) }}
-                                                onClick={() => !isArchived && (setSelectedList(list.id), navigate('/planner'))}
-                                                onDuplicate={() => { duplicateList(list.id); setMenuListId(null) }}
-                                                onEdit={() => { setEditingList(list); setMenuListId(null) }}
-                                                onArchive={() => { archive(list.id); setMenuListId(null) }}
-                                                onMove={() => { setMovingList(list); setMenuListId(null) }}
-                                                onRestore={() => { restoreList(list.id); setMenuListId(null) }}
-                                                onPermanentDelete={() => { permanentDeleteList(list.id); setMenuListId(null) }}
-                                                search={search}
-                                            />
-                                        </SortableBentoCard>
-                                    )
-                                })}
+                                                    <div className="my-1 border-t border-[var(--border-default)] mx-2" />
 
-                                {/* Add card */}
-                                {!isArchived && (
-                                    <motion.button
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        onClick={() => setShowCreateList(true)}
-                                        className="group rounded-2xl border-2 border-dashed border-[var(--border-default)] hover:border-[var(--accent-primary)]/40 flex flex-col items-center justify-center gap-2.5 transition-all col-span-1 row-span-1 min-h-[180px]"
-                                    >
-                                        <div className="w-10 h-10 rounded-xl bg-[var(--bg-hover)] group-hover:bg-[var(--accent-primary)]/10 flex items-center justify-center transition-all">
-                                            <Plus size={18} className="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors" />
-                                        </div>
-                                        <span className="text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors font-semibold">New List</span>
-                                    </motion.button>
-                                )}
+                                                    {/* Unassigned / Archive */}
+                                                    <button
+                                                        onClick={() => { useWorkspaceStore.getState().setActiveWorkspace('unassigned'); setShowWsMenu(false) }}
+                                                        className={cn("w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm transition-all", activeWorkspaceId === 'unassigned' ? "bg-[var(--accent-primary)]/10 text-[var(--text-primary)] font-bold" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]")}
+                                                    >
+                                                        <div className="flex items-center gap-2 truncate">
+                                                            <div className="w-2.5 h-2.5 rounded-full border-2 border-[var(--text-muted)] shrink-0" />
+                                                            <span className="truncate">Unassigned</span>
+                                                        </div>
+                                                        {activeWorkspaceId === 'unassigned' && <Check size={14} className="text-[var(--accent-primary)] shrink-0" />}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => { useWorkspaceStore.getState().setActiveWorkspace('archived'); setShowWsMenu(false) }}
+                                                        className={cn("w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm transition-all", activeWorkspaceId === 'archived' ? "bg-[var(--accent-primary)]/10 text-[var(--text-primary)] font-bold" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]")}
+                                                    >
+                                                        <div className="flex items-center gap-2 truncate">
+                                                            <Archive size={12} className="text-[var(--text-muted)] shrink-0" />
+                                                            <span className="truncate">Archived</span>
+                                                        </div>
+                                                        {activeWorkspaceId === 'archived' && <Check size={14} className="text-[var(--accent-primary)] shrink-0" />}
+                                                    </button>
+                                                </div>
+                                            </motion.div>
+                                        </>
+                                    )}
+                                </AnimatePresence>
                             </div>
-                        </SortableContext>
 
-                        <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.35' } } }) }}>
-                            {activeDragList && (
-                                <div className="rotate-[1.5deg] scale-[1.04] shadow-2xl pointer-events-none opacity-95">
-                                    <BentoListCard
-                                        list={activeDragList}
-                                        tasks={(tasksByList[activeDragList.id] || []).filter(t => !t.deleted_at)}
-                                        pending={[]} done={[]} progress={0} hasActive={false}
-                                        size={getBentoSize((tasksByList[activeDragList.id] || []).length)}
-                                        isMenuOpen={false} isArchived={false} isDragging
-                                        onOpenMenu={() => { }} onClick={() => { }} onDuplicate={() => { }} onEdit={() => { }}
-                                        onArchive={() => { }} onMove={() => { }} onRestore={() => { }} onPermanentDelete={() => { }}
-                                        search=""
+                            <div className="flex items-center gap-2 bg-[var(--bg-hover)] px-2 py-0.5 rounded-full">
+                                <span className="text-xs font-semibold text-[var(--text-muted)] tabular-nums">
+                                    <span className="text-[var(--text-primary)]">{orderedLists.length}</span> lists
+                                </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                                <div className="relative">
+                                    <Search size={11} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                                    <input
+                                        value={search}
+                                        onChange={e => setSearch(e.target.value)}
+                                        placeholder="Search lists..."
+                                        className="w-36 pl-8 pr-3 py-1.5 text-xs bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-lg placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
                                     />
                                 </div>
-                            )}
-                        </DragOverlay>
-                    </DndContext>
-                )}
-            </main>
+                                {!isArchived && (
+                                    <button
+                                        onClick={() => setShowCreateList(true)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/90 text-white text-xs font-semibold rounded-lg transition-all active:scale-95"
+                                    >
+                                        <ListPlus size={12} /> New List
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Row 2: insight strip */}
+                        {!isArchived && (
+                            <div className="flex items-center gap-4 text-[11px] text-[var(--text-muted)] overflow-x-auto scrollbar-hide">
+                                <span className="flex items-center gap-1.5 shrink-0">
+                                    <Zap size={11} className="text-amber-400" />
+                                    <span className="font-semibold text-[var(--text-primary)]">{fmtMin(stats.focusMin)}</span> focus today
+                                </span>
+                                <span className="text-[var(--border-default)]">·</span>
+                                <span className="flex items-center gap-1.5 shrink-0">
+                                    <CheckCircle2 size={11} className="text-emerald-400" />
+                                    <span className="font-semibold text-[var(--text-primary)]">{stats.doneToday}</span> tasks done
+                                </span>
+                                <span className="text-[var(--border-default)]">·</span>
+                                <span className="flex items-center gap-1.5 shrink-0">
+                                    <Target size={11} className="text-blue-400" />
+                                    <span className="font-semibold text-[var(--text-primary)]">{stats.active}</span> active
+                                    {stats.totalEst > 0 && <span className="text-[var(--text-muted)]">&nbsp;· {fmtMin(stats.totalEst)} est.</span>}
+                                </span>
+                                {isActive && (
+                                    <>
+                                        <span className="text-[var(--border-default)]">·</span>
+                                        <span className="flex items-center gap-1.5 text-[var(--accent-primary)] font-semibold shrink-0 animate-pulse">
+                                            <Flame size={11} /> Live session
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── BODY ── */}
+                    <main className="flex-1 overflow-y-auto p-5">
+
+                        {/* ── BENTO GRID ── */}
+                        {!activeWorkspaceId && workspaces.length === 0 ? (
+                            <EmptyState kind="no-workspace" onCreate={() => setShowWsModal(true)} search="" />
+                        ) : orderedLists.length === 0 ? (
+                            <EmptyState kind={isArchived ? 'archived' : search ? 'search' : 'empty'} onCreate={() => setShowCreateList(true)} search={search} />
+                        ) : (
+                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                                <SortableContext items={sortedIds} strategy={rectSortingStrategy}>
+                                    <div className="grid grid-cols-2 xl:grid-cols-4 auto-rows-[minmax(180px,auto)] gap-3">
+                                        {orderedLists.map(list => {
+                                            const lt = (tasksByList[list.id] || []).filter(t => !t.deleted_at)
+                                            const pending = lt.filter(t => t.status !== 'done')
+                                            const done = lt.filter(t => t.status === 'done')
+                                            const progress = lt.length ? Math.round((done.length / lt.length) * 100) : 0
+                                            const hasActive = lt.some(t => t.id === activeTaskId && isActive)
+                                            const size = getBentoSize(lt.length)
+
+                                            return (
+                                                <SortableBentoCard key={list.id} id={list.id} size={size} disabled={isArchived} isDragging={activeDragId === list.id}>
+                                                    <BentoListCard
+                                                        list={list}
+                                                        tasks={lt}
+                                                        pending={pending}
+                                                        done={done}
+                                                        progress={progress}
+                                                        hasActive={hasActive}
+                                                        size={size}
+                                                        isMenuOpen={menuListId === list.id}
+                                                        isArchived={isArchived}
+                                                        onOpenMenu={e => { e.stopPropagation(); setMenuListId(menuListId === list.id ? null : list.id) }}
+                                                        onClick={() => {
+                                                            if (!isArchived) {
+                                                                setSelectedList(list.id)
+                                                                navigate('/planner')
+                                                            }
+                                                        }}
+                                                        onDuplicate={() => { duplicateList(list.id); setMenuListId(null) }}
+                                                        onEdit={() => { setEditingList(list); setMenuListId(null) }}
+                                                        onArchive={() => { archive(list.id); setMenuListId(null) }}
+                                                        onMove={() => { setMovingList(list); setMenuListId(null) }}
+                                                        onRestore={() => { restoreList(list.id); setMenuListId(null) }}
+                                                        onPermanentDelete={() => { permanentDeleteList(list.id); setMenuListId(null) }}
+                                                        search={search}
+                                                    />
+                                                </SortableBentoCard>
+                                            )
+                                        })}
+
+                                        {/* Add card */}
+                                        {!isArchived && (
+                                            <motion.button
+                                                initial={{ opacity: 0, scale: 0.95 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                onClick={() => setShowCreateList(true)}
+                                                className="group rounded-2xl border-2 border-dashed border-[var(--border-default)] hover:border-[var(--accent-primary)]/40 flex flex-col items-center justify-center gap-2.5 transition-all col-span-1 row-span-1 min-h-[180px]"
+                                            >
+                                                <div className="w-10 h-10 rounded-xl bg-[var(--bg-hover)] group-hover:bg-[var(--accent-primary)]/10 flex items-center justify-center transition-all">
+                                                    <Plus size={18} className="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors" />
+                                                </div>
+                                                <span className="text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors font-semibold">New List</span>
+                                            </motion.button>
+                                        )}
+                                    </div>
+                                </SortableContext>
+
+                                <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.35' } } }) }}>
+                                    {activeDragList && (
+                                        <div className="rotate-[1.5deg] scale-[1.04] shadow-2xl pointer-events-none opacity-95">
+                                            <BentoListCard
+                                                list={activeDragList}
+                                                tasks={(tasksByList[activeDragList.id] || []).filter(t => !t.deleted_at)}
+                                                pending={[]} done={[]} progress={0} hasActive={false}
+                                                size={getBentoSize((tasksByList[activeDragList.id] || []).length)}
+                                                isMenuOpen={false} isArchived={false} isDragging
+                                                onOpenMenu={() => { }} onClick={() => { }} onDuplicate={() => { }} onEdit={() => { }}
+                                                onArchive={() => { }} onMove={() => { }} onRestore={() => { }} onPermanentDelete={() => { }}
+                                                search=""
+                                            />
+                                        </div>
+                                    )}
+                                </DragOverlay>
+                            </DndContext>
+                        )}
+                    </main>
+                </>
+            )}
 
             {/* ── MODALS ── */}
             <CreateListModal
@@ -344,31 +423,6 @@ export function Dashboard() {
     )
 }
 
-/* ─────────────────────────────────────────
-   HERO STAT TILE
-───────────────────────────────────────── */
-function StatTile({ icon, label, value, color, sub }: { icon: React.ReactNode; label: string; value: string; color: string; sub: string }) {
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative rounded-2xl bg-[var(--bg-card)] border border-[var(--border-default)] px-4 py-3.5 overflow-hidden"
-        >
-            {/* Accent glow blob */}
-            <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-10 blur-xl" style={{ backgroundColor: color }} />
-            <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{label}</span>
-                <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ backgroundColor: color + '20', color }}>
-                    {icon}
-                </div>
-            </div>
-            <div className="text-2xl font-black text-[var(--text-primary)] leading-none mb-1" style={{ fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-            <div className="text-[10px] text-[var(--text-muted)]">{sub}</div>
-            {/* Bottom accent line */}
-            <div className="absolute bottom-0 left-0 h-[2px] w-full" style={{ background: `linear-gradient(to right, ${color}60, transparent)` }} />
-        </motion.div>
-    )
-}
 
 /* ─────────────────────────────────────────
    SORTABLE BENTO WRAPPER
@@ -430,17 +484,18 @@ function BentoListCard({
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: isDragging ? 0.4 : 1, scale: 1 }}
             className={cn(
-                "group relative h-full bg-[var(--bg-card)] rounded-2xl border border-[var(--border-default)] flex flex-col overflow-hidden transition-all duration-200",
+                "group relative h-full bg-[var(--bg-card)] rounded-2xl border border-[var(--border-default)] flex flex-col transition-all duration-200",
                 !isArchived && "cursor-pointer hover:shadow-lg hover:border-[var(--border-hover)] hover:-translate-y-0.5",
                 isArchived && "cursor-default opacity-60",
                 hasActive && "ring-1 ring-[var(--accent-primary)]/40 shadow-md",
-                isDragging && "shadow-2xl scale-[1.02]"
+                isDragging && "shadow-2xl scale-[1.02]",
+                isMenuOpen ? "z-50 shadow-2xl border-[var(--border-hover)]" : "z-10"
             )}
             onClick={onClick}
         >
             {/* ── Gradient header ── */}
             <div
-                className="flex items-start justify-between px-4 pt-4 pb-3 shrink-0"
+                className="flex items-start justify-between px-4 pt-4 pb-3 shrink-0 rounded-t-2xl"
                 style={{ background: `linear-gradient(135deg, ${accent}18 0%, ${accent}06 100%)` }}
             >
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -485,7 +540,7 @@ function BentoListCard({
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: -6, scale: 0.93 }}
                                 transition={{ duration: 0.1 }}
-                                className="absolute right-3 top-12 w-44 bg-[var(--bg-tertiary)] border border-[var(--border-default)] rounded-xl z-50 shadow-2xl overflow-hidden"
+                                className="absolute right-3 top-12 w-48 glass-thick border border-[var(--border-hover)] rounded-xl z-50 shadow-2xl overflow-hidden"
                             >
                                 <div className="p-1">
                                     {isArchived ? (

@@ -18,6 +18,7 @@ import { useFocusStore } from '@/store/focusStore'
 import { useTaskStore } from '@/store/taskStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { SuperFocusPill } from '@/components/focus/SuperFocusPill'
+import { WorkspacesOverview } from '@/components/workspaces/WorkspacesOverview'
 
 import { cn } from '@/utils/helpers'
 
@@ -85,6 +86,15 @@ function App() {
             })
         }
     }, [])
+
+    // Inject super-focus-mode class into HTML root for transparency overrides
+    useEffect(() => {
+        if (settings.superFocusMode) {
+            document.documentElement.classList.add('super-focus-mode')
+        } else {
+            document.documentElement.classList.remove('super-focus-mode')
+        }
+    }, [settings.superFocusMode])
 
     // Keep store elapsed in sync for persistence and endSession; use getState() so effect doesn't re-run
     useEffect(() => {
@@ -225,7 +235,7 @@ function App() {
                         settings.theme === 'blue' && "theme-blue",
                         settings.theme === 'red' && "theme-red",
                         settings.theme === 'nebula' && "theme-nebula",
-                        !settings.superFocusMode ? "bg-[var(--bg-primary)]" : "bg-transparent",
+                        !settings.superFocusMode ? "bg-[var(--bg-primary)]" : "bg-transparent super-focus",
                         "text-[var(--text-primary)]"
                     )}>
                         {!settings.superFocusMode && <TitleBar />}
@@ -240,6 +250,7 @@ function App() {
                                             <Layout>
                                                 <Routes>
                                                     <Route path="/dashboard" element={<Dashboard />} />
+                                                    <Route path="/workspaces" element={<WorkspacesOverview />} />
                                                     <Route path="/planner" element={<Planner />} />
                                                     <Route path="/focus" element={<FocusMode />} />
                                                     <Route path="/settings" element={<Settings />} />

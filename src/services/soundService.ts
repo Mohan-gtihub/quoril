@@ -54,7 +54,7 @@ class SoundService {
                 src: [path],
                 volume: 0.6,
                 preload: true,
-                html5: true, // FORCE HTML5 Audio for Electron stability
+                html5: true, // MUST BE TRUE! Web Audio API crashes this Electron version.
                 format: ['mp3'],
                 onloaderror: (_id, err) => {
                     console.warn(`[SoundService] Failed to load sound: ${name} (${path})`, err)

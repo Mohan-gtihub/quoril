@@ -13,6 +13,9 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
+  /* Force transparency for Electron overlay windows */
+  background: transparent !important;
+
   /* Theme Transitions */
   --transition-speed: 0.3s;
 
@@ -173,6 +176,11 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   transition: background-color var(--transition-speed), color var(--transition-speed);
+}
+
+body.super-focus {
+  background-color: transparent !important;
+  background: transparent !important;
 }
 
 #root {
@@ -379,9 +387,9 @@ html.super-focus-mode #root {
       var(--bg-primary);
   }
 
-  /* Nebula Specific Background */
-  .theme-nebula body,
-  body.theme-nebula {
+  /* Nebula Specific Background (Disabled during SuperFocusMode) */
+  body.theme-nebula:not(.super-focus),
+  .theme-nebula body:not(.super-focus) {
     background:
       radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15), transparent 25%),
       radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.15), transparent 25%),
@@ -395,4 +403,19 @@ html.super-focus-mode #root {
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
   }
+}
+
+/* Nuclear Option for Electron Window Transparency */
+html.super-focus-mode,
+html.super-focus-mode body,
+html.super-focus-mode #root,
+.super-focus,
+.super-focus body,
+body.super-focus,
+.super-focus #root {
+  background-color: transparent !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: none !important;
 }

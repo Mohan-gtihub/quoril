@@ -5,7 +5,8 @@ import {
     Tray,
     Menu,
     nativeImage,
-    shell
+    shell,
+    globalShortcut
 } from 'electron'
 
 import path from 'path'
@@ -103,12 +104,12 @@ function createWindow() {
         minHeight: 600,
         show: false,
         frame: false,
-        // FIX: transparent:true causes ghost/invisible window on Windows.
-        // Use backgroundColor instead — supports CSS transparency via the renderer.
-        transparent: false,
-        backgroundColor: '#0f0f13',
-        hasShadow: true,
-        icon: getIconPath(),  // FIX: required for Windows taskbar icon
+        // FIX: Re-enable transparency so the SuperFocus widget can be frameless and rounded.
+        // The ghost window rendering bug on Windows is mitigated by the activate/show repaint sequence below.
+        transparent: true,
+        backgroundColor: '#00000000',
+        hasShadow: false, // Turn off OS shadows to prevent native Windows 11 bounding box drawing around the transparent window
+        icon: getIconPath(),
 
         webPreferences: {
             preload: path.join(__dirname, 'index.mjs'),
@@ -131,6 +132,18 @@ function createWindow() {
 
     mainWindow.once('ready-to-show', () => {
         mainWindow?.show()
+    })
+
+    // Register devtools shortcuts regardless of environment for debugging
+    globalShortcut.register('CommandOrControl+Shift+I', () => {
+        if (mainWindow) {
+            mainWindow.webContents.toggleDevTools()
+        }
+    })
+    globalShortcut.register('F12', () => {
+        if (mainWindow) {
+            mainWindow.webContents.toggleDevTools()
+        }
     })
 
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -451,6 +464,13 @@ function setupIPC() {
         if (url && (url.startsWith('https://') || url.startsWith('http://'))) {
             shell.openExternal(url)
         }
+    })
+
+    /* Reports — single aggregated call */
+
+    ipcMain.handle('reports:getDashboardData', (_, { userId, startDate, endDate }: { userId: string, startDate: string, endDate: string }) => {
+        if (!userId) return null
+        return dbOps.getReportsDashboardData(userId, startDate, endDate)
     })
 }
 

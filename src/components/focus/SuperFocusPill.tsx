@@ -91,12 +91,12 @@ export function SuperFocusPill() {
     }
 
     return (
-        <div className="w-full h-full flex flex-col gap-2 pointer-events-none pt-4">
+        <div className="w-full h-full flex flex-col gap-2 pointer-events-none pt-4 bg-transparent border-none outline-none">
             {/* Main Pill Row */}
             <div
                 className={cn(
-                    "w-[340px] h-[48px] flex items-center gap-3 px-4 shadow-2xl transition-all duration-300 pointer-events-auto shrink-0 relative",
-                    "glass-regular rounded-full group hover:border-[var(--border-hover)]"
+                    "w-[340px] h-[48px] flex items-center gap-3 px-4 transition-all duration-300 pointer-events-auto shrink-0 relative",
+                    "bg-[#0f1117] border border-white/10 rounded-full group hover:border-[#3b82f6]/50"
                 )}
                 style={{ WebkitAppRegion: 'no-drag' } as any}
                 onMouseEnter={() => setIsHovered(true)}
@@ -105,7 +105,7 @@ export function SuperFocusPill() {
                 {/* POMODORO BADGE: Half-on-air, Centered Top */}
                 {!isBreak && settings.pomodorosEnabled && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center pointer-events-none">
-                        <div className="bg-[var(--bg-primary)] border border-red-500/30 text-red-500 text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg tracking-widest uppercase">
+                        <div className="bg-[var(--bg-primary)] border border-red-500/30 text-red-500 text-[9px] font-black px-2 py-0.5 rounded-full tracking-widest uppercase">
                             POMO {formatShortTime(pomodoroRemaining)}
                         </div>
                     </div>
@@ -198,7 +198,7 @@ export function SuperFocusPill() {
             {/* Subtasks Panel (Floating Accordion) */}
             {isExpanded && (
                 <div
-                    className="mx-2 w-[324px] bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl p-3 shadow-2xl animate-in slide-in-from-top-4 fade-in duration-300 pointer-events-auto overflow-hidden shrink-0"
+                    className="mx-2 w-[324px] bg-[#0f1117] border border-white/10 rounded-2xl p-3 shadow-[0_10px_40px_rgba(0,0,0,0.8)] animate-in slide-in-from-top-4 fade-in duration-300 pointer-events-auto overflow-hidden shrink-0"
                     style={{ WebkitAppRegion: 'no-drag' } as any}
                 >
                     <div className="flex items-center justify-between mb-2 px-1">

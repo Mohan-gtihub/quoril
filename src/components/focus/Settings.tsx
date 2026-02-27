@@ -1,342 +1,334 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Bell, Zap, ShieldCheck, Palette, Sparkles } from 'lucide-react'
+import { ArrowLeft, Bell, Zap, Palette, Sparkles, Volume2, Monitor, Play, CheckCircle2 } from 'lucide-react'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useFocusStore } from '@/store/focusStore'
 import { soundService } from '@/services/soundService'
 import { cn } from '@/utils/helpers'
 
-const SectionHeader = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => (
-    <div className="flex items-start gap-4 mb-8">
-        <div className="w-10 h-10 rounded-xl bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)]">
-            <Icon className="w-5 h-5" />
-        </div>
-        <div>
-            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-1">{title}</h3>
-            <p className="text-sm text-[var(--text-tertiary)]">{description}</p>
-        </div>
-    </div>
-)
+// ── Shared UI Components ─────────────────────────────────────
 
-const Toggle = ({ value, onChange, label, description }: { value: boolean, onChange: (v: boolean) => void, label: string, description?: string }) => (
-    <div
-        onClick={(e) => {
-            e.preventDefault()
-            onChange(!value)
-        }}
-        className="flex items-center justify-between p-4 rounded-xl bg-[var(--bg-hover)]/30 border border-[var(--border-default)] hover:bg-[var(--bg-hover)] transition-all cursor-pointer group"
-    >
-        <div className="flex-1">
-            <div className="text-sm font-bold text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">{label}</div>
-            {description && <div className="text-[11px] text-[var(--text-muted)] mt-0.5">{description}</div>}
-        </div>
-        <div
-            className={cn(
-                "w-12 h-6 rounded-full relative transition-all duration-300 pointer-events-none",
-                value ? "bg-[var(--accent-primary)] shadow-[0_0_15px_var(--accent-glow)]" : "bg-[var(--bg-tertiary)]"
-            )}
-        >
-            <div className={cn(
-                "absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-300 shadow-sm",
-                value ? "left-7" : "left-1"
-            )} />
-        </div>
-    </div>
-)
-
-const Select = ({ value, onChange, options, label }: { value: string, onChange: (v: string) => void, options: { label: string, value: string }[], label: string }) => (
-    <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--bg-hover)]/30 border border-[var(--border-default)] hover:bg-[var(--bg-hover)] transition-all">
-        <span className="text-sm font-bold text-[var(--text-secondary)]">{label}</span>
-        <div className="relative">
-            <select
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className="bg-[var(--bg-secondary)] border border-[var(--border-default)] text-[var(--text-primary)] text-xs rounded-lg px-3 py-2 pr-8 cursor-pointer outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)]/20 transition-all hover:border-[var(--accent-primary)]/50 appearance-none"
-            >
-                {options.map(opt => (
-                    <option
-                        key={opt.value}
-                        value={opt.value}
-                        className="bg-[var(--bg-secondary)] text-[var(--text-primary)] py-2"
-                    >
-                        {opt.label}
-                    </option>
-                ))}
-            </select>
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-tertiary)]">
-                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+function SettingCard({ icon: Icon, title, description, children, accent = "text-blue-400 bg-blue-500/10" }: any) {
+    return (
+        <div className="bg-white/[0.02] border border-white/[0.05] rounded-3xl p-6 transition-all duration-300 hover:bg-white/[0.03]">
+            <div className="flex items-start gap-5 mb-8">
+                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border border-white/5", accent)}>
+                    <Icon className="w-6 h-6" />
+                </div>
+                <div>
+                    <h2 className="text-xl font-black text-white tracking-tight mb-1">{title}</h2>
+                    <p className="text-xs text-white/40 leading-relaxed max-w-lg">{description}</p>
+                </div>
+            </div>
+            <div className="space-y-6">
+                {children}
             </div>
         </div>
-    </div>
-)
+    )
+}
+
+function ToggleRow({ label, description, value, onChange }: any) {
+    return (
+        <label className="flex items-center justify-between group cursor-pointer p-4 -mx-4 rounded-2xl hover:bg-white/[0.02] transition-colors">
+            <div className="pr-6">
+                <p className="text-sm font-bold text-white/90 group-hover:text-white transition-colors">{label}</p>
+                {description && <p className="text-[11px] text-white/40 mt-1">{description}</p>}
+            </div>
+            <div className={cn(
+                "relative w-12 h-6 rounded-full transition-colors duration-300 ease-in-out shrink-0 border border-white/5",
+                value ? "bg-[var(--accent-primary)] shadow-[0_0_15px_rgba(139,92,246,0.3)]" : "bg-white/10"
+            )}>
+                <div className={cn(
+                    "absolute top-[1px] w-[20px] h-[20px] bg-white rounded-full transition-transform duration-300 ease-in-out shadow-sm",
+                    value ? "left-[calc(100%-22px)]" : "left-[2px]"
+                )} />
+            </div>
+        </label>
+    )
+}
+
+function SegmentedControl({ label, options, value, onChange }: any) {
+    return (
+        <div className="space-y-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-white/30">{label}</p>
+            <div className="flex flex-wrap gap-2 p-1.5 bg-white/[0.03] rounded-2xl border border-white/[0.05]">
+                {options.map((opt: any) => {
+                    const active = value === opt.value
+                    return (
+                        <button
+                            key={opt.value}
+                            onClick={() => onChange(opt.value)}
+                            className={cn(
+                                "flex-1 min-w-[80px] px-3 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap",
+                                active
+                                    ? "bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] shadow-sm border border-[var(--accent-primary)]/30"
+                                    : "text-white/40 hover:text-white/80 hover:bg-white/[0.05] border border-transparent"
+                            )}
+                        >
+                            {opt.label}
+                        </button>
+                    )
+                })}
+            </div>
+        </div>
+    )
+}
+
+function OptionGrid({ label, options, value, onChange, onPreview }: any) {
+    return (
+        <div className="space-y-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-white/30">{label}</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {options.map((opt: any) => {
+                    const active = value === opt.value
+                    return (
+                        <button
+                            key={opt.value}
+                            onClick={() => {
+                                onChange(opt.value)
+                                if (onPreview) onPreview(opt.value)
+                            }}
+                            className={cn(
+                                "flex items-center justify-between px-4 py-3 rounded-xl border text-xs font-bold transition-all group",
+                                active
+                                    ? "bg-[var(--accent-primary)]/10 border-[var(--accent-primary)]/50 text-[var(--accent-primary)] shadow-[0_0_20px_rgba(139,92,246,0.1)]"
+                                    : "bg-white/[0.02] border-white/[0.05] text-white/40 hover:bg-white/[0.05] hover:text-white hover:border-white/20"
+                            )}
+                        >
+                            <span className="truncate">{opt.label}</span>
+                            {active ? (
+                                <CheckCircle2 className="w-4 h-4 shrink-0 shadow-[0_0_10px_var(--accent-primary)] rounded-full" />
+                            ) : (
+                                onPreview && <Play className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                            )}
+                        </button>
+                    )
+                })}
+            </div>
+        </div>
+    )
+}
+
+// ── Main Page ────────────────────────────────────────────────
 
 export function Settings() {
     const navigate = useNavigate()
     const settings = useSettingsStore()
 
-    const handleBack = () => {
-        navigate('/planner')
+    const handlePomodoroLengthChange = (valStr: string) => {
+        const newLength = parseInt(valStr)
+        settings.updateSettings({ pomodoroLength: newLength })
+
+        const focus = useFocusStore.getState()
+        if (!focus.isActive || focus.isPaused) {
+            const newSeconds = newLength * 60
+            useFocusStore.setState({
+                pomodoroTotal: newSeconds,
+                pomodoroRemaining: newSeconds,
+                pomodoroRemainingAtStart: newSeconds
+            })
+        }
     }
 
     return (
-        <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col font-sans select-none transition-colors duration-500">
-            <header className="h-16 flex items-center justify-between px-8 border-b border-[var(--border-default)] glass-thick sticky top-0 z-50">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={handleBack}
-                        className="p-2 rounded-xl bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    <div>
-                        <h1 className="text-sm font-black uppercase tracking-[0.3em] text-[var(--text-muted)]">Configuration</h1>
-                        <h2 className="text-lg font-bold text-[var(--text-primary)]">System Settings</h2>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-mono text-[var(--accent-primary)] bg-[var(--accent-primary)]/10 px-3 py-1 rounded-full uppercase tracking-widest border border-[var(--accent-primary)]/20">V1.0.4 rdy</span>
+        <div className="h-full flex flex-col bg-transparent overflow-hidden">
+            <header className="flex-shrink-0 flex items-center gap-4 px-6 md:px-10 py-6 border-b border-white/[0.05] sticky top-0 bg-[#050510]/80 backdrop-blur-xl z-20">
+                <button
+                    onClick={() => navigate('/dashboard')}
+                    className="w-10 h-10 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-all hover:-translate-x-1"
+                >
+                    <ArrowLeft className="w-5 h-5 text-white/60" />
+                </button>
+                <div>
+                    <h1 className="text-2xl font-black text-white tracking-tight">System Config</h1>
+                    <p className="text-[10px] text-[var(--accent-primary)] uppercase tracking-[0.2em] font-bold">Preferences & Operations</p>
                 </div>
             </header>
 
-            <main className="flex-1 max-w-4xl w-full mx-auto p-8 pb-32 space-y-16">
-                {/* General */}
-                <section>
-                    <SectionHeader
+            <main className="flex-1 overflow-y-auto custom-scrollbar px-6 md:px-10 py-8 pb-32">
+                <div className="max-w-4xl mx-auto space-y-8">
+
+                    {/* ══ Aesthetics & Interface ══ */}
+                    <SettingCard
                         icon={Palette}
                         title="Aesthetics & Interface"
-                        description="Tailor the visual experience of your terminal."
-                    />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Toggle
-                            label="Hide Estimates"
-                            description="Streamline the UI by removing estimated times."
-                            value={settings.hideEstDoneTimes}
-                            onChange={(v) => settings.updateSettings({ hideEstDoneTimes: v })}
-                        />
-                        <Select
-                            label="Color Theme"
+                        description="Tailor the visual envelope of your terminal. Themes dynamically adjust the entire OS environment."
+                        accent="text-emerald-400 bg-emerald-500/10"
+                    >
+                        <SegmentedControl
+                            label="Color Environment"
                             value={settings.theme}
-                            onChange={(v) => settings.updateSettings({ theme: v as any })}
+                            onChange={(v: any) => settings.updateSettings({ theme: v })}
                             options={[
-                                { label: 'Onyx Black', value: 'dark' },
-                                { label: 'Lunar Light', value: 'light' },
+                                { label: 'Onyx Dark', value: 'dark' },
                                 { label: 'Arcade Blue', value: 'blue' },
                                 { label: 'Sunset Red', value: 'red' },
                                 { label: 'Cosmic Nebula', value: 'nebula' }
                             ]}
                         />
-                    </div>
-                </section>
+                        <div className="pt-2">
+                            <ToggleRow
+                                label="Minimal Interface"
+                                description="Hide estimated and completed times in task cards to reduce visual noise."
+                                value={settings.hideEstDoneTimes}
+                                onChange={(v: boolean) => settings.updateSettings({ hideEstDoneTimes: v })}
+                            />
+                            <div className="border-t border-white/[0.05] my-2" />
+                            <ToggleRow
+                                label="Scrolling Titles"
+                                description="Slide long mission names smoothly in the status bar instead of truncating."
+                                value={settings.scrollingTitle}
+                                onChange={(v: boolean) => settings.updateSettings({ scrollingTitle: v })}
+                            />
+                        </div>
+                    </SettingCard>
 
-                {/* Focus Settings */}
-                <section>
-                    <SectionHeader
+                    {/* ══ Focus Intelligence ══ */}
+                    <SettingCard
                         icon={Sparkles}
                         title="Focus Intelligence"
-                        description="Configure how the terminal manages your deep work sessions."
-                    />
-                    <div className="space-y-4">
-                        <Toggle
+                        description="Configure how the terminal manages your deep work sessions and recovery phases."
+                        accent="text-blue-400 bg-blue-500/10"
+                    >
+                        <ToggleRow
                             label="Pomodoro Protocol"
-                            description="Automatically schedule breaks after intense focus blocks."
+                            description="Automatically suggest recovery breaks after intense focus blocks."
                             value={settings.pomodorosEnabled}
-                            onChange={(v) => settings.updateSettings({ pomodorosEnabled: v })}
+                            onChange={(v: boolean) => settings.updateSettings({ pomodorosEnabled: v })}
                         />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Select
-                                label="Focus Duration"
-                                value={(settings.pomodoroLength || 25).toString()}
-                                onChange={(v) => {
-                                    const newLength = parseInt(v)
-                                    settings.updateSettings({ pomodoroLength: newLength })
 
-                                    // Aggressively update current focus store if not actively counting
-                                    // so the UI reflects the change immediately
-                                    const focus = useFocusStore.getState()
-                                    if (!focus.isActive || focus.isPaused) {
-                                        const newSeconds = newLength * 60
-                                        useFocusStore.setState({
-                                            pomodoroTotal: newSeconds,
-                                            pomodoroRemaining: newSeconds,
-                                            pomodoroRemainingAtStart: newSeconds
-                                        })
-                                    }
-                                }}
-                                options={[
-                                    { label: '5 Minutes', value: '5' },
-                                    { label: '15 Minutes', value: '15' },
-                                    { label: '25 Minutes', value: '25' },
-                                    { label: '30 Minutes', value: '30' },
-                                    { label: '45 Minutes', value: '45' },
-                                    { label: '50 Minutes', value: '50' },
-                                    { label: '60 Minutes', value: '60' }
-                                ]}
-                            />
-                            <Select
-                                label="Default Break Length"
-                                value={settings.defaultBreakLength.toString()}
-                                onChange={(v) => settings.updateSettings({ defaultBreakLength: parseInt(v) })}
-                                options={[
-                                    { label: '5 Minutes', value: '5' },
-                                    { label: '10 Minutes', value: '10' },
-                                    { label: '15 Minutes', value: '15' },
-                                    { label: '25 Minutes', value: '25' }
-                                ]}
-                            />
-                            <Toggle
-                                label="Scrolling Titles"
-                                description="Scroll long mission names in the status bar."
-                                value={settings.scrollingTitle}
-                                onChange={(v) => settings.updateSettings({ scrollingTitle: v })}
-                            />
-                        </div>
-                    </div>
-                </section>
+                        {settings.pomodorosEnabled && (
+                            <div className="grid md:grid-cols-2 gap-6 pt-2 animate-in fade-in slide-in-from-top-2">
+                                <SegmentedControl
+                                    label="Sprint Duration"
+                                    value={(settings.pomodoroLength || 25).toString()}
+                                    onChange={handlePomodoroLengthChange}
+                                    options={[
+                                        { label: '15m', value: '15' },
+                                        { label: '25m', value: '25' },
+                                        { label: '45m', value: '45' },
+                                        { label: '60m', value: '60' }
+                                    ]}
+                                />
+                                <SegmentedControl
+                                    label="Recovery Length"
+                                    value={settings.defaultBreakLength.toString()}
+                                    onChange={(v: string) => settings.updateSettings({ defaultBreakLength: parseInt(v) })}
+                                    options={[
+                                        { label: '5m', value: '5' },
+                                        { label: '10m', value: '10' },
+                                        { label: '15m', value: '15' },
+                                        { label: '25m', value: '25' }
+                                    ]}
+                                />
+                            </div>
+                        )}
+                    </SettingCard>
 
-                {/* Alerts */}
-                <section>
-                    <SectionHeader
+                    {/* ══ Alert Systems ══ */}
+                    <SettingCard
                         icon={Zap}
                         title="Alert Systems"
-                        description="Stay on track with tactical pulses and visual cues."
-                    />
-                    <div className="space-y-4">
-                        <Toggle
+                        description="Periodic tactical pulses and visual cues keep your attention anchored during deep work."
+                        accent="text-amber-400 bg-amber-500/10 border-amber-500/20 shadow-[0_0_30px_rgba(245,158,11,0.05)]"
+                    >
+                        <ToggleRow
                             label="Timed Pulses"
-                            description="Periodic alerts to keep your focus from drifting."
+                            description="Play a subtle audio cue at set intervals to prevent mind-wandering."
                             value={settings.timedAlertsEnabled}
-                            onChange={(v) => settings.updateSettings({ timedAlertsEnabled: v })}
+                            onChange={(v: boolean) => settings.updateSettings({ timedAlertsEnabled: v })}
                         />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Select
-                                label="Pulse Interval"
-                                value={settings.alertInterval.toString()}
-                                onChange={(v) => settings.updateSettings({ alertInterval: parseInt(v) })}
-                                options={[
-                                    { label: 'Every 5m', value: '5' },
-                                    { label: 'Every 10m', value: '10' },
-                                    { label: 'Every 15m', value: '15' },
-                                    { label: 'Every 20m', value: '20' }
-                                ]}
-                            />
-                            <Toggle
-                                label="Animated Flash"
-                                description="Bright flash on the screen when an alert triggers."
-                                value={settings.animatedFlash}
-                                onChange={(v) => settings.updateSettings({ animatedFlash: v })}
-                            />
-                        </div>
-                        <div className="space-y-4">
-                            <Select
-                                label="Alert Signal"
-                                value={settings.alertSound}
-                                onChange={(v) => {
-                                    settings.updateSettings({ alertSound: v });
-                                    soundService.playAlert(v);
-                                }}
-                                options={[
-                                    { label: 'Tactical Ping', value: 'ping' },
-                                    { label: 'Sonar Pulse', value: 'sonar' },
-                                    { label: 'Radar Sweep', value: 'radar' },
-                                    { label: 'Digital Blip', value: 'digital' },
-                                    { label: 'Crystal Chime', value: 'crystal' },
-                                    { label: 'Minimal Tick', value: 'minimal' },
-                                    { label: 'Classic Beep', value: 'beep' }
-                                ]}
-                            />
-                            <button
-                                onClick={() => soundService.playAlert(settings.alertSound)}
-                                className="w-full py-3 rounded-xl bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/30 text-[var(--accent-primary)] text-xs font-bold hover:bg-[var(--accent-primary)]/20 transition-all flex items-center justify-center gap-2"
-                            >
-                                <Zap className="w-3.5 h-3.5" />
-                                Test Alert Signal
-                            </button>
-                        </div>
-                    </div>
-                </section>
 
-                {/* Notifications */}
-                <section>
-                    <SectionHeader
+                        {settings.timedAlertsEnabled && (
+                            <div className="space-y-6 pt-2 pb-2 animate-in fade-in slide-in-from-top-2">
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <SegmentedControl
+                                        label="Pulse Frequency"
+                                        value={settings.alertInterval.toString()}
+                                        onChange={(v: string) => settings.updateSettings({ alertInterval: parseInt(v) })}
+                                        options={[
+                                            { label: '5m', value: '5' },
+                                            { label: '10m', value: '10' },
+                                            { label: '15m', value: '15' },
+                                            { label: '20m', value: '20' }
+                                        ]}
+                                    />
+                                    <div className="space-y-3">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/30 hidden md:block">&nbsp;</p>
+                                        <ToggleRow
+                                            label="Animated Screen Flash"
+                                            description="Edge-screen flash effect when pulse triggers."
+                                            value={settings.animatedFlash}
+                                            onChange={(v: boolean) => settings.updateSettings({ animatedFlash: v })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <OptionGrid
+                                    label="Tactical Pulse Sound"
+                                    value={settings.alertSound}
+                                    onChange={(v: string) => settings.updateSettings({ alertSound: v })}
+                                    onPreview={(v: string) => soundService.playAlert(v)}
+                                    options={[
+                                        { label: 'Ping', value: 'ping' },
+                                        { label: 'Sonar', value: 'sonar' },
+                                        { label: 'Radar', value: 'radar' },
+                                        { label: 'Minimal', value: 'minimal' },
+                                        { label: 'Crystal', value: 'crystal' },
+                                        { label: 'Beep', value: 'beep' }
+                                    ]}
+                                />
+                            </div>
+                        )}
+                    </SettingCard>
+
+                    {/* ══ External Comms ══ */}
+                    <SettingCard
                         icon={Bell}
                         title="External Comms"
-                        description="System-level notifications for session events."
-                    />
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Toggle
-                                label="Push Alerts"
-                                value={settings.notificationAlertsEnabled}
-                                onChange={(v) => {
-                                    if (v && Notification.permission !== 'granted') {
-                                        Notification.requestPermission()
-                                    }
-                                    settings.updateSettings({ notificationAlertsEnabled: v })
-                                }}
-                            />
-                            <Toggle
-                                label="Success Chime"
-                                value={settings.successSoundEnabled}
-                                onChange={(v) => settings.updateSettings({ successSoundEnabled: v })}
-                            />
-                        </div>
-
-                        <Select
-                            label="Success Signal"
-                            value={settings.successSound}
-                            onChange={(v) => {
-                                settings.updateSettings({ successSound: v });
-                                soundService.playSuccess(v);
+                        description="System-level notifications and auditory rewards for mission completion."
+                        accent="text-violet-400 bg-violet-500/10"
+                    >
+                        <ToggleRow
+                            label="Push Notifications"
+                            description="Send OS-level alerts when timers finish."
+                            value={settings.notificationAlertsEnabled}
+                            onChange={(v: boolean) => {
+                                if (v && Notification.permission !== 'granted') {
+                                    Notification.requestPermission()
+                                }
+                                settings.updateSettings({ notificationAlertsEnabled: v })
                             }}
-                            options={[
-                                { label: 'Victory Bell', value: 'Victory Bell' },
-                                { label: 'Futuristic', value: 'Futuristic' },
-                                { label: 'Mission Achievement', value: 'Achievement' },
-                                { label: 'Magic Reveal', value: 'Magic Reveal' },
-                                { label: 'Data Uplink', value: 'Data Uplink' },
-                                { label: 'Level Up', value: 'Level Up' }
-                            ]}
                         />
-                    </div>
-                </section>
+                        <div className="border-t border-white/[0.05] my-2" />
+                        <ToggleRow
+                            label="Success Checksum Reward"
+                            description="Play a celebratory chime when marking tasks complete."
+                            value={settings.successSoundEnabled}
+                            onChange={(v: boolean) => settings.updateSettings({ successSoundEnabled: v })}
+                        />
 
-                {/* Completion */}
-                <section>
-                    <SectionHeader
-                        icon={ShieldCheck}
-                        title="Success Protocol"
-                        description="What happens after a mission is successfully completed."
-                    />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Toggle
-                            label="Celebration Screen"
-                            value={settings.showSuccessScreen}
-                            onChange={(v) => settings.updateSettings({ showSuccessScreen: v })}
-                        />
-                        <Toggle
-                            label="Fun Rewards (GIFs)"
-                            value={settings.funGifEnabled}
-                            onChange={(v) => settings.updateSettings({ funGifEnabled: v })}
-                        />
-                    </div>
-                </section>
-            </main>
+                        {settings.successSoundEnabled && (
+                            <div className="pt-2 animate-in fade-in slide-in-from-top-2">
+                                <OptionGrid
+                                    label="Success Signature"
+                                    value={settings.successSound}
+                                    onChange={(v: string) => settings.updateSettings({ successSound: v })}
+                                    onPreview={(v: string) => soundService.playSuccess(v)}
+                                    options={[
+                                        { label: 'Victory Bell', value: 'Victory Bell' },
+                                        { label: 'Level Up', value: 'Level Up' },
+                                        { label: 'Achievement', value: 'Achievement' },
+                                        { label: 'Data Uplink', value: 'Data Uplink' },
+                                        { label: 'Magic Reveal', value: 'Magic Reveal' }
+                                    ]}
+                                />
+                            </div>
+                        )}
+                    </SettingCard>
 
-            {/* Sticky Save / Factory Reset Bar */}
-            <div className="fixed bottom-0 left-0 right-0 h-20 glass-thick border-t border-[var(--border-default)] flex items-center justify-center px-8">
-                <div className="max-w-4xl w-full flex items-center justify-between">
-                    <p className="text-[10px] font-mono text-[var(--text-muted)] uppercase">All changes are synchronized across your neural link.</p>
-                    <div className="flex gap-4">
-                        <button className="px-6 py-2 rounded-xl bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] text-xs font-bold transition-all border border-[var(--border-default)]">Factory Reset</button>
-                        <button
-                            onClick={handleBack}
-                            className="px-8 py-2 rounded-xl bg-[var(--accent-primary)] hover:opacity-90 text-white text-xs font-bold transition-all shadow-[0_0_20px_var(--accent-glow)]"
-                        >Save & Synchronize</button>
-                    </div>
                 </div>
-            </div>
+            </main>
         </div>
     )
 }

@@ -94,6 +94,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
             return () => ipcRenderer.removeListener('deep-link', subscription)
         }
     },
+
+    // Reports
+    reports: {
+        getDashboardData: (args: { userId: string; startDate: string; endDate: string }) =>
+            ipcRenderer.invoke('reports:getDashboardData', args),
+    },
 })
 
 // Window Management (Special case for legacy/custom calls)
@@ -179,6 +185,9 @@ export interface ElectronAPI {
     }
     auth: {
         setUser: (userId: string) => Promise<void>
+    }
+    reports: {
+        getDashboardData: (args: { userId: string; startDate: string; endDate: string }) => Promise<any>
     }
 }
 

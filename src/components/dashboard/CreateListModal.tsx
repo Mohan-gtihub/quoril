@@ -89,7 +89,7 @@ export function CreateListModal({ isOpen, onClose, listToEdit, defaultWorkspaceI
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-[var(--text-primary)]">
-                        {listToEdit ? 'Configure Module' : 'Initialize Module'}
+                        {listToEdit ? 'Edit List' : 'Create New List'}
                     </h2>
                     <button
                         onClick={onClose}
@@ -104,13 +104,13 @@ export function CreateListModal({ isOpen, onClose, listToEdit, defaultWorkspaceI
                     {/* Name Input */}
                     <div>
                         <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
-                            Deployment Designation
+                            List Name
                         </label>
                         <input
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            placeholder="e.g., Strategic Ops"
+                            placeholder="e.g., Marketing Tasks"
                             className="w-full px-4 py-3 bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-xl text-[var(--text-primary)] placeholder:[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/50"
                             autoFocus
                         />
@@ -119,7 +119,7 @@ export function CreateListModal({ isOpen, onClose, listToEdit, defaultWorkspaceI
                     {/* Icon Picker */}
                     <div>
                         <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
-                            Visual Identifier
+                            List Icon
                         </label>
                         <div className="grid grid-cols-8 gap-2">
                             {PRESET_ICONS.map((icon) => (
@@ -141,7 +141,7 @@ export function CreateListModal({ isOpen, onClose, listToEdit, defaultWorkspaceI
                     {/* Color Picker */}
                     <div>
                         <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
-                            Signature Frequency
+                            Theme Color
                         </label>
                         <div className="grid grid-cols-6 gap-2">
                             {PRESET_COLORS.map((color) => (
@@ -171,7 +171,7 @@ export function CreateListModal({ isOpen, onClose, listToEdit, defaultWorkspaceI
                             disabled={!name.trim() || loading}
                             className="flex-1 btn-glass-primary py-3 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {loading ? (listToEdit ? 'Updating...' : 'Deploying...') : (listToEdit ? 'Save Changes' : 'Deploy Module')}
+                            {loading ? (listToEdit ? 'Updating...' : 'Creating...') : (listToEdit ? 'Save Changes' : 'Create List')}
                         </button>
                     </div>
                 </form>

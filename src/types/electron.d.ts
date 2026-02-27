@@ -1,4 +1,5 @@
 export interface ElectronAPI {
+    reports: any
     window: {
         minimize: () => Promise<void>
         maximize: () => Promise<void>

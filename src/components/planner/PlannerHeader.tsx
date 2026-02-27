@@ -23,7 +23,7 @@ export function PlannerHeader() {
     }
 
     return (
-        <div className="flex items-center justify-between p-4 border-b" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-default)' }}>
+        <div className="flex items-center justify-between p-4 border-b relative z-50" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-default)' }}>
             {/* Workspace Selector */}
             <div className="relative group z-50">
                 <button
@@ -48,7 +48,7 @@ export function PlannerHeader() {
 
                 {/* Dropdown */}
                 {isDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-2 w-64 border rounded-xl shadow-xl overflow-hidden py-1" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-default)' }}>
+                    <div className="absolute top-full left-0 mt-2 w-64 border rounded-xl shadow-2xl glass-thick z-50 overflow-hidden py-1" style={{ borderColor: 'var(--border-default)' }}>
                         <div className="px-3 py-2 text-xs font-bold uppercase" style={{ color: 'var(--text-muted)' }}>Views</div>
                         <button
                             onClick={() => {

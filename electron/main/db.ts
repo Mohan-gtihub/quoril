@@ -227,6 +227,136 @@ export const dbOps = {
             console.warn(`[DB] Removing ${domainCorrupted.length} corrupted domain sessions`)
             exec(`DELETE FROM domain_sessions WHERE duration_seconds > 86400 OR duration_seconds < 0 OR end_time < start_time`)
         }
+    },
+
+    /* ---- Reports Dashboard (one aggregated call) ---- */
+
+    getReportsDashboardData(userId: string, startDate: string, endDate: string) {
+        // 1. Focus Summary — total seconds, session count, avg, interruptions proxy
+        const focusSummary = (exec(`
+            SELECT
+                COALESCE(SUM(seconds), 0)          AS totalSeconds,
+                COUNT(*)                            AS sessionCount,
+                COALESCE(AVG(seconds), 0)           AS avgSeconds,
+                COALESCE(SUM(CASE WHEN type='break' THEN 1 ELSE 0 END), 0) AS breakCount
+            FROM focus_sessions
+            WHERE user_id = ?
+              AND start_time >= ?
+              AND start_time <= ?
+        `, [userId, startDate, endDate]) as any[])?.[0] ?? {}
+
+        // 2. Weekly Trend — focus minutes per calendar day
+        const weeklyTrend = (exec(`
+            SELECT
+                strftime('%Y-%m-%d', start_time)    AS day,
+                COALESCE(SUM(seconds), 0)           AS totalSeconds,
+                COUNT(*)                            AS sessionCount
+            FROM focus_sessions
+            WHERE user_id = ?
+              AND start_time >= ?
+              AND start_time <= ?
+              AND type != 'break'
+            GROUP BY day
+            ORDER BY day ASC
+        `, [userId, startDate, endDate]) as any[]) ?? []
+
+        // 3. Task Stats — completion, estimation accuracy, overdue, recurring
+        const taskStats = (exec(`
+            SELECT
+                id,
+                title,
+                status,
+                estimate_m          AS estimated_minutes,
+                spent_s             AS actual_seconds,
+                completed_at,
+                created_at,
+                is_recurring,
+                last_reset_date,
+                list_id
+            FROM tasks
+            WHERE user_id = ?
+              AND deleted_at IS NULL
+        `, [userId]) as any[]) ?? []
+
+        // 4. App Usage — grouped by app + category, pre-summed
+        const appUsage = (exec(`
+            SELECT
+                s.app_id                            AS appName,
+                COALESCE(a.category, 'Other')       AS category,
+                SUM(s.duration_seconds)             AS totalSeconds,
+                SUM(s.idle_seconds)                 AS idleSeconds,
+                COUNT(*)                            AS sessionCount
+            FROM app_sessions s
+            LEFT JOIN apps a ON s.app_id = a.id
+            WHERE s.start_time >= ?
+              AND s.start_time <= ?
+            GROUP BY s.app_id
+            ORDER BY totalSeconds DESC
+            LIMIT 30
+        `, [startDate, endDate]) as any[]) ?? []
+
+        // 5. Context Switching — sessions per day with avg duration & short sessions
+        const contextSwitching = (exec(`
+            SELECT
+                strftime('%Y-%m-%d', start_time)    AS day,
+                COUNT(*)                            AS sessionCount,
+                COALESCE(AVG(duration_seconds), 0)  AS avgDuration,
+                SUM(CASE WHEN duration_seconds < 120 THEN 1 ELSE 0 END) AS shortSessions
+            FROM app_sessions
+            WHERE start_time >= ?
+              AND start_time <= ?
+            GROUP BY day
+            ORDER BY day ASC
+        `, [startDate, endDate]) as any[]) ?? []
+
+        // 6. Workspace Stats — tasks per workspace with focus seconds
+        const workspaceStats = (exec(`
+            SELECT
+                w.id                                AS workspaceId,
+                w.name                              AS workspaceName,
+                w.color                             AS workspaceColor,
+                COUNT(DISTINCT t.id)                AS taskCount,
+                SUM(CASE WHEN t.status='done' THEN 1 ELSE 0 END) AS completedCount,
+                COALESCE(SUM(t.spent_s), 0)         AS focusSeconds
+            FROM workspaces w
+            LEFT JOIN lists l ON l.workspace_id = w.id AND l.deleted_at IS NULL
+            LEFT JOIN tasks t ON t.list_id = l.id AND t.deleted_at IS NULL
+            WHERE w.user_id = ?
+              AND w.deleted_at IS NULL
+            GROUP BY w.id
+            ORDER BY focusSeconds DESC
+        `, [userId]) as any[]) ?? []
+
+        // 7. Productive App Time — for productivity score
+        const productiveAppSeconds = (exec(`
+            SELECT COALESCE(SUM(s.duration_seconds - s.idle_seconds), 0) AS productiveAppSeconds,
+                   COALESCE(SUM(s.duration_seconds), 0)                   AS totalAppSeconds,
+                   COALESCE(SUM(s.idle_seconds), 0)                       AS totalIdleSeconds
+            FROM app_sessions s
+            LEFT JOIN apps a ON s.app_id = a.id
+            WHERE s.start_time >= ?
+              AND s.start_time <= ?
+              AND COALESCE(a.category, 'Other') IN ('Development', 'Work')
+        `, [startDate, endDate]) as any[])?.[0] ?? {}
+
+        // 8. All app seconds in range (for denominator)
+        const allAppSeconds = (exec(`
+            SELECT COALESCE(SUM(duration_seconds), 0)  AS totalSeconds,
+                   COALESCE(SUM(idle_seconds), 0)       AS idleSeconds
+            FROM app_sessions
+            WHERE start_time >= ? AND start_time <= ?
+        `, [startDate, endDate]) as any[])?.[0] ?? {}
+
+        return {
+            focusSummary,
+            weeklyTrend,
+            taskStats,
+            appUsage,
+            contextSwitching,
+            workspaceStats,
+            productiveAppSeconds,
+            allAppSeconds,
+        }
     }
 }
 
@@ -346,6 +476,17 @@ function autoMigrate() {
             db.prepare("UPDATE db_meta SET value='7' WHERE key='version'").run()
         })()
         version = 7
+    }
+
+    if (version < 8) {
+        db.transaction(() => {
+            // Performance indexes for reports queries
+            db.exec("CREATE INDEX IF NOT EXISTS idx_focus_sessions_start_time ON focus_sessions(start_time)")
+            db.exec("CREATE INDEX IF NOT EXISTS idx_tasks_completed_at ON tasks(completed_at)")
+            db.exec("CREATE INDEX IF NOT EXISTS idx_tasks_list_id ON tasks(list_id)")
+            db.prepare("UPDATE db_meta SET value='8' WHERE key='version'").run()
+        })()
+        version = 8
     }
 }
 
