@@ -44,6 +44,7 @@ function BoardColumn({
     progress?: number
 }) {
     const { setNodeRef } = useDroppable({ id: column.id })
+    const { hideEstDoneTimes } = useSettingsStore()
 
     const isToday = column.id === 'today'
     const count = tasks.length
@@ -81,13 +82,13 @@ function BoardColumn({
 
                         <div className="flex items-center gap-2">
                             {column.id === 'done' ? (
-                                !useSettingsStore.getState().hideEstDoneTimes && (
+                                !hideEstDoneTimes && (
                                     <span className="text-[10px] font-mono px-1.5 py-0.5 rounded font-bold" style={{ color: 'var(--accent-green-400)', backgroundColor: 'var(--accent-green-100)' }}>
                                         {count} Completed
                                     </span>
                                 )
                             ) : (
-                                !useSettingsStore.getState().hideEstDoneTimes && totalMinutes > 0 && (
+                                !hideEstDoneTimes && totalMinutes > 0 && (
                                     <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ color: 'var(--text-tertiary)', backgroundColor: 'var(--accent-gray-800)' }}>
                                         {formatTime(totalMinutes)}
                                     </span>

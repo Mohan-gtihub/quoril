@@ -16,6 +16,13 @@ const P_INFO: Record<string, { label: string; color: string }> = {
     high: { label: 'High', color: '#f97316' },
 }
 
+function getGreeting() {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Good morning'
+    if (hour < 17) return 'Good afternoon'
+    return 'Good evening'
+}
+
 function fmtMin(m: number) {
     if (m >= 60) return `${Math.floor(m / 60)}h ${m % 60}m`
     return m ? `${m}m` : '0m'
@@ -89,7 +96,7 @@ export function HomeOverview() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
                     <h1 className="text-[28px] font-black tracking-tight text-[var(--text-primary)]">
-                        Good morning, {user?.email?.split('@')[0] || 'User'}.
+                        {getGreeting()}, {user?.email?.split('@')[0] || 'User'}.
                     </h1>
                     <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--text-muted)] font-medium">
                         <p>You've focused <strong className="text-emerald-400">{fmtMin(stats.weeklyMins)}</strong> this week.</p>

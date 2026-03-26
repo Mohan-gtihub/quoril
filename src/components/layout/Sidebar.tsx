@@ -329,6 +329,22 @@ export function Sidebar() {
 
             </div>
 
+            {/* Bottom: Settings shortcut */}
+            <div className="px-2 pb-3 pt-2 border-t border-[var(--border-default)]">
+                <button
+                    onClick={() => navigate('/settings')}
+                    className={cn(
+                        'w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-[13px] font-medium transition-all text-left outline-none',
+                        location.pathname === '/settings'
+                            ? 'bg-[var(--accent-primary)]/10 text-[var(--text-primary)]'
+                            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+                    )}
+                >
+                    <Settings size={14} className={cn(location.pathname === '/settings' ? "text-[var(--accent-primary)]" : "text-[var(--text-muted)]")} />
+                    <span className="flex-1">Settings</span>
+                </button>
+            </div>
+
         </aside>
     )
 }

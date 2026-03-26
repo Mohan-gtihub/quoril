@@ -52,6 +52,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
     } = useSortable({ id: task.id, disabled: !draggable })
 
     const { updateTask, archiveTask, permanentDeleteTask, moveTaskToColumn, fetchSubtasks, subtasks, toggleSubtask, deleteSubtask, createSubtask, toggleTaskRecurring } = useTaskStore()
+    const settings = useSettingsStore()
 
     const { selectedDate } = usePlannerStore()
     // Focus Store – subscribe to what we need for active-timer display
@@ -180,8 +181,6 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
             ref={setNodeRef}
             {...attributes}
             {...listeners}
-            draggable
-            {...attributes}
             className={cn(
                 "group rounded-xl p-3 mb-2 transition-all duration-300 border backdrop-blur-sm relative",
                 stateStyles
@@ -276,8 +275,9 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                 )}>
                     {!isTaskActive && (
                         <button
-                            onClick={(e) => { e.stopPropagation(); focus.startFocus(task.id); }}
+                            onClick={(e) => { e.stopPropagation(); focus.startSession(task.id); }}
                             className="p-1.5 rounded-lg hover:bg-blue-500/10 text-white/40 hover:text-blue-400 transition-colors"
+                            aria-label="Instant Launch"
                             title="Instant Launch"
                         >
                             <Zap className="w-4 h-4 fill-current" />
@@ -309,7 +309,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
             <div className="flex items-center justify-between mt-3 pl-1">
                 <div className="flex items-center gap-4">
                     {/* EST */}
-                    {!useSettingsStore.getState().hideEstDoneTimes && (
+                    {!settings.hideEstDoneTimes && (
                         <div
                             className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
                             onClick={(e) => { e.stopPropagation(); setIsEditingEst(true); }}
@@ -504,8 +504,9 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                         </div>
                         <div className="flex gap-2">
                             <button
-                                onClick={() => { focus.startFocus(task.id) }}
+                                onClick={() => { focus.startSession(task.id) }}
                                 className="p-2 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/20 hover:text-[var(--accent-secondary)] transition-all"
+                                aria-label="Launch Task Now"
                                 title="Launch Task Now"
                             >
                                 <Zap className="w-4 h-4 fill-current" />

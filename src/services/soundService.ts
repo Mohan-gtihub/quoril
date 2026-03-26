@@ -11,6 +11,7 @@ const SOUND_MAP: Record<string, string> = {
 
     // Success Sounds
     'achievement': '/sounds/achievement.mp3',
+    'Achievement': '/sounds/achievement.mp3',
     'levelup': '/sounds/levelup.mp3',
     'reveal': '/sounds/reveal.mp3',
 

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Bell, Zap, Palette, Sparkles, Play, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Bell, Zap, Palette, Sparkles, Play, CheckCircle2, Target, Eye, Cpu } from 'lucide-react'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useFocusStore } from '@/store/focusStore'
 import { soundService } from '@/services/soundService'
@@ -26,13 +26,19 @@ function SettingCard({ icon: Icon, title, description, children, accent = "text-
     )
 }
 
-function ToggleRow({ label, description, value }: any) {
+function ToggleRow({ label, description, value, onChange }: any) {
     return (
         <label className="flex items-center justify-between group cursor-pointer p-4 -mx-4 rounded-2xl hover:bg-white/[0.02] transition-colors">
             <div className="pr-6">
                 <p className="text-sm font-bold text-white/90 group-hover:text-white transition-colors">{label}</p>
                 {description && <p className="text-[11px] text-white/40 mt-1">{description}</p>}
             </div>
+            <input
+                type="checkbox"
+                checked={!!value}
+                onChange={(e) => onChange?.(e.target.checked)}
+                className="sr-only"
+            />
             <div className={cn(
                 "relative w-12 h-6 rounded-full transition-colors duration-300 ease-in-out shrink-0 border border-white/5",
                 value ? "bg-[var(--accent-primary)] shadow-[0_0_15px_rgba(139,92,246,0.3)]" : "bg-white/10"
@@ -108,6 +114,34 @@ function OptionGrid({ label, options, value, onChange, onPreview }: any) {
     )
 }
 
+function SliderRow({ label, description, value, onChange, min, max, step = 1, format }: any) {
+    const display = format ? format(value) : value
+    return (
+        <div className="space-y-3 p-4 -mx-4">
+            <div className="flex items-center justify-between">
+                <div>
+                    <p className="text-sm font-bold text-white/90">{label}</p>
+                    {description && <p className="text-[11px] text-white/40 mt-0.5">{description}</p>}
+                </div>
+                <span className="text-sm font-black text-[var(--accent-primary)] tabular-nums">{display}</span>
+            </div>
+            <input
+                type="range"
+                min={min}
+                max={max}
+                step={step}
+                value={value}
+                onChange={(e) => onChange(Number(e.target.value))}
+                className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-white/10 accent-[var(--accent-primary)]"
+            />
+            <div className="flex justify-between text-[10px] text-white/20 font-bold">
+                <span>{format ? format(min) : min}</span>
+                <span>{format ? format(max) : max}</span>
+            </div>
+        </div>
+    )
+}
+
 // ── Main Page ────────────────────────────────────────────────
 
 export function Settings() {
@@ -133,7 +167,7 @@ export function Settings() {
         <div className="h-full flex flex-col bg-transparent overflow-hidden">
             <header className="flex-shrink-0 flex items-center gap-4 px-6 md:px-10 py-6 border-b border-white/[0.05] sticky top-0 bg-[#050510]/80 backdrop-blur-xl z-20">
                 <button
-                    onClick={() => navigate('/dashboard')}
+                    onClick={() => navigate(-1)}
                     className="w-10 h-10 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-all hover:-translate-x-1"
                 >
                     <ArrowLeft className="w-5 h-5 text-white/60" />
@@ -157,7 +191,7 @@ export function Settings() {
                         <SegmentedControl
                             label="Color Environment"
                             value={settings.theme}
-                            onChange={(v: any) => settings.updateSettings({ theme: v })}
+                            onChange={(v: string) => settings.updateSettings({ theme: v as any })}
                             options={[
                                 { label: 'Onyx Dark', value: 'dark' },
                                 { label: 'Arcade Blue', value: 'blue' },
@@ -222,6 +256,61 @@ export function Settings() {
                                 />
                             </div>
                         )}
+                    </SettingCard>
+
+                    {/* ══ Mission Goals ══ */}
+                    <SettingCard
+                        icon={Target}
+                        title="Mission Goals"
+                        description="Set your daily focus target and control how victory is celebrated when you hit it."
+                        accent="text-cyan-400 bg-cyan-500/10"
+                    >
+                        <SliderRow
+                            label="Daily Focus Goal"
+                            description="Minimum focused time to consider the day a success."
+                            value={settings.dailyFocusGoalMinutes}
+                            onChange={(v: number) => settings.updateSettings({ dailyFocusGoalMinutes: v })}
+                            min={30}
+                            max={480}
+                            step={15}
+                            format={(v: number) => {
+                                const h = Math.floor(v / 60)
+                                const m = v % 60
+                                return h > 0 ? `${h}h ${m > 0 ? `${m}m` : ''}`.trim() : `${m}m`
+                            }}
+                        />
+                        <div className="border-t border-white/[0.05]" />
+                        <ToggleRow
+                            label="Victory Screen"
+                            description="Display the completion celebration when a focus session ends."
+                            value={settings.showSuccessScreen}
+                            onChange={(v: boolean) => settings.updateSettings({ showSuccessScreen: v })}
+                        />
+                        {settings.showSuccessScreen && (
+                            <div className="animate-in fade-in slide-in-from-top-2">
+                                <ToggleRow
+                                    label="Animated GIF Reward"
+                                    description="Show a celebration GIF on the victory screen."
+                                    value={settings.funGifEnabled}
+                                    onChange={(v: boolean) => settings.updateSettings({ funGifEnabled: v })}
+                                />
+                            </div>
+                        )}
+                    </SettingCard>
+
+                    {/* ══ Super Focus Mode ══ */}
+                    <SettingCard
+                        icon={Cpu}
+                        title="Super Focus Mode"
+                        description="Locks the interface to a minimal pill overlay. Maximises screen space for deep work."
+                        accent="text-rose-400 bg-rose-500/10"
+                    >
+                        <ToggleRow
+                            label="Super Focus Mode"
+                            description="Collapses the UI to a floating pill. Press Escape or click the pill to exit."
+                            value={settings.superFocusMode}
+                            onChange={(v: boolean) => settings.updateSettings({ superFocusMode: v })}
+                        />
                     </SettingCard>
 
                     {/* ══ Alert Systems ══ */}
@@ -324,6 +413,21 @@ export function Settings() {
                                 />
                             </div>
                         )}
+                    </SettingCard>
+
+                    {/* ══ Visibility ══ */}
+                    <SettingCard
+                        icon={Eye}
+                        title="Data Visibility"
+                        description="Control what information is surfaced during active sessions and in your reports."
+                        accent="text-pink-400 bg-pink-500/10"
+                    >
+                        <ToggleRow
+                            label="Minimal Interface"
+                            description="Hide estimated and completed times in task cards during focus sessions."
+                            value={settings.hideEstDoneTimes}
+                            onChange={(v: boolean) => settings.updateSettings({ hideEstDoneTimes: v })}
+                        />
                     </SettingCard>
 
                 </div>

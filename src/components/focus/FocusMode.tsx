@@ -348,7 +348,7 @@ export function FocusMode() {
                             )}
                         >
                             {isPaused ? <Play className="w-5 h-5 fill-current" /> : <Pause className="w-5 h-5 fill-current" />}
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">{isPaused ? 'Resuming' : 'Holding'}</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">{isPaused ? 'Resume' : 'Hold'}</span>
                         </button>
 
                         <HoldButton
@@ -453,40 +453,6 @@ export function FocusMode() {
                         </div>
                     </div>
 
-                    {activeTask && (
-                        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#12141c]/90 backdrop-blur-md border border-white/10 px-4 py-2 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-bottom-4 duration-500 z-50">
-                            <button
-                                onClick={() => isBreak ? stopBreak() : startBreak()}
-                                className={cn(
-                                    "flex items-center gap-2 px-4 py-2 rounded-xl transition-all border group",
-                                    isBreak
-                                        ? "bg-amber-500/20 border-amber-500/40 text-amber-500"
-                                        : "bg-white/5 border-white/5 hover:bg-white/10"
-                                )}
-                            >
-                                <Zap className={cn("w-4 h-4", isBreak ? "fill-current" : "text-amber-500 fill-amber-500")} />
-                                <span className="text-xs font-bold">{isBreak ? 'End Break' : 'Break'}</span>
-                            </button>
-                            <div className="w-px h-6 bg-white/10" />
-                            <div className="flex items-center gap-1">
-                                <button className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"><FileText className="w-4 h-4" /></button>
-                                <button
-                                    onClick={() => isPaused ? resumeSession() : pauseSession()}
-                                    className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                                >
-                                    {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                                </button>
-                                <button
-                                    onClick={() => endSession()}
-                                    className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                                ><ArrowRight className="w-4 h-4" /></button>
-                                <button
-                                    onClick={() => handleCompleteTask(activeTask.id)}
-                                    className="p-2 text-green-500/60 hover:text-green-500 hover:bg-green-500/10 rounded-lg transition-colors"
-                                ><CheckCircle2 className="w-4 h-4" /></button>
-                            </div>
-                        </div>
-                    )}
                 </main>
 
                 {showCreateModal && (
