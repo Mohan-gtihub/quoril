@@ -33,10 +33,10 @@ export const backupService = {
 
             // 2. Direct Task Update (Efficient)
             if (window.electronAPI?.db) {
-                window.electronAPI.db.exec(
-                    'UPDATE tasks SET spent_s = ?, updated_at = ? WHERE id = ?',
-                    [seconds, new Date().toISOString(), taskId]
-                ).catch(err => {
+                window.electronAPI.db.updateTask(taskId, {
+                    spent_s: seconds,
+                    updated_at: new Date().toISOString()
+                }).catch((err: unknown) => {
                     console.error("Failed to backup to DB", err)
                 })
             }
