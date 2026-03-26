@@ -126,7 +126,7 @@ export const dbOps = {
     },
 
     getSessions(userId: string) {
-        return exec("SELECT * FROM focus_sessions WHERE user_id =? ORDER BY created_at DESC LIMIT 100", [userId])
+        return exec("SELECT * FROM focus_sessions WHERE user_id=? AND deleted_at IS NULL ORDER BY created_at DESC", [userId])
     },
 
     getAppUsage(startDate: string, endDate: string) {
@@ -188,12 +188,84 @@ export const dbOps = {
         exec(`INSERT OR REPLACE INTO focus_sessions(${cols.join(',')}) VALUES(${cols.map(() => '?').join(',')})`, vals)
     },
 
-    getPending(table: string) {
-        return exec(`SELECT * FROM ${table} WHERE synced = 0 LIMIT 50`)
+    getPending(table: string, limit = 100) {
+        return exec(`SELECT * FROM ${table} WHERE synced = 0 LIMIT ?`, [limit])
     },
 
     markSynced(table: string, id: string) {
         exec(`UPDATE ${table} SET synced = 1 WHERE id =?`, [id])
+    },
+
+    /* ---- Named update ops (replace raw db:exec) ---- */
+
+    updateTask(id: string, updates: Record<string, any>) {
+        const TASK_COLUMNS = new Set(['title','description','status','priority','estimate_m','spent_s','started_at','due_at','completed_at','parent_id','sort_order','updated_at','deleted_at','synced','is_recurring','last_reset_date','list_id'])
+        const keys = Object.keys(updates).filter(k => TASK_COLUMNS.has(k))
+        if (!keys.length) return
+        exec(`UPDATE tasks SET ${keys.map(k => `${k}=?`).join(',')} WHERE id=?`, [...keys.map(k => updates[k]), id])
+        return exec('SELECT * FROM tasks WHERE id=?', [id])
+    },
+
+    updateTaskSortOrder(id: string, sortOrder: number) {
+        exec('UPDATE tasks SET sort_order=?, synced=0 WHERE id=?', [sortOrder, id])
+    },
+
+    softDeleteTasksByListId(listId: string) {
+        exec('UPDATE tasks SET deleted_at=?, synced=0 WHERE list_id=?', [now(), listId])
+    },
+
+    resetAllTaskTimes(userId: string) {
+        exec('UPDATE tasks SET spent_s=0, synced=0 WHERE user_id=?', [userId])
+    },
+
+    updateList(id: string, updates: Record<string, any>) {
+        const LIST_COLUMNS = new Set(['name','color','icon','sort_order','is_system','updated_at','archived_at','deleted_at','synced','workspace_id'])
+        const keys = Object.keys(updates).filter(k => LIST_COLUMNS.has(k))
+        if (!keys.length) return
+        exec(`UPDATE lists SET ${keys.map(k => `${k}=?`).join(',')} WHERE id=?`, [...keys.map(k => updates[k]), id])
+    },
+
+    updateSubtask(id: string, updates: Record<string, any>) {
+        const SUBTASK_COLUMNS = new Set(['title','done','sort_order','updated_at','deleted_at','synced','completed'])
+        const keys = Object.keys(updates).filter(k => SUBTASK_COLUMNS.has(k))
+        if (!keys.length) return
+        exec(`UPDATE subtasks SET ${keys.map(k => `${k}=?`).join(',')} WHERE id=?`, [...keys.map(k => updates[k]), id])
+    },
+
+    softDeleteSubtask(id: string) {
+        exec('UPDATE subtasks SET deleted_at=?, synced=0 WHERE id=?', [now(), id])
+    },
+
+    updateFocusSession(id: string, updates: Record<string, any>) {
+        const SESSION_COLUMNS = new Set(['type','seconds','start_time','end_time','metadata','synced'])
+        const keys = Object.keys(updates).filter(k => SESSION_COLUMNS.has(k))
+        if (!keys.length) return
+        exec(`UPDATE focus_sessions SET ${keys.map(k => `${k}=?`).join(',')} WHERE id=?`, [...keys.map(k => updates[k]), id])
+    },
+
+    softDeleteAllSessions(userId: string) {
+        exec('UPDATE focus_sessions SET deleted_at=?, synced=0 WHERE user_id=?', [now(), userId])
+    },
+
+    hardDeleteTask(id: string) {
+        exec('DELETE FROM tasks WHERE id=?', [id])
+    },
+
+    hardDeleteList(id: string) {
+        exec('DELETE FROM lists WHERE id=?', [id])
+    },
+
+    taskExists(taskId: string): boolean {
+        const rows = exec('SELECT id FROM tasks WHERE id=? AND deleted_at IS NULL', [taskId]) as any[]
+        return rows?.length > 0
+    },
+
+    requeueWorkspace(workspaceId: string) {
+        exec('UPDATE workspaces SET synced=0 WHERE id=?', [workspaceId])
+    },
+
+    getWorkspaceForList(workspaceId: string) {
+        return exec('SELECT id, synced FROM workspaces WHERE id=? AND deleted_at IS NULL', [workspaceId]) as any[]
     },
 
     cleanupCorruptedSessions() {
@@ -487,6 +559,21 @@ function autoMigrate() {
             db.prepare("UPDATE db_meta SET value='8' WHERE key='version'").run()
         })()
         version = 8
+    }
+
+    if (version < 9) {
+        db.transaction(() => {
+            // Add deleted_at to focus_sessions for soft-delete sync support
+            const fsCols = db.prepare("PRAGMA table_info(focus_sessions)").all()
+            if (!fsCols.some((c: any) => c.name === 'deleted_at')) {
+                db.exec("ALTER TABLE focus_sessions ADD COLUMN deleted_at TEXT")
+            }
+            db.exec("CREATE INDEX IF NOT EXISTS idx_tasks_user_deleted ON tasks(user_id, deleted_at)")
+            db.exec("CREATE INDEX IF NOT EXISTS idx_subtasks_task_id ON subtasks(task_id)")
+            db.exec("CREATE INDEX IF NOT EXISTS idx_focus_sessions_user_id ON focus_sessions(user_id)")
+            db.prepare("UPDATE db_meta SET value='9' WHERE key='version'").run()
+        })()
+        version = 9
     }
 }
 

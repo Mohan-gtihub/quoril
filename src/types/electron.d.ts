@@ -32,43 +32,48 @@ export interface ElectronAPI {
         getTasks: (userId: string, listId?: string) => Promise<any[]>
         saveTask: (task: any) => Promise<any>
         updateTask: (id: string, updates: any) => Promise<any>
+        updateTaskSortOrder: (id: string, sortOrder: number) => Promise<void>
+        softDeleteTasksByListId: (listId: string) => Promise<void>
+        resetAllTaskTimes: (userId: string) => Promise<void>
         deleteTask: (id: string) => Promise<any>
         startTask: (id: string) => Promise<any>
         pauseTask: (id: string) => Promise<any>
         reorderTasks: (items: any) => Promise<any>
         getLists: (userId: string, archived?: boolean) => Promise<any[]>
         saveList: (list: any) => Promise<any>
-        deleteList: (id: string) => Promise<any>
+        updateList: (id: string, updates: any) => Promise<void>
+        archiveList: (id: string) => Promise<any>
         restoreList: (id: string) => Promise<any>
+        deleteList: (id: string) => Promise<any>
         getSubtasks: (taskId: string) => Promise<any[]>
         saveSubtask: (subtask: any) => Promise<any>
+        updateSubtask: (id: string, updates: any) => Promise<void>
+        softDeleteSubtask: (id: string) => Promise<void>
         deleteSubtask: (id: string) => Promise<any>
         getSessions: (userId: string) => Promise<any[]>
+        saveSession: (session: any) => Promise<any>
+        updateFocusSession: (id: string, updates: any) => Promise<void>
+        softDeleteAllSessions: (userId: string) => Promise<void>
         getAppUsage: (start: string, end: string) => Promise<any[]>
         getDailyActivity: (start: string, end: string) => Promise<any[]>
         getAppUsageByTask: (taskId: string) => Promise<any[]>
         getDailyAppUsage: (date: string) => Promise<any[]>
         getDailyDomainUsage: (date: string) => Promise<any[]>
-        saveFocusSession: (session: any) => Promise<any>
-        saveSession: (session: any) => Promise<any>
-        updateFocusSession: (id: string, updates: any) => Promise<any>
         genericUpdate: (table: string, id: string, updates: any) => Promise<any>
-        exec: (sql: string, params: any[]) => Promise<any>
-        getPending: (table: string) => Promise<any[]>
+        taskExists: (taskId: string) => Promise<boolean>
+        getPending: (table: string, limit?: number) => Promise<any[]>
         markSynced: (table: string, id: string) => Promise<void>
-        /* Workspaces */
+        requeueWorkspace: (workspaceId: string) => Promise<void>
+        getWorkspaceForList: (workspaceId: string) => Promise<any[]>
         getWorkspaces: (userId: string) => Promise<any[]>
         saveWorkspace: (ws: any) => Promise<any>
         deleteWorkspace: (id: string) => Promise<any>
         moveListToWorkspace: (listId: string, workspaceId: string | null) => Promise<any>
-        /* Orphan recovery */
-        recoverOrphans?: (userId: string) => Promise<any>
     }
     tracker: {
         setContext: (taskId: string | null) => Promise<void>
         getLiveSession: () => Promise<any>
     }
-
 }
 
 declare global {

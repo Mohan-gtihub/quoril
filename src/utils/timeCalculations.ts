@@ -23,6 +23,14 @@ export interface DayStats {
 }
 
 /**
+ * Checks if a session type should count as focus time
+ */
+export function isFocusType(type: string | null | undefined): boolean {
+    if (!type) return false
+    return ['focus', 'deep_work', 'regular', 'pomodoro'].includes(type)
+}
+
+/**
  * Calculate focus time for a specific day from sessions
  * @param sessions - All sessions
  * @param targetDate - The day to calculate for
@@ -37,15 +45,36 @@ export function calculateDayFocus(
     // Sum all focus session seconds for this day
     const focusSec = sessions
         .filter(s => {
-            const dateMatch = format(parseISO(s.start_time), 'yyyy-MM-dd') === dayStr
-            // Broaden check for robustness
-            const type = s.type as string
-            const isFocus = ['focus', 'deep_work', 'regular', 'pomodoro'].includes(type)
-            return isFocus && dateMatch
+            const dateMatch = s.start_time && format(parseISO(s.start_time), 'yyyy-MM-dd') === dayStr
+            return isFocusType(s.type) && dateMatch
         })
         .reduce((sum, s) => sum + (s.seconds || 0), 0)
 
     return focusSec
+}
+
+/**
+ * Aggregates saved day focus with a current active focus timer
+ */
+export function calculateRealTimeFocus(
+    sessions: FocusSession[],
+    isActive: boolean,
+    startTime: number | null | undefined, // ms
+    sessionType: string | null | undefined,
+    targetDate: Date = new Date()
+): number {
+    const saved = calculateDayFocus(sessions, targetDate)
+
+    const todayStr = format(new Date(), 'yyyy-MM-dd')
+    const targetStr = format(targetDate, 'yyyy-MM-dd')
+
+    // Only add active timer if it's for the target date and is a focus type
+    if (isActive && isFocusType(sessionType) && startTime && todayStr === targetStr) {
+        const delta = Math.floor((Date.now() - startTime) / 1000)
+        return saved + delta
+    }
+
+    return saved
 }
 
 /**
@@ -59,7 +88,7 @@ export function calculateDayBreak(sessions: FocusSession[], targetDate: Date): n
 
     return sessions
         .filter(s => {
-            const dateMatch = format(parseISO(s.start_time), 'yyyy-MM-dd') === dayStr
+            const dateMatch = s.start_time && format(parseISO(s.start_time), 'yyyy-MM-dd') === dayStr
             const type = s.type as string
             return ['break', 'long_break'].includes(type) && dateMatch
         })
@@ -75,30 +104,52 @@ export function calculateDayBreak(sessions: FocusSession[], targetDate: Date): n
  */
 export function calculateRangeFocus(
     sessions: FocusSession[], startDate: Date, endDate: Date): number {
+    // Ensure we include the full end day if only a date was provided
+    const end = new Date(endDate)
+    if (end.getHours() === 0 && end.getMinutes() === 0) {
+        end.setHours(23, 59, 59, 999)
+    }
+
     return sessions
         .filter(s => {
-            const type = s.type as string
-            if (!['focus', 'deep_work', 'regular', 'pomodoro'].includes(type)) return false
+            if (!isFocusType(s.type)) return false
+            if (!s.start_time) return false
             const sessionStart = parseISO(s.start_time)
-            return sessionStart >= startDate && sessionStart <= endDate
+            return sessionStart >= startDate && sessionStart <= end
         })
         .reduce((sum, s) => sum + (s.seconds || 0), 0)
 }
 
 /**
- * Get stats for multiple days
- * @param sessions - All sessions
- * @param tasks - All tasks (for completed count)
- * @param days - Array of dates to calculate for
- * @returns Array of stats for each day
+ * Get stats for multiple days — single-pass O(n) implementation.
  */
 export function calculateMultiDayStats(
     sessions: FocusSession[], tasks: Task[], days: Date[]): DayStats[] {
+    const focusByDay = new Map<string, number>()
+    const breakByDay = new Map<string, number>()
+
+    sessions.forEach(s => {
+        if (!s.start_time) return
+        const day = format(parseISO(s.start_time), 'yyyy-MM-dd')
+        if (isFocusType(s.type)) {
+            focusByDay.set(day, (focusByDay.get(day) ?? 0) + (s.seconds || 0))
+        } else if (['break', 'long_break'].includes(s.type as string)) {
+            breakByDay.set(day, (breakByDay.get(day) ?? 0) + (s.seconds || 0))
+        }
+    })
+
+    const tasksByDay = new Map<string, number>()
+    tasks.forEach(t => {
+        if (t.completed_at) {
+            const day = format(parseISO(t.completed_at), 'yyyy-MM-dd')
+            tasksByDay.set(day, (tasksByDay.get(day) ?? 0) + 1)
+        }
+    })
+
     return days.map(day => {
         const dayStr = format(day, 'yyyy-MM-dd')
-        const focusSeconds = calculateDayFocus(sessions, day)
-        const breakSeconds = calculateDayBreak(sessions, day)
-
+        const focusSeconds = focusByDay.get(dayStr) ?? 0
+        const breakSeconds = breakByDay.get(dayStr) ?? 0
         return {
             date: day,
             label: format(day, 'MMM dd'),
@@ -107,9 +158,7 @@ export function calculateMultiDayStats(
             focusMinutes: Math.round(focusSeconds / 60),
             breakMinutes: Math.round(breakSeconds / 60),
             totalMinutes: Math.round((focusSeconds + breakSeconds) / 60),
-            tasksCompleted: tasks.filter(t =>
-                t.completed_at && format(parseISO(t.completed_at), 'yyyy-MM-dd') === dayStr
-            ).length
+            tasksCompleted: tasksByDay.get(dayStr) ?? 0
         }
     })
 }
@@ -144,13 +193,7 @@ export const calculateFocusDistribution = (sessions: FocusSession[]): { taskId: 
 
     // 1. Sum up completed sessions
     sessions.forEach(s => {
-        // Use loose check or ensure type matches. Database type is string usually.
-        // If s.type is strictly 'focus' | 'break', then 'deep_work' might be invalid if not in type definition.
-        // However, FocusSession in database.ts usually allows string or specific enum.
-        // Let's assume 'focus' is the main one, and if 'deep_work' exists it's valid.
-        // To be safe against TS errors if type is narrowed:
-        const t = s.type as string
-        if (t !== 'focus' && t !== 'deep_work') return
+        if (!isFocusType(s.type)) return
 
         const tid = s.task_id
         if (!tid) return
@@ -175,9 +218,8 @@ export const calculateStreak = (sessions: FocusSession[]): number => {
     // 1. Get all unique dates with focus time
     const activeDates = new Set<string>()
     sessions.forEach(s => {
-        const t = s.type as string
-        if ((t === 'focus' || t === 'deep_work') && (s.seconds || 0) > 0) {
-            const day = format(new Date(s.start_time), 'yyyy-MM-dd')
+        if (isFocusType(s.type) && (s.seconds || 0) > 0 && s.start_time) {
+            const day = format(parseISO(s.start_time), 'yyyy-MM-dd')
             activeDates.add(day)
         }
     })

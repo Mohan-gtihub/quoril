@@ -25,16 +25,26 @@ const mapTask = (row: any): Task => {
         ? row.due_at.split('T')
         : [null, null]
 
+    const estimateMinutes = row.estimate_m || 0
+    const focusSeconds = row.spent_s || 0
+    const parentTaskId = row.parent_id ?? null
+
     return {
         ...row,
-        actual_seconds: row.spent_s || 0,
-        estimated_minutes: row.estimate_m || 0,
+        // camelCase fields (canonical)
+        estimateMinutes,
+        focusSeconds,
+        parentTaskId,
+        // legacy snake_case aliases (@deprecated)
+        actual_seconds: focusSeconds,
+        estimated_minutes: estimateMinutes,
+        parent_task_id: parentTaskId,
+        // parsed due date/time
         due_date: date,
         due_time: time?.split('.')[0] || null,
-        parent_task_id: row.parent_id,
         sync_status: row.synced ? 'synced' : 'pending',
         is_recurring: Boolean(row.is_recurring),
-        last_reset_date: row.last_reset_date
+        last_reset_date: row.last_reset_date ?? null,
     }
 }
 
@@ -87,7 +97,7 @@ export const localService = {
                 status: task.status || 'todo',
                 priority: task.priority || 'medium',
                 estimate_m: task.estimated_minutes || 0,
-                spent_s: 0,
+                spent_s: task.actual_seconds || 0,
                 started_at: null,
                 due_at: task.due_date ? `${task.due_date}T${task.due_time || '00:00:00'}` : null,
                 parent_id: task.parent_task_id || null,
@@ -125,6 +135,8 @@ export const localService = {
             // Normalized Mapping
             if (updates.estimated_minutes !== undefined) row.estimate_m = updates.estimated_minutes
             if (updates.parent_task_id !== undefined) row.parent_id = updates.parent_task_id
+            if (updates.actual_seconds !== undefined) row.spent_s = updates.actual_seconds
+
             delete row.actual_seconds
             delete row.estimated_minutes
             delete row.parent_task_id
@@ -161,24 +173,15 @@ export const localService = {
                     }
                 }
             }
-            // Helper function to safely update due date/time
-            const updateDueDateTime = async (taskId: string, row: any, updates: any): Promise<void> => {
-                if (updates.due_date || updates.due_time) {
-                    // Use a single query to get existing task data if needed
-                    const existing = await getExistingDueDateTime(taskId)
-
-                    // Combine due_date and due_time into due_at field
-                    const newDueDate = updates.due_date || existing.due_date
-                    const newDueTime = updates.due_time || existing.due_time
-                    row.due_at = newDueDate && newDueTime ? `${newDueDate}T${newDueTime}` : newDueDate || null
-                } else {
-                    // If no due date/time provided, keep existing values
-                    const existing = await getExistingDueDateTime(taskId)
-                    row.due_at = existing.due_date && existing.due_time ? `${existing.due_date}T${existing.due_time}` : existing.due_date || null
-                }
+            const needsDueUpdate = updates.due_date !== undefined || updates.due_time !== undefined
+            if (needsDueUpdate) {
+                const existing = await getExistingDueDateTime(id)
+                const newDueDate = updates.due_date !== undefined ? updates.due_date : existing.due_date
+                const newDueTime = updates.due_time !== undefined ? updates.due_time : existing.due_time
+                row.due_at = newDueDate ? `${newDueDate}T${newDueTime || '00:00:00'}` : null
+            } else if (updates.due_at === undefined) {
+                delete row.due_at
             }
-
-            await updateDueDateTime(id, row, updates)
 
             if (!db()) {
                 row.synced = 1
@@ -187,12 +190,9 @@ export const localService = {
                 return { data: mapTask(data), error: null }
             }
 
-            const keys = Object.keys(row)
-            await db().exec(`UPDATE tasks SET ${keys.map(k => `${k}=?`).join(',')} WHERE id=?`, [...Object.values(row), id])
+            const fresh = await db().updateTask(id, row)
             dataSyncService.trigger()
-
-            const [fresh] = await db().exec('SELECT * FROM tasks WHERE id=?', [id])
-            return { data: mapTask(fresh), error: null }
+            return { data: mapTask(Array.isArray(fresh) ? fresh[0] : fresh), error: null }
         },
 
         delete: async (id: string) => {
@@ -243,7 +243,7 @@ export const localService = {
             }
 
             for (const item of items) {
-                await db().exec('UPDATE tasks SET sort_order=?, synced=0 WHERE id=?', [item.sort_order, item.id])
+                await db().updateTaskSortOrder(item.id, item.sort_order)
             }
             dataSyncService.trigger()
         },
@@ -254,8 +254,7 @@ export const localService = {
                 const { error } = await (supabase.from('tasks') as any).delete().eq('list_id', listId)
                 return { error: error?.message || null }
             }
-            // Use Soft Delete for Sync compatibility
-            await db().exec('UPDATE tasks SET deleted_at = ?, synced = 0 WHERE list_id = ?', [new Date().toISOString(), listId])
+            await db().softDeleteTasksByListId(listId)
             dataSyncService.trigger()
             return { error: null }
         },
@@ -271,8 +270,7 @@ export const localService = {
                 return { error: error?.message || null }
             }
 
-            // SQLite
-            await db().exec('UPDATE tasks SET spent_s = 0, synced = 0 WHERE user_id = ?', [user.id])
+            await db().resetAllTaskTimes(user.id)
             dataSyncService.trigger()
             return { error: null }
         }
@@ -346,8 +344,7 @@ export const localService = {
                 return { data: { ...updates, id }, error: null }
             }
 
-            const keys = Object.keys(data)
-            await db().exec(`UPDATE lists SET ${keys.map(k => `${k}=?`).join(',')} WHERE id = ?`, [...Object.values(data), id])
+            await db().updateList(id, data)
             dataSyncService.trigger()
             return { data: { ...updates, id }, error: null }
         },
@@ -473,8 +470,7 @@ export const localService = {
                 return { data: { ...updates, id }, error: null }
             }
 
-            const keys = Object.keys(row)
-            await db().exec(`UPDATE subtasks SET ${keys.map(k => `${k}=?`).join(',')} WHERE id=?`, [...Object.values(row), id])
+            await db().updateSubtask(id, row)
             dataSyncService.trigger()
             return { data: { ...updates, id }, error: null }
         },
@@ -484,7 +480,7 @@ export const localService = {
                 await (supabase.from('subtasks') as any).update({ deleted_at: new Date().toISOString() }).eq('id', id)
                 return { error: null }
             }
-            await db().exec('UPDATE subtasks SET deleted_at=?, synced=0 WHERE id=?', [new Date().toISOString(), id])
+            await db().softDeleteSubtask(id)
             dataSyncService.trigger()
             return { error: null }
         }
@@ -502,6 +498,7 @@ export const localService = {
                     .from('focus_sessions')
                     .select('*')
                     .eq('user_id', user.id)
+                    .is('deleted_at', null)
                     .order('created_at', { ascending: false })
 
                 if (error) return { data: [], error: error.message }
@@ -575,10 +572,8 @@ export const localService = {
                 return { error: null }
             }
 
-            const keys = Object.keys(row)
-            await db().exec(`UPDATE focus_sessions SET ${keys.map(k => `${k}=?`).join(',')} WHERE id=?`, [...Object.values(row), id])
+            await db().updateFocusSession(id, row)
             dataSyncService.trigger()
-
             return { error: null }
         },
 
@@ -588,15 +583,15 @@ export const localService = {
 
             if (!db()) {
                 const { error } = await (supabase.from('focus_sessions') as any)
-                    .delete()
+                    .update({ deleted_at: new Date().toISOString() })
                     .eq('user_id', user.id)
+                    .is('deleted_at', null)
 
                 if (error) return { error: error.message }
                 return { error: null }
             }
 
-            // SQLite
-            await db().exec('DELETE FROM focus_sessions WHERE user_id = ?', [user.id])
+            await db().softDeleteAllSessions(user.id)
             dataSyncService.trigger()
             return { error: null }
         }

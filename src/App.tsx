@@ -123,15 +123,6 @@ function App() {
         }
     }, [isActive, isPaused, isBreak])
 
-    // TRICK: Force HTML/BODY background to transparent in Super Focus Mode
-    useEffect(() => {
-        if (settings.superFocusMode) {
-            document.documentElement.classList.add('super-focus-mode')
-        } else {
-            document.documentElement.classList.remove('super-focus-mode')
-        }
-    }, [settings.superFocusMode])
-
     // When user comes back to the app, sync store elapsed from real time
     useEffect(() => {
         const onVisible = () => {
@@ -174,12 +165,12 @@ function App() {
                 const code = parsed.searchParams.get('code')
                 if (code) {
                     const { supabase } = await import('@/services/supabase')
-                    const { error } = await supabase.auth.exchangeCodeForSession(code)
+                    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
                     if (error) {
                         console.error('[DeepLink] PKCE exchange failed:', error.message)
                         toast.error('Verification failed. Please try again.')
-                    } else {
-                        window.location.reload()
+                    } else if (data.session) {
+                        useAuthStore.getState().setSession(data.session)
                     }
                     return
                 }
@@ -194,15 +185,15 @@ function App() {
 
                     if (access_token && refresh_token) {
                         const { supabase } = await import('@/services/supabase')
-                        const { error } = await supabase.auth.setSession({
+                        const { data, error } = await supabase.auth.setSession({
                             access_token,
                             refresh_token
                         })
                         if (error) {
                             console.error('[DeepLink] setSession failed:', error.message)
                             toast.error('Verification failed. Please try again.')
-                        } else {
-                            window.location.reload()
+                        } else if (data.session) {
+                            useAuthStore.getState().setSession(data.session)
                         }
                     }
                 }

@@ -175,13 +175,49 @@ export function validatePassword(password: string): {
 }
 
 // ==================== RATE LIMITING ====================
+// Persisted to electron-store via IPC so state survives app restarts.
+// Falls back to in-memory if electronAPI is unavailable (web/test env).
 
 interface RateLimitRecord {
     attempts: number[]
     lockedUntil?: number
 }
 
-const rateLimitStore = new Map<string, RateLimitRecord>()
+// In-memory mirror — avoids async round-trips for every attempt check
+const rateLimitMirror = new Map<string, RateLimitRecord>()
+
+const RATE_LIMIT_STORE_KEY = 'rateLimitStore'
+
+async function loadRateLimitStore(): Promise<Record<string, RateLimitRecord>> {
+    try {
+        const stored = await window.electronAPI?.store?.get(RATE_LIMIT_STORE_KEY)
+        return stored ?? {}
+    } catch {
+        return {}
+    }
+}
+
+async function saveRateLimitStore(data: Record<string, RateLimitRecord>): Promise<void> {
+    try {
+        await window.electronAPI?.store?.set(RATE_LIMIT_STORE_KEY, data)
+    } catch {
+        // non-fatal — in-memory mirror still works
+    }
+}
+
+/** Load persisted rate limit records into the in-memory mirror on startup. */
+export async function initRateLimitStore(): Promise<void> {
+    const stored = await loadRateLimitStore()
+    const now = Date.now()
+    // Only restore records that are still relevant (locked out or have recent attempts)
+    for (const [key, record] of Object.entries(stored)) {
+        const hasRecentAttempts = record.attempts.some(t => now - t < 3600_000) // 1 hour
+        const stillLocked = record.lockedUntil && record.lockedUntil > now
+        if (hasRecentAttempts || stillLocked) {
+            rateLimitMirror.set(key, record)
+        }
+    }
+}
 
 /**
  * Check if action is rate limited
@@ -193,7 +229,7 @@ export function checkRateLimit(
     lockoutDurationMs?: number
 ): { allowed: boolean; remainingAttempts?: number; lockedUntil?: number } {
     const now = Date.now()
-    const record = rateLimitStore.get(identifier) || { attempts: [] }
+    const record = rateLimitMirror.get(identifier) || { attempts: [] }
 
     // Check if currently locked out
     if (record.lockedUntil && now < record.lockedUntil) {
@@ -210,7 +246,12 @@ export function checkRateLimit(
     if (record.attempts.length >= maxAttempts) {
         if (lockoutDurationMs) {
             record.lockedUntil = now + lockoutDurationMs
-            rateLimitStore.set(identifier, record)
+            rateLimitMirror.set(identifier, record)
+            // Persist asynchronously — don't block the caller
+            loadRateLimitStore().then(all => {
+                all[identifier] = record
+                saveRateLimitStore(all)
+            })
             return {
                 allowed: false,
                 lockedUntil: record.lockedUntil,
@@ -224,7 +265,11 @@ export function checkRateLimit(
 
     // Record this attempt
     record.attempts.push(now)
-    rateLimitStore.set(identifier, record)
+    rateLimitMirror.set(identifier, record)
+    loadRateLimitStore().then(all => {
+        all[identifier] = record
+        saveRateLimitStore(all)
+    })
 
     return {
         allowed: true,
@@ -236,7 +281,11 @@ export function checkRateLimit(
  * Clear rate limit for identifier (use after successful auth)
  */
 export function clearRateLimit(identifier: string): void {
-    rateLimitStore.delete(identifier)
+    rateLimitMirror.delete(identifier)
+    loadRateLimitStore().then(all => {
+        delete all[identifier]
+        saveRateLimitStore(all)
+    })
 }
 
 /**
@@ -297,78 +346,9 @@ export function checkSignupRateLimit(ip: string): {
 }
 
 // ==================== SESSION SECURITY ====================
-
-interface SessionData {
-    createdAt: number
-    lastActivity: number
-    userId: string
-}
-
-const sessionStore = new Map<string, SessionData>()
-
-/**
- * Validate session is still active
- */
-export function validateSession(sessionId: string): {
-    valid: boolean
-    reason?: 'expired' | 'timeout' | 'not-found'
-} {
-    const session = sessionStore.get(sessionId)
-
-    if (!session) {
-        return { valid: false, reason: 'not-found' }
-    }
-
-    const now = Date.now()
-
-    // Check max session duration
-    if (now - session.createdAt > SECURITY_CONFIG.SESSION.MAX_DURATION_MS) {
-        sessionStore.delete(sessionId)
-        return { valid: false, reason: 'expired' }
-    }
-
-    // Check inactivity timeout
-    if (now - session.lastActivity > SECURITY_CONFIG.SESSION.TIMEOUT_MS) {
-        sessionStore.delete(sessionId)
-        return { valid: false, reason: 'timeout' }
-    }
-
-    // Update last activity
-    session.lastActivity = now
-    sessionStore.set(sessionId, session)
-
-    return { valid: true }
-}
-
-/**
- * Create new session
- */
-export function createSession(sessionId: string, userId: string): void {
-    const now = Date.now()
-    sessionStore.set(sessionId, {
-        createdAt: now,
-        lastActivity: now,
-        userId,
-    })
-}
-
-/**
- * Destroy session
- */
-export function destroySession(sessionId: string): void {
-    sessionStore.delete(sessionId)
-}
-
-/**
- * Update session activity
- */
-export function updateSessionActivity(sessionId: string): void {
-    const session = sessionStore.get(sessionId)
-    if (session) {
-        session.lastActivity = Date.now()
-        sessionStore.set(sessionId, session)
-    }
-}
+// Session validity is managed by Supabase Auth + the lastActivity timestamp in authStore.
+// The in-memory sessionStore was removed — it was cleared on every restart, causing
+// validateSession to always return { valid: false, reason: 'not-found' } and sign the user out.
 
 // ==================== SECURE ERROR MESSAGES ====================
 
@@ -420,6 +400,82 @@ function sanitizeErrorMessage(message: string, context: 'login' | 'signup' | 'ge
     return 'An error occurred. Please try again.'
 }
 
+// ==================== SECURE STORAGE (AES-GCM) ====================
+
+const STORE_KEY_MATERIAL = 'quoril_store_v1'
+
+async function deriveKey(): Promise<CryptoKey> {
+    const enc = new TextEncoder()
+    const keyMaterial = await window.crypto.subtle.importKey(
+        'raw',
+        enc.encode(STORE_KEY_MATERIAL),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+    )
+    // Use a stable salt derived from the origin so the key is consistent across sessions
+    const salt = enc.encode('quoril-local-store-salt-v1')
+    return window.crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+    )
+}
+
+/**
+ * Store a value encrypted with AES-256-GCM in localStorage.
+ * Replaces the previous base64 (no-op) implementation.
+ */
+export async function secureSet(key: string, value: string): Promise<void> {
+    try {
+        const cryptoKey = await deriveKey()
+        const iv = window.crypto.getRandomValues(new Uint8Array(12))
+        const enc = new TextEncoder()
+        const ciphertext = await window.crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv },
+            cryptoKey,
+            enc.encode(value)
+        )
+        const payload = {
+            iv: Array.from(iv),
+            data: Array.from(new Uint8Array(ciphertext))
+        }
+        localStorage.setItem(`secure_${key}`, JSON.stringify(payload))
+    } catch (e) {
+        console.error('[secureSet] encryption failed', e)
+    }
+}
+
+/**
+ * Retrieve and decrypt a value stored with secureSet.
+ * Returns null if the key doesn't exist or decryption fails.
+ */
+export async function secureGet(key: string): Promise<string | null> {
+    try {
+        const raw = localStorage.getItem(`secure_${key}`)
+        if (!raw) return null
+        const { iv, data } = JSON.parse(raw)
+        const cryptoKey = await deriveKey()
+        const decrypted = await window.crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv: new Uint8Array(iv) },
+            cryptoKey,
+            new Uint8Array(data)
+        )
+        return new TextDecoder().decode(decrypted)
+    } catch {
+        return null
+    }
+}
+
+/**
+ * Remove a value stored with secureSet.
+ */
+export function secureRemove(key: string): void {
+    localStorage.removeItem(`secure_${key}`)
+}
+
 // ==================== FINGERPRINTING ====================
 
 /**
@@ -438,39 +494,3 @@ export function generateBrowserFingerprint(): string {
     return btoa(components.join('|'))
 }
 
-// ==================== SECURE STORAGE ====================
-
-/**
- * Securely store sensitive data in localStorage with encryption
- */
-export function secureStore(key: string, value: string): void {
-    try {
-        // In production, you would encrypt this value
-        // For now, we'll use base64 encoding as a basic obfuscation
-        const encoded = btoa(value)
-        localStorage.setItem(`secure_${key}`, encoded)
-    } catch (error) {
-        console.error('Failed to store secure data:', error)
-    }
-}
-
-/**
- * Retrieve securely stored data
- */
-export function secureRetrieve(key: string): string | null {
-    try {
-        const encoded = localStorage.getItem(`secure_${key}`)
-        if (!encoded) return null
-        return atob(encoded)
-    } catch (error) {
-        console.error('Failed to retrieve secure data:', error)
-        return null
-    }
-}
-
-/**
- * Clear secure storage
- */
-export function secureClear(key: string): void {
-    localStorage.removeItem(`secure_${key}`)
-}

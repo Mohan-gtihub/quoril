@@ -1,6 +1,5 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Bell, Zap, Palette, Sparkles, Volume2, Monitor, Play, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Bell, Zap, Palette, Sparkles, Play, CheckCircle2 } from 'lucide-react'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useFocusStore } from '@/store/focusStore'
 import { soundService } from '@/services/soundService'
@@ -27,7 +26,7 @@ function SettingCard({ icon: Icon, title, description, children, accent = "text-
     )
 }
 
-function ToggleRow({ label, description, value, onChange }: any) {
+function ToggleRow({ label, description, value }: any) {
     return (
         <label className="flex items-center justify-between group cursor-pointer p-4 -mx-4 rounded-2xl hover:bg-white/[0.02] transition-colors">
             <div className="pr-6">

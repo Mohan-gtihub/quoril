@@ -49,7 +49,7 @@ export interface FocusState {
 
     /* Celebration State */
     showCelebration: boolean
-    celebratedTask: any | null
+    celebratedTask: import('@/types/database').Task | null
     celebratedDuration: number
 
     /* History */
@@ -306,18 +306,13 @@ export const useFocusStore = create<FocusState>()(
                             const { data } = await localService.focus.create(sessionData)
 
                             if (data) {
-                                // If store is still active on same task, set ID
-                                // Use functional set to check current state matches
                                 set(s => (s.taskId === taskId && s.isActive ? { currentSessionId: data.id } : {}))
                             }
                         }
+                        window.electronAPI?.tracker?.setContext(taskId)
                     } catch (e) {
                         console.error('[Focus] Failed to create session record', e)
-                        // Don't kill the UI session, just run locally? 
-                        // Or warn user? behavior: generic error logging for now.
                     }
-
-                    window.electronAPI.tracker.setContext(taskId)
                 } catch (e) {
                     console.error('[Focus] start failed', e)
                 }
@@ -532,7 +527,7 @@ export const useFocusStore = create<FocusState>()(
                         breakRemaining: 0
                     })
 
-                    window.electronAPI.tracker.setContext(null)
+                    window.electronAPI?.tracker?.setContext(null)
                 } catch (e) {
                     console.error('[Focus] end failed', e)
                     get().reset()
@@ -568,6 +563,13 @@ export const useFocusStore = create<FocusState>()(
 
                 const now = Date.now()
                 const delta = Math.floor((now - s.startTime) / 1000)
+
+                const MAX_DELTA = 3600 // 1 hour — anything larger means system was asleep
+                if (delta > MAX_DELTA) {
+                    toast("Session paused — long inactivity detected. Resume when ready.", { icon: '⏸️' })
+                    get().pauseSession(false)
+                    return
+                }
 
                 // BREAK MODE
                 if (s.isBreak) {

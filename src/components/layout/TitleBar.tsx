@@ -1,6 +1,8 @@
 import { Minus, Square, X } from 'lucide-react'
+import { useSyncStore } from '@/store/syncStore'
 
 export function TitleBar() {
+    const { syncing, pendingCount, lastSync, error } = useSyncStore()
     const handleMinimize = () => {
         window.electronAPI?.window.minimize()
     }
@@ -25,6 +27,17 @@ export function TitleBar() {
                     <path d="M12 7v5l3 3" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" />
                 </svg>
                 <span className="text-xs text-gray-400 font-medium">Quoril</span>
+
+                {/* Sync status indicator */}
+                {error ? (
+                    <span className="text-xs text-red-400 font-mono" title={error}>⚠ sync error</span>
+                ) : syncing ? (
+                    <span className="text-xs text-indigo-400 font-mono animate-pulse">syncing…</span>
+                ) : pendingCount > 0 ? (
+                    <span className="text-xs text-yellow-400 font-mono">{pendingCount} pending</span>
+                ) : lastSync ? (
+                    <span className="text-xs text-gray-600 font-mono">synced</span>
+                ) : null}
             </div>
 
             <div

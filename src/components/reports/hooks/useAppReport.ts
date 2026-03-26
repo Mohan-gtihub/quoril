@@ -1,9 +1,5 @@
 import { useMemo } from 'react'
 
-/* ─── Constants ─────────────────────────────────────────────── */
-
-const PRODUCTIVE_CATEGORIES = ['Development', 'Work', 'Coding', 'Programming']
-
 /* ─── Types ──────────────────────────────────────────────────── */
 
 export interface AppUsageRow {

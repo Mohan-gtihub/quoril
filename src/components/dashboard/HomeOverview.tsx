@@ -9,6 +9,7 @@ import { useListStore } from '@/store/listStore'
 import { CheckCircle2, Target, Zap, FolderKanban, ChevronRight, Activity, Plus, Play, BarChart3, Flame } from 'lucide-react'
 import { isToday, startOfWeek, format } from 'date-fns'
 import { ActivityHeatmap } from './ActivityHeatmap'
+import { calculateRealTimeFocus, calculateStreak, isFocusType } from '@/utils/timeCalculations'
 
 const P_INFO: Record<string, { label: string; color: string }> = {
     critical: { label: 'Critical', color: '#ef4444' },
@@ -25,7 +26,7 @@ export function HomeOverview() {
     const { tasks, setSelectedTask } = useTaskStore()
     const { lists, setSelectedList } = useListStore()
     const { workspaces, setActiveWorkspace } = useWorkspaceStore()
-    const { elapsed, isActive, sessions, setShowFocusPanel } = useFocusStore()
+    const { startTime, isActive, sessionType, sessions, setShowFocusPanel } = useFocusStore()
     const navigate = useNavigate()
 
     // --- Dynamic KPI Calculations ---
@@ -33,35 +34,25 @@ export function HomeOverview() {
         const validTasks = tasks.filter((t: any) => !t.deleted_at && (!t.list_id || lists.some((l: any) => l.id === t.list_id)))
         const active = validTasks.filter((t: any) => t.status !== 'done')
         const doneToday = validTasks.filter((t: any) => t.status === 'done' && t.completed_at?.startsWith(new Date().toISOString().split('T')[0]))
-        const focusMin = Math.round(elapsed / 60)
+        const focusMin = Math.round(calculateRealTimeFocus(sessions, isActive, startTime, sessionType) / 60)
 
         // Calculate weekly total
         const startOfCurWeek = startOfWeek(new Date(), { weekStartsOn: 1 })
         let weeklyMins = 0
         sessions.forEach(s => {
-            if (s.type !== 'break' && s.start_time && new Date(s.start_time) >= startOfCurWeek) {
+            if (isFocusType(s.type) && s.start_time && new Date(s.start_time) >= startOfCurWeek) {
                 weeklyMins += (s.seconds || 0) / 60
             }
         })
+        const delta = (isActive && isFocusType(sessionType) && startTime) ? Math.floor((Date.now() - startTime) / 1000) : 0
+        const currentMins = delta / 60
+        weeklyMins += currentMins
 
-        // Current streak logic (naive consecutive days backwards from today)
-        let currentStreak = 0
-        const dateMap = new Set(sessions.filter(s => s.type !== 'break' && (s.seconds || 0) > 60).map(s => s.start_time?.split('T')[0]))
-        let testDate = new Date()
-        while (true) {
-            const dateStr = testDate.toISOString().split('T')[0]
-            if (dateMap.has(dateStr)) {
-                currentStreak++
-                testDate.setDate(testDate.getDate() - 1)
-            } else if (currentStreak === 0 && isToday(testDate)) {
-                testDate.setDate(testDate.getDate() - 1) // allow today to be empty if streak continues from yesterday
-            } else {
-                break
-            }
-        }
+        // Current streak logic (using centralized util)
+        const currentStreak = calculateStreak(sessions)
 
         return { active: active.length, doneToday: doneToday.length, focusMin, weeklyMins: Math.round(weeklyMins), currentStreak }
-    }, [tasks, elapsed, sessions, lists])
+    }, [tasks, startTime, sessions, lists, isActive, sessionType])
 
     const suggestedTasks = useMemo(() => {
         const pending = tasks.filter((t: any) => !t.deleted_at && t.status !== 'done' && (!t.list_id || lists.some((l: any) => l.id === t.list_id)))

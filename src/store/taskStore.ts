@@ -39,8 +39,11 @@ interface TaskState {
     toggleComplete: (id: string) => Promise<void>
 
     startTask: (id: string) => Promise<void>
+    pauseTask: (id: string) => Promise<void>
     archiveTask: (id: string) => Promise<void>
+    softDeleteTask: (id: string) => Promise<void>
     permanentDeleteTask: (id: string) => Promise<void>
+    hardDeleteTask: (id: string) => Promise<void>
     restoreTask: (id: string) => Promise<void>
 
     moveTaskToColumn: (
@@ -269,30 +272,35 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         await get().fetchTasks()
     },
 
-    permanentDeleteTask: async (id) => {
+    softDeleteTask: async (id) => {
         const prev = get().tasks
         try {
-            set({ error: null })
-            set({
-                tasks: prev.filter((t) => t.id !== id),
-            })
-
+            set({ error: null, tasks: prev.filter((t) => t.id !== id) })
             backupService.remove(id)
-
-            // CRITICAL FIX: Use Soft Delete (archive) instead of Hard Delete.
-            // Hard deleting locally removes the row, so Sync Service never sees it
-            // and never pushes the deletion to Supabase. Supabase then sends it back.
-            // By soft deleting, we set deleted_at, Sync pushes it, and it stays gone.
             await localService.tasks.update(id, { deleted_at: new Date().toISOString() })
-
         } catch (e) {
             set({ tasks: prev, error: 'Delete failed' })
         }
     },
 
+    permanentDeleteTask: async (id) => {
+        await get().hardDeleteTask(id)
+    },
+
+    hardDeleteTask: async (id) => {
+        const prev = get().tasks
+        try {
+            set({ error: null, tasks: prev.filter((t) => t.id !== id) })
+            backupService.remove(id)
+            await localService.tasks.permanentDelete(id)
+        } catch (e) {
+            set({ tasks: prev, error: 'Hard delete failed' })
+        }
+    },
+
     // Legacy Alias
     deleteTask: async (id) => {
-        await get().permanentDeleteTask(id)
+        await get().softDeleteTask(id)
     },
 
     /* ---------------- COMPLETE ---------------- */
@@ -301,15 +309,14 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         const task = get().tasks.find((t) => t.id === id)
         if (!task) return
 
-        // If already done, we might want to move back to 'today'?
-        // For now, adhering to previous one-way logic but using the requested drag handler.
-        if (task.status === 'done') return
-
         try {
-            // Reuse the "perfect" drag logic
+            if (task.status === 'done') {
+                await get().moveTaskToColumn(id, 'today')
+                return
+            }
+
             await get().moveTaskToColumn(id, 'done')
 
-            // Play sound if completing
             const { successSoundEnabled, successSound } = useSettingsStore.getState()
             if (successSoundEnabled) {
                 soundService.playSuccess(successSound)
@@ -466,43 +473,36 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
     syncRecurringTasks: async () => {
         const { tasks, updateTask } = get()
-        // FIX: Use local date instead of UTC ISO string to avoid timezone issues
         const now = new Date()
         const year = now.getFullYear()
         const month = String(now.getMonth() + 1).padStart(2, '0')
         const day = String(now.getDate()).padStart(2, '0')
         const today = `${year}-${month}-${day}`
 
-        // Find tasks that are recurring but haven't been reset today
         const toReset = tasks.filter(t => t.is_recurring && t.last_reset_date !== today)
-
         if (toReset.length === 0) return
 
-        for (const task of toReset) {
+        await Promise.all(toReset.map(async (task) => {
             await updateTask(task.id, {
-                status: 'active', // Keep in Today column but not 'done'
+                status: 'active',
                 completed_at: null,
                 actual_seconds: 0,
                 last_reset_date: today
             })
 
-            // Reset Subtasks for this task
-            // We need to fetch them if they aren't in the state
             if (!get().subtasks[task.id]) {
                 await get().fetchSubtasks(task.id)
             }
 
             const taskSubtasks = get().subtasks[task.id] || []
-            for (const sub of taskSubtasks) {
-                if (sub.completed || sub.done) {
-                    try {
-                        await localService.subtasks.update(sub.id, { completed: false })
-                    } catch (e) {
-                        console.error('Failed to reset subtask:', sub.id)
-                    }
-                }
-            }
-            // Clear subtasks from state to force a re-fetch or manual update
+            await Promise.all(
+                taskSubtasks
+                    .filter(sub => sub.completed)
+                    .map(sub => localService.subtasks.update(sub.id, { completed: false }).catch(e => {
+                        console.error('Failed to reset subtask:', sub.id, e)
+                    }))
+            )
+
             set((s) => ({
                 subtasks: {
                     ...s.subtasks,
@@ -513,7 +513,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                     }))
                 }
             }))
-        }
+        }))
     },
 
     /* ---------------- SUBTASKS ---------------- */

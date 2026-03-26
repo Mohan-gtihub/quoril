@@ -9,7 +9,8 @@ import {
     calculateFocusDistribution,
     calculateStreak,
     formatTime,
-    calculateDayFocus
+    calculateDayFocus,
+    isFocusType
 } from '@/utils/timeCalculations'
 import type { FocusSession } from '@/types/database'
 import type { DateRange } from '../components/DateRangePicker'
@@ -32,31 +33,16 @@ export const useReportsController = () => {
         label: 'This Week'
     })
 
-    // LIVE TICKER STATE
-    const [tick, setTick] = useState(0)
-
-    // 3. INITIAL DATA FETCH & LIVE TICKER
+    // 3. INITIAL DATA FETCH
     useEffect(() => {
         fetchSessions()
         fetchTasks()
     }, [fetchSessions, fetchTasks])
 
-    useEffect(() => {
-        let interval: NodeJS.Timeout
-        if (isActive) {
-            interval = setInterval(() => {
-                setTick(t => t + 1)
-            }, 1000)
-        }
-        return () => clearInterval(interval)
-    }, [isActive])
-
-    // helper to avoid duplication
+    // Active virtual session — depends only on session identity, not on elapsed time.
+    // Elapsed is computed at stats-evaluation time from startTime so we don't tick every second.
     const activeVirtualSession = useMemo<FocusSession | null>(() => {
         if (!isActive || !startTime || !taskId) return null
-
-        const now = Date.now()
-        const activeBonus = Math.floor((now - startTime) / 1000)
 
         const dbType = (sessionType === 'focus' || sessionType === 'break' || sessionType === 'long_break')
             ? sessionType
@@ -67,14 +53,14 @@ export const useReportsController = () => {
             user_id: 'current',
             task_id: taskId,
             type: dbType,
-            seconds: activeBonus,
+            seconds: Math.floor((Date.now() - startTime) / 1000),
             start_time: new Date(startTime).toISOString(),
             end_time: null,
             created_at: new Date(startTime).toISOString(),
             synced: 0,
             metadata: null
         }
-    }, [isActive, startTime, taskId, sessionType, tick])
+    }, [isActive, startTime, taskId, sessionType])
 
     // UNIFIED SESSION LIST (Fixes Double Logging)
     const allSessions = useMemo(() => {
@@ -97,17 +83,11 @@ export const useReportsController = () => {
         // A. Basic Totals
         // Re-implementing logic similar to calculateRangeFocus but using our sessionsInWindow
         const rangeFocusSeconds = sessionsInWindow
-            .filter(s => {
-                const t = s.type as string
-                return t === 'focus' || t === 'deep_work'
-            })
+            .filter(s => isFocusType(s.type))
             .reduce((sum, s) => sum + (s.seconds || 0), 0)
 
         const totalBreakSeconds = sessionsInWindow
-            .filter(s => {
-                const t = s.type as string
-                return t === 'break' || t === 'long_break'
-            })
+            .filter(s => ['break', 'long_break'].includes(s.type as string))
             .reduce((sum, s) => sum + (s.seconds || 0), 0)
 
         // Efficiency Score: Focus / (Focus + Break)

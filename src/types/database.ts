@@ -34,8 +34,6 @@ export interface Database {
                     created_at: string
                     updated_at: string
                     deleted_at: string | null
-
-                    synced: number
                 }
 
                 Insert: {
@@ -62,8 +60,6 @@ export interface Database {
                     created_at?: string
                     updated_at?: string
                     deleted_at?: string | null
-
-                    synced?: number
                 }
 
                 Update: {
@@ -90,8 +86,6 @@ export interface Database {
                     created_at?: string
                     updated_at?: string
                     deleted_at?: string | null
-
-                    synced?: number
                 }
             }
 
@@ -113,8 +107,6 @@ export interface Database {
                     archived_at: string | null
                     deleted_at: string | null
                     workspace_id: string | null
-
-                    synced: number
                 }
 
                 Insert: {
@@ -134,8 +126,6 @@ export interface Database {
                     archived_at?: string | null
                     deleted_at?: string | null
                     workspace_id?: string | null
-
-                    synced?: number
                 }
 
                 Update: {
@@ -155,8 +145,6 @@ export interface Database {
                     archived_at?: string | null
                     deleted_at?: string | null
                     workspace_id?: string | null
-
-                    synced?: number
                 }
             }
 
@@ -174,8 +162,6 @@ export interface Database {
                     created_at: string
                     updated_at: string
                     deleted_at: string | null
-
-                    synced: number
                 }
 
                 Insert: {
@@ -191,8 +177,6 @@ export interface Database {
                     created_at?: string
                     updated_at?: string
                     deleted_at?: string | null
-
-                    synced?: number
                 }
 
                 Update: {
@@ -208,8 +192,6 @@ export interface Database {
                     created_at?: string
                     updated_at?: string
                     deleted_at?: string | null
-
-                    synced?: number
                 }
             }
 
@@ -229,8 +211,6 @@ export interface Database {
                     metadata: string | null
 
                     created_at: string
-
-                    synced: number
                 }
 
                 Insert: {
@@ -248,8 +228,6 @@ export interface Database {
                     metadata?: string | null
 
                     created_at?: string
-
-                    synced?: number
                 }
 
                 Update: {
@@ -267,8 +245,6 @@ export interface Database {
                     metadata?: string | null
 
                     created_at?: string
-
-                    synced?: number
                 }
             }
         }
@@ -277,26 +253,65 @@ export interface Database {
 
 /* ================= APP TYPES ================= */
 
-export type Task = Database['public']['Tables']['tasks']['Row'] & {
-    actual_seconds?: number
+/**
+ * Raw row shape from the local SQLite database.
+ * `synced` is a local-only tracking field — it does NOT exist in Supabase.
+ * It is stripped from payloads before any cloud upsert.
+ */
+export type DbTaskRow = Database['public']['Tables']['tasks']['Row'] & {
+    synced: number
+    is_recurring?: number | boolean
+    last_reset_date?: string | null
+}
+
+/**
+ * App-level Task type with camelCase convenience fields.
+ * The snake_case fields from DbTaskRow are kept for backwards compatibility
+ * but should not be used in new code.
+ */
+export type Task = DbTaskRow & {
+    /** @deprecated use estimateMinutes */
     estimated_minutes?: number
+    /** camelCase alias for estimate_m */
+    estimateMinutes: number
+
+    /** @deprecated use focusSeconds */
+    actual_seconds?: number
+    /** camelCase alias for spent_s */
+    focusSeconds: number
+
+    /** Parsed date portion of due_at (YYYY-MM-DD) */
     due_date?: string | null
+    /** Parsed time portion of due_at (HH:MM:SS) */
     due_time?: string | null
+
+    /** @deprecated use parentTaskId */
     parent_task_id?: string | null
+    /** camelCase alias for parent_id */
+    parentTaskId: string | null
+
     sync_status?: 'synced' | 'pending'
     prev_status?: TaskStatus
-    is_recurring?: boolean
+    is_recurring: boolean
     last_reset_date?: string | null
 }
 
 export type Subtask = Database['public']['Tables']['subtasks']['Row'] & {
+    /** Local-only sync tracking field — not in Supabase */
+    synced?: number
+    /** App-layer alias for `done` — always normalised by mapSubtask */
     completed?: boolean
 }
 
-export type List = Database['public']['Tables']['lists']['Row']
+export type List = Database['public']['Tables']['lists']['Row'] & {
+    /** Local-only sync tracking field — not in Supabase */
+    synced?: number
+}
 
 export type FocusSession =
     Database['public']['Tables']['focus_sessions']['Row'] & {
+        /** Local-only sync tracking field — not in Supabase */
+        synced?: number
         notes?: string
         focus_score?: number
         energy_level?: number

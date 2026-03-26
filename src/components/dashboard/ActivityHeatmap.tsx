@@ -13,22 +13,30 @@ import { Tooltip } from 'react-tooltip'
 import { useFocusStore } from '@/store/focusStore'
 import { cn } from '@/utils/helpers'
 import { Award, CalendarDays, Flame } from 'lucide-react'
+import { calculateStreak, isFocusType } from '@/utils/timeCalculations'
 
 export function ActivityHeatmap() {
-    const { sessions } = useFocusStore()
+    const { sessions, isActive, startTime, sessionType } = useFocusStore()
 
     // 1. Process all historical focus sessions into a map: { "YYYY-MM-DD": minutes }
     const activityMap = useMemo(() => {
         const map: Record<string, number> = {}
         sessions.forEach(s => {
-            if (s.type === 'break') return
+            if (!isFocusType(s.type)) return
             const day = s.start_time?.split('T')[0]
             if (day) {
                 map[day] = (map[day] || 0) + (s.seconds || 0) / 60
             }
         })
+
+        if (isActive && isFocusType(sessionType) && startTime) {
+            const today = new Date().toISOString().split('T')[0]
+            const delta = Math.floor((Date.now() - startTime) / 1000)
+            map[today] = (map[today] || 0) + (delta / 60)
+        }
+
         return map
-    }, [sessions])
+    }, [sessions, isActive, startTime, sessionType])
 
     // 2. Generate date grid for the last 6 months (aligned to week start/end)
     const { days } = useMemo(() => {
@@ -73,22 +81,6 @@ export function ActivityHeatmap() {
             }
         })
 
-        // Current streak logic (naive consecutive days backwards from today)
-        let currentStreak = 0
-        const dateSet = new Set(Object.keys(activityMap).filter(k => activityMap[k] >= 1)) // At least 1 min to count as a streak day
-        let testDate = new Date()
-        while (true) {
-            const dateStr = testDate.toISOString().split('T')[0]
-            if (dateSet.has(dateStr)) {
-                currentStreak++
-                testDate.setDate(testDate.getDate() - 1)
-            } else if (currentStreak === 0 && isToday(testDate)) {
-                testDate.setDate(testDate.getDate() - 1) // allow today to be empty if continuing from yesterday
-            } else {
-                break
-            }
-        }
-
         const fmtHrs = (m: number) => {
             if (m < 60) return `${Math.round(m)}m`
             const h = Math.floor(m / 60)
@@ -99,9 +91,9 @@ export function ActivityHeatmap() {
         return {
             monthStr: fmtHrs(monthMins),
             bestStr: bestDay.date ? `${format(new Date(bestDay.date), 'EEEE')} (${fmtHrs(bestDay.mins)})` : 'None yet',
-            streakCount: currentStreak
+            streakCount: calculateStreak(sessions)
         }
-    }, [activityMap])
+    }, [activityMap, sessions])
 
     return (
         <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-3xl p-6 w-full flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-500 shadow-sm relative overflow-hidden">

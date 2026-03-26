@@ -27,6 +27,7 @@ import { HomeOverview } from './HomeOverview'
 import type { List, Task } from '@/types/database'
 import { cn } from '@/utils/helpers'
 import { format, isToday, isTomorrow } from 'date-fns'
+import { calculateRealTimeFocus } from '@/utils/timeCalculations'
 
 /* ─────────────────────────────────────────
    HELPERS
@@ -70,13 +71,13 @@ function getBentoSize(taskCount: number): 'sm' | 'md' | 'lg' {
 export function Dashboard() {
     const { user } = useAuthStore()
     const {
-        lists, archivedLists, fetchLists, setSelectedList,
+        lists, archived: archivedLists, fetchLists, setSelectedList,
         duplicateList, archive, moveListToWorkspace,
         restoreList, permanentDeleteList, reorderLists, loadArchived
     } = useListStore()
     const { tasks, fetchTasks } = useTaskStore()
     const { workspaces, loadWorkspaces, activeWorkspaceId } = useWorkspaceStore()
-    const { isActive, taskId: activeTaskId, elapsed, fetchSessions } = useFocusStore()
+    const { isActive, taskId: activeTaskId, startTime, fetchSessions, sessions, sessionType } = useFocusStore()
     const navigate = useNavigate()
 
     const [search, setSearch] = useState('')
@@ -107,10 +108,12 @@ export function Dashboard() {
 
     const visibleLists = useMemo(() => {
         const base = lists.filter(l => !l.deleted_at && !l.archived_at)
+        const validWsIds = new Set(workspaces.map(w => w.id))
+
         let filtered = isArchived
             ? archivedLists.filter(l => !l.deleted_at)
             : activeWorkspaceId === 'unassigned'
-                ? base.filter(l => !(l as any).workspace_id)
+                ? base.filter(l => !(l as any).workspace_id || !validWsIds.has((l as any).workspace_id))
                 : activeWorkspaceId
                     ? base.filter(l => (l as any).workspace_id === activeWorkspaceId)
                     : base
@@ -134,13 +137,16 @@ export function Dashboard() {
 
     // Global stats
     const stats = useMemo(() => {
-        const all = tasks.filter(t => !t.deleted_at)
+        const validListIds = new Set(visibleLists.map(l => l.id))
+        const all = tasks.filter(t => !t.deleted_at && t.list_id && validListIds.has(t.list_id))
         const active = all.filter(t => t.status !== 'done')
         const doneToday = all.filter(t => t.status === 'done' && t.completed_at?.startsWith(new Date().toISOString().split('T')[0]))
-        const focusMin = Math.round(elapsed / 60)
+
+        const focusMin = Math.round(calculateRealTimeFocus(sessions, isActive, startTime, sessionType) / 60)
+
         const totalEst = active.reduce((s, t) => s + (t.estimated_minutes || 0), 0)
         return { active: active.length, doneToday: doneToday.length, focusMin, totalEst }
-    }, [tasks, elapsed])
+    }, [tasks, startTime, visibleLists, sessions, isActive, sessionType])
 
     const handleDragStart = (e: DragStartEvent) => { setActiveDragId(e.active.id as string); setMenuListId(null) }
     const handleDragEnd = async (e: DragEndEvent) => {

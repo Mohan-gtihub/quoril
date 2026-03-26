@@ -3,8 +3,8 @@ import { persist } from 'zustand/middleware'
 import { localService } from '@/services/localStorage'
 import type { List } from '@/types/database'
 import type { Task } from '@/types/database'
-import { supabase } from '@/services/supabase'
 import toast from 'react-hot-toast'
+import { useTaskStore } from '@/store/taskStore'
 
 /* ================= TYPES ================= */
 
@@ -14,7 +14,6 @@ interface ListState {
 
     lists: List[]
     archived: List[]
-    archivedLists: List[]
 
     selectedListId: string | null
 
@@ -26,7 +25,6 @@ interface ListState {
 
     load: () => Promise<void>
     loadArchived: () => Promise<void>
-    syncFromCloud: () => Promise<void>
 
 
     /* Aliases (UI compatibility) */
@@ -73,7 +71,6 @@ export const useListStore = create<ListState>()(
 
             lists: [],
             archived: [],
-            archivedLists: [],
 
             selectedListId: null,
 
@@ -126,7 +123,6 @@ export const useListStore = create<ListState>()(
 
                     set({
                         archived: data || [],
-                        archivedLists: data || [],
                         loading: false
                     })
                 } catch (err: any) {
@@ -135,64 +131,6 @@ export const useListStore = create<ListState>()(
                         error: err?.message || 'Failed to load archived',
                         loading: false
                     })
-                }
-            },
-
-
-            /* ================= SYNC ================= */
-
-            syncFromCloud: async () => {
-
-                try {
-
-                    const { data: { session } } =
-                        await supabase.auth.getSession()
-
-                    if (!session?.user) return
-
-
-                    const { data, error } = await supabase
-                        .from('lists')
-                        .select('*')
-                        .eq('user_id', session.user.id)
-
-                    if (error || !data) return
-
-
-                    if (window.electronAPI?.db) {
-
-                        const db = window.electronAPI.db
-
-                        for (const item of data as any[]) {
-                            const [local] =
-                                await db.exec(
-                                    'SELECT * FROM lists WHERE id=?',
-                                    [item.id]
-                                )
-
-                            // If Supabase doesn't have workspace_id yet (due to cache/missing column)
-                            // DO NOT overwrite the local SQLite workspace_id with undefined/null.
-                            // Preserve it so it can sync up later.
-                            if (local && item.workspace_id === undefined) {
-                                item.workspace_id = local.workspace_id
-                            }
-
-                            if (
-                                !local ||
-                                new Date(item.updated_at) >
-                                new Date(local.updated_at)
-                            ) {
-                                await db.saveList(item)
-                            }
-                        }
-                    }
-
-                    // Refresh local state without re-triggering sync
-                    await get().load()
-                    await get().loadArchived()
-
-                } catch (err) {
-                    console.error('[ListStore] sync failed', err)
                 }
             },
 
@@ -264,7 +202,6 @@ export const useListStore = create<ListState>()(
                 set(state => ({
                     lists: state.lists.filter(l => l.id !== id),
                     archived: [...state.archived, list],
-                    archivedLists: [...state.archivedLists, list],
                     selectedListId: state.selectedListId === id ? null : state.selectedListId
                 }))
 
@@ -277,7 +214,6 @@ export const useListStore = create<ListState>()(
                     set({
                         lists: prevLists,
                         archived: prevArchived,
-                        archivedLists: prevArchived,
                         selectedListId: prevSelected,
                         error: 'Archive failed'
                     })
@@ -297,7 +233,6 @@ export const useListStore = create<ListState>()(
                 set(state => ({
                     lists: [...state.lists, list],
                     archived: state.archived.filter(l => l.id !== id),
-                    archivedLists: state.archivedLists.filter(l => l.id !== id)
                 }))
 
                 try {
@@ -309,7 +244,6 @@ export const useListStore = create<ListState>()(
                     set({
                         lists: prevLists,
                         archived: prevArchived,
-                        archivedLists: prevArchived,
                         error: 'Restore failed'
                     })
                     toast.error('Failed to restore list')
@@ -406,11 +340,8 @@ export const useListStore = create<ListState>()(
 
             /* ================= ALIASES ================= */
 
-            /* ================= ALIASES ================= */
-
             fetchLists: async () => {
                 await get().load()
-                get().syncFromCloud().catch(() => { })
             },
 
             fetchArchivedLists: async () => {
@@ -444,16 +375,19 @@ export const useListStore = create<ListState>()(
 
                     set(state => ({
                         archived: state.archived.filter(l => l.id !== id),
-                        archivedLists: state.archivedLists.filter(l => l.id !== id),
                         lists: state.lists.filter(l => l.id !== id)
                     }))
+
+                    // 4. Synchronously clear ghost tasks from memory
+                    useTaskStore.setState(state => ({
+                        tasks: state.tasks.filter(t => t.list_id !== id)
+                    }))
+
                     toast.success('List and its tasks deleted')
                 } catch {
                     toast.error('Failed to delete list')
                 }
             },
-
-            /* 🔥 COMPATIBILITY FOR OLD UI */
 
             createList: async (data: Partial<List>) => {
                 return await get().create(data)
@@ -531,8 +465,7 @@ export const useListStore = create<ListState>()(
             name: 'list-store',
 
             partialize: (state) => ({
-                selectedListId: state.selectedListId,
-                lists: state.lists
+                selectedListId: state.selectedListId
             })
         }
     )

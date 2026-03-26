@@ -7,11 +7,8 @@ import {
     checkLoginRateLimit,
     clearRateLimit,
     getSecureErrorMessage,
-    createSession,
-    destroySession,
-    updateSessionActivity,
-    validateSession,
     generateBrowserFingerprint,
+    initRateLimitStore,
 } from '@/utils/securityUtils'
 import { SECURITY_CONFIG } from '@/config/security'
 
@@ -56,6 +53,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
             set({ loading: true })
 
+            // Load persisted rate-limit records so lockouts survive restarts
+            await initRateLimitStore()
+
             // Generate browser fingerprint for session validation
             const fingerprint = generateBrowserFingerprint()
             set({ sessionFingerprint: fingerprint })
@@ -64,9 +64,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const { data: { session } } = await supabase.auth.getSession()
 
             if (session) {
-                // Validate session with our security layer
-                createSession(session.access_token, session.user.id)
-
                 // Notify main process for synchronization engine
                 if (window.electronAPI?.auth) {
                     window.electronAPI.auth.setUser(session.user.id, session.access_token).catch(console.error)
@@ -96,7 +93,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 console.log('[Auth] State change:', event)
 
                 if (event === 'SIGNED_IN' && session) {
-                    createSession(session.access_token, session.user.id)
                     set({
                         session,
                         user: session.user,
@@ -108,10 +104,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     }
                     startSessionMonitoring()
                 } else if (event === 'SIGNED_OUT') {
-                    const currentSession = get().session
-                    if (currentSession) {
-                        destroySession(currentSession.access_token)
-                    }
                     stopSessionMonitoring()
                     set({
                         session: null,
@@ -175,9 +167,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
             // 4. Clear rate limit on successful login
             clearRateLimit(`login:${email.toLowerCase()}`)
-
-            // 5. Create secure session
-            createSession(data.session.access_token, data.user.id)
 
             set({
                 session: data.session,
@@ -246,9 +235,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const requiresVerification = !data.session
 
             if (data.session && data.user) {
-                // Auto-signed in (email confirmation disabled in Supabase)
-                createSession(data.session.access_token, data.user.id)
-
                 set({
                     session: data.session,
                     user: data.user,
@@ -326,13 +312,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
             set({ loading: true })
 
-            // 1. Destroy secure session
-            const currentSession = get().session
-            if (currentSession) {
-                destroySession(currentSession.access_token)
-            }
-
-            // 2. Stop session monitoring
+            // 1. Stop session monitoring
             stopSessionMonitoring()
 
             if (window.electronAPI?.auth) {
@@ -372,11 +352,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const state = get()
         if (!state.session) return false
 
-        const validation = validateSession(state.session.access_token)
-
-        if (!validation.valid) {
-            console.warn('[Auth] Session invalid:', validation.reason)
-            // Auto sign out on invalid session
+        const now = Date.now()
+        const inactiveTime = now - state.lastActivity
+        if (inactiveTime > SECURITY_CONFIG.SESSION.TIMEOUT_MS) {
             get().signOut()
             return false
         }
@@ -387,7 +365,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     updateActivity: () => {
         const state = get()
         if (state.session) {
-            updateSessionActivity(state.session.access_token)
             set({ lastActivity: Date.now() })
         }
     },

@@ -22,10 +22,10 @@ const __dirname = path.dirname(__filename)
 
 /* ---------------- FLAGS ---------------- */
 
-process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
-
 const isDev = !app.isPackaged
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
+
+if (isDev) process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
 
 /* ---------------- ICON PATH (works in dev + production) ---------------- */
 function getIconPath() {
@@ -134,17 +134,18 @@ function createWindow() {
         mainWindow?.show()
     })
 
-    // Register devtools shortcuts regardless of environment for debugging
-    globalShortcut.register('CommandOrControl+Shift+I', () => {
-        if (mainWindow) {
-            mainWindow.webContents.toggleDevTools()
-        }
-    })
-    globalShortcut.register('F12', () => {
-        if (mainWindow) {
-            mainWindow.webContents.toggleDevTools()
-        }
-    })
+    if (isDev) {
+        globalShortcut.register('CommandOrControl+Shift+I', () => {
+            if (mainWindow) {
+                mainWindow.webContents.toggleDevTools()
+            }
+        })
+        globalShortcut.register('F12', () => {
+            if (mainWindow) {
+                mainWindow.webContents.toggleDevTools()
+            }
+        })
+    }
 
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
         // Keep internal routes inside the app (e.g. popups)
@@ -432,16 +433,66 @@ function setupIPC() {
 
     /* Sync */
 
-    ipcMain.handle('db:getPending', (_, table) =>
-        dbOps.getPending(table)
+    const SYNC_TABLES = new Set(['workspaces', 'lists', 'tasks', 'subtasks', 'focus_sessions'])
+
+    ipcMain.handle('db:getPending', (_, table, limit?: number) => {
+        if (!SYNC_TABLES.has(table)) throw new Error(`Invalid sync table: ${table}`)
+        return dbOps.getPending(table, limit)
+    })
+
+    ipcMain.handle('db:markSynced', (_, table, id) => {
+        if (!SYNC_TABLES.has(table)) throw new Error(`Invalid sync table: ${table}`)
+        return safe(() => dbOps.markSynced(table, id))
+    })
+
+    /* Named update handlers (db:exec removed — no raw SQL from renderer) */
+
+    ipcMain.handle('db:updateTask', (_, id, updates) =>
+        safe(() => dbOps.updateTask(id, updates))
     )
 
-    ipcMain.handle('db:markSynced', (_, table, id) =>
-        safe(() => dbOps.markSynced(table, id))
+    ipcMain.handle('db:updateTaskSortOrder', (_, id, sortOrder) =>
+        safe(() => dbOps.updateTaskSortOrder(id, sortOrder))
     )
 
-    ipcMain.handle('db:exec', (_, sql, params) =>
-        safe(() => dbOps.exec(sql, params))
+    ipcMain.handle('db:softDeleteTasksByListId', (_, listId) =>
+        safe(() => dbOps.softDeleteTasksByListId(listId))
+    )
+
+    ipcMain.handle('db:resetAllTaskTimes', (_, userId) =>
+        safe(() => dbOps.resetAllTaskTimes(userId))
+    )
+
+    ipcMain.handle('db:updateList', (_, id, updates) =>
+        safe(() => dbOps.updateList(id, updates))
+    )
+
+    ipcMain.handle('db:updateSubtask', (_, id, updates) =>
+        safe(() => dbOps.updateSubtask(id, updates))
+    )
+
+    ipcMain.handle('db:softDeleteSubtask', (_, id) =>
+        safe(() => dbOps.softDeleteSubtask(id))
+    )
+
+    ipcMain.handle('db:updateFocusSession', (_, id, updates) =>
+        safe(() => dbOps.updateFocusSession(id, updates))
+    )
+
+    ipcMain.handle('db:softDeleteAllSessions', (_, userId) =>
+        safe(() => dbOps.softDeleteAllSessions(userId))
+    )
+
+    ipcMain.handle('db:taskExists', (_, taskId) =>
+        safe(() => dbOps.taskExists(taskId))
+    )
+
+    ipcMain.handle('db:requeueWorkspace', (_, workspaceId) =>
+        safe(() => dbOps.requeueWorkspace(workspaceId))
+    )
+
+    ipcMain.handle('db:getWorkspaceForList', (_, workspaceId) =>
+        safe(() => dbOps.getWorkspaceForList(workspaceId))
     )
 
     /* Tracker */

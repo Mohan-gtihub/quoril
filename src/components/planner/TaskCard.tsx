@@ -235,13 +235,13 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                                 {allSubtasks.slice(0, 5).map(sub => (
                                     <div key={sub.id} className="flex items-center gap-2 px-1 py-0.5 group/sub">
                                         <Checkbox
-                                            checked={!!(sub.done || sub.completed)}
+                                            checked={!!sub.completed}
                                             onChange={() => toggleSubtask(sub.id)}
                                             size="xs"
                                         />
                                         <span className={cn(
                                             "text-[11px] truncate flex-1",
-                                            (sub.done || sub.completed) ? "line-through text-[var(--text-muted)]" : "text-[var(--text-secondary)]"
+                                            sub.completed ? "line-through text-[var(--text-muted)]" : "text-[var(--text-secondary)]"
                                         )}>
                                             {sub.title}
                                         </span>

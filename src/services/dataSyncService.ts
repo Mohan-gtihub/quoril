@@ -1,6 +1,7 @@
 // dataSyncService.ts
 
 import { supabase } from './supabase'
+import { useSyncStore } from '@/store/syncStore'
 
 const SYNC_INTERVAL = 10000
 
@@ -64,6 +65,18 @@ class DataSyncService {
         if (!user) return
 
         this.syncing = true
+        const sync = useSyncStore.getState()
+        sync.setSyncing(true)
+
+        // Count total pending across all tables
+        if (window.electronAPI?.db) {
+            let total = 0
+            for (const table of SYNC_ORDER) {
+                const rows = await window.electronAPI.db.getPending(table).catch(() => [])
+                total += rows?.length ?? 0
+            }
+            sync.setPending(total)
+        }
 
         try {
             for (const table of SYNC_ORDER) {
@@ -71,8 +84,13 @@ class DataSyncService {
                 if (this.aborted) break
                 await this.syncTable(table, user.id)
             }
+            useSyncStore.getState().setLastSync(Date.now())
+            useSyncStore.getState().setPending(0)
+        } catch (err: any) {
+            useSyncStore.getState().setError(err?.message ?? 'Sync failed')
         } finally {
             this.syncing = false
+            useSyncStore.getState().setSyncing(false)
         }
     }
 
@@ -82,13 +100,16 @@ class DataSyncService {
 
         if (!window.electronAPI?.db) return
 
-        const pendings =
-            await window.electronAPI.db.getPending(table)
+        const BATCH_SIZE = 100
 
-        if (!pendings?.length) return
+        // Loop until the table is fully drained — avoids the old silent LIMIT 50 ceiling
+        while (true) {
+            if (this.aborted) return
 
+            const pendings = await window.electronAPI.db.getPending(table, BATCH_SIZE)
+            if (!pendings?.length) break
 
-        for (const row of pendings) {
+            for (const row of pendings) {
 
             let payload: any = null
 
@@ -98,12 +119,9 @@ class DataSyncService {
 
                 if (table === 'focus_sessions' && row.task_id) {
 
-                    const exists = await window.electronAPI.db.exec(
-                        'SELECT id FROM tasks WHERE id = ? AND deleted_at IS NULL',
-                        [row.task_id]
-                    )
+                    const exists = await window.electronAPI.db.taskExists(row.task_id)
 
-                    if (!exists?.length) {
+                    if (!exists) {
 
                         console.warn('[Sync] Dropping orphan focus session:', row.id)
 
@@ -132,16 +150,7 @@ class DataSyncService {
 
                 /* ---------- Push to Supabase ---------- */
 
-                // Abort if user signed out mid-loop (prevents RLS 403)
                 if (this.aborted) break
-
-                // Re-verify session is still valid before each upsert
-                const { data: { session: currentSession } } = await supabase.auth.getSession()
-                if (!currentSession?.user) {
-                    console.warn('[Sync] Session lost mid-sync, aborting remaining rows')
-                    this.aborted = true
-                    break
-                }
 
                 const { error } = await (supabase.from(table) as any)
                     .upsert(payload, {
@@ -199,20 +208,11 @@ class DataSyncService {
                 /* Handle Foreign Key Violations gracefully */
                 if (err?.code === '23503') {
                     if (table === 'lists' && payload.workspace_id) {
-                        // Check if the workspace exists locally at all
-                        const wsRows = await window.electronAPI.db.exec(
-                            'SELECT id, synced FROM workspaces WHERE id=? AND deleted_at IS NULL',
-                            [payload.workspace_id]
-                        ).catch(() => [])
+                        const wsRows = await window.electronAPI.db.getWorkspaceForList(payload.workspace_id).catch(() => [])
 
                         if (wsRows?.length) {
-                            // Workspace exists locally but not in Supabase yet.
-                            // Reset it to synced=0 so it gets pushed on the next cycle.
                             console.warn(`[Sync] Workspace ${payload.workspace_id} not yet in Supabase. Re-queuing workspace & will retry list next cycle.`)
-                            await window.electronAPI.db.exec(
-                                'UPDATE workspaces SET synced=0 WHERE id=?',
-                                [payload.workspace_id]
-                            ).catch(() => { })
+                            await window.electronAPI.db.requeueWorkspace(payload.workspace_id).catch(() => { })
                             // Also force a fresh sync pass after a short delay
                             setTimeout(() => this.syncPendings(), 3000)
                         } else {
@@ -273,6 +273,7 @@ class DataSyncService {
                 }
             }
         }
+        } // end while
     }
 
     /* ================= PAYLOAD BUILDER ================= */
@@ -404,15 +405,15 @@ class DataSyncService {
         switch (s) {
             case 'active':
             case 'in_progress':
-                return 'in_progress'; // Matches DB 'in_progress'
+                return 'active';
             case 'paused':
             case 'in_review':
-                return 'in_review'; // Matches DB 'in_review'
+                return 'paused';
             case 'done':
             case 'completed':
-                return 'done'; // Matches DB 'done'
+                return 'done';
             case 'planned':
-                return 'todo'; // 'planned' not in strict DB constraint
+                return 'planned';
             case 'todo':
             default:
                 return 'todo';
