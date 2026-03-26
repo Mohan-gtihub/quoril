@@ -126,7 +126,13 @@ export const dbOps = {
     },
 
     getSessions(userId: string) {
-        return exec("SELECT * FROM focus_sessions WHERE user_id=? AND deleted_at IS NULL ORDER BY created_at DESC", [userId])
+        // Defensive: check if deleted_at column exists (may be missing in older DBs before migration v9 runs)
+        const cols = db.prepare("PRAGMA table_info(focus_sessions)").all() as { name: string }[]
+        const hasDeletedAt = cols.some(c => c.name === 'deleted_at')
+        if (hasDeletedAt) {
+            return exec("SELECT * FROM focus_sessions WHERE user_id=? AND deleted_at IS NULL ORDER BY created_at DESC", [userId])
+        }
+        return exec("SELECT * FROM focus_sessions WHERE user_id=? ORDER BY created_at DESC", [userId])
     },
 
     getAppUsage(startDate: string, endDate: string) {

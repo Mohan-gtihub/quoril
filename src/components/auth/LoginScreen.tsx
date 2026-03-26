@@ -108,7 +108,7 @@ export function LoginScreen() {
     /* ── Verification Screen ── */
     if (success === 'verification') {
         return (
-            <div className="h-full flex items-center justify-center bg-[#09090b] select-none">
+            <div className="h-full flex items-center justify-center bg-[var(--bg-primary)] select-none">
                 <div className="text-center max-w-sm px-8 py-10 rounded-2xl border border-white/8 bg-white/[0.02]">
                     <div className="w-16 h-16 rounded-full bg-emerald-500/15 ring-1 ring-emerald-500/30 flex items-center justify-center mx-auto mb-5">
                         <Mail className="w-8 h-8 text-emerald-400" />
@@ -130,7 +130,7 @@ export function LoginScreen() {
 
     /* ── Main Layout ── */
     return (
-        <div className="h-full flex overflow-hidden bg-[#09090b] select-none font-sans">
+        <div className="h-full flex overflow-hidden bg-[var(--bg-primary)] select-none font-sans">
 
             {/* ── LEFT PANEL ── */}
             <div className="hidden lg:flex flex-col w-[45%] relative overflow-hidden bg-gradient-to-br from-blue-950/60 to-[#09090b] border-r border-white/5">

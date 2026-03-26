@@ -16,7 +16,7 @@ export function getLast7DaysRange(): DateRange {
 
 /* ─── Root Hook ──────────────────────────────────────────────── */
 
-export function useReportsData(range: DateRange) {
+export function useReportsData(range: DateRange, retryKey = 0) {
     const { user } = useAuthStore()
     const [raw, setRaw] = useState<any>(null)
     const [loading, setLoading] = useState(true)
@@ -46,7 +46,7 @@ export function useReportsData(range: DateRange) {
                 setError('Failed to load report data.')
                 setLoading(false)
             })
-    }, [user?.id, startDate, endDate])
+    }, [user?.id, startDate, endDate, retryKey])
 
     /* ── Sub-hooks ─────────────────────────────────────────────── */
 

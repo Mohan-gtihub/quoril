@@ -173,18 +173,18 @@ export function CreateTaskModal({ isOpen, onClose, listId }: Props) {
                         </button>
 
                         <button
-                            disabled={loading}
+                            disabled={loading || !title.trim()}
                             onClick={() => handleSubmit(false)}
-                            className="flex-1 btn-glass-primary py-3 rounded-xl font-bold disabled:opacity-50"
+                            className="flex-1 btn-glass-primary py-3 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Create
                         </button>
                     </div>
 
                     <button
-                        disabled={loading}
+                        disabled={loading || !title.trim()}
                         onClick={() => handleSubmit(true)}
-                        className="w-full bg-emerald-500/80 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold backdrop-blur-md border border-emerald-400/30 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all disabled:opacity-50"
+                        className="w-full bg-emerald-500/80 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold backdrop-blur-md border border-emerald-400/30 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Create & Focus Now
                     </button>

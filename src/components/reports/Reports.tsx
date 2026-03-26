@@ -129,11 +129,18 @@ function DayBars({ points, max, color = '#3b82f6', days }: {
     points: number[]; max: number; color?: string; days: string[]
 }) {
     if (max === 0) return <EmptyState icon={TrendingUp} msg="No data yet for this range" />
+    const peakIdx = points.indexOf(Math.max(...points))
     return (
         <div className="flex flex-col gap-1">
             <div className="flex items-end gap-1 h-20">
                 {points.map((v, i) => (
-                    <div key={i} className="flex-1 flex flex-col justify-end" title={`${days[i]}: ${v}`}>
+                    <div key={i} className="flex-1 flex flex-col justify-end relative group" title={`${format(parseISO(days[i]), 'EEE MMM d')}: ${v}`}>
+                        {/* Peak label */}
+                        {i === peakIdx && v > 0 && (
+                            <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] font-bold whitespace-nowrap tabular-nums" style={{ color }}>
+                                {v}
+                            </span>
+                        )}
                         <div
                             className="rounded-t transition-all duration-500 w-full"
                             style={{
@@ -185,7 +192,8 @@ function Gauge({ score, size = 80 }: { score: number; size?: number }) {
 export function Reports() {
     const navigate = useNavigate()
     const [range, setRange] = useState<DateRange>(getLast7DaysRange)
-    const data = useReportsData(range)
+    const [retryKey, setRetryKey] = useState(0)
+    const data = useReportsData(range, retryKey)
     const { loading, error, focusSummary, focusReport, taskReport, appReport, workspaceStats, days } = data
     const { trendByDay, qualityByDay, movingAvg } = focusReport
     const { topApps, categoryBreakdown, productivityScore, contextByDay, avgDailySwitches, idleRatio } = appReport
@@ -226,7 +234,7 @@ export function Reports() {
                     <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20">
                         <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
                         <p className="text-xs text-red-300 flex-1">{error}</p>
-                        <button onClick={() => setRange(range)} className="text-[11px] text-red-400 flex items-center gap-1">
+                        <button onClick={() => setRetryKey(k => k + 1)} className="text-[11px] text-red-400 flex items-center gap-1">
                             <RefreshCw className="w-3 h-3" /> Retry
                         </button>
                     </div>

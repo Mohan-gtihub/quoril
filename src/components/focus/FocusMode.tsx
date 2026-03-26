@@ -6,6 +6,7 @@ import { useTaskStore } from '@/store/taskStore'
 import { useFocusStore } from '@/store/focusStore'
 import { useListStore } from '@/store/listStore'
 import { useSettingsStore } from '@/store/settingsStore'
+import { useSyncStore } from '@/store/syncStore'
 import { Play, Pause, Zap, ArrowLeft, CheckCircle2, Plus, ArrowRight, ListTodo, FileText, Settings as SettingsIcon, Coffee } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useTimerDisplay } from '@/hooks/useTimerDisplay'
@@ -37,6 +38,7 @@ export function FocusMode() {
     } = useFocusStore()
 
     const { isOvertime, progress, breakRemaining, pomodoroRemaining, pomodoroTotal, displayTime } = useTimerDisplay()
+    const { syncing, pendingCount, error: syncError } = useSyncStore()
 
 
     // Request Notification Permission
@@ -297,7 +299,13 @@ export function FocusMode() {
                                 <Zap className="w-3 h-3 text-amber-500 fill-amber-500" />
                                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 italic">Active Frontier</span>
                             </div>
-                            <span className="text-[9px] font-mono text-white/20 uppercase tabular-nums">ID_{activeTaskId?.slice(-8) || 'none'}</span>
+                            {syncError ? (
+                                <span className="text-[9px] font-mono text-red-400/60 uppercase tabular-nums tracking-widest">Sync Error</span>
+                            ) : syncing ? (
+                                <span className="text-[9px] font-mono text-blue-400/60 uppercase tabular-nums tracking-widest animate-pulse">Syncing…</span>
+                            ) : pendingCount > 0 ? (
+                                <span className="text-[9px] font-mono text-amber-400/60 uppercase tabular-nums tracking-widest">{pendingCount} pending</span>
+                            ) : null}
                         </div>
 
                         <div
@@ -394,7 +402,13 @@ export function FocusMode() {
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] italic">Intelligence</span>
                                 </button>
                             </div>
-                            <span className="text-[9px] font-mono text-white/10 uppercase tabular-nums tracking-widest">Sector_01_Sync</span>
+                            {syncing ? (
+                                <span className="text-[9px] font-mono text-blue-400/40 uppercase tabular-nums tracking-widest animate-pulse">Syncing…</span>
+                            ) : pendingCount > 0 ? (
+                                <span className="text-[9px] font-mono text-amber-400/40 uppercase tabular-nums tracking-widest">{pendingCount} pending</span>
+                            ) : (
+                                <span className="text-[9px] font-mono text-white/10 uppercase tabular-nums tracking-widest">All synced</span>
+                            )}
                         </div>
 
                         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-8">

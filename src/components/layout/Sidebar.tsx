@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { LayoutGrid, Settings, LogOut, BarChart3, Plus, Edit2, Trash2, Check, MoreHorizontal, FolderKanban, Archive, ChevronDown, Folders } from 'lucide-react'
+import { LayoutGrid, Settings, LogOut, BarChart3, Plus, Edit2, Trash2, Check, MoreHorizontal, FolderKanban, Archive, ChevronDown, Folders, Kanban } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useListStore } from '@/store/listStore'
 import { useWorkspaceStore, Workspace } from '@/store/workspaceStore'
@@ -217,7 +217,7 @@ export function Sidebar() {
     )
 
     return (
-        <aside className="w-[220px] bg-[var(--bg-secondary)] border-r border-[var(--border-default)] flex flex-col h-full shrink-0 hidden lg:flex transition-colors duration-500 overflow-y-auto relative z-40">
+        <aside className="w-[220px] bg-[var(--bg-secondary)] border-r border-[var(--border-default)] flex flex-col h-full shrink-0 hidden lg:flex transition-colors duration-500 relative z-40">
 
             {/* Top User Profile / Dropdown */}
             <div ref={userMenuRef} className="relative px-2 pt-4 pb-2">
@@ -256,7 +256,7 @@ export function Sidebar() {
                 </AnimatePresence>
             </div>
 
-            <div className="flex-1 px-2 space-y-5 py-2">
+            <div className="flex-1 px-2 space-y-5 py-2 overflow-y-auto">
 
                 {/* Main Links */}
                 <div className="space-y-0.5">
@@ -270,6 +270,7 @@ export function Sidebar() {
                         <LayoutGrid size={14} className={cn(isDashboard && !activeWorkspaceId ? "text-[var(--accent-primary)]" : "text-[var(--text-muted)]")} />
                         <span className="flex-1">Home</span>
                     </button>
+                    <NavItem icon={<Kanban size={14} />} label="Planner" path="/planner" active={location.pathname === '/planner'} />
                     <NavItem icon={<Folders size={14} />} label="Workspaces" path="/workspaces" active={location.pathname === '/workspaces'} />
                     <NavItem icon={<BarChart3 size={14} />} label="Reports" path="/reports" active={location.pathname === '/reports'} />
                 </div>
