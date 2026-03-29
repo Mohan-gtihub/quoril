@@ -17,6 +17,7 @@ import { PlannerHeader } from './PlannerHeader'
 import { usePlannerStore } from '@/store/plannerStore'
 import { isSameDay, startOfToday, format } from 'date-fns'
 import toast from 'react-hot-toast'
+import { confirm } from '@/components/ui/ConfirmDialog'
 
 interface ColumnDef {
     id: TaskColumn
@@ -62,7 +63,7 @@ function BoardColumn({
     return (
         <div
             ref={setNodeRef}
-            className={`flex flex-col h-full rounded-xl transition-all duration-300 ${isToday ? 'w-96 min-w-[384px] ring-1 ring-white/10' : 'w-72 min-w-[288px]'
+            className={`flex flex-col h-full rounded-xl transition-all duration-300 flex-shrink-0 ${isToday ? 'w-80 lg:w-96 min-w-[280px] ring-1 ring-white/10' : 'w-64 lg:w-72 min-w-[240px]'
                 } glass-regular`}
             style={{
                 borderColor: 'var(--border-default)',
@@ -72,11 +73,11 @@ function BoardColumn({
             <div className="p-4 border-b rounded-t-xl glass-thin" style={{ borderColor: 'var(--border-default)' }}>
                 <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${column.color}`}></div>
-                            <div>
-                                <h2 className="font-bold text-sm leading-none" style={{ color: 'var(--text-primary)' }}>{column.title}</h2>
-                                <p className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>{column.subtitle}</p>
+                        <div className="flex items-center gap-2 min-w-0">
+                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${column.color}`}></div>
+                            <div className="min-w-0">
+                                <h2 className="font-bold text-sm leading-none truncate" style={{ color: 'var(--text-primary)' }}>{column.title}</h2>
+                                <p className="text-[10px] font-medium truncate" style={{ color: 'var(--text-muted)' }}>{column.subtitle}</p>
                             </div>
                         </div>
 
@@ -464,16 +465,15 @@ export function Planner() {
         }
     }
 
-    const handleBlitz = (task: Task) => {
+    const handleBlitz = async (task: Task) => {
         if (isActive && activeFocusId === task.id) {
             setShowFocusPanel(true)
             return
         }
 
         if (isActive && activeFocusId !== task.id) {
-            if (!window.confirm("You have an active session running. Switch focus to this task?")) {
-                return
-            }
+            const ok = await confirm({ message: 'You have an active session running. Switch focus to this task?', variant: 'warning', confirmLabel: 'Switch Task' })
+            if (!ok) return
         }
 
         startSession(task.id)
@@ -495,12 +495,12 @@ export function Planner() {
                 onDragEnd={handleDragEnd}
             >
                 {/* Board Columns container */}
-                <div className="flex-1 overflow-x-auto overflow-y-hidden p-6">
-                    <div className="flex h-full gap-6 min-w-max">
+                <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 lg:p-6">
+                    <div className="flex h-full gap-4 lg:gap-6">
                         {columns_def.map((col) => {
                             if (col.id === 'today') {
                                 return (
-                                    <div key={col.id} className="w-96 min-w-[384px]">
+                                    <div key={col.id} className="min-w-[280px] w-80 lg:w-96 flex-shrink-0">
                                         <TodayColumn
                                             title={col.title}
                                             tasks={tasksByColumn[col.id]}

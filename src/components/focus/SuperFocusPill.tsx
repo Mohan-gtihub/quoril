@@ -47,7 +47,7 @@ export function SuperFocusPill() {
                 // If 0 items, allocate 60px for the "Target is locked" message
                 const contentHeight = itemsCount === 0 ? 60 : (itemsCount * 32) + 40 // +40 for add button space
                 const containerHeight = (12 + 20 + contentHeight + 48 + 12)
-                const baseHeight = 48 + 12 // 48 pill + 12 badge space
+                const baseHeight = 48 + 20 // 48 pill + 16 badge space + 4 bottom padding for rounded corners
                 const height = isExpanded ? (baseHeight + 8 + containerHeight) : baseHeight
 
                 window.electron.resizeWindow(340, height, 40, 40)
@@ -91,7 +91,7 @@ export function SuperFocusPill() {
     }
 
     return (
-        <div className="w-full h-full flex flex-col gap-2 pointer-events-none pt-4 bg-transparent border-none outline-none">
+        <div className="w-full h-full flex flex-col gap-2 pointer-events-none pt-4 pb-1 bg-transparent border-none outline-none">
             {/* Main Pill Row */}
             <div
                 className={cn(

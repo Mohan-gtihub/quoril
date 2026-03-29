@@ -3,6 +3,7 @@ import { DateRangePicker } from './DateRangePicker'
 import type { DateRange } from './DateRangePicker'
 import { useFocusStore } from '@/store/focusStore'
 import toast from 'react-hot-toast'
+import { confirm } from '@/components/ui/ConfirmDialog'
 
 interface ReportsHeaderProps {
     navigate: (path: string) => void
@@ -14,7 +15,7 @@ export function ReportsHeader({ navigate, dateRange, setDateRange }: ReportsHead
     const { clearHistory } = useFocusStore()
 
     const handleClearHistory = async () => {
-        if (window.confirm('Are you sure you want to clear all session history? This cannot be undone.')) {
+        if (await confirm({ message: 'Clear all session history? This cannot be undone.', variant: 'danger', confirmLabel: 'Clear History' })) {
             await clearHistory()
             toast.success('History cleared')
         }

@@ -3,6 +3,7 @@ import { useListStore } from '@/store/listStore'
 import { useState } from 'react'
 import { DateNavigator } from './DateNavigator'
 import { IconButton } from '../dashboard/Dashboard'
+import { confirm } from '@/components/ui/ConfirmDialog'
 
 export function PlannerHeader() {
     const { lists, selectedListId, setSelectedList, deleteList } = useListStore()
@@ -14,7 +15,7 @@ export function PlannerHeader() {
 
     const handleDeleteList = async (listId: string, listName: string, e: React.MouseEvent) => {
         e.stopPropagation()
-        if (window.confirm(`Delete list "${listName}"? All tasks in this list will also be deleted.`)) {
+        if (await confirm({ message: `Delete list "${listName}"? All tasks in this list will also be deleted.`, variant: 'danger', confirmLabel: 'Delete List' })) {
             await deleteList(listId)
             if (selectedListId === listId) {
                 setSelectedList('all')

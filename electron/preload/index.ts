@@ -53,6 +53,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         softDeleteTasksByListId: (listId: string) => ipcRenderer.invoke('db:softDeleteTasksByListId', listId),
         resetAllTaskTimes: (userId: string) => ipcRenderer.invoke('db:resetAllTaskTimes', userId),
         deleteTask: (id: string) => ipcRenderer.invoke('db:deleteTask', id),
+        hardDeleteTask: (id: string) => ipcRenderer.invoke('db:hardDeleteTask', id),
         startTask: (id: string) => ipcRenderer.invoke('db:startTask', id),
         pauseTask: (id: string) => ipcRenderer.invoke('db:pauseTask', id),
         reorderTasks: (items: any) => ipcRenderer.invoke('db:reorderTasks', items),
@@ -62,6 +63,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         archiveList: (id: string) => ipcRenderer.invoke('db:archiveList', id),
         restoreList: (id: string) => ipcRenderer.invoke('db:restoreList', id),
         deleteList: (id: string) => ipcRenderer.invoke('db:deleteList', id),
+        hardDeleteList: (id: string) => ipcRenderer.invoke('db:hardDeleteList', id),
         getSubtasks: (taskId: string) => ipcRenderer.invoke('db:getSubtasks', taskId),
         saveSubtask: (subtask: any) => ipcRenderer.invoke('db:saveSubtask', subtask),
         updateSubtask: (id: string, updates: any) => ipcRenderer.invoke('db:updateSubtask', id, updates),
@@ -115,6 +117,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     reports: {
         getDashboardData: (args: { userId: string; startDate: string; endDate: string }) =>
             ipcRenderer.invoke('reports:getDashboardData', args),
+    },
+
+    // Screen Time
+    screenTime: {
+        getData: (args: { date: string }) =>
+            ipcRenderer.invoke('screenTime:getData', args),
     },
 })
 
@@ -171,6 +179,7 @@ export interface ElectronAPI {
         softDeleteTasksByListId: (listId: string) => Promise<void>
         resetAllTaskTimes: (userId: string) => Promise<void>
         deleteTask: (id: string) => Promise<any>
+        hardDeleteTask: (id: string) => Promise<any>
         startTask: (id: string) => Promise<any>
         pauseTask: (id: string) => Promise<any>
         reorderTasks: (items: any) => Promise<any>
@@ -180,6 +189,7 @@ export interface ElectronAPI {
         archiveList: (id: string) => Promise<any>
         restoreList: (id: string) => Promise<any>
         deleteList: (id: string) => Promise<any>
+        hardDeleteList: (id: string) => Promise<any>
         getSubtasks: (taskId: string) => Promise<any[]>
         saveSubtask: (subtask: any) => Promise<any>
         updateSubtask: (id: string, updates: any) => Promise<void>
@@ -220,6 +230,9 @@ export interface ElectronAPI {
     }
     reports: {
         getDashboardData: (args: { userId: string; startDate: string; endDate: string }) => Promise<any>
+    }
+    screenTime: {
+        getData: (args: { date: string }) => Promise<any>
     }
 }
 

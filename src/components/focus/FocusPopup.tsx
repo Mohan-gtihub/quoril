@@ -43,17 +43,8 @@ export function FocusPopup() {
 
     const handleSkip = async () => {
         const nextTaskId = nextTasks.length > 0 ? nextTasks[0].id : undefined
-
-        if (nextTaskId) {
-            if (window.confirm('Skip to next task?')) {
-                await skipToNext(nextTaskId)
-            }
-        } else {
-            if (window.confirm('Skip this session? (No more tasks in queue)')) {
-                await skipToNext()
-                window.close()
-            }
-        }
+        await skipToNext(nextTaskId)
+        if (!nextTaskId) window.close()
     }
 
     const handleDone = async () => {

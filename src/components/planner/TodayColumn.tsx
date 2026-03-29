@@ -34,7 +34,7 @@ export function TodayColumn({ title = "Today", tasks, columnId, onTaskComplete, 
     return (
         <div
             ref={setNodeRef}
-            className="flex flex-col h-full rounded-xl border shadow-lg overflow-hidden flex-shrink-0"
+            className="flex flex-col h-full rounded-xl border shadow-lg overflow-hidden"
             style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-default)' }}
         >
             {/* Header (Clean Quoril Style) */}

@@ -435,6 +435,142 @@ export const dbOps = {
             productiveAppSeconds,
             allAppSeconds,
         }
+    },
+
+    /* ---- Screen Time / Digital Wellbeing (one aggregated call) ---- */
+
+    getScreenTimeData(date: string) {
+        // date = 'YYYY-MM-DD'
+
+        // 1. Hourly breakdown — seconds per hour of the day (0–23)
+        const hourlyBreakdown = (exec(`
+            SELECT
+                CAST(strftime('%H', start_time) AS INTEGER) AS hour,
+                SUM(duration_seconds)                       AS totalSeconds,
+                COUNT(DISTINCT app_id)                      AS uniqueApps
+            FROM app_sessions
+            WHERE strftime('%Y-%m-%d', start_time) = ?
+              AND duration_seconds > 0
+            GROUP BY hour
+            ORDER BY hour ASC
+        `, [date]) as any[]) ?? []
+
+        // 2. Per-app breakdown for the day — with category, duration, session count
+        const appBreakdown = (exec(`
+            SELECT
+                s.app_id                            AS appName,
+                COALESCE(a.category, 'Other')       AS category,
+                SUM(s.duration_seconds)             AS totalSeconds,
+                COUNT(*)                            AS sessionCount,
+                MIN(s.start_time)                   AS firstSeen,
+                MAX(s.end_time)                     AS lastSeen
+            FROM app_sessions s
+            LEFT JOIN apps a ON s.app_id = a.id
+            WHERE strftime('%Y-%m-%d', s.start_time) = ?
+              AND s.duration_seconds > 0
+            GROUP BY s.app_id
+            ORDER BY totalSeconds DESC
+        `, [date]) as any[]) ?? []
+
+        // 3. Category totals — for the donut/pie chart
+        const categoryTotals = (exec(`
+            SELECT
+                COALESCE(a.category, 'Other')       AS category,
+                SUM(s.duration_seconds)             AS totalSeconds,
+                COUNT(DISTINCT s.app_id)            AS appCount
+            FROM app_sessions s
+            LEFT JOIN apps a ON s.app_id = a.id
+            WHERE strftime('%Y-%m-%d', s.start_time) = ?
+              AND s.duration_seconds > 0
+            GROUP BY category
+            ORDER BY totalSeconds DESC
+        `, [date]) as any[]) ?? []
+
+        // 4. Domain breakdown — websites visited
+        const domainBreakdown = (exec(`
+            SELECT
+                ds.domain,
+                COALESCE(dc.category, 'Web')        AS category,
+                SUM(ds.duration_seconds)             AS totalSeconds,
+                COUNT(*)                             AS sessionCount
+            FROM domain_sessions ds
+            LEFT JOIN domain_categories dc ON ds.domain = dc.domain
+            WHERE strftime('%Y-%m-%d', ds.start_time) = ?
+              AND ds.duration_seconds > 0
+            GROUP BY ds.domain
+            ORDER BY totalSeconds DESC
+            LIMIT 20
+        `, [date]) as any[]) ?? []
+
+        // 5. Weekly comparison — last 7 days of total screen time
+        const weeklyTrend = (exec(`
+            SELECT
+                strftime('%Y-%m-%d', start_time)    AS day,
+                SUM(duration_seconds)               AS totalSeconds,
+                COUNT(DISTINCT app_id)              AS uniqueApps,
+                COUNT(*)                            AS sessionCount
+            FROM app_sessions
+            WHERE start_time >= date(?, '-6 days')
+              AND strftime('%Y-%m-%d', start_time) <= ?
+              AND duration_seconds > 0
+            GROUP BY day
+            ORDER BY day ASC
+        `, [date, date]) as any[]) ?? []
+
+        // 6. App timeline — individual sessions for the day (for timeline view)
+        const appTimeline = (exec(`
+            SELECT
+                s.app_id                            AS appName,
+                COALESCE(a.category, 'Other')       AS category,
+                s.start_time                        AS startTime,
+                s.end_time                          AS endTime,
+                s.duration_seconds                  AS durationSeconds,
+                s.window_title                      AS windowTitle
+            FROM app_sessions s
+            LEFT JOIN apps a ON s.app_id = a.id
+            WHERE strftime('%Y-%m-%d', s.start_time) = ?
+              AND s.duration_seconds >= 10
+            ORDER BY s.start_time ASC
+        `, [date]) as any[]) ?? []
+
+        // 7. Day totals
+        const dayTotals = (exec(`
+            SELECT
+                COALESCE(SUM(duration_seconds), 0)  AS totalScreenTime,
+                COUNT(DISTINCT app_id)              AS totalApps,
+                COUNT(*)                            AS totalSessions,
+                COALESCE(MAX(duration_seconds), 0)  AS longestSession
+            FROM app_sessions
+            WHERE strftime('%Y-%m-%d', start_time) = ?
+              AND duration_seconds > 0
+        `, [date]) as any[])?.[0] ?? {}
+
+        // 8. Productive vs unproductive split
+        const productivitySplit = (exec(`
+            SELECT
+                CASE
+                    WHEN COALESCE(a.category, 'Other') IN ('Development', 'Work') THEN 'productive'
+                    WHEN COALESCE(a.category, 'Other') IN ('Entertainment', 'Gaming') THEN 'unproductive'
+                    ELSE 'neutral'
+                END AS bucket,
+                SUM(s.duration_seconds) AS totalSeconds
+            FROM app_sessions s
+            LEFT JOIN apps a ON s.app_id = a.id
+            WHERE strftime('%Y-%m-%d', s.start_time) = ?
+              AND s.duration_seconds > 0
+            GROUP BY bucket
+        `, [date]) as any[]) ?? []
+
+        return {
+            hourlyBreakdown,
+            appBreakdown,
+            categoryTotals,
+            domainBreakdown,
+            weeklyTrend,
+            appTimeline,
+            dayTotals,
+            productivitySplit,
+        }
     }
 }
 

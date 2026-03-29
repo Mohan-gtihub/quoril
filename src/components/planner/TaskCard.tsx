@@ -13,6 +13,7 @@ import { formatTimeInput, parseTimeInput } from '@/utils/timeParser'
 import { useTimerDisplay } from '@/hooks/useTimerDisplay'
 import { cn } from '@/utils/helpers'
 import { useSettingsStore } from '@/store/settingsStore'
+import { confirm } from '@/components/ui/ConfirmDialog'
 import { usePlannerStore } from '@/store/plannerStore'
 import { isSameDay, startOfToday } from 'date-fns'
 
@@ -139,9 +140,8 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
     }
 
     const handleStopClick = async () => {
-        if (window.confirm('End focus session?')) {
-            await focus.endSession()
-        }
+        const ok = await confirm({ message: 'End this focus session?', variant: 'warning', confirmLabel: 'End Session' })
+        if (ok) await focus.endSession()
     }
 
     const handleTitleBlur = async () => {
@@ -512,14 +512,14 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                                 <Zap className="w-4 h-4 fill-current" />
                             </button>
                             <button
-                                onClick={() => { if (window.confirm('Archive this task? (Removes from view)')) archiveTask(task.id); }}
+                                onClick={async () => { if (await confirm({ message: 'Archive this task? It will be removed from view.', variant: 'warning', confirmLabel: 'Archive' })) archiveTask(task.id); }}
                                 className="p-2 rounded-lg bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-all"
                                 title="Archive Task"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-archive"><rect width="20" height="5" x="2" y="3" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /><path d="M10 12h4" /></svg>
                             </button>
                             <button
-                                onClick={() => { if (window.confirm('Permanently delete this task? Cannot be undone.')) permanentDeleteTask(task.id); }}
+                                onClick={async () => { if (await confirm({ message: 'Permanently delete this task? This cannot be undone.', variant: 'danger', confirmLabel: 'Delete' })) permanentDeleteTask(task.id); }}
                                 className="p-2 rounded-lg bg-[var(--error)]/5 text-[var(--error)]/40 hover:text-[var(--error)] hover:bg-[var(--error)]/10 transition-all"
                                 title="Delete Permanently"
                             >

@@ -5,8 +5,7 @@ import {
     Monitor,
     Globe,
     TrendingUp,
-    Zap,
-    AlertCircle
+    Zap
 } from 'lucide-react'
 import {
     BarChart,
@@ -57,17 +56,37 @@ export function ActivityDashboard() {
         }
     }
 
+    const [categoryMap, setCategoryMap] = useState<Record<string, string>>({})
+
+    // Load app categories for accurate productivity scoring
+    useEffect(() => {
+        const today = format(new Date(), 'yyyy-MM-dd')
+        window.electronAPI?.db?.getAppUsage(today + 'T00:00:00', today + 'T23:59:59')
+            .then((rows: any[]) => {
+                const map: Record<string, string> = {}
+                rows?.forEach((r: any) => { if (r.appName && r.category) map[r.appName] = r.category })
+                setCategoryMap(map)
+            })
+            .catch(() => {})
+    }, [])
+
     const { totalTime, topApps, topDomains, productivityScore } = useMemo(() => {
-        // Sort and filter
         const sortedApps = [...appUsage].sort((a, b) => b.total_seconds - a.total_seconds)
         const sortedDomains = [...domainUsage].sort((a, b) => b.total_seconds - a.total_seconds)
 
         const totalSeconds = sortedApps.reduce((acc, curr) => acc + curr.total_seconds, 0)
 
-        // Simple productivity score placeholder (randomized or based on categories if we had them fully linked)
-        // For V1, let's just make it look cool based on time.
-        // In real V2, we'd join with category tables.
-        const score = Math.min(100, Math.max(0, 75 + Math.floor(Math.random() * 10 - 5)))
+        // Real productivity score based on app categories
+        let productiveSeconds = 0
+        sortedApps.forEach(app => {
+            const cat = categoryMap[app.app_id] || 'Other'
+            if (['Development', 'Work'].includes(cat)) {
+                productiveSeconds += app.total_seconds
+            }
+        })
+        const score = totalSeconds > 0
+            ? Math.min(100, Math.round((productiveSeconds / totalSeconds) * 100))
+            : 0
 
         return {
             totalTime: totalSeconds,
@@ -75,7 +94,7 @@ export function ActivityDashboard() {
             topDomains: sortedDomains.slice(0, 5),
             productivityScore: score
         }
-    }, [appUsage, domainUsage])
+    }, [appUsage, domainUsage, categoryMap])
 
     const formatDuration = (seconds: number) => {
         const h = Math.floor(seconds / 3600)
@@ -142,8 +161,8 @@ export function ActivityDashboard() {
                         {productivityScore}
                     </div>
                     <div className="mt-4 flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                        <AlertCircle size={14} />
-                        <span>Based on categorization (Beta)</span>
+                        <Zap size={14} />
+                        <span>Based on app categories</span>
                     </div>
                 </div>
 
