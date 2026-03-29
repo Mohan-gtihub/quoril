@@ -6,7 +6,8 @@ import {
     Menu,
     nativeImage,
     shell,
-    globalShortcut
+    globalShortcut,
+    systemPreferences
 } from 'electron'
 
 import path from 'path'
@@ -509,6 +510,32 @@ function setupIPC() {
         trackingEngine.setUserId(userId, accessToken)
     })
 
+    /* macOS Accessibility Permission (needed for active-win app tracking) */
+
+    ipcMain.handle('permissions:checkAccessibility', () => {
+        if (process.platform !== 'darwin') return true
+        return systemPreferences.isTrustedAccessibilityClient(false)
+    })
+
+    ipcMain.handle('permissions:requestAccessibility', () => {
+        if (process.platform !== 'darwin') return true
+        // Passing true triggers the macOS system prompt
+        return systemPreferences.isTrustedAccessibilityClient(true)
+    })
+
+    ipcMain.handle('permissions:startTracking', () => {
+        // Called after user grants accessibility permission from the in-app prompt
+        if (process.platform === 'darwin') {
+            const hasAccess = systemPreferences.isTrustedAccessibilityClient(false)
+            if (hasAccess) {
+                trackingEngine.start()
+                return true
+            }
+            return false
+        }
+        return true
+    })
+
     /* External URLs (Google OAuth, etc.) */
 
     ipcMain.handle('file:openExternal', (_, url: string) => {
@@ -548,7 +575,18 @@ app.whenReady().then(async () => {
     createWindow()
     createTray()
     setupIPC()
-    trackingEngine.start()
+
+    // On macOS, only start app tracking if accessibility permission is granted
+    if (process.platform === 'darwin') {
+        const hasAccess = systemPreferences.isTrustedAccessibilityClient(false)
+        if (hasAccess) {
+            trackingEngine.start()
+        } else {
+            console.log('[Quoril] Accessibility permission not granted — app tracking disabled. Core features still work.')
+        }
+    } else {
+        trackingEngine.start()
+    }
 
     // Auto-launch on startup (Safe production-grade implementation)
     if (!isDev) {

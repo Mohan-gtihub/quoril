@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Bell, Zap, Palette, Sparkles, Play, CheckCircle2, Target, Eye, Cpu } from 'lucide-react'
+import { ArrowLeft, Bell, Zap, Palette, Sparkles, Play, CheckCircle2, Target, Eye, Cpu, Shield } from 'lucide-react'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useFocusStore } from '@/store/focusStore'
 import { soundService } from '@/services/soundService'
@@ -430,8 +431,79 @@ export function Settings() {
                         />
                     </SettingCard>
 
+                    {/* ══ macOS Permissions (only shown on macOS) ══ */}
+                    <AccessibilityPermissionCard />
+
                 </div>
             </main>
         </div>
+    )
+}
+
+function AccessibilityPermissionCard() {
+    const [platform, setPlatform] = useState<string>('')
+    const [hasAccess, setHasAccess] = useState<boolean | null>(null)
+
+    useEffect(() => {
+        const api = window.electronAPI
+        if (!api?.permissions) return
+        api.app.getPlatform().then(setPlatform)
+        api.permissions.checkAccessibility().then(setHasAccess)
+    }, [])
+
+    // Only show on macOS
+    if (platform !== 'darwin') return null
+    // Still loading
+    if (hasAccess === null) return null
+
+    const handleRequest = async () => {
+        const api = window.electronAPI
+        if (!api?.permissions) return
+        api.permissions.requestAccessibility()
+        // After the user interacts with System Settings, poll for the change
+        const poll = setInterval(async () => {
+            const granted = await api.permissions.checkAccessibility()
+            if (granted) {
+                clearInterval(poll)
+                setHasAccess(true)
+                await api.permissions.startTracking()
+            }
+        }, 2000)
+        // Stop polling after 2 minutes
+        setTimeout(() => clearInterval(poll), 120000)
+    }
+
+    return (
+        <SettingCard
+            icon={Shield}
+            title="App Tracking Permission"
+            description="Quoril tracks which apps you use during focus sessions to give you productivity insights. This requires macOS Accessibility permission."
+            accent={hasAccess ? "text-green-400 bg-green-500/10" : "text-amber-400 bg-amber-500/10"}
+        >
+            {hasAccess ? (
+                <div className="flex items-center gap-3 p-4 bg-green-500/5 border border-green-500/10 rounded-2xl">
+                    <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
+                    <div>
+                        <p className="text-sm font-bold text-green-400">Permission Granted</p>
+                        <p className="text-[11px] text-white/40 mt-0.5">App tracking is active. Your usage data stays local on this device.</p>
+                    </div>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-2xl">
+                        <p className="text-sm text-white/70 leading-relaxed">
+                            To track which apps you use during focus sessions, Quoril needs Accessibility access.
+                            Your data never leaves this device.
+                        </p>
+                    </div>
+                    <button
+                        onClick={handleRequest}
+                        className="w-full py-3 px-4 bg-[var(--accent-primary)] hover:brightness-110 text-white text-sm font-bold rounded-2xl transition-all"
+                    >
+                        Grant Accessibility Access
+                    </button>
+                </div>
+            )}
+        </SettingCard>
     )
 }

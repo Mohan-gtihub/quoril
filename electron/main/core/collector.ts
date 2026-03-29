@@ -184,8 +184,11 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
             domain
         }
 
-    } catch (e) {
-        // Quietly fail as tracking is background
+    } catch (e: any) {
+        // On macOS, active-win throws if accessibility permission is not granted
+        if (e?.message?.includes('accessibility') || e?.code === 'ERR_ACCESSIBILITY') {
+            console.warn('[Collector] Accessibility permission not granted — app tracking unavailable')
+        }
         return null
     }
 }
