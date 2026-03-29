@@ -94,6 +94,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
         getLiveSession: () => ipcRenderer.invoke('tracker:getLiveSession'),
     },
 
+    // Permissions (macOS accessibility for app tracking)
+    permissions: {
+        checkAccessibility: () => ipcRenderer.invoke('permissions:checkAccessibility'),
+        requestAccessibility: () => ipcRenderer.invoke('permissions:requestAccessibility'),
+        startTracking: () => ipcRenderer.invoke('permissions:startTracking'),
+    },
+
     // Auth
     auth: {
         setUser: (userId: string | null, accessToken?: string | null) => ipcRenderer.invoke('auth:setUser', userId, accessToken),
@@ -201,6 +208,11 @@ export interface ElectronAPI {
     tracker: {
         setContext: (taskId: string | null) => Promise<void>
         getLiveSession: () => Promise<any>
+    }
+    permissions: {
+        checkAccessibility: () => Promise<boolean>
+        requestAccessibility: () => Promise<boolean>
+        startTracking: () => Promise<boolean>
     }
     auth: {
         setUser: (userId: string | null, accessToken?: string | null) => Promise<void>

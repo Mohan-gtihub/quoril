@@ -74,6 +74,11 @@ export interface ElectronAPI {
         setContext: (taskId: string | null) => Promise<void>
         getLiveSession: () => Promise<any>
     }
+    permissions: {
+        checkAccessibility: () => Promise<boolean>
+        requestAccessibility: () => Promise<boolean>
+        startTracking: () => Promise<boolean>
+    }
 }
 
 declare global {
