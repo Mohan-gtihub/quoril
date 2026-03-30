@@ -7,6 +7,7 @@ import { useTimerDisplay } from '@/hooks/useTimerDisplay'
 import { TaskCard } from '../planner/TaskCard'
 import { CreateTaskModal } from '../planner/CreateTaskModal'
 import { cn } from '@/utils/helpers'
+import { confirm } from '@/components/ui/ConfirmDialog'
 
 import {
     Play,
@@ -293,9 +294,8 @@ export function FocusTimerPanel() {
 
     const handleSkip = async () => {
         const next = nextTasks[0]?.id
-        if (window.confirm(next ? 'Skip to next task?' : 'End session?')) {
-            await skipToNext(next)
-        }
+        const ok = await confirm({ message: next ? 'Skip to the next task?' : 'End this session?', variant: 'warning', confirmLabel: next ? 'Skip' : 'End' })
+        if (ok) await skipToNext(next)
     }
 
     const [isNativeDragOver, setIsNativeDragOver] = useState(false)

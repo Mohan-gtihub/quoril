@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { LayoutGrid, Settings, LogOut, BarChart3, Plus, Edit2, Trash2, Check, MoreHorizontal, FolderKanban, Archive, ChevronDown, Folders, Kanban } from 'lucide-react'
+import { LayoutGrid, Settings, LogOut, BarChart3, Plus, Edit2, Trash2, Check, MoreHorizontal, FolderKanban, Archive, ChevronDown, Folders, Kanban, Smartphone } from 'lucide-react'
+import { confirm as confirmDialog } from '@/components/ui/ConfirmDialog'
 import { useAuthStore } from '@/store/authStore'
 import { useListStore } from '@/store/listStore'
 import { useWorkspaceStore, Workspace } from '@/store/workspaceStore'
@@ -46,7 +47,7 @@ function WorkspaceRow({ ws, isActive, onClick }: { ws: Workspace; isActive: bool
     async function handleDelete(e: React.MouseEvent) {
         e.stopPropagation()
         if (workspaces.length <= 1) return
-        if (!confirm(`Delete workspace "${ws.name}"? Lists inside won't be deleted.`)) return
+        if (!await confirmDialog({ message: `Delete workspace "${ws.name}"? Lists inside won't be deleted.`, variant: 'danger', confirmLabel: 'Delete' })) return
         await deleteWorkspace(ws.id)
         setShowMenu(false)
     }
@@ -273,6 +274,7 @@ export function Sidebar() {
                     <NavItem icon={<Kanban size={14} />} label="Planner" path="/planner" active={location.pathname === '/planner'} />
                     <NavItem icon={<Folders size={14} />} label="Workspaces" path="/workspaces" active={location.pathname === '/workspaces'} />
                     <NavItem icon={<BarChart3 size={14} />} label="Reports" path="/reports" active={location.pathname === '/reports'} />
+                    <NavItem icon={<Smartphone size={14} />} label="Screen Time" path="/screen-time" active={location.pathname === '/screen-time'} />
                 </div>
 
                 {/* Workspaces Section */}

@@ -7,10 +7,12 @@ import {
     nativeImage,
     shell,
     globalShortcut,
-    systemPreferences
+    systemPreferences,
+    Notification
 } from 'electron'
 
 import path from 'path'
+import fs from 'fs'
 import { fileURLToPath } from 'url'
 
 import { initDatabase, dbOps } from './db'
@@ -330,6 +332,52 @@ function setupIPC() {
         }
     })
 
+    /* App Info */
+
+    ipcMain.handle('app:getVersion', () => app.getVersion())
+    ipcMain.handle('app:getPlatform', () => process.platform)
+
+    /* Notifications */
+
+    ipcMain.handle('notification:show', (_, { title, body }: { title: string; body: string }) => {
+        if (Notification.isSupported()) {
+            new Notification({ title, body }).show()
+        }
+    })
+
+    /* Simple Key-Value Store (persisted to JSON file) */
+
+    const storePath = path.join(app.getPath('userData'), 'quoril-store.json')
+
+    function readStore(): Record<string, any> {
+        try {
+            if (fs.existsSync(storePath)) {
+                return JSON.parse(fs.readFileSync(storePath, 'utf-8'))
+            }
+        } catch (_) {}
+        return {}
+    }
+
+    function writeStore(data: Record<string, any>) {
+        try {
+            fs.writeFileSync(storePath, JSON.stringify(data, null, 2), 'utf-8')
+        } catch (e) {
+            console.error('[Store] Write failed:', e)
+        }
+    }
+
+    ipcMain.handle('store:get', (_, key: string) => {
+        const data = readStore()
+        return data[key] ?? null
+    })
+
+    ipcMain.handle('store:set', (_, key: string, value: any) => {
+        const data = readStore()
+        data[key] = value
+        writeStore(data)
+        return true
+    })
+
     /* Tasks */
 
     ipcMain.handle('db:getTasks', (_, uid, listId) =>
@@ -352,6 +400,10 @@ function setupIPC() {
         safe(() => dbOps.deleteTask(id))
     )
 
+    ipcMain.handle('db:hardDeleteTask', (_, id) =>
+        safe(() => dbOps.hardDeleteTask(id))
+    )
+
     /* Lists */
 
     ipcMain.handle('db:getLists', (_, uid, archived) =>
@@ -364,6 +416,10 @@ function setupIPC() {
 
     ipcMain.handle('db:deleteList', (_, id) =>
         safe(() => dbOps.deleteList(id))
+    )
+
+    ipcMain.handle('db:hardDeleteList', (_, id) =>
+        safe(() => dbOps.hardDeleteList(id))
     )
 
     ipcMain.handle('db:restoreList', (_, id) =>
@@ -550,6 +606,12 @@ function setupIPC() {
         if (!userId) return null
         return dbOps.getReportsDashboardData(userId, startDate, endDate)
     })
+
+    /* Screen Time — single aggregated call for a specific day */
+
+    ipcMain.handle('screenTime:getData', (_, { date }: { date: string }) => {
+        return dbOps.getScreenTimeData(date)
+    })
 }
 
 /* ---------------- SAFE WRAPPER ---------------- */
@@ -576,17 +638,11 @@ app.whenReady().then(async () => {
     createTray()
     setupIPC()
 
-    // On macOS, only start app tracking if accessibility permission is granted
-    if (process.platform === 'darwin') {
-        const hasAccess = systemPreferences.isTrustedAccessibilityClient(false)
-        if (hasAccess) {
-            trackingEngine.start()
-        } else {
-            console.log('[Quoril] Accessibility permission not granted — app tracking disabled. Core features still work.')
-        }
-    } else {
-        trackingEngine.start()
-    }
+    // Start app tracking engine.
+    // On macOS, the engine handles passive permission checks via systemPreferences.
+    // This allows the app to start quietly even without permissions, and pick up 
+    // permissions automatically if the user grants them in System Settings later.
+    trackingEngine.start()
 
     // Auto-launch on startup (Safe production-grade implementation)
     if (!isDev) {
@@ -616,7 +672,6 @@ app.on('before-quit', async () => {
     }
 })
 
-import fs from 'fs'
 const logCrash = (type: string, error: any) => {
     try {
         const desktopPath = path.join(app.getPath('desktop'), 'quoril-crash.log')

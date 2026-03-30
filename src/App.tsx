@@ -13,12 +13,14 @@ import { FocusMode } from '@/components/focus/FocusMode'
 import { Settings } from '@/components/focus/Settings'
 import { Reports } from '@/components/reports/Reports'
 import { ActivityDashboard } from '@/components/dashboard/ActivityDashboard'
+import { ScreenTime } from '@/components/screentime/ScreenTime'
 import { TitleBar } from '@/components/layout/TitleBar'
 import { useFocusStore } from '@/store/focusStore'
 import { useTaskStore } from '@/store/taskStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { SuperFocusPill } from '@/components/focus/SuperFocusPill'
 import { WorkspacesOverview } from '@/components/workspaces/WorkspacesOverview'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 import { cn } from '@/utils/helpers'
 
@@ -247,6 +249,7 @@ function App() {
                                                     <Route path="/settings" element={<Settings />} />
                                                     <Route path="/reports" element={<Reports />} />
                                                     <Route path="/activity" element={<ActivityDashboard />} />
+                                                    <Route path="/screen-time" element={<ScreenTime />} />
                                                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                                                 </Routes>
                                             </Layout>
@@ -277,6 +280,7 @@ function App() {
                                     },
                                 }}
                             />
+                            <ConfirmDialog />
                         </div>
                     </div>
                 </HashRouter>

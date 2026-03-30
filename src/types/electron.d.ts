@@ -36,6 +36,7 @@ export interface ElectronAPI {
         softDeleteTasksByListId: (listId: string) => Promise<void>
         resetAllTaskTimes: (userId: string) => Promise<void>
         deleteTask: (id: string) => Promise<any>
+        hardDeleteTask: (id: string) => Promise<any>
         startTask: (id: string) => Promise<any>
         pauseTask: (id: string) => Promise<any>
         reorderTasks: (items: any) => Promise<any>
@@ -45,6 +46,7 @@ export interface ElectronAPI {
         archiveList: (id: string) => Promise<any>
         restoreList: (id: string) => Promise<any>
         deleteList: (id: string) => Promise<any>
+        hardDeleteList: (id: string) => Promise<any>
         getSubtasks: (taskId: string) => Promise<any[]>
         saveSubtask: (subtask: any) => Promise<any>
         updateSubtask: (id: string, updates: any) => Promise<void>
@@ -78,6 +80,9 @@ export interface ElectronAPI {
         checkAccessibility: () => Promise<boolean>
         requestAccessibility: () => Promise<boolean>
         startTracking: () => Promise<boolean>
+    }
+    screenTime: {
+        getData: (args: { date: string }) => Promise<any>
     }
 }
 

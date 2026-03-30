@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTaskStore } from '@/store/taskStore'
 import { X, CheckCircle2, Circle, Trash2, Plus, Repeat, Activity } from 'lucide-react'
+import { confirm } from '@/components/ui/ConfirmDialog'
 
 export function TaskDetailsPanel() {
     const {
@@ -209,8 +210,8 @@ export function TaskDetailsPanel() {
             {/* Footer */}
             <div className="p-6 border-t border-[var(--border-default)] bg-[var(--bg-hover)]/30">
                 <button
-                    onClick={() => {
-                        if (window.confirm('Delete this task?')) {
+                    onClick={async () => {
+                        if (await confirm({ message: 'Delete this task?', variant: 'danger', confirmLabel: 'Delete' })) {
                             deleteTask(task.id)
                             handleClose()
                         }

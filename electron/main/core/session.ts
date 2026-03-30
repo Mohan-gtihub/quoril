@@ -68,6 +68,8 @@ class SessionManager {
     }
 
     private async pulse() {
+        // getActiveWindow() handles non-intrusive permission checks on macOS.
+        // It returns null if permission is denied or if no window is found.
         const active = await getActiveWindow()
         const context = contextManager.getCurrentContext()
 

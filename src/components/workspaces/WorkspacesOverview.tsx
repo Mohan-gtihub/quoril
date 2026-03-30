@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useWorkspaceStore, Workspace } from '@/store/workspaceStore'
 import { useListStore } from '@/store/listStore'
 import { useTaskStore } from '@/store/taskStore'
+import { confirm } from '@/components/ui/ConfirmDialog'
 
 const PALETTE = [
     '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b',
@@ -40,11 +41,8 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
     }
 
     const handleDelete = async () => {
-        if (workspaces.length <= 1) {
-            alert("You must have at least one workspace.")
-            return
-        }
-        if (confirm(`Delete workspace "${ws.name}"? Lists inside won't be deleted.`)) {
+        if (workspaces.length <= 1) return
+        if (await confirm({ message: `Delete workspace "${ws.name}"? Lists inside won't be deleted.`, variant: 'danger', confirmLabel: 'Delete' })) {
             await deleteWorkspace(ws.id)
         }
     }

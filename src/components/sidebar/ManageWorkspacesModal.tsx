@@ -3,6 +3,7 @@ import { useWorkspaceStore, Workspace } from '@/store/workspaceStore'
 import { useAuthStore } from '@/store/authStore'
 import { X, Edit2, Check, Trash2, Plus, Loader2, Layout, RefreshCw } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { confirm as confirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface ManageWorkspacesModalProps {
     isOpen: boolean
@@ -94,13 +95,13 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
 
     const handleDelete = async (ws: Workspace) => {
         if (workspaces.length <= 1) return // store also guards this
-        if (!confirm(`Delete workspace "${ws.name}"? Lists inside it won't be deleted.`)) return
+        if (!await confirmDialog({ message: `Delete workspace "${ws.name}"? Lists inside it won't be deleted.`, variant: 'danger', confirmLabel: 'Delete' })) return
         await deleteWorkspace(ws.id)
     }
 
     /* ---- Recover lost data handler ---- */
     const onRecover = async () => {
-        if (!confirm('Recover lost data? This will merge orphaned lists back into your account.')) return
+        if (!await confirmDialog({ message: 'Recover lost data? This will merge orphaned lists back into your account.', confirmLabel: 'Recover' })) return
         try {
             const userId = user?.id
             if (userId) {
