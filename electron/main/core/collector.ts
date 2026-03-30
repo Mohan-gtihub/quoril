@@ -1,5 +1,5 @@
 import activeWin from 'active-win'
-import { powerMonitor } from 'electron'
+import { powerMonitor, systemPreferences } from 'electron'
 
 export interface ActiveWindow {
     appName: string
@@ -130,6 +130,17 @@ function detectSite(title: string) {
 
 export async function getActiveWindow(): Promise<ActiveWindow | null> {
     try {
+        // macOS: Check for accessibility permission without requesting it (false)
+        if (process.platform === 'darwin') {
+            const hasAccess = systemPreferences.isTrustedAccessibilityClient(false)
+            if (!hasAccess) {
+                // If we don't have access, we can still detect idle time via powerMonitor
+                // but we can't reliably get the active window title.
+                // We return null to indicate tracking is disabled/restricted.
+                return null
+            }
+        }
+
         const win = await activeWin()
         if (!win) return null
 
@@ -185,10 +196,7 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
         }
 
     } catch (e: any) {
-        // On macOS, active-win throws if accessibility permission is not granted
-        if (e?.message?.includes('accessibility') || e?.code === 'ERR_ACCESSIBILITY') {
-            console.warn('[Collector] Accessibility permission not granted — app tracking unavailable')
-        }
+        // Catch any remaining errors (e.g. from active-win native code)
         return null
     }
 }

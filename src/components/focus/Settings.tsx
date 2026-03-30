@@ -459,18 +459,23 @@ function AccessibilityPermissionCard() {
     const handleRequest = async () => {
         const api = window.electronAPI
         if (!api?.permissions) return
+        
+        // Triggers the OS prompt (should only happen once per app run or until decided)
         api.permissions.requestAccessibility()
-        // After the user interacts with System Settings, poll for the change
+        
+        // Passive polling: Check every 5 seconds for 5 minutes, much more relaxed
         const poll = setInterval(async () => {
             const granted = await api.permissions.checkAccessibility()
             if (granted) {
                 clearInterval(poll)
                 setHasAccess(true)
+                // Now it's safe to start because we have confirmed access
                 await api.permissions.startTracking()
             }
-        }, 2000)
-        // Stop polling after 2 minutes
-        setTimeout(() => clearInterval(poll), 120000)
+        }, 5000)
+        
+        // Stop polling after 5 minutes
+        setTimeout(() => clearInterval(poll), 300000)
     }
 
     return (

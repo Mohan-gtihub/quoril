@@ -638,17 +638,11 @@ app.whenReady().then(async () => {
     createTray()
     setupIPC()
 
-    // On macOS, only start app tracking if accessibility permission is granted
-    if (process.platform === 'darwin') {
-        const hasAccess = systemPreferences.isTrustedAccessibilityClient(false)
-        if (hasAccess) {
-            trackingEngine.start()
-        } else {
-            console.log('[Quoril] Accessibility permission not granted — app tracking disabled. Core features still work.')
-        }
-    } else {
-        trackingEngine.start()
-    }
+    // Start app tracking engine.
+    // On macOS, the engine handles passive permission checks via systemPreferences.
+    // This allows the app to start quietly even without permissions, and pick up 
+    // permissions automatically if the user grants them in System Settings later.
+    trackingEngine.start()
 
     // Auto-launch on startup (Safe production-grade implementation)
     if (!isDev) {
