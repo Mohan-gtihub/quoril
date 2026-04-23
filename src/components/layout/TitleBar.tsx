@@ -1,14 +1,35 @@
-import { Minus, Square, X } from 'lucide-react'
+import { Minus, Square, Copy, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useSyncStore } from '@/store/syncStore'
 
 export function TitleBar() {
     const { syncing, pendingCount, lastSync, error } = useSyncStore()
+    const [isMaximized, setIsMaximized] = useState(false)
+
+    useEffect(() => {
+        let cancelled = false
+        const poll = async () => {
+            try {
+                const val = await (window as any).electronAPI?.window?.isMaximized?.()
+                if (!cancelled && typeof val === 'boolean') setIsMaximized(val)
+            } catch { /* noop */ }
+        }
+        poll()
+        const onResize = () => poll()
+        window.addEventListener('resize', onResize)
+        return () => {
+            cancelled = true
+            window.removeEventListener('resize', onResize)
+        }
+    }, [])
+
     const handleMinimize = () => {
         window.electronAPI?.window.minimize()
     }
 
     const handleMaximize = () => {
         window.electronAPI?.window.maximize()
+        setIsMaximized(v => !v)
     }
 
     const handleClose = () => {
@@ -19,6 +40,7 @@ export function TitleBar() {
         <div
             className="h-8 glass-thick flex items-center justify-between px-3 select-none z-50 border-b border-gray-800"
             style={{ WebkitAppRegion: 'drag' } as any}
+            onDoubleClick={handleMaximize}
         >
             <div className="flex items-center gap-2">
                 {/* Inline SVG logo — works in both Electron dev and production (no file:// path issues) */}
@@ -53,8 +75,11 @@ export function TitleBar() {
                 <button
                     onClick={handleMaximize}
                     className="p-1.5 hover:bg-gray-700 rounded-md text-gray-400 hover:text-white transition-colors"
+                    title={isMaximized ? 'Restore' : 'Maximize'}
                 >
-                    <Square className="w-3 h-3" />
+                    {isMaximized
+                        ? <Copy className="w-3 h-3" />
+                        : <Square className="w-3 h-3" />}
                 </button>
                 <button
                     onClick={handleClose}

@@ -174,11 +174,16 @@
   padding: 0;
 }
 
-body {
+html, body {
   margin: 0;
-  min-width: 320px;
-  height: 100vh;
+  padding: 0;
+  height: 100%;
+  width: 100%;
   overflow: hidden;
+}
+
+body {
+  min-width: 320px;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   transition: background-color var(--transition-speed), color var(--transition-speed);

@@ -84,6 +84,32 @@ export interface ElectronAPI {
     screenTime: {
         getData: (args: { date: string }) => Promise<any>
     }
+    canvas: {
+        list: (userId: string) => Promise<any[]>
+        get: (id: string) => Promise<any | null>
+        create: (c: any) => Promise<any>
+        update: (id: string, patch: any) => Promise<void>
+        softDelete: (id: string) => Promise<void>
+        listBlocks: (canvasId: string) => Promise<any[]>
+        upsertBlock: (b: any) => Promise<void>
+        upsertBlocksBatch: (bs: any[]) => Promise<void>
+        softDeleteBlock: (id: string) => Promise<void>
+        softDeleteBlocksBatch: (ids: string[]) => Promise<void>
+        listConnections: (canvasId: string) => Promise<any[]>
+        upsertConnection: (c: any) => Promise<void>
+        softDeleteConnection: (id: string) => Promise<void>
+        listZones: (canvasId: string) => Promise<any[]>
+        upsertZone: (z: any) => Promise<void>
+        softDeleteZone: (id: string) => Promise<void>
+        unfurlLink: (url: string) => Promise<{
+            url: string
+            title?: string
+            description?: string
+            image?: string
+            siteName?: string
+            fetchedAt: number
+        }>
+    }
 }
 
 declare global {

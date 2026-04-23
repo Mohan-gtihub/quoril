@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { LayoutGrid, Settings, LogOut, BarChart3, Plus, Edit2, Trash2, Check, MoreHorizontal, FolderKanban, Archive, ChevronDown, Folders, Kanban, Smartphone } from 'lucide-react'
+import { LayoutGrid, Settings, LogOut, BarChart3, Plus, Edit2, Trash2, Check, MoreHorizontal, FolderKanban, Archive, ChevronDown, Folders, Kanban, Smartphone, Map } from 'lucide-react'
 import { confirm as confirmDialog } from '@/components/ui/ConfirmDialog'
 import { useAuthStore } from '@/store/authStore'
 import { useListStore } from '@/store/listStore'
@@ -275,6 +275,7 @@ export function Sidebar() {
                     <NavItem icon={<Folders size={14} />} label="Workspaces" path="/workspaces" active={location.pathname === '/workspaces'} />
                     <NavItem icon={<BarChart3 size={14} />} label="Reports" path="/reports" active={location.pathname === '/reports'} />
                     <NavItem icon={<Smartphone size={14} />} label="Screen Time" path="/screen-time" active={location.pathname === '/screen-time'} />
+                    <NavItem icon={<Map size={14} />} label="Canvas" path="/canvas" active={location.pathname === '/canvas'} />
                 </div>
 
                 {/* Workspaces Section */}

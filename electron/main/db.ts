@@ -717,6 +717,171 @@ function autoMigrate() {
         })()
         version = 9
     }
+
+    // Canvas tables — always ensure they exist (idempotent CREATE IF NOT EXISTS).
+    // Ran unconditionally because an earlier dev build may have bumped the version
+    // without the canvas DDL succeeding.
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS canvases (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            workspace_id TEXT,
+            title TEXT NOT NULL,
+            icon TEXT,
+            color TEXT,
+            viewport_json TEXT NOT NULL DEFAULT '{"x":0,"y":0,"zoom":1}',
+            home_viewport_json TEXT,
+            settings_json TEXT NOT NULL DEFAULT '{"grid":true,"snap":false,"autoZoneHints":false}',
+            schema_version INTEGER DEFAULT 1,
+            created_at TEXT, updated_at TEXT, deleted_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS canvases_user_idx ON canvases(user_id, deleted_at);
+
+        CREATE TABLE IF NOT EXISTS blocks (
+            id TEXT PRIMARY KEY,
+            canvas_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            x REAL NOT NULL, y REAL NOT NULL,
+            w REAL NOT NULL, h REAL NOT NULL,
+            z INTEGER DEFAULT 0,
+            rotation REAL DEFAULT 0,
+            content_json TEXT NOT NULL,
+            style_json TEXT,
+            tags_json TEXT,
+            linked_task_id TEXT,
+            is_landmark INTEGER DEFAULT 0,
+            last_touched_at TEXT,
+            created_at TEXT, updated_at TEXT, deleted_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS blocks_canvas_idx ON blocks(canvas_id, deleted_at);
+        CREATE INDEX IF NOT EXISTS blocks_linked_task_idx ON blocks(linked_task_id);
+
+        CREATE TABLE IF NOT EXISTS connections (
+            id TEXT PRIMARY KEY,
+            canvas_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            from_block_id TEXT NOT NULL,
+            to_block_id TEXT NOT NULL,
+            from_anchor TEXT DEFAULT 'auto',
+            to_anchor TEXT DEFAULT 'auto',
+            kind TEXT DEFAULT 'reference',
+            label TEXT,
+            style_json TEXT,
+            condition_json TEXT,
+            created_at TEXT, updated_at TEXT, deleted_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS connections_canvas_idx ON connections(canvas_id, deleted_at);
+        CREATE INDEX IF NOT EXISTS connections_from_idx ON connections(from_block_id);
+        CREATE INDEX IF NOT EXISTS connections_to_idx ON connections(to_block_id);
+
+        CREATE TABLE IF NOT EXISTS zones (
+            id TEXT PRIMARY KEY,
+            canvas_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            name TEXT,
+            color TEXT,
+            icon TEXT,
+            pattern TEXT DEFAULT 'none',
+            bounds_json TEXT NOT NULL,
+            created_at TEXT, updated_at TEXT, deleted_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS zones_canvas_idx ON zones(canvas_id, deleted_at);
+
+        CREATE TABLE IF NOT EXISTS link_previews (
+            url TEXT PRIMARY KEY,
+            title TEXT, description TEXT, image TEXT, site_name TEXT,
+            fetched_at TEXT
+        );
+    `)
+    if (version < 10) {
+        db.transaction(() => {
+            db.exec(`
+                CREATE TABLE IF NOT EXISTS canvases (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    workspace_id TEXT,
+                    title TEXT NOT NULL,
+                    icon TEXT,
+                    color TEXT,
+                    viewport_json TEXT NOT NULL DEFAULT '{"x":0,"y":0,"zoom":1}',
+                    home_viewport_json TEXT,
+                    settings_json TEXT NOT NULL DEFAULT '{"grid":true,"snap":false,"autoZoneHints":false}',
+                    schema_version INTEGER DEFAULT 1,
+                    created_at TEXT, updated_at TEXT, deleted_at TEXT
+                );
+                CREATE INDEX IF NOT EXISTS canvases_user_idx ON canvases(user_id, deleted_at);
+
+                CREATE TABLE IF NOT EXISTS blocks (
+                    id TEXT PRIMARY KEY,
+                    canvas_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    kind TEXT NOT NULL,
+                    x REAL NOT NULL, y REAL NOT NULL,
+                    w REAL NOT NULL, h REAL NOT NULL,
+                    z INTEGER DEFAULT 0,
+                    rotation REAL DEFAULT 0,
+                    content_json TEXT NOT NULL,
+                    style_json TEXT,
+                    tags_json TEXT,
+                    linked_task_id TEXT,
+                    is_landmark INTEGER DEFAULT 0,
+                    last_touched_at TEXT,
+                    created_at TEXT, updated_at TEXT, deleted_at TEXT
+                );
+                CREATE INDEX IF NOT EXISTS blocks_canvas_idx ON blocks(canvas_id, deleted_at);
+                CREATE INDEX IF NOT EXISTS blocks_linked_task_idx ON blocks(linked_task_id);
+
+                CREATE TABLE IF NOT EXISTS connections (
+                    id TEXT PRIMARY KEY,
+                    canvas_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    from_block_id TEXT NOT NULL,
+                    to_block_id TEXT NOT NULL,
+                    from_anchor TEXT DEFAULT 'auto',
+                    to_anchor TEXT DEFAULT 'auto',
+                    kind TEXT DEFAULT 'reference',
+                    label TEXT,
+                    style_json TEXT,
+                    created_at TEXT, updated_at TEXT, deleted_at TEXT
+                );
+                CREATE INDEX IF NOT EXISTS connections_canvas_idx ON connections(canvas_id, deleted_at);
+                CREATE INDEX IF NOT EXISTS connections_from_idx ON connections(from_block_id);
+                CREATE INDEX IF NOT EXISTS connections_to_idx ON connections(to_block_id);
+
+                CREATE TABLE IF NOT EXISTS zones (
+                    id TEXT PRIMARY KEY,
+                    canvas_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    name TEXT,
+                    color TEXT,
+                    icon TEXT,
+                    pattern TEXT DEFAULT 'none',
+                    bounds_json TEXT NOT NULL,
+                    created_at TEXT, updated_at TEXT, deleted_at TEXT
+                );
+                CREATE INDEX IF NOT EXISTS zones_canvas_idx ON zones(canvas_id, deleted_at);
+
+                CREATE TABLE IF NOT EXISTS link_previews (
+                    url TEXT PRIMARY KEY,
+                    title TEXT, description TEXT, image TEXT, site_name TEXT,
+                    fetched_at TEXT
+                );
+            `)
+            db.prepare("UPDATE db_meta SET value='10' WHERE key='version'").run()
+        })()
+        version = 10
+    }
+    if (version < 11) {
+        db.transaction(() => {
+            const cols = (db.prepare("PRAGMA table_info(connections)").all() as any[]).map((r) => r.name)
+            if (!cols.includes('condition_json')) {
+                db.exec('ALTER TABLE connections ADD COLUMN condition_json TEXT')
+            }
+            db.prepare("UPDATE db_meta SET value='11' WHERE key='version'").run()
+        })()
+        version = 11
+    }
 }
 
 /* ---------------- INIT ---------------- */

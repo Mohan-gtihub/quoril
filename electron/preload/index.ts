@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     window: {
         minimize: () => ipcRenderer.invoke('window:minimize'),
         maximize: () => ipcRenderer.invoke('window:maximize'),
+        isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
         close: () => ipcRenderer.invoke('window:close'),
     },
 
@@ -124,6 +125,31 @@ contextBridge.exposeInMainWorld('electronAPI', {
         getData: (args: { date: string }) =>
             ipcRenderer.invoke('screenTime:getData', args),
     },
+
+    // Canvas
+    canvas: {
+        list: (userId: string) => ipcRenderer.invoke('canvas:list', userId),
+        get: (id: string) => ipcRenderer.invoke('canvas:get', id),
+        create: (c: any) => ipcRenderer.invoke('canvas:create', c),
+        update: (id: string, patch: any) => ipcRenderer.invoke('canvas:update', id, patch),
+        softDelete: (id: string) => ipcRenderer.invoke('canvas:softDelete', id),
+
+        listBlocks: (canvasId: string) => ipcRenderer.invoke('canvas:listBlocks', canvasId),
+        upsertBlock: (b: any) => ipcRenderer.invoke('canvas:upsertBlock', b),
+        upsertBlocksBatch: (bs: any[]) => ipcRenderer.invoke('canvas:upsertBlocksBatch', bs),
+        softDeleteBlock: (id: string) => ipcRenderer.invoke('canvas:softDeleteBlock', id),
+        softDeleteBlocksBatch: (ids: string[]) => ipcRenderer.invoke('canvas:softDeleteBlocksBatch', ids),
+
+        listConnections: (canvasId: string) => ipcRenderer.invoke('canvas:listConnections', canvasId),
+        upsertConnection: (c: any) => ipcRenderer.invoke('canvas:upsertConnection', c),
+        softDeleteConnection: (id: string) => ipcRenderer.invoke('canvas:softDeleteConnection', id),
+
+        listZones: (canvasId: string) => ipcRenderer.invoke('canvas:listZones', canvasId),
+        upsertZone: (z: any) => ipcRenderer.invoke('canvas:upsertZone', z),
+        softDeleteZone: (id: string) => ipcRenderer.invoke('canvas:softDeleteZone', id),
+
+        unfurlLink: (url: string) => ipcRenderer.invoke('canvas:unfurlLink', url),
+    },
 })
 
 // Window Management (Special case for legacy/custom calls)
@@ -150,6 +176,7 @@ export interface ElectronAPI {
     window: {
         minimize: () => Promise<void>
         maximize: () => Promise<void>
+        isMaximized: () => Promise<boolean>
         close: () => Promise<void>
     }
     app: {
@@ -233,6 +260,24 @@ export interface ElectronAPI {
     }
     screenTime: {
         getData: (args: { date: string }) => Promise<any>
+    }
+    canvas: {
+        list: (userId: string) => Promise<any[]>
+        get: (id: string) => Promise<any | null>
+        create: (c: any) => Promise<any>
+        update: (id: string, patch: any) => Promise<void>
+        softDelete: (id: string) => Promise<void>
+        listBlocks: (canvasId: string) => Promise<any[]>
+        upsertBlock: (b: any) => Promise<void>
+        upsertBlocksBatch: (bs: any[]) => Promise<void>
+        softDeleteBlock: (id: string) => Promise<void>
+        softDeleteBlocksBatch: (ids: string[]) => Promise<void>
+        listConnections: (canvasId: string) => Promise<any[]>
+        upsertConnection: (c: any) => Promise<void>
+        softDeleteConnection: (id: string) => Promise<void>
+        listZones: (canvasId: string) => Promise<any[]>
+        upsertZone: (z: any) => Promise<void>
+        softDeleteZone: (id: string) => Promise<void>
     }
 }
 

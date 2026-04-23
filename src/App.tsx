@@ -21,6 +21,7 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { SuperFocusPill } from '@/components/focus/SuperFocusPill'
 import { WorkspacesOverview } from '@/components/workspaces/WorkspacesOverview'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { CanvasApp } from '@/components/canvas/CanvasApp'
 
 import { cn } from '@/utils/helpers'
 
@@ -250,6 +251,7 @@ function App() {
                                                     <Route path="/reports" element={<Reports />} />
                                                     <Route path="/activity" element={<ActivityDashboard />} />
                                                     <Route path="/screen-time" element={<ScreenTime />} />
+                                                    <Route path="/canvas" element={<CanvasApp />} />
                                                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                                                 </Routes>
                                             </Layout>

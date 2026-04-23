@@ -8,7 +8,8 @@ import {
     shell,
     globalShortcut,
     systemPreferences,
-    Notification
+    Notification,
+    screen
 } from 'electron'
 
 import path from 'path'
@@ -17,6 +18,7 @@ import { fileURLToPath } from 'url'
 
 import { initDatabase, dbOps } from './db'
 import { trackingEngine } from './core/core'
+import { registerCanvasIpc } from './canvas/ipc'
 
 /* ---------------- PATH ---------------- */
 
@@ -100,18 +102,25 @@ app.on('open-url', (event, url) => {
 /* ---------------- WINDOW ---------------- */
 
 function createWindow() {
+    // Size the window to fit the current display's work area so it works on
+    // small laptops (1366x768) up to large monitors without overflowing.
+    const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize
+    const initialWidth = Math.min(1400, Math.max(900, Math.floor(sw * 0.9)))
+    const initialHeight = Math.min(900, Math.max(600, Math.floor(sh * 0.9)))
+
     mainWindow = new BrowserWindow({
-        width: 1400,
-        height: 900,
-        minWidth: 1000,
-        minHeight: 600,
+        width: initialWidth,
+        height: initialHeight,
+        minWidth: 820,
+        minHeight: 560,
         show: false,
         frame: false,
-        // FIX: Re-enable transparency so the SuperFocus widget can be frameless and rounded.
-        // The ghost window rendering bug on Windows is mitigated by the activate/show repaint sequence below.
         transparent: true,
         backgroundColor: '#00000000',
-        hasShadow: false, // Turn off OS shadows to prevent native Windows 11 bounding box drawing around the transparent window
+        hasShadow: false,
+        resizable: true,
+        maximizable: true,
+        fullscreenable: true,
         icon: getIconPath(),
 
         webPreferences: {
@@ -283,11 +292,28 @@ function setupIPC() {
         mainWindow?.minimize()
     )
 
-    ipcMain.handle('window:maximize', () =>
-        mainWindow?.isMaximized()
-            ? mainWindow.unmaximize()
-            : mainWindow?.maximize()
-    )
+    ipcMain.handle('window:maximize', () => {
+        if (!mainWindow) return
+        if (mainWindow.isMaximized()) {
+            mainWindow.unmaximize()
+        } else {
+            // Transparent/frameless windows on Windows don't always honour
+            // maximize() cleanly — explicitly size to the current display's
+            // work area so the app fills the screen edge-to-edge.
+        const display = screen.getDisplayMatching(mainWindow.getBounds())
+            const { x, y, width, height } = display.workArea
+            mainWindow.setBounds({ x, y, width, height })
+        }
+    })
+
+    ipcMain.handle('window:isMaximized', () => {
+        if (!mainWindow) return false
+        if (mainWindow.isMaximized()) return true
+const display = screen.getDisplayMatching(mainWindow.getBounds())
+        const b = mainWindow.getBounds()
+        const w = display.workArea
+        return b.x === w.x && b.y === w.y && b.width === w.width && b.height === w.height
+    })
 
     ipcMain.handle('window:close', () =>
         mainWindow?.close()
@@ -325,11 +351,16 @@ function setupIPC() {
     })
 
     ipcMain.on('restore-window', () => {
-        if (mainWindow) {
-            mainWindow.setMinimumSize(1000, 600)
-            mainWindow.setSize(1400, 900)
-            mainWindow.center()
-        }
+        if (!mainWindow) return
+        mainWindow.setResizable(true)
+        mainWindow.setMinimumSize(820, 560)
+
+const display = screen.getDisplayMatching(mainWindow.getBounds())
+        const { width: sw, height: sh } = display.workAreaSize
+        const w = Math.min(1400, Math.max(900, Math.floor(sw * 0.9)))
+        const h = Math.min(900, Math.max(600, Math.floor(sh * 0.9)))
+        mainWindow.setSize(w, h)
+        mainWindow.center()
     })
 
     /* App Info */
@@ -612,6 +643,9 @@ function setupIPC() {
     ipcMain.handle('screenTime:getData', (_, { date }: { date: string }) => {
         return dbOps.getScreenTimeData(date)
     })
+
+    /* Canvas */
+    registerCanvasIpc()
 }
 
 /* ---------------- SAFE WRAPPER ---------------- */
