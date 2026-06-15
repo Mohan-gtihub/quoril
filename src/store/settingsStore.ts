@@ -64,6 +64,31 @@ export const useSettingsStore = create<SettingsState>()(
         }),
         {
             name: 'settings-storage',
+            partialize: (s) => ({
+                hideEstDoneTimes: s.hideEstDoneTimes,
+                theme: s.theme,
+                timezone: s.timezone,
+                pomodorosEnabled: s.pomodorosEnabled,
+                pomodoroLength: s.pomodoroLength,
+                defaultBreakLength: s.defaultBreakLength,
+                scrollingTitle: s.scrollingTitle,
+                dailyFocusGoalMinutes: s.dailyFocusGoalMinutes,
+                timedAlertsEnabled: s.timedAlertsEnabled,
+                alertInterval: s.alertInterval,
+                alertSound: s.alertSound,
+                animatedFlash: s.animatedFlash,
+                notificationAlertsEnabled: s.notificationAlertsEnabled,
+                notificationSound: s.notificationSound,
+                showSuccessScreen: s.showSuccessScreen,
+                funGifEnabled: s.funGifEnabled,
+                successSound: s.successSound,
+                successSoundEnabled: s.successSoundEnabled,
+            }),
+            onRehydrateStorage: () => (state) => {
+                if (state) {
+                    state.superFocusMode = false
+                }
+            },
         }
     )
 )

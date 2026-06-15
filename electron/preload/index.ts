@@ -1,5 +1,21 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
+interface AiChatArgs {
+    messages: Array<{ role: string; content: string }>
+    model: string
+    apiKey?: string
+    temperature?: number
+    maxTokens?: number
+}
+
+interface AiTranscribeArgs {
+    audio: Uint8Array | ArrayBuffer
+    mimeType?: string
+    fileName?: string
+    model?: string
+    apiKey?: string
+}
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -150,6 +166,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
         unfurlLink: (url: string) => ipcRenderer.invoke('canvas:unfurlLink', url),
     },
+
+    // AI / Voice task agent
+    ai: {
+        chat: (args: AiChatArgs) => ipcRenderer.invoke('ai:chat', args),
+        transcribe: (args: AiTranscribeArgs) => ipcRenderer.invoke('ai:transcribe', args),
+    },
 })
 
 // Window Management (Special case for legacy/custom calls)
@@ -278,6 +300,10 @@ export interface ElectronAPI {
         listZones: (canvasId: string) => Promise<any[]>
         upsertZone: (z: any) => Promise<void>
         softDeleteZone: (id: string) => Promise<void>
+    }
+    ai: {
+        chat: (args: AiChatArgs) => Promise<string>
+        transcribe: (args: AiTranscribeArgs) => Promise<string>
     }
 }
 

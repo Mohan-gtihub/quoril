@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { X, Repeat } from 'lucide-react'
 import { useCreateTask } from '@/hooks/useCreateTask'
+import { VoiceTaskWidget } from './VoiceTaskWidget'
+import type { TaskDraft } from '@/ai'
 
 interface Props {
     isOpen: boolean
@@ -30,19 +32,49 @@ export function CreateTaskModal({ isOpen, onClose, listId }: Props) {
         setIsRecurring(false)
     }
 
-    async function handleSubmit(focusAfter = false) {
-        const res = await submit({
-            title,
-            minutes,
-            priority,
-            focusAfter,
-            isRecurring,
-        })
+    type SubmitValues = {
+        title: string
+        minutes: number
+        priority: 'low' | 'medium' | 'high'
+        isRecurring: boolean
+    }
+
+    async function doSubmit(values: SubmitValues, focusAfter: boolean) {
+        const res = await submit({ ...values, focusAfter })
 
         if (res) {
             reset()
             onClose()
         }
+    }
+
+    function handleSubmit(focusAfter = false) {
+        return doSubmit({ title, minutes, priority, isRecurring }, focusAfter)
+    }
+
+    /* Voice: merge a (partial) draft into the form fields. */
+    function applyDraft(draft: TaskDraft) {
+        if (draft.title !== null) setTitle(draft.title)
+        if (draft.minutes !== null) setMinutes(draft.minutes)
+        if (draft.priority !== null) setPriority(draft.priority)
+        if (draft.isRecurring !== null) setIsRecurring(draft.isRecurring)
+    }
+
+    /* Voice: agent says the task is ready — submit using draft values directly
+       (state setters are async, so we can't rely on them being applied yet). */
+    function handleVoiceComplete(draft: TaskDraft) {
+        applyDraft(draft)
+
+        const values: SubmitValues = {
+            title: draft.title ?? title,
+            minutes: draft.minutes ?? minutes,
+            priority: draft.priority ?? priority,
+            isRecurring: draft.isRecurring ?? isRecurring,
+        }
+
+        if (!values.title.trim()) return
+
+        return doSubmit(values, draft.autoStart ?? false)
     }
 
     function onKeyDown(e: React.KeyboardEvent) {
@@ -73,6 +105,14 @@ export function CreateTaskModal({ isOpen, onClose, listId }: Props) {
                         <X className="text-[var(--text-muted)] hover:text-[var(--text-primary)]" />
                     </button>
                 </div>
+
+                {/* Voice capture */}
+                <VoiceTaskWidget
+                    onDraft={applyDraft}
+                    onComplete={handleVoiceComplete}
+                    disabled={loading}
+                    autoStart
+                />
 
                 {/* Title */}
                 <input

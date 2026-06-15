@@ -370,7 +370,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     },
 
     setUser: (user) => set({ user }),
-    setSession: (session) => set({ session }),
+    setSession: (session) => {
+        if (!session) {
+            stopSessionMonitoring()
+            set({
+                session: null,
+                user: null,
+                loading: false,
+            })
+            if (window.electronAPI?.auth) {
+                window.electronAPI.auth.setUser(null, null).catch(console.error)
+            }
+            return
+        }
+
+        set({
+            session,
+            user: session.user,
+            loading: false,
+            lastActivity: Date.now(),
+        })
+
+        if (window.electronAPI?.auth) {
+            window.electronAPI.auth.setUser(session.user.id, session.access_token).catch(console.error)
+        }
+
+        startSessionMonitoring()
+    },
 }))
 
 // ==================== SESSION MONITORING ====================

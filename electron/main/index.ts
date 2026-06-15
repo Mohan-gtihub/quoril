@@ -19,6 +19,7 @@ import { fileURLToPath } from 'url'
 import { initDatabase, dbOps } from './db'
 import { trackingEngine } from './core/core'
 import { registerCanvasIpc } from './canvas/ipc'
+import { registerAiIpc } from './ai'
 
 /* ---------------- PATH ---------------- */
 
@@ -133,9 +134,19 @@ function createWindow() {
 
     Menu.setApplicationMenu(null)
 
+    // Allow microphone access for the voice-task capture (denied by default in
+    // Electron). We only grant 'media'; everything else stays blocked.
+    const ses = mainWindow.webContents.session
+    ses.setPermissionRequestHandler((_wc, permission, callback) => {
+        callback(permission === 'media')
+    })
+    ses.setPermissionCheckHandler((_wc, permission) => permission === 'media')
+
     if (isDev && VITE_DEV_SERVER_URL) {
         mainWindow.loadURL(VITE_DEV_SERVER_URL)
-        mainWindow.webContents.openDevTools()
+        if (process.env.QUORIL_OPEN_DEVTOOLS === '1') {
+            mainWindow.webContents.openDevTools({ mode: 'detach' })
+        }
     } else {
         mainWindow.loadFile(
             path.join(__dirname, '../dist/index.html')
@@ -646,6 +657,9 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
 
     /* Canvas */
     registerCanvasIpc()
+
+    /* AI / Voice task agent */
+    registerAiIpc()
 }
 
 /* ---------------- SAFE WRAPPER ---------------- */
@@ -723,5 +737,4 @@ process.on('unhandledRejection', e => {
     console.error('[Promise]', e)
     logCrash('unhandledRejection', e)
 })
-
 

@@ -110,6 +110,22 @@ export interface ElectronAPI {
             fetchedAt: number
         }>
     }
+    ai?: {
+        chat: (args: {
+            messages: Array<{ role: string; content: string }>
+            model: string
+            apiKey?: string
+            temperature?: number
+            maxTokens?: number
+        }) => Promise<string>
+        transcribe: (args: {
+            audio: Uint8Array | ArrayBuffer
+            mimeType?: string
+            fileName?: string
+            model?: string
+            apiKey?: string
+        }) => Promise<string>
+    }
 }
 
 declare global {

@@ -696,7 +696,6 @@ export const useFocusStore = create<FocusState>()(
                 elapsed: s.elapsed,
                 duration: s.duration,
                 sessionType: s.sessionType,
-                showFocusPanel: s.showFocusPanel,
                 isBreak: s.isBreak,
                 breakRemaining: s.breakRemaining,
                 breakElapsed: s.breakElapsed,
@@ -706,6 +705,10 @@ export const useFocusStore = create<FocusState>()(
                 pomodoroTotal: s.pomodoroTotal
             }),
             onRehydrateStorage: () => (state) => {
+                if (state) {
+                    state.showFocusPanel = false
+                }
+
                 // Rehydration Fix: If active but no startTime, we must pause.
                 if (state && state.isActive && !state.startTime && !state.isPaused) {
                     state.isPaused = true
