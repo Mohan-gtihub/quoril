@@ -82,13 +82,13 @@ export function useTaskVoiceAgent(options: UseTaskVoiceAgentOptions): TaskVoiceA
             onDraftRef.current(turn.draft)
 
             if (turn.status === 'complete') {
+                // Commit immediately — don't make the user wait through a spoken
+                // sentence before the task is created. The host typically closes
+                // on complete, so a confirmation utterance would be cut off mid-
+                // word anyway; the filled form is the confirmation.
                 setQuestion(null)
-                const spoken = turn.message ?? 'Got it. Creating your task now.'
-                setStatus('speaking')
-                synthesisRef.current.speak(spoken, () => {
-                    setStatus('idle')
-                    onCompleteRef.current(turn.draft)
-                })
+                setStatus('idle')
+                onCompleteRef.current(turn.draft)
                 return
             }
 
