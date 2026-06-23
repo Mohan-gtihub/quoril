@@ -11,10 +11,23 @@ export default defineConfig({
         react(),
         electron({
             main: {
-                entry: 'electron/main/index.ts',
+                // NOTE: `entry` is intentionally omitted here. When set, the
+                // plugin injects its own `build.lib` with formats based on
+                // package.json "type" (which is "module" → ESM). Vite's
+                // mergeConfig concatenates the `formats` arrays, producing a
+                // duplicate ESM build that overwrites our CJS output. By
+                // omitting `entry` and defining `build.lib` ourselves below,
+                // we get a single, clean CommonJS build — required because
+                // Electron's `electron` module is CJS.
+                entry: undefined as unknown as string,
                 vite: {
                     build: {
                         outDir: 'dist-electron',
+                        lib: {
+                            entry: 'electron/main/index.ts',
+                            formats: ['cjs'],
+                            fileName: () => 'index.cjs',
+                        },
                         rollupOptions: {
                             external: [
                                 ...Object.keys(pkg.dependencies || {}),

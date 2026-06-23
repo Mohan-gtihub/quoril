@@ -1,7 +1,7 @@
-import { useSortable } from '@dnd-kit/sortable'
+﻿import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 /* --------------------------------------------- */
-import { Play, Pause, Square, MoreHorizontal, Plus, Trash2, ArrowRight, ArrowLeft, FileText, ListTodo, Zap, Repeat } from 'lucide-react'
+import { Play, Pause, Square, MoreHorizontal, Plus, Trash2, ArrowRight, ArrowLeft, ListTodo, Repeat } from 'lucide-react'
 import { Checkbox } from '@/components/ui/Checkbox'
 import type { Task } from '@/types/database'
 import type { TaskColumn } from '@/types/list'
@@ -34,12 +34,12 @@ const getTaskStateStyles = (isActive: boolean, isPaused: boolean, isCompleted: b
     }
     if (isActive) {
         if (isPaused) {
-            return "bg-amber-500/10 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)] ring-1 ring-amber-500/20"
+            return "bg-amber-500/10 border-amber-500/30"
         } else {
-            return "bg-[var(--accent-primary)]/10 border-[var(--accent-primary)]/40 shadow-[0_0_20px_var(--accent-glow)] ring-1 ring-[var(--accent-primary)]/30"
+            return "bg-[var(--accent-primary)]/10 border-[var(--accent-primary)]/40"
         }
     }
-    return "bg-[var(--bg-card)] border-[var(--border-default)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-hover)] shadow-lg shadow-black/5"
+    return "bg-[var(--bg-card)] border-[var(--border-default)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-hover)]"
 }
 
 export function TaskCard({ task, column, onComplete, draggable = true, disableTimer = false }: TaskCardProps) {
@@ -182,7 +182,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
             {...attributes}
             {...listeners}
             className={cn(
-                "group rounded-xl p-3 mb-2 transition-all duration-300 border backdrop-blur-sm relative",
+                "group rounded-2xl p-3.5 mb-2 transition-all duration-300 border relative",
                 stateStyles
             )}
             style={style}
@@ -247,19 +247,19 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                                     </div>
                                 ))}
                                 {allSubtasks.length > 5 && (
-                                    <span className="text-[10px] text-white/40 pl-6 font-medium">+{allSubtasks.length - 5} more</span>
+                                    <span className="text-[11px] text-[var(--text-muted)] pl-6 font-medium">+{allSubtasks.length - 5} more</span>
                                 )}
                             </div>
 
                             {/* Premium Progress Bar */}
                             <div className="mt-3 pt-2 border-t border-[var(--border-default)]">
                                 <div className="flex justify-between items-center mb-1.5 px-0.5">
-                                    <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Session Progress</span>
-                                    <span className="text-[10px] text-[var(--accent-primary)] font-mono font-bold">{doneSub}/{totalSub}</span>
+                                    <span className="text-[11px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Session Progress</span>
+                                    <span className="text-[11px] text-[var(--accent-primary)] font-mono font-bold">{doneSub}/{totalSub}</span>
                                 </div>
-                                <div className="h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden ring-1 ring-[var(--border-default)]">
+                                <div className="h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
                                     <div
-                                        className="h-full bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] transition-all duration-700 ease-out shadow-[0_0_8px_var(--accent-glow)]"
+                                        className="h-full bg-[var(--accent-primary)] transition-all duration-500"
                                         style={{ width: `${progressPercent}%` }}
                                     />
                                 </div>
@@ -273,31 +273,21 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                     "flex items-center gap-1 transition-all duration-200",
                     isTaskActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                 )}>
-                    {!isTaskActive && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); focus.startSession(task.id); }}
-                            className="p-1.5 rounded-lg hover:bg-blue-500/10 text-white/40 hover:text-blue-400 transition-colors"
-                            aria-label="Instant Launch"
-                            title="Instant Launch"
-                        >
-                            <Zap className="w-4 h-4 fill-current" />
-                        </button>
-                    )}
                     <button
                         onClick={(e) => { e.stopPropagation(); toggleTaskRecurring(task.id); }}
                         className={cn(
-                            "p-1.5 rounded-lg transition-all",
+                            "p-1.5 rounded-lg transition-colors",
                             task.is_recurring
-                                ? "bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.2)]"
-                                : "hover:bg-white/10 text-white/40 hover:text-white"
+                                ? "bg-emerald-500/10 text-emerald-400"
+                                : "hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                         )}
                         title={task.is_recurring ? "Daily Recurrence On" : "Enable Daily Recurrence"}
                     >
-                        <Repeat className={cn("w-4 h-4", task.is_recurring && "animate-pulse-slow")} />
+                        <Repeat className="w-4 h-4" />
                     </button>
                     <button
                         onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
-                        className="p-1.5 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                        className="p-1.5 rounded-lg hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
                         title="Expansion"
                     >
                         <MoreHorizontal className="w-4 h-4" />
@@ -326,8 +316,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                                     onPointerDown={e => e.stopPropagation()}
                                 />
                             ) : (
-                                <span className="flex items-center gap-1 lowercase tracking-tight">
-                                    <Zap className="w-3 h-3 text-amber-500/50" />
+                                <span className="lowercase tracking-tight">
                                     {(task.estimated_minutes ?? 0) > 0 ? `${formatTimeInput(task.estimated_minutes!)}` : 'unlimited'}
                                 </span>
                             )}
@@ -352,9 +341,9 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                                     <button
                                         onClick={(e) => { e.stopPropagation(); timer.isPaused ? focus.resumeSession() : focus.pauseSession(); }}
                                         className={cn(
-                                            "h-7 px-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center justify-center transition-all shadow-lg",
+                                            "h-7 px-2.5 rounded-full text-[11px] font-semibold flex items-center justify-center transition-all active:scale-95",
                                             timer.isPaused
-                                                ? "bg-blue-500 text-white hover:bg-blue-600"
+                                                ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105"
                                                 : "bg-amber-500/20 text-amber-500 border border-amber-500/30 hover:bg-amber-500/30"
                                         )}
                                         title={timer.isPaused ? "Resume Mission" : "Hold Mission"}
@@ -363,7 +352,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                                     </button>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handleStopClick(); }}
-                                        className="h-7 px-2.5 rounded-lg text-[10px] bg-[var(--error)]/20 text-[var(--error)] border border-[var(--error)]/30 hover:bg-[var(--error)]/30 font-black uppercase tracking-widest flex items-center gap-1.5 transition-all shadow-lg"
+                                        className="h-7 px-2.5 rounded-full text-[11px] bg-[var(--error)]/20 text-[var(--error)] border border-[var(--error)]/30 hover:bg-[var(--error)]/30 font-semibold flex items-center gap-1.5 transition-all active:scale-95"
                                         title="Stop Mission"
                                     >
                                         <Square className="w-2.5 h-2.5 fill-current" />
@@ -373,7 +362,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                             ) : (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleStartClick(); }}
-                                    className="h-7 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all shadow-lg bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-secondary)] shadow-[var(--accent-primary)]/20"
+                                    className="h-7 px-3 rounded-full text-[11px] font-semibold flex items-center gap-1.5 transition-all active:scale-95 bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105"
                                 >
                                     <Play className="w-2.5 h-2.5 fill-current" />
                                     <span>Start</span>
@@ -425,8 +414,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                 >
                     {/* Description */}
                     <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] ml-1">
-                            <FileText className="w-3 h-3" />
+                        <div className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.2em] ml-1">
                             Quick Notes
                         </div>
                         <textarea
@@ -441,11 +429,10 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                     {/* Subtasks */}
                     <div className="space-y-2">
                         <div className="flex items-center justify-between px-1">
-                            <div className="flex items-center gap-2 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">
-                                <ListTodo className="w-3 h-3" />
+                            <div className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.2em]">
                                 Breakdown
                             </div>
-                            <span className="text-[10px] font-bold text-[var(--text-tertiary)]">{doneSub}/{totalSub}</span>
+                            <span className="text-[11px] font-bold text-[var(--text-tertiary)]">{doneSub}/{totalSub}</span>
                         </div>
 
                         <div className="space-y-1">
@@ -505,11 +492,11 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                         <div className="flex gap-2">
                             <button
                                 onClick={() => { focus.startSession(task.id) }}
-                                className="p-2 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/20 hover:text-[var(--accent-secondary)] transition-all"
+                                className="p-2 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/20 transition-colors"
                                 aria-label="Launch Task Now"
                                 title="Launch Task Now"
                             >
-                                <Zap className="w-4 h-4 fill-current" />
+                                <Play className="w-4 h-4 fill-current" />
                             </button>
                             <button
                                 onClick={async () => { if (await confirm({ message: 'Archive this task? It will be removed from view.', variant: 'warning', confirmLabel: 'Archive' })) archiveTask(task.id); }}

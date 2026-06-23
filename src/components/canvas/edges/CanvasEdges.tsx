@@ -1,8 +1,12 @@
-import { memo } from 'react'
+﻿import { memo } from 'react'
 import {
     BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath,
     type EdgeProps, MarkerType,
 } from '@xyflow/react'
+import {
+    Check, Play, Hourglass, ListChecks, Percent, GitMerge, Dot, HelpCircle,
+    type LucideIcon,
+} from 'lucide-react'
 import type { ConnectionKind, EdgeCondition } from '@/types/canvas'
 
 const COLORS: Record<ConnectionKind, string> = {
@@ -11,14 +15,14 @@ const COLORS: Record<ConnectionKind, string> = {
     dependency: '#ef4444',
 }
 
-const TRIGGER_ICON: Record<string, string> = {
-    task_completed: '✓',
-    task_started: '▶',
-    focus_session_ended: '⌛',
-    checklist_complete: '☑',
-    checklist_threshold: '%',
-    all_upstream_met: '∧',
-    manual: '·',
+const TRIGGER_ICON: Record<string, LucideIcon> = {
+    task_completed: Check,
+    task_started: Play,
+    focus_session_ended: Hourglass,
+    checklist_complete: ListChecks,
+    checklist_threshold: Percent,
+    all_upstream_met: GitMerge,
+    manual: Dot,
 }
 
 type Data = {
@@ -45,7 +49,7 @@ function EdgeImpl(props: EdgeProps & { data?: Data }) {
         : undefined
 
     const hasCondition = !!data?.condition
-    const badge = hasCondition ? (TRIGGER_ICON[data!.condition!.trigger] ?? '?') : null
+    const BadgeIcon = hasCondition ? (TRIGGER_ICON[data!.condition!.trigger] ?? HelpCircle) : null
 
     return (
         <>
@@ -61,17 +65,17 @@ function EdgeImpl(props: EdgeProps & { data?: Data }) {
                     filter: selected ? `drop-shadow(0 0 4px ${color})` : undefined,
                 }}
             />
-            {(data?.label || badge) && (
+            {(data?.label || BadgeIcon) && (
                 <EdgeLabelRenderer>
                     <div
-                        className="absolute pointer-events-auto flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-[var(--bg-card)] border shadow-sm"
+                        className="absolute pointer-events-auto flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-[var(--bg-card)] border shadow-sm"
                         style={{
                             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
                             borderColor: color,
                             color,
                         }}
                     >
-                        {badge && <span title={data?.condition?.trigger}>{badge}</span>}
+                        {BadgeIcon && <span title={data?.condition?.trigger} className="flex items-center"><BadgeIcon size={11} /></span>}
                         {data?.label && <span className="text-[var(--text-primary)]">{data.label}</span>}
                     </div>
                 </EdgeLabelRenderer>

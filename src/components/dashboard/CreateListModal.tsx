@@ -19,13 +19,13 @@ const PRESET_COLORS = [
     '#ec4899', // pink
 ]
 
-const PRESET_ICONS = ['📋', '💼', '🎯', '📚', '💡', '🚀', '✨', '🔥']
+const DEFAULT_ICON = 'list'
 
 export function CreateListModal({ isOpen, onClose, listToEdit, defaultWorkspaceId }: CreateListModalProps) {
     const { createList, updateList } = useListStore()
     const [name, setName] = useState('')
     const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0])
-    const [selectedIcon, setSelectedIcon] = useState(PRESET_ICONS[0])
+    const [selectedIcon, setSelectedIcon] = useState(DEFAULT_ICON)
     const [loading, setLoading] = useState(false)
 
     useEffect(() => {
@@ -33,11 +33,11 @@ export function CreateListModal({ isOpen, onClose, listToEdit, defaultWorkspaceI
             if (listToEdit) {
                 setName(listToEdit.name)
                 setSelectedColor(listToEdit.color)
-                setSelectedIcon(listToEdit.icon)
+                setSelectedIcon(listToEdit.icon || DEFAULT_ICON)
             } else {
                 setName('')
                 setSelectedColor(PRESET_COLORS[0])
-                setSelectedIcon(PRESET_ICONS[0])
+                setSelectedIcon(DEFAULT_ICON)
             }
         }
     }, [isOpen, listToEdit])
@@ -114,28 +114,6 @@ export function CreateListModal({ isOpen, onClose, listToEdit, defaultWorkspaceI
                             className="w-full px-4 py-3 bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-xl text-[var(--text-primary)] placeholder:[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/50"
                             autoFocus
                         />
-                    </div>
-
-                    {/* Icon Picker */}
-                    <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
-                            List Icon
-                        </label>
-                        <div className="grid grid-cols-8 gap-2">
-                            {PRESET_ICONS.map((icon) => (
-                                <button
-                                    key={icon}
-                                    type="button"
-                                    onClick={() => setSelectedIcon(icon)}
-                                    className={`p-2 rounded-xl text-2xl transition-all ${selectedIcon === icon
-                                        ? 'bg-[var(--accent-primary)] text-white shadow-lg shadow-[var(--accent-primary)]/25'
-                                        : 'bg-[var(--bg-hover)] hover:bg-[var(--bg-tertiary)]'
-                                        }`}
-                                >
-                                    {icon}
-                                </button>
-                            ))}
-                        </div>
                     </div>
 
                     {/* Color Picker */}

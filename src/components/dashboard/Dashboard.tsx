@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+﻿import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useListStore } from '@/store/listStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -169,20 +169,26 @@ export function Dashboard() {
             ) : (
                 <>
                     {/* ── TOP BAR ── */}
-                    <div className="px-5 py-3 border-b border-[var(--border-default)] bg-[var(--bg-secondary)] sticky top-0 z-30 shrink-0 space-y-3">
+                    <div className="px-6 py-4 border-b border-[var(--border-default)] bg-[var(--bg-secondary)]/80 backdrop-blur-xl sticky top-0 z-30 shrink-0 space-y-3.5">
                         {/* Row 1: workspace title switcher + actions */}
                         <div className="flex items-center justify-between gap-3 relative">
 
                             {/* NEW Workspace Switcher Dropdown */}
-                            <div className="relative">
+                            <div className="relative flex items-center gap-3">
+                                {ws?.color && !isArchived && activeWorkspaceId !== 'unassigned' && (
+                                    <span className="w-9 h-9 rounded-2xl shrink-0 flex items-center justify-center text-white font-bold text-base"
+                                        style={{ background: `linear-gradient(135deg, ${ws.color}, ${ws.color}bb)`, boxShadow: `0 6px 18px ${ws.color}55` }}>
+                                        {ws.name.charAt(0).toUpperCase()}
+                                    </span>
+                                )}
                                 <button
                                     onClick={() => setShowWsMenu(!showWsMenu)}
                                     className="flex items-center gap-2 group hover:opacity-80 transition-opacity outline-none"
                                 >
-                                    <h1 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">
+                                    <h1 className="text-[26px] leading-none font-semibold text-[var(--text-primary)] tracking-tight">
                                         {isArchived ? 'Archived' : activeWorkspaceId === 'unassigned' ? 'Unassigned' : ws?.name}
                                     </h1>
-                                    <ChevronDown size={18} className="text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors mt-1" />
+                                    <ChevronDown size={18} className="text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors" />
                                 </button>
 
                                 <AnimatePresence>
@@ -246,28 +252,27 @@ export function Dashboard() {
                                 </AnimatePresence>
                             </div>
 
-                            <div className="flex items-center gap-2 bg-[var(--bg-hover)] px-2 py-0.5 rounded-full">
-                                <span className="text-xs font-semibold text-[var(--text-muted)] tabular-nums">
-                                    <span className="text-[var(--text-primary)]">{orderedLists.length}</span> lists
-                                </span>
-                            </div>
+                            <span className="hidden sm:flex items-center gap-1.5 bg-[var(--bg-hover)] px-2.5 py-1 rounded-full">
+                                <span className="text-xs font-semibold tabular-nums text-[var(--text-primary)]">{orderedLists.length}</span>
+                                <span className="text-[11px] text-[var(--text-tertiary)]">lists</span>
+                            </span>
 
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-2 shrink-0 ml-auto">
                                 <div className="relative">
-                                    <Search size={11} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                                     <input
                                         value={search}
                                         onChange={e => setSearch(e.target.value)}
-                                        placeholder="Search lists..."
-                                        className="w-36 pl-8 pr-3 py-1.5 text-xs bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-lg placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
+                                        placeholder="Search lists…"
+                                        className="w-40 pl-9 pr-3 py-2 text-xs bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-full placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-primary)] focus:w-52 transition-all duration-200"
                                     />
                                 </div>
                                 {!isArchived && (
                                     <button
                                         onClick={() => setShowCreateList(true)}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/90 text-white text-xs font-semibold rounded-lg transition-all active:scale-95"
+                                        className="flex items-center gap-1.5 px-3.5 py-2 bg-[var(--accent-primary)] text-[var(--accent-contrast)] text-xs font-semibold rounded-full transition-all active:scale-95 hover:brightness-105 shadow-[0_6px_18px_var(--accent-glow)]"
                                     >
-                                        <ListPlus size={12} /> New List
+                                        <ListPlus size={13} /> New List
                                     </button>
                                 )}
                             </div>
@@ -275,36 +280,31 @@ export function Dashboard() {
 
                         {/* Row 2: insight strip */}
                         {!isArchived && (
-                            <div className="flex items-center gap-4 text-[11px] text-[var(--text-muted)] overflow-x-auto scrollbar-hide">
-                                <span className="flex items-center gap-1.5 shrink-0">
+                            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                                <span className="flex items-center gap-1.5 shrink-0 rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] text-[var(--text-tertiary)]">
                                     <Zap size={11} className="text-amber-400" />
-                                    <span className="font-semibold text-[var(--text-primary)]">{fmtMin(stats.focusMin)}</span> focus today
+                                    <span className="font-semibold text-[var(--text-primary)] tabular-nums">{fmtMin(stats.focusMin)}</span> focus
                                 </span>
-                                <span className="text-[var(--border-default)]">·</span>
-                                <span className="flex items-center gap-1.5 shrink-0">
+                                <span className="flex items-center gap-1.5 shrink-0 rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] text-[var(--text-tertiary)]">
                                     <CheckCircle2 size={11} className="text-emerald-400" />
-                                    <span className="font-semibold text-[var(--text-primary)]">{stats.doneToday}</span> tasks done
+                                    <span className="font-semibold text-[var(--text-primary)] tabular-nums">{stats.doneToday}</span> done today
                                 </span>
-                                <span className="text-[var(--border-default)]">·</span>
-                                <span className="flex items-center gap-1.5 shrink-0">
+                                <span className="flex items-center gap-1.5 shrink-0 rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] text-[var(--text-tertiary)]">
                                     <Target size={11} className="text-blue-400" />
-                                    <span className="font-semibold text-[var(--text-primary)]">{stats.active}</span> active
-                                    {stats.totalEst > 0 && <span className="text-[var(--text-muted)]">&nbsp;· {fmtMin(stats.totalEst)} est.</span>}
+                                    <span className="font-semibold text-[var(--text-primary)] tabular-nums">{stats.active}</span> active
+                                    {stats.totalEst > 0 && <span className="text-[var(--text-muted)]">· {fmtMin(stats.totalEst)} est.</span>}
                                 </span>
                                 {isActive && (
-                                    <>
-                                        <span className="text-[var(--border-default)]">·</span>
-                                        <span className="flex items-center gap-1.5 text-[var(--accent-primary)] font-semibold shrink-0 animate-pulse">
-                                            <Flame size={11} /> Live session
-                                        </span>
-                                    </>
+                                    <span className="flex items-center gap-1.5 shrink-0 rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] font-semibold px-2.5 py-1 text-[11px] animate-pulse">
+                                        <Flame size={11} /> Live session
+                                    </span>
                                 )}
                             </div>
                         )}
                     </div>
 
                     {/* ── BODY ── */}
-                    <main className="flex-1 overflow-y-auto p-5">
+                    <main className="flex-1 overflow-y-auto p-6">
 
                         {/* ── BENTO GRID ── */}
                         {!activeWorkspaceId && workspaces.length === 0 ? (
@@ -314,7 +314,7 @@ export function Dashboard() {
                         ) : (
                             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                                 <SortableContext items={sortedIds} strategy={rectSortingStrategy}>
-                                    <div className="grid grid-cols-2 xl:grid-cols-4 auto-rows-[minmax(180px,auto)] gap-3">
+                                    <div className="grid grid-cols-2 xl:grid-cols-4 auto-rows-[minmax(186px,auto)] gap-4">
                                         {orderedLists.map(list => {
                                             const lt = (tasksByList[list.id] || []).filter(t => !t.deleted_at)
                                             const pending = lt.filter(t => t.status !== 'done')
@@ -360,12 +360,12 @@ export function Dashboard() {
                                                 initial={{ opacity: 0, scale: 0.95 }}
                                                 animate={{ opacity: 1, scale: 1 }}
                                                 onClick={() => setShowCreateList(true)}
-                                                className="group rounded-2xl border-2 border-dashed border-[var(--border-default)] hover:border-[var(--accent-primary)]/40 flex flex-col items-center justify-center gap-2.5 transition-all col-span-1 row-span-1 min-h-[180px]"
+                                                className="group rounded-2xl border border-dashed border-[var(--border-hover)] bg-[var(--bg-hover)]/30 hover:bg-[var(--bg-hover)] hover:border-[var(--accent-primary)] flex flex-col items-center justify-center gap-2.5 transition-all duration-200 col-span-1 row-span-1 min-h-[186px]"
                                             >
-                                                <div className="w-10 h-10 rounded-xl bg-[var(--bg-hover)] group-hover:bg-[var(--accent-primary)]/10 flex items-center justify-center transition-all">
-                                                    <Plus size={18} className="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors" />
+                                                <div className="w-11 h-11 rounded-2xl bg-[var(--bg-card)] group-hover:bg-[var(--accent-primary)] flex items-center justify-center transition-all group-hover:scale-105 group-hover:shadow-[0_8px_24px_var(--accent-glow)]">
+                                                    <Plus size={20} className="text-[var(--text-muted)] group-hover:text-[var(--accent-contrast)] transition-colors" />
                                                 </div>
-                                                <span className="text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors font-semibold">New List</span>
+                                                <span className="text-xs text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors font-semibold">New List</span>
                                             </motion.button>
                                         )}
                                     </div>
@@ -490,8 +490,8 @@ function BentoListCard({
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: isDragging ? 0.4 : 1, scale: 1 }}
             className={cn(
-                "group relative h-full bg-[var(--bg-card)] rounded-2xl border border-[var(--border-default)] flex flex-col transition-all duration-200",
-                !isArchived && "cursor-pointer hover:shadow-lg hover:border-[var(--border-hover)] hover:-translate-y-0.5",
+                "group relative h-full overflow-hidden bg-[var(--bg-card)] rounded-2xl border border-[var(--border-default)] flex flex-col transition-all duration-200",
+                !isArchived && "cursor-pointer hover:shadow-xl hover:border-[var(--border-hover)] hover:-translate-y-0.5",
                 isArchived && "cursor-default opacity-60",
                 hasActive && "ring-1 ring-[var(--accent-primary)]/40 shadow-md",
                 isDragging && "shadow-2xl scale-[1.02]",
@@ -499,15 +499,21 @@ function BentoListCard({
             )}
             onClick={onClick}
         >
+            {/* Ambient accent wash */}
+            <div
+                className="pointer-events-none absolute -top-12 -right-12 w-32 h-32 rounded-full blur-3xl opacity-20 group-hover:opacity-30 transition-opacity duration-300"
+                style={{ background: accent }}
+            />
+
             {/* ── Gradient header ── */}
             <div
-                className="flex items-start justify-between px-4 pt-4 pb-3 shrink-0 rounded-t-2xl"
-                style={{ background: `linear-gradient(135deg, ${accent}18 0%, ${accent}06 100%)` }}
+                className="relative flex items-start justify-between px-4 pt-4 pb-3 shrink-0 rounded-t-2xl"
+                style={{ background: `linear-gradient(135deg, ${accent}1f 0%, ${accent}05 100%)` }}
             >
                 <div className="flex items-center gap-2.5 min-w-0">
                     {/* Avatar */}
                     <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-base shrink-0 shadow-md"
+                        className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold text-base shrink-0 shadow-md"
                         style={{
                             background: `linear-gradient(135deg, ${accent}, ${accent}bb)`,
                             boxShadow: `0 4px 12px ${accent}40`
@@ -519,7 +525,7 @@ function BentoListCard({
                         <h3 className="font-bold text-sm text-[var(--text-primary)] truncate leading-tight">
                             {hl(list.name, search)}
                         </h3>
-                        <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                        <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
                             {pending.length} pending · {done.length} done
                         </p>
                     </div>
@@ -572,28 +578,31 @@ function BentoListCard({
             </div>
 
             {/* ── Progress bar ── */}
-            <div className="px-4 pb-2 shrink-0">
+            <div className="relative px-4 pb-2 shrink-0">
                 <div className="flex items-center gap-2 mb-1">
-                    <div className="flex-1 h-1 bg-[var(--bg-hover)] rounded-full overflow-hidden">
+                    <div className="flex-1 h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
                         <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${progress}%` }}
                             transition={{ duration: 0.8, ease: 'easeOut' }}
                             className="h-full rounded-full"
-                            style={{ backgroundColor: progress === 100 ? '#10b981' : accent }}
+                            style={{
+                                background: progress === 100 ? 'linear-gradient(90deg,#10b981aa,#10b981)' : `linear-gradient(90deg, ${accent}aa, ${accent})`,
+                                boxShadow: `0 0 8px ${progress === 100 ? '#10b981' : accent}66`,
+                            }}
                         />
                     </div>
-                    <span className="text-[9px] font-bold text-[var(--text-muted)] tabular-nums shrink-0">{progress}%</span>
+                    <span className="text-[11px] font-bold text-[var(--text-muted)] tabular-nums shrink-0">{progress}%</span>
                 </div>
             </div>
 
             {/* ── Task list ── */}
-            <div className="flex-1 px-3 pb-3 overflow-hidden">
+            <div className="relative flex-1 px-3 pb-3 overflow-hidden">
                 {previewTasks.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full gap-1.5 text-[var(--text-muted)]">
                         {tasks.length === 0
-                            ? <><Layers size={20} className="opacity-15" /><p className="text-[10px] opacity-40">No tasks yet</p></>
-                            : <><CheckCircle2 size={20} className="text-emerald-500 opacity-40" /><p className="text-[10px] text-emerald-500/50 font-semibold">All done!</p></>
+                            ? <><Layers size={20} className="opacity-15" /><p className="text-[11px] opacity-40">No tasks yet</p></>
+                            : <><CheckCircle2 size={20} className="text-emerald-500 opacity-40" /><p className="text-[11px] text-emerald-500/50 font-semibold">All done!</p></>
                         }
                     </div>
                 ) : (
@@ -609,12 +618,12 @@ function BentoListCard({
                                         {(due || p) && (
                                             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                                 {due && (
-                                                    <span className="flex items-center gap-0.5 text-[9px] text-[var(--text-muted)]">
+                                                    <span className="flex items-center gap-0.5 text-[11px] text-[var(--text-muted)]">
                                                         <AlarmClock size={7} /> {due}
                                                     </span>
                                                 )}
                                                 {p && (
-                                                    <span className="text-[9px] font-semibold rounded-full" style={{ color: p.color }}>
+                                                    <span className="text-[11px] font-semibold rounded-full" style={{ color: p.color }}>
                                                         ● {p.label}
                                                     </span>
                                                 )}
@@ -625,7 +634,7 @@ function BentoListCard({
                             )
                         })}
                         {pending.length > taskLimit && (
-                            <p className="text-[9px] text-[var(--text-muted)] text-center pt-0.5 italic">
+                            <p className="text-[11px] text-[var(--text-muted)] text-center pt-0.5 italic">
                                 +{pending.length - taskLimit} more
                             </p>
                         )}
@@ -634,8 +643,8 @@ function BentoListCard({
             </div>
 
             {/* ── Footer ── */}
-            <div className="px-4 py-2 border-t border-[var(--border-default)]/40 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-2 text-[9px] text-[var(--text-muted)]">
+            <div className="relative px-4 py-2 border-t border-[var(--border-default)]/40 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
                     {hasActive && (
                         <span className="flex items-center gap-1 text-[var(--accent-primary)] font-bold">
                             <Flame size={9} className="animate-pulse" /> Active
@@ -647,7 +656,7 @@ function BentoListCard({
                         </span>
                     )}
                 </div>
-                <div className="flex items-center gap-1 text-[9px] text-[var(--text-muted)]">
+                <div className="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
                     <CheckCircle2 size={9} className="text-emerald-500" />
                     <span className="tabular-nums">{done.length}/{tasks.length}</span>
                 </div>

@@ -202,6 +202,60 @@ export const dbOps = {
         exec(`UPDATE ${table} SET synced = 1 WHERE id =?`, [id])
     },
 
+    /**
+     * Merge rows pulled FROM the cloud INTO local SQLite (cloud → local restore).
+     *
+     * Last-write-wins: a cloud row only overwrites the local copy when its
+     * updated_at is newer (or the row doesn't exist locally). Rows written this
+     * way are marked synced=1 so the push loop doesn't immediately re-upload them.
+     * Returns how many rows were actually written.
+     */
+    upsertFromCloud(table: string, rows: any[]): number {
+        if (!Array.isArray(rows) || rows.length === 0) return 0
+
+        // Only keep columns that actually exist locally, so cloud-only fields
+        // (e.g. a column we haven't migrated yet) don't break the INSERT.
+        const localCols = new Set(
+            (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map(c => c.name)
+        )
+        const hasUpdatedAt = localCols.has('updated_at')
+
+        const getLocalUpdated = hasUpdatedAt
+            ? db.prepare(`SELECT updated_at FROM ${table} WHERE id = ?`)
+            : null
+
+        let written = 0
+
+        const tx = db.transaction((batch: any[]) => {
+            for (const raw of batch) {
+                if (!raw || !raw.id) continue
+
+                // Last-write-wins guard
+                if (getLocalUpdated) {
+                    const local = getLocalUpdated.get(raw.id) as { updated_at?: string } | undefined
+                    if (local?.updated_at && raw.updated_at && local.updated_at >= raw.updated_at) {
+                        continue // local copy is newer or equal — keep it
+                    }
+                }
+
+                const row: Record<string, any> = { synced: 1 }
+                for (const [k, v] of Object.entries(raw)) {
+                    if (localCols.has(k)) row[k] = v
+                }
+
+                const cols = Object.keys(row)
+                const vals = sanitize(Object.values(row))
+                db.prepare(
+                    `INSERT OR REPLACE INTO ${table} (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')})`
+                ).run(...vals)
+                written++
+            }
+        })
+
+        tx(rows)
+        return written
+    },
+
     /* ---- Named update ops (replace raw db:exec) ---- */
 
     updateTask(id: string, updates: Record<string, any>) {
@@ -445,11 +499,11 @@ export const dbOps = {
         // 1. Hourly breakdown — seconds per hour of the day (0–23)
         const hourlyBreakdown = (exec(`
             SELECT
-                CAST(strftime('%H', start_time) AS INTEGER) AS hour,
+                CAST(strftime('%H', start_time, 'localtime') AS INTEGER) AS hour,
                 SUM(duration_seconds)                       AS totalSeconds,
                 COUNT(DISTINCT app_id)                      AS uniqueApps
             FROM app_sessions
-            WHERE strftime('%Y-%m-%d', start_time) = ?
+            WHERE strftime('%Y-%m-%d', start_time, 'localtime') = ?
               AND duration_seconds > 0
             GROUP BY hour
             ORDER BY hour ASC
@@ -466,7 +520,7 @@ export const dbOps = {
                 MAX(s.end_time)                     AS lastSeen
             FROM app_sessions s
             LEFT JOIN apps a ON s.app_id = a.id
-            WHERE strftime('%Y-%m-%d', s.start_time) = ?
+            WHERE strftime('%Y-%m-%d', s.start_time, 'localtime') = ?
               AND s.duration_seconds > 0
             GROUP BY s.app_id
             ORDER BY totalSeconds DESC
@@ -480,7 +534,7 @@ export const dbOps = {
                 COUNT(DISTINCT s.app_id)            AS appCount
             FROM app_sessions s
             LEFT JOIN apps a ON s.app_id = a.id
-            WHERE strftime('%Y-%m-%d', s.start_time) = ?
+            WHERE strftime('%Y-%m-%d', s.start_time, 'localtime') = ?
               AND s.duration_seconds > 0
             GROUP BY category
             ORDER BY totalSeconds DESC
@@ -495,7 +549,7 @@ export const dbOps = {
                 COUNT(*)                             AS sessionCount
             FROM domain_sessions ds
             LEFT JOIN domain_categories dc ON ds.domain = dc.domain
-            WHERE strftime('%Y-%m-%d', ds.start_time) = ?
+            WHERE strftime('%Y-%m-%d', ds.start_time, 'localtime') = ?
               AND ds.duration_seconds > 0
             GROUP BY ds.domain
             ORDER BY totalSeconds DESC
@@ -505,13 +559,13 @@ export const dbOps = {
         // 5. Weekly comparison — last 7 days of total screen time
         const weeklyTrend = (exec(`
             SELECT
-                strftime('%Y-%m-%d', start_time)    AS day,
+                strftime('%Y-%m-%d', start_time, 'localtime')    AS day,
                 SUM(duration_seconds)               AS totalSeconds,
                 COUNT(DISTINCT app_id)              AS uniqueApps,
                 COUNT(*)                            AS sessionCount
             FROM app_sessions
-            WHERE start_time >= date(?, '-6 days')
-              AND strftime('%Y-%m-%d', start_time) <= ?
+            WHERE strftime('%Y-%m-%d', start_time, 'localtime') >= date(?, '-6 days')
+              AND strftime('%Y-%m-%d', start_time, 'localtime') <= ?
               AND duration_seconds > 0
             GROUP BY day
             ORDER BY day ASC
@@ -528,7 +582,7 @@ export const dbOps = {
                 s.window_title                      AS windowTitle
             FROM app_sessions s
             LEFT JOIN apps a ON s.app_id = a.id
-            WHERE strftime('%Y-%m-%d', s.start_time) = ?
+            WHERE strftime('%Y-%m-%d', s.start_time, 'localtime') = ?
               AND s.duration_seconds >= 10
             ORDER BY s.start_time ASC
         `, [date]) as any[]) ?? []
@@ -541,7 +595,7 @@ export const dbOps = {
                 COUNT(*)                            AS totalSessions,
                 COALESCE(MAX(duration_seconds), 0)  AS longestSession
             FROM app_sessions
-            WHERE strftime('%Y-%m-%d', start_time) = ?
+            WHERE strftime('%Y-%m-%d', start_time, 'localtime') = ?
               AND duration_seconds > 0
         `, [date]) as any[])?.[0] ?? {}
 
@@ -556,7 +610,7 @@ export const dbOps = {
                 SUM(s.duration_seconds) AS totalSeconds
             FROM app_sessions s
             LEFT JOIN apps a ON s.app_id = a.id
-            WHERE strftime('%Y-%m-%d', s.start_time) = ?
+            WHERE strftime('%Y-%m-%d', s.start_time, 'localtime') = ?
               AND s.duration_seconds > 0
             GROUP BY bucket
         `, [date]) as any[]) ?? []

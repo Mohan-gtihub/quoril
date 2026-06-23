@@ -9,7 +9,7 @@ interface ProductivityTrendsReportProps {
 export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProps) {
     return (
         <div className="space-y-6">
-            <h2 className="text-sm font-black uppercase tracking-[0.3em] text-[var(--text-secondary)] flex items-center gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--text-secondary)] flex items-center gap-3">
                 <TrendingUp className="w-4 h-4" />
                 Productivity Trends
             </h2>
@@ -140,13 +140,13 @@ export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProp
                                         <span className="text-sm text-[var(--text-secondary)] font-medium w-12">
                                             {day.day}
                                         </span>
-                                        <span className="text-xs font-mono font-bold text-indigo-400 tabular-nums">
+                                        <span className="text-xs font-mono font-bold text-[var(--accent-primary)] tabular-nums">
                                             {day.avgMinutes}m
                                         </span>
                                     </div>
                                     <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+                                            className="h-full bg-gradient-to-r from-[var(--accent-primary)] to-purple-500 rounded-full transition-all duration-500"
                                             style={{ width: `${widthPercent}%` }}
                                         />
                                     </div>

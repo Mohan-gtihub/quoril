@@ -60,11 +60,11 @@ export function ReflectionModal({ isOpen, onSubmit, onSkip }: ReflectionModalPro
                                     key={level.val}
                                     onClick={() => setEnergyLevel(level.val)}
                                     className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all border-2 ${energyLevel === level.val
-                                        ? 'border-blue-500 bg-blue-500/10'
+                                        ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10'
                                         : 'border-transparent hover:bg-gray-800'
                                         }`}
                                 >
-                                    <div className={`w-3 h-8 rounded-full ${level.color} ${energyLevel === level.val ? 'shadow-[0_0_10px_currentColor]' : 'opacity-40'}`}></div>
+                                    <div className={`w-3 h-8 rounded-full ${level.color} ${energyLevel === level.val ? '' : 'opacity-40'}`}></div>
                                     <span className={`text-xs font-bold ${energyLevel === level.val ? 'text-white' : 'text-gray-500'}`}>{level.label}</span>
                                 </button>
                             ))}
@@ -78,7 +78,7 @@ export function ReflectionModal({ isOpen, onSubmit, onSkip }: ReflectionModalPro
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
                             placeholder="What blocked you? What went well?"
-                            className="w-full h-24 bg-[#1a1f2e] border border-gray-700 rounded-lg p-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                            className="w-full h-24 bg-[#1a1f2e] border border-gray-700 rounded-lg p-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[var(--accent-primary)] transition-colors resize-none"
                         />
                     </div>
                 </div>
@@ -87,7 +87,7 @@ export function ReflectionModal({ isOpen, onSubmit, onSkip }: ReflectionModalPro
                     <button
                         onClick={handleSubmit}
                         disabled={focusScore === 0 || energyLevel === 0}
-                        className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-colors shadow-lg shadow-blue-900/20"
+                        className="flex-1 py-3 bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold transition-all"
                     >
                         Save & Continue
                     </button>

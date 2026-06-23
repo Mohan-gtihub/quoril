@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useTaskStore } from '@/store/taskStore'
-import { X, CheckCircle2, Circle, Trash2, Plus, Repeat, Activity } from 'lucide-react'
+import { X, CheckCircle2, Circle, Trash2, Plus, Repeat } from 'lucide-react'
 import { confirm } from '@/components/ui/ConfirmDialog'
 
 export function TaskDetailsPanel() {
@@ -60,7 +60,7 @@ export function TaskDetailsPanel() {
                         className="bg-transparent text-xl font-bold text-[var(--text-primary)] w-full focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]/50 rounded px-1 -ml-1 border-transparent hover:border-[var(--border-default)] border"
                     />
                     <div className="flex items-center gap-2 mt-2">
-                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${task.status === 'done' ? 'bg-green-500/10 text-green-400' : 'bg-gray-700 text-gray-400'
+                        <span className={`px-2 py-0.5 rounded text-[11px] uppercase font-bold tracking-wider ${task.status === 'done' ? 'bg-green-500/10 text-green-400' : 'bg-gray-700 text-gray-400'
                             }`}>
                             {task.status.replace('_', ' ')}
                         </span>
@@ -84,12 +84,12 @@ export function TaskDetailsPanel() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => updateTask(task.id, { is_recurring: !task.is_recurring })}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${task.is_recurring
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_15px_-3px_rgba(16,185,129,0.2)]'
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border ${task.is_recurring
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                             : 'bg-gray-800/50 text-gray-500 border-gray-700 hover:border-gray-600'
                             }`}
                     >
-                        <Repeat className={`w-3.5 h-3.5 ${task.is_recurring ? 'animate-pulse' : ''}`} />
+                        <Repeat className="w-3.5 h-3.5" />
                         {task.is_recurring ? 'Daily Recurrence Active' : 'Enable Daily Recurrence'}
                     </button>
                 </div>
@@ -113,21 +113,20 @@ export function TaskDetailsPanel() {
 
                 {/* Task intelligence - App usage per task */}
                 <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <Activity className="w-3 h-3 text-indigo-400" />
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">
                         Task Intelligence
                     </label>
 
                     <div className="space-y-3 bg-white/[0.02] border border-white/5 rounded-2xl p-4">
                         {taskUsage.length === 0 ? (
-                            <div className="text-[10px] text-white/20 italic text-center py-4">
+                            <div className="text-[11px] text-white/20 italic text-center py-4">
                                 No specific app activity tied to this task yet.
                             </div>
                         ) : (
                             <div className="space-y-3">
                                 {taskUsage.map((item) => (
                                     <div key={item.appName} className="space-y-1.5">
-                                        <div className="flex justify-between text-[10px] font-bold">
+                                        <div className="flex justify-between text-[11px] font-bold">
                                             <span className="text-white/60 truncate max-w-[150px]">{item.appName}</span>
                                             <span className="text-white/40">{Math.round(item.totalSeconds / 60)}m</span>
                                         </div>
@@ -141,7 +140,7 @@ export function TaskDetailsPanel() {
                                 ))}
                             </div>
                         )}
-                        <p className="text-[9px] text-white/20 mt-4 leading-relaxed">
+                        <p className="text-[11px] text-white/20 mt-4 leading-relaxed">
                             Apps used while this task was in 'Active' state. Data is local and private.
                         </p>
                     </div>
@@ -164,7 +163,7 @@ export function TaskDetailsPanel() {
                     {taskSubtasks.length > 0 && (
                         <div className="h-1.5 w-full bg-[var(--bg-hover)] rounded-full mb-6 overflow-hidden border border-[var(--border-default)]">
                             <div
-                                className="h-full bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] transition-all duration-500 shadow-[0_0_10px_var(--accent-glow)]"
+                                className="h-full bg-[var(--accent-primary)] transition-all duration-500"
                                 style={{ width: `${calculateProgress()}%` }}
                             />
                         </div>

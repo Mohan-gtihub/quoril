@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+﻿import { useMemo, useRef, useState } from 'react'
 import { useViewport, useReactFlow } from '@xyflow/react'
 import { useZonesStore } from '@/store/canvas/zonesStore'
 import type { Zone, ZonePattern } from '@/types/canvas'
@@ -96,7 +96,7 @@ export function ZoneLayer({ canvasId }: { canvasId: string }) {
             return (
                 <div key={z.id} style={style}>
                     <div
-                        className="absolute top-1 left-2 text-[10px] uppercase tracking-wider font-semibold cursor-move select-none"
+                        className="absolute top-1 left-2 text-[11px] uppercase tracking-wider font-semibold cursor-move select-none"
                         style={{ color }}
                         onMouseDown={(e) => onMouseDown(e, z, 'move')}
                         onDoubleClick={(e) => { e.stopPropagation(); setEditing(z.id) }}
@@ -193,7 +193,7 @@ function ZoneInspector({ zone, screen, onClose }: { zone: Zone; screen: { x: num
                 <button onClick={onClose} className="p-1 hover:bg-[var(--bg-hover)] rounded"><X size={12} /></button>
             </div>
             <div>
-                <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Color</div>
+                <div className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Color</div>
                 <div className="flex flex-wrap gap-1">
                     {PALETTE.map((c) => (
                         <button
@@ -206,13 +206,13 @@ function ZoneInspector({ zone, screen, onClose }: { zone: Zone; screen: { x: num
                 </div>
             </div>
             <div>
-                <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Pattern</div>
+                <div className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Pattern</div>
                 <div className="flex gap-1">
                     {PATTERNS.map((p) => (
                         <button
                             key={p}
                             onClick={() => patch({ pattern: p })}
-                            className={`flex-1 text-[10px] px-1 py-0.5 rounded border ${zone.pattern === p ? 'border-[var(--accent-primary)]' : 'border-[var(--border-default)]'}`}
+                            className={`flex-1 text-[11px] px-1 py-0.5 rounded border ${zone.pattern === p ? 'border-[var(--accent-primary)]' : 'border-[var(--border-default)]'}`}
                         >
                             {p}
                         </button>

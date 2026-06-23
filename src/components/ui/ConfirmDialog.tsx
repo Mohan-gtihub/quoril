@@ -1,4 +1,4 @@
-import { create } from 'zustand'
+﻿import { create } from 'zustand'
 import { AnimatePresence, motion } from 'framer-motion'
 import { AlertTriangle, Trash2, X } from 'lucide-react'
 import { useEffect, useCallback } from 'react'
@@ -116,8 +116,8 @@ export function ConfirmDialog() {
                                     <Icon className="w-5 h-5" />
                                 </div>
                                 <div className="flex-1 min-w-0 pt-0.5">
-                                    <h3 className="text-sm font-black text-white mb-1">{title}</h3>
-                                    <p className="text-[12px] text-white/40 leading-relaxed">{message}</p>
+                                    <h3 className="text-sm font-semibold text-white mb-1">{title}</h3>
+                                    <p className="text-[13px] text-white/40 leading-relaxed">{message}</p>
                                 </div>
                             </div>
                         </div>
@@ -126,14 +126,14 @@ export function ConfirmDialog() {
                         <div className="flex gap-2.5 px-6 pb-5">
                             <button
                                 onClick={() => close(false)}
-                                className="flex-1 py-2.5 px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-[12px] font-bold text-white/50 transition-colors"
+                                className="flex-1 py-2.5 px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-[13px] font-bold text-white/50 transition-colors"
                             >
                                 {cancelLabel}
                             </button>
                             <button
                                 onClick={() => close(true)}
                                 autoFocus
-                                className={`flex-1 py-2.5 px-4 rounded-xl text-[12px] font-bold text-white transition-all ${btnColor}`}
+                                className={`flex-1 py-2.5 px-4 rounded-xl text-[13px] font-bold text-white transition-all ${btnColor}`}
                             >
                                 {confirmLabel}
                             </button>

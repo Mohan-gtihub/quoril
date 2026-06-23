@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react'
-import { Clock, Monitor, Activity } from 'lucide-react'
+﻿import { useState, useEffect } from 'react'
 
 interface AppUsage {
     appName: string
@@ -57,7 +56,7 @@ export function AppUsageReport({ dateRange }: AppUsageReportProps) {
         return (
             <div className="h-[400px] flex items-center justify-center">
                 <div className="animate-pulse flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin" />
+                    <div className="w-12 h-12 rounded-full border-2 border-[var(--accent-primary)]/20 border-t-[var(--accent-primary)] animate-spin" />
                     <p className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-widest">Analyzing Activity...</p>
                 </div>
             </div>
@@ -65,54 +64,42 @@ export function AppUsageReport({ dateRange }: AppUsageReportProps) {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-8">
             {/* Stats Overview Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="glass-regular p-6 rounded-3xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-                        <Clock size={64} />
-                    </div>
-                    <div className="flex items-center gap-2 text-[var(--text-tertiary)] text-[10px] font-black uppercase tracking-[0.2em] mb-4">
-                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] p-6 rounded-3xl">
+                    <div className="text-[var(--text-tertiary)] text-[11px] font-semibold uppercase tracking-[0.2em] mb-4">
                         Total Screen Time
                     </div>
-                    <div className="text-3xl font-black text-[var(--text-primary)] tabular-nums drop-shadow-lg">
+                    <div className="text-3xl font-semibold text-[var(--text-primary)] tabular-nums">
                         {formatDuration(totalTime)}
                     </div>
                 </div>
 
-                <div className="glass-regular p-6 rounded-3xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-                        <Monitor size={64} />
-                    </div>
-                    <div className="flex items-center gap-2 text-[var(--text-tertiary)] text-[10px] font-black uppercase tracking-[0.2em] mb-4">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] p-6 rounded-3xl">
+                    <div className="text-[var(--text-tertiary)] text-[11px] font-semibold uppercase tracking-[0.2em] mb-4">
                         Applications Tracked
                     </div>
-                    <div className="text-3xl font-black text-[var(--text-primary)] tabular-nums">
+                    <div className="text-3xl font-semibold text-[var(--text-primary)] tabular-nums">
                         {usage.length}
                     </div>
                 </div>
 
-                <div className="glass-regular p-6 rounded-3xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-                        <Activity size={64} />
-                    </div>
-                    <div className="flex items-center gap-2 text-[var(--text-tertiary)] text-[10px] font-black uppercase tracking-[0.2em] mb-4">
-                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
+                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] p-6 rounded-3xl">
+                    <div className="text-[var(--text-tertiary)] text-[11px] font-semibold uppercase tracking-[0.2em] mb-4">
                         Top Platform
                     </div>
-                    <div className="text-2xl font-black text-[var(--text-primary)] truncate max-w-full italic">
+                    <div className="text-2xl font-semibold text-[var(--text-primary)] truncate max-w-full">
                         {usage[0]?.appName || 'None Detected'}
                     </div>
                 </div>
             </div>
 
             {/* List Table */}
-            <div className="glass-panel rounded-3xl overflow-hidden shadow-2xl">
-                <div className="px-8 py-5 border-b border-[var(--border-default)] bg-[var(--bg-hover)] flex items-center justify-between">
-                    <h3 className="text-xs font-black text-[var(--text-secondary)] uppercase tracking-[0.2em]">Application Activity Log</h3>
-                    <div className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+            <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-3xl overflow-hidden">
+                <div className="px-8 py-5 border-b border-[var(--border-default)] flex items-center justify-between">
+                    <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-[0.2em]">Application Activity Log</h3>
+                    <div className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
                         Last synced: {new Date().toLocaleTimeString()}
                     </div>
                 </div>
@@ -120,10 +107,10 @@ export function AppUsageReport({ dateRange }: AppUsageReportProps) {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
-                            <tr className="bg-[var(--bg-hover)]">
-                                <th className="px-8 py-4 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Application</th>
-                                <th className="px-8 py-4 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Current/Last View</th>
-                                <th className="px-8 py-4 text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest text-right">Activity Share</th>
+                            <tr className="border-b border-[var(--border-default)]">
+                                <th className="px-8 py-4 text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Application</th>
+                                <th className="px-8 py-4 text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Current/Last View</th>
+                                <th className="px-8 py-4 text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest text-right">Activity Share</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border-default)]">
@@ -131,21 +118,21 @@ export function AppUsageReport({ dateRange }: AppUsageReportProps) {
                                 <tr key={app.appName} className="group hover:bg-[var(--bg-hover)] transition-colors">
                                     <td className="px-8 py-5">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/10 to-indigo-500/5 border border-indigo-500/10 flex items-center justify-center text-indigo-400 font-black text-sm uppercase ring-1 ring-[var(--border-default)]">
+                                            <div className="w-10 h-10 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-default)] flex items-center justify-center text-[var(--text-primary)] font-semibold text-sm uppercase">
                                                 {app.appName.charAt(0)}
                                             </div>
                                             <div>
-                                                <div className="text-sm font-bold text-[var(--text-primary)] group-hover:text-indigo-400 transition-colors">
+                                                <div className="text-sm font-bold text-[var(--text-primary)]">
                                                     {app.appName}
                                                 </div>
-                                                <div className="text-[10px] font-bold text-[var(--text-muted)] tracking-widest uppercase mt-0.5">
-                                                    {idx === 0 ? '🏆 Dominant App' : (app.category || 'Uncategorized')}
+                                                <div className="text-[11px] font-bold text-[var(--text-muted)] tracking-widest uppercase mt-0.5">
+                                                    {idx === 0 ? 'Dominant App' : (app.category || 'Uncategorized')}
                                                 </div>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-8 py-5">
-                                        <div className="text-xs text-[var(--text-tertiary)] font-medium italic truncate max-w-[300px] border-l border-[var(--border-default)] pl-4 py-1">
+                                        <div className="text-xs text-[var(--text-tertiary)] font-medium truncate max-w-[300px] border-l border-[var(--border-default)] pl-4 py-1">
                                             {app.lastTitle || 'Unknown window title'}
                                         </div>
                                     </td>
@@ -156,11 +143,11 @@ export function AppUsageReport({ dateRange }: AppUsageReportProps) {
                                         <div className="flex items-center justify-end gap-2 mt-2">
                                             <div className="w-24 h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
                                                 <div
-                                                    className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 transition-all duration-1000 shadow-[0_0_8px_rgba(79,70,229,0.3)]"
+                                                    className="h-full bg-[var(--accent-primary)]"
                                                     style={{ width: `${(app.totalSeconds / totalTime) * 100}%` }}
                                                 />
                                             </div>
-                                            <span className="text-[10px] font-mono font-bold text-[var(--text-muted)] w-8">
+                                            <span className="text-[11px] font-mono font-bold text-[var(--text-muted)] w-8">
                                                 {Math.round((app.totalSeconds / totalTime) * 100)}%
                                             </span>
                                         </div>
@@ -170,10 +157,9 @@ export function AppUsageReport({ dateRange }: AppUsageReportProps) {
                             {usage.length === 0 && (
                                 <tr>
                                     <td colSpan={3} className="px-8 py-20 text-center">
-                                        <div className="max-w-xs mx-auto space-y-3 opacity-20">
-                                            <Monitor className="w-12 h-12 mx-auto mb-4 text-[var(--text-muted)]" />
-                                            <p className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">Transmission Silent</p>
-                                            <p className="text-[10px] normal-case leading-relaxed text-[var(--text-muted)]">System agent has not recorded any application activity for this specific time window.</p>
+                                        <div className="max-w-xs mx-auto space-y-3">
+                                            <p className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">No Activity Recorded</p>
+                                            <p className="text-[11px] normal-case leading-relaxed text-[var(--text-muted)]">No application activity was recorded for this time window.</p>
                                         </div>
                                     </td>
                                 </tr>

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Bell, Zap, Palette, Sparkles, Play, CheckCircle2, Target, Eye, Cpu, Shield } from 'lucide-react'
+import { ArrowLeft, Play, CheckCircle2 } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useFocusStore } from '@/store/focusStore'
 import { soundService } from '@/services/soundService'
@@ -8,31 +9,26 @@ import { cn } from '@/utils/helpers'
 
 // ── Shared UI Components ─────────────────────────────────────
 
-function SettingCard({ icon: Icon, title, description, children, accent = "text-blue-400 bg-blue-500/10" }: any) {
+function SettingCard({ title, description, children }: any) {
     return (
-        <div className="bg-white/[0.02] border border-white/[0.05] rounded-3xl p-6 transition-all duration-300 hover:bg-white/[0.03]">
-            <div className="flex items-start gap-5 mb-8">
-                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border border-white/5", accent)}>
-                    <Icon className="w-6 h-6" />
-                </div>
-                <div>
-                    <h2 className="text-xl font-black text-white tracking-tight mb-1">{title}</h2>
-                    <p className="text-xs text-white/40 leading-relaxed max-w-lg">{description}</p>
-                </div>
+        <section className="rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-sm p-6 md:p-7">
+            <div className="mb-5">
+                <h2 className="text-base font-semibold text-[var(--text-primary)] tracking-tight">{title}</h2>
+                {description && <p className="text-xs text-[var(--text-tertiary)] leading-relaxed max-w-lg mt-1">{description}</p>}
             </div>
-            <div className="space-y-6">
+            <div className="space-y-4">
                 {children}
             </div>
-        </div>
+        </section>
     )
 }
 
 function ToggleRow({ label, description, value, onChange }: any) {
     return (
-        <label className="flex items-center justify-between group cursor-pointer p-4 -mx-4 rounded-2xl hover:bg-white/[0.02] transition-colors">
+        <label className="flex items-center justify-between group cursor-pointer px-4 py-3.5 rounded-2xl bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] transition-colors">
             <div className="pr-6">
-                <p className="text-sm font-bold text-white/90 group-hover:text-white transition-colors">{label}</p>
-                {description && <p className="text-[11px] text-white/40 mt-1">{description}</p>}
+                <p className="text-sm font-semibold text-[var(--text-primary)]">{label}</p>
+                {description && <p className="text-[11px] text-[var(--text-tertiary)] mt-1">{description}</p>}
             </div>
             <input
                 type="checkbox"
@@ -41,11 +37,11 @@ function ToggleRow({ label, description, value, onChange }: any) {
                 className="sr-only"
             />
             <div className={cn(
-                "relative w-12 h-6 rounded-full transition-colors duration-300 ease-in-out shrink-0 border border-white/5",
-                value ? "bg-[var(--accent-primary)] shadow-[0_0_15px_rgba(139,92,246,0.3)]" : "bg-white/10"
+                "relative w-12 h-6 rounded-full transition-colors duration-300 ease-in-out shrink-0",
+                value ? "bg-[var(--accent-primary)] shadow-[0_4px_14px_var(--accent-glow)]" : "bg-[var(--border-hover)]"
             )}>
                 <div className={cn(
-                    "absolute top-[1px] w-[20px] h-[20px] bg-white rounded-full transition-transform duration-300 ease-in-out shadow-sm",
+                    "absolute top-[2px] w-[20px] h-[20px] bg-white rounded-full transition-transform duration-300 ease-in-out shadow-sm",
                     value ? "left-[calc(100%-22px)]" : "left-[2px]"
                 )} />
             </div>
@@ -55,9 +51,9 @@ function ToggleRow({ label, description, value, onChange }: any) {
 
 function SegmentedControl({ label, options, value, onChange }: any) {
     return (
-        <div className="space-y-3">
-            <p className="text-[10px] font-black uppercase tracking-widest text-white/30">{label}</p>
-            <div className="flex flex-wrap gap-2 p-1.5 bg-white/[0.03] rounded-2xl border border-white/[0.05]">
+        <div className="space-y-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">{label}</p>
+            <div className="flex flex-wrap gap-2 p-1.5 bg-[var(--bg-hover)] rounded-2xl">
                 {options.map((opt: any) => {
                     const active = value === opt.value
                     return (
@@ -67,8 +63,8 @@ function SegmentedControl({ label, options, value, onChange }: any) {
                             className={cn(
                                 "flex-1 min-w-[80px] px-3 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap",
                                 active
-                                    ? "bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] shadow-sm border border-[var(--accent-primary)]/30"
-                                    : "text-white/40 hover:text-white/80 hover:bg-white/[0.05] border border-transparent"
+                                    ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-[0_4px_14px_var(--accent-glow)]"
+                                    : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-hover)]"
                             )}
                         >
                             {opt.label}
@@ -82,8 +78,8 @@ function SegmentedControl({ label, options, value, onChange }: any) {
 
 function OptionGrid({ label, options, value, onChange, onPreview }: any) {
     return (
-        <div className="space-y-3">
-            <p className="text-[10px] font-black uppercase tracking-widest text-white/30">{label}</p>
+        <div className="space-y-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">{label}</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {options.map((opt: any) => {
                     const active = value === opt.value
@@ -95,15 +91,15 @@ function OptionGrid({ label, options, value, onChange, onPreview }: any) {
                                 if (onPreview) onPreview(opt.value)
                             }}
                             className={cn(
-                                "flex items-center justify-between px-4 py-3 rounded-xl border text-xs font-bold transition-all group",
+                                "flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all group",
                                 active
-                                    ? "bg-[var(--accent-primary)]/10 border-[var(--accent-primary)]/50 text-[var(--accent-primary)] shadow-[0_0_20px_rgba(139,92,246,0.1)]"
-                                    : "bg-white/[0.02] border-white/[0.05] text-white/40 hover:bg-white/[0.05] hover:text-white hover:border-white/20"
+                                    ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-[0_4px_14px_var(--accent-glow)]"
+                                    : "bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)]"
                             )}
                         >
                             <span className="truncate">{opt.label}</span>
                             {active ? (
-                                <CheckCircle2 className="w-4 h-4 shrink-0 shadow-[0_0_10px_var(--accent-primary)] rounded-full" />
+                                <CheckCircle2 className="w-4 h-4 shrink-0" />
                             ) : (
                                 onPreview && <Play className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                             )}
@@ -118,13 +114,13 @@ function OptionGrid({ label, options, value, onChange, onPreview }: any) {
 function SliderRow({ label, description, value, onChange, min, max, step = 1, format }: any) {
     const display = format ? format(value) : value
     return (
-        <div className="space-y-3 p-4 -mx-4">
+        <div className="space-y-3 px-4 py-3.5 rounded-2xl bg-[var(--bg-hover)]">
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-sm font-bold text-white/90">{label}</p>
-                    {description && <p className="text-[11px] text-white/40 mt-0.5">{description}</p>}
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">{label}</p>
+                    {description && <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">{description}</p>}
                 </div>
-                <span className="text-sm font-black text-[var(--accent-primary)] tabular-nums">{display}</span>
+                <span className="text-sm font-semibold text-[var(--accent-primary)] tabular-nums">{display}</span>
             </div>
             <input
                 type="range"
@@ -133,9 +129,9 @@ function SliderRow({ label, description, value, onChange, min, max, step = 1, fo
                 step={step}
                 value={value}
                 onChange={(e) => onChange(Number(e.target.value))}
-                className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-white/10 accent-[var(--accent-primary)]"
+                className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-[var(--border-hover)] accent-[var(--accent-primary)]"
             />
-            <div className="flex justify-between text-[10px] text-white/20 font-bold">
+            <div className="flex justify-between text-[11px] text-[var(--text-muted)] font-bold">
                 <span>{format ? format(min) : min}</span>
                 <span>{format ? format(max) : max}</span>
             </div>
@@ -165,29 +161,34 @@ export function Settings() {
     }
 
     return (
-        <div className="h-full flex flex-col bg-transparent overflow-hidden">
-            <header className="flex-shrink-0 flex items-center gap-4 px-6 md:px-10 py-6 border-b border-white/[0.05] sticky top-0 bg-[#050510]/80 backdrop-blur-xl z-20">
-                <button
-                    onClick={() => navigate(-1)}
-                    className="w-10 h-10 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-all hover:-translate-x-1"
+        <div className="flex-1 overflow-y-auto w-full h-full custom-scrollbar pb-24">
+            <div className="max-w-4xl mx-auto px-6 md:px-10 py-10">
+                <motion.header
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, ease: 'easeOut' }}
+                    className="mb-8 flex items-center gap-4"
                 >
-                    <ArrowLeft className="w-5 h-5 text-white/60" />
-                </button>
-                <div>
-                    <h1 className="text-2xl font-black text-white tracking-tight">System Config</h1>
-                    <p className="text-[10px] text-[var(--accent-primary)] uppercase tracking-[0.2em] font-bold">Preferences & Operations</p>
-                </div>
-            </header>
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] hover:bg-[var(--bg-hover)] flex items-center justify-center transition-all hover:-translate-x-0.5"
+                    >
+                        <ArrowLeft className="w-5 h-5 text-[var(--text-secondary)]" />
+                    </button>
+                    <h1 className="text-[28px] md:text-[34px] leading-none font-semibold tracking-tight text-[var(--text-primary)]">Settings</h1>
+                </motion.header>
 
-            <main className="flex-1 overflow-y-auto custom-scrollbar px-6 md:px-10 py-8 pb-32">
-                <div className="max-w-4xl mx-auto space-y-8">
+                <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.45, delay: 0.05, ease: 'easeOut' }}
+                    className="space-y-4"
+                >
 
                     {/* ══ Aesthetics & Interface ══ */}
                     <SettingCard
-                        icon={Palette}
                         title="Aesthetics & Interface"
                         description="Tailor the visual envelope of your terminal. Themes dynamically adjust the entire OS environment."
-                        accent="text-emerald-400 bg-emerald-500/10"
                     >
                         <SegmentedControl
                             label="Color Environment"
@@ -207,7 +208,6 @@ export function Settings() {
                                 value={settings.hideEstDoneTimes}
                                 onChange={(v: boolean) => settings.updateSettings({ hideEstDoneTimes: v })}
                             />
-                            <div className="border-t border-white/[0.05] my-2" />
                             <ToggleRow
                                 label="Scrolling Titles"
                                 description="Slide long mission names smoothly in the status bar instead of truncating."
@@ -219,10 +219,8 @@ export function Settings() {
 
                     {/* ══ Focus Intelligence ══ */}
                     <SettingCard
-                        icon={Sparkles}
                         title="Focus Intelligence"
                         description="Configure how the terminal manages your deep work sessions and recovery phases."
-                        accent="text-blue-400 bg-blue-500/10"
                     >
                         <ToggleRow
                             label="Pomodoro Protocol"
@@ -261,10 +259,8 @@ export function Settings() {
 
                     {/* ══ Mission Goals ══ */}
                     <SettingCard
-                        icon={Target}
                         title="Mission Goals"
                         description="Set your daily focus target and control how victory is celebrated when you hit it."
-                        accent="text-cyan-400 bg-cyan-500/10"
                     >
                         <SliderRow
                             label="Daily Focus Goal"
@@ -280,7 +276,6 @@ export function Settings() {
                                 return h > 0 ? `${h}h ${m > 0 ? `${m}m` : ''}`.trim() : `${m}m`
                             }}
                         />
-                        <div className="border-t border-white/[0.05]" />
                         <ToggleRow
                             label="Victory Screen"
                             description="Display the completion celebration when a focus session ends."
@@ -301,10 +296,8 @@ export function Settings() {
 
                     {/* ══ Super Focus Mode ══ */}
                     <SettingCard
-                        icon={Cpu}
                         title="Super Focus Mode"
                         description="Locks the interface to a minimal pill overlay. Maximises screen space for deep work."
-                        accent="text-rose-400 bg-rose-500/10"
                     >
                         <ToggleRow
                             label="Super Focus Mode"
@@ -316,10 +309,8 @@ export function Settings() {
 
                     {/* ══ Alert Systems ══ */}
                     <SettingCard
-                        icon={Zap}
                         title="Alert Systems"
                         description="Periodic tactical pulses and visual cues keep your attention anchored during deep work."
-                        accent="text-amber-400 bg-amber-500/10 border-amber-500/20 shadow-[0_0_30px_rgba(245,158,11,0.05)]"
                     >
                         <ToggleRow
                             label="Timed Pulses"
@@ -343,7 +334,7 @@ export function Settings() {
                                         ]}
                                     />
                                     <div className="space-y-3">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/30 hidden md:block">&nbsp;</p>
+                                        <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] hidden md:block">&nbsp;</p>
                                         <ToggleRow
                                             label="Animated Screen Flash"
                                             description="Edge-screen flash effect when pulse triggers."
@@ -373,10 +364,8 @@ export function Settings() {
 
                     {/* ══ External Comms ══ */}
                     <SettingCard
-                        icon={Bell}
                         title="External Comms"
                         description="System-level notifications and auditory rewards for mission completion."
-                        accent="text-violet-400 bg-violet-500/10"
                     >
                         <ToggleRow
                             label="Push Notifications"
@@ -418,10 +407,8 @@ export function Settings() {
 
                     {/* ══ Visibility ══ */}
                     <SettingCard
-                        icon={Eye}
                         title="Data Visibility"
                         description="Control what information is surfaced during active sessions and in your reports."
-                        accent="text-pink-400 bg-pink-500/10"
                     >
                         <ToggleRow
                             label="Minimal Interface"
@@ -434,8 +421,8 @@ export function Settings() {
                     {/* ══ macOS Permissions (only shown on macOS) ══ */}
                     <AccessibilityPermissionCard />
 
-                </div>
-            </main>
+                </motion.div>
+            </div>
         </div>
     )
 }
@@ -480,30 +467,28 @@ function AccessibilityPermissionCard() {
 
     return (
         <SettingCard
-            icon={Shield}
             title="App Tracking Permission"
             description="Quoril tracks which apps you use during focus sessions to give you productivity insights. This requires macOS Accessibility permission."
-            accent={hasAccess ? "text-green-400 bg-green-500/10" : "text-amber-400 bg-amber-500/10"}
         >
             {hasAccess ? (
-                <div className="flex items-center gap-3 p-4 bg-green-500/5 border border-green-500/10 rounded-2xl">
-                    <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
+                <div className="flex items-center gap-3 px-4 py-3.5 bg-[var(--bg-hover)] rounded-2xl">
+                    <CheckCircle2 className="w-5 h-5 text-[var(--accent-primary)] shrink-0" />
                     <div>
-                        <p className="text-sm font-bold text-green-400">Permission Granted</p>
-                        <p className="text-[11px] text-white/40 mt-0.5">App tracking is active. Your usage data stays local on this device.</p>
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">Permission Granted</p>
+                        <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">App tracking is active. Your usage data stays local on this device.</p>
                     </div>
                 </div>
             ) : (
                 <div className="space-y-4">
-                    <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-2xl">
-                        <p className="text-sm text-white/70 leading-relaxed">
+                    <div className="px-4 py-3.5 bg-[var(--bg-hover)] rounded-2xl">
+                        <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                             To track which apps you use during focus sessions, Quoril needs Accessibility access.
                             Your data never leaves this device.
                         </p>
                     </div>
                     <button
                         onClick={handleRequest}
-                        className="w-full py-3 px-4 bg-[var(--accent-primary)] hover:brightness-110 text-white text-sm font-bold rounded-2xl transition-all"
+                        className="w-full py-3 px-5 bg-[var(--accent-primary)] hover:brightness-105 active:scale-95 text-[var(--accent-contrast)] text-sm font-semibold rounded-full transition-all shadow-[0_8px_24px_var(--accent-glow)]"
                     >
                         Grant Accessibility Access
                     </button>

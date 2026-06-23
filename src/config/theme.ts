@@ -7,19 +7,19 @@
 export const theme = {
     // Background Colors
     bg: {
-        primary: '#0d0d0d',      // Pure black background
-        secondary: '#1a1a1a',    // Slightly lighter black  
-        tertiary: '#1f1f1f',     // Panel backgrounds (pure dark gray, not blue-tinted)
-        card: '#2a2a2a',         // Card backgrounds (pure dark gray, not blue-tinted)
-        hover: '#333333',        // Hover state (pure dark gray, not blue-tinted)
+        primary: '#0a0a0a',      // Near-black background
+        secondary: '#101010',    // Slightly lighter black
+        tertiary: '#161616',     // Panel backgrounds (neutral dark gray)
+        card: '#161616',         // Card backgrounds (neutral dark gray)
+        hover: '#1c1c1c',        // Hover state (neutral dark gray)
         light: '#ffffff',        // Light mode primary
         lightSecondary: '#f9fafb', // Light mode secondary
     },
 
     // Border Colors
     border: {
-        default: 'rgba(255, 255, 255, 0.05)',
-        hover: 'rgba(59, 130, 246, 0.3)',
+        default: 'rgba(255, 255, 255, 0.06)',
+        hover: 'rgba(196, 248, 42, 0.3)',
         light: '#e5e7eb',
     },
 
@@ -35,14 +35,29 @@ export const theme = {
 
     // Accent Colors
     accent: {
+        // Brand accent. Key kept as `blue` for back-compat; values are lime.
         blue: {
-            50: 'rgba(59, 130, 246, 0.05)',
-            100: 'rgba(59, 130, 246, 0.1)',
-            200: 'rgba(59, 130, 246, 0.2)',
-            300: 'rgba(59, 130, 246, 0.3)',
-            400: '#60a5fa',
-            500: '#3b82f6',
-            600: '#2563eb',
+            50: 'rgba(196, 248, 42, 0.05)',
+            100: 'rgba(196, 248, 42, 0.1)',
+            200: 'rgba(196, 248, 42, 0.2)',
+            300: 'rgba(196, 248, 42, 0.3)',
+            400: '#d4ff4a',
+            500: '#c4f82a',
+            600: '#a5d916',
+        },
+        lime: {
+            50: 'rgba(196, 248, 42, 0.05)',
+            100: 'rgba(196, 248, 42, 0.1)',
+            200: 'rgba(196, 248, 42, 0.2)',
+            300: 'rgba(196, 248, 42, 0.3)',
+            400: '#d4ff4a',
+            500: '#c4f82a',
+            600: '#a5d916',
+        },
+        violet: {
+            100: 'rgba(99, 102, 241, 0.12)',
+            400: '#818cf8',
+            500: '#6366f1',
         },
         green: {
             50: 'rgba(16, 185, 129, 0.05)',
@@ -78,7 +93,7 @@ export const theme = {
         md: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
         lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
         xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-        blue: '0 0 30px rgba(59, 130, 246, 0.05)',
+        blue: '0 0 30px rgba(196, 248, 42, 0.06)',
     },
 } as const
 

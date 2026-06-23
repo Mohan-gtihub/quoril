@@ -60,7 +60,7 @@ export function FocusPopup() {
                     <button
                         onClick={() => window.close()}
                         className="text-xs font-bold uppercase tracking-wider px-4 py-2 rounded"
-                        style={{ backgroundColor: 'var(--accent-blue-500)', color: 'white' }}
+                        style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--accent-contrast)' }}
                     >
                         Close Window
                     </button>
@@ -86,7 +86,7 @@ export function FocusPopup() {
                         <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--accent-gray-700)' }}>
                             <div
                                 className="h-full transition-all duration-1000"
-                                style={{ width: `${isOvertime ? 100 : progress}%`, backgroundColor: isOvertime ? 'var(--accent-red-500)' : 'var(--accent-blue-500)' }}
+                                style={{ width: `${isOvertime ? 100 : progress}%`, backgroundColor: isOvertime ? 'var(--accent-red-500)' : 'var(--accent-primary)' }}
                             />
                         </div>
                     )}
@@ -108,8 +108,8 @@ export function FocusPopup() {
                         onClick={() => isPaused ? resumeSession() : pauseSession()}
                         className="flex flex-col items-center justify-center gap-2 py-4 rounded-lg transition-all"
                         style={{
-                            backgroundColor: isPaused ? 'var(--accent-yellow-100)' : 'var(--accent-blue-100)',
-                            color: isPaused ? 'var(--accent-yellow-400)' : 'var(--accent-blue-400)'
+                            backgroundColor: isPaused ? 'var(--accent-yellow-100)' : 'var(--bg-hover)',
+                            color: isPaused ? 'var(--accent-yellow-400)' : 'var(--text-secondary)'
                         }}
                     >
                         {isPaused ? <Play className="w-6 h-6 fill-current" /> : <Pause className="w-6 h-6 fill-current" />}

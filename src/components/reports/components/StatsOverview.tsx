@@ -1,5 +1,4 @@
-import { TrendingUp, Clock, Zap } from 'lucide-react'
-import { DailyGoalRing } from './DailyGoalRing'
+﻿import { DailyGoalRing } from './DailyGoalRing'
 import { HabitConsistencyCard } from './HabitConsistencyCard'
 import type { ComprehensiveReportStats as ReportStats } from '../types/reports.types'
 
@@ -15,8 +14,8 @@ export function StatsOverview({ stats, dailyFocusGoalMinutes }: StatsOverviewPro
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
 
             {/* 1. Daily Goal Ring (Top Left) */}
-            <div className="col-span-12 md:col-span-4 lg:col-span-3 glass-panel rounded-3xl p-6 relative overflow-hidden group hover:border-white/20 transition-all duration-500">
-                <div className="flex flex-col items-center justify-center h-full gap-4 relative z-10">
+            <div className="col-span-12 md:col-span-4 lg:col-span-3 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-6 shadow-sm">
+                <div className="flex flex-col items-center justify-center h-full gap-4">
                     <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-[0.2em]">Daily Focus Goal</h3>
                     <DailyGoalRing
                         currentMinutes={stats.focusTime.totalMinutesToday}
@@ -24,7 +23,7 @@ export function StatsOverview({ stats, dailyFocusGoalMinutes }: StatsOverviewPro
                         size={160}
                     />
                     <div className="text-center">
-                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold">Today's Progress</p>
+                        <p className="text-[11px] text-[var(--text-muted)] uppercase tracking-widest font-bold">Today's Progress</p>
                     </div>
                 </div>
             </div>
@@ -42,18 +41,18 @@ export function StatsOverview({ stats, dailyFocusGoalMinutes }: StatsOverviewPro
             <div className="col-span-12 lg:col-span-4 flex flex-col gap-4 h-full">
 
                 {/* Completed Tasks Card */}
-                <div className="glass-regular rounded-2xl p-5 flex flex-col justify-between group hover:border-emerald-500/30 transition-all duration-300 flex-1 min-h-[140px]">
+                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-5 flex flex-col justify-between flex-1 min-h-[140px] shadow-sm">
                     <div className="flex items-start justify-between">
-                        <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1 flex items-center gap-2">
-                            <Zap size={12} className="fill-emerald-400" /> Completed
+                        <h4 className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest mb-1">
+                            Completed
                         </h4>
-                        <div className="text-3xl font-bold text-[var(--text-primary)] font-mono">
+                        <div className="text-3xl font-semibold text-[var(--text-primary)] tabular-nums tracking-tight">
                             {stats.taskCompletion.completedToday}
                         </div>
                     </div>
 
                     <div className="mt-4">
-                        <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden mb-2">
+                        <div className="w-full bg-[var(--bg-hover)] h-1.5 rounded-full overflow-hidden mb-2">
                             <div className="h-full bg-emerald-500 rounded-full" style={{ width: '60%' }}></div>
                         </div>
                         <p className="text-xs text-[var(--text-tertiary)] font-medium">
@@ -66,20 +65,14 @@ export function StatsOverview({ stats, dailyFocusGoalMinutes }: StatsOverviewPro
 
                 {/* Efficiency & Total Focus Grid */}
                 <div className="grid grid-cols-2 gap-4 flex-1">
-                    <div className="glass-regular rounded-2xl p-4 flex flex-col justify-between hover:border-indigo-500/30 transition-all duration-300">
-                        <div className="flex items-center gap-2 mb-2 text-indigo-400">
-                            <TrendingUp size={14} />
-                            <span className="text-[10px] font-bold uppercase tracking-wider">Efficiency</span>
-                        </div>
-                        <div className="text-2xl font-bold text-[var(--text-primary)] font-mono">{stats.efficiencyScore}%</div>
+                    <div className="bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-[var(--radius-tile)] p-4 flex flex-col justify-between shadow-[0_8px_24px_var(--accent-glow)]">
+                        <span className="text-[11px] font-bold uppercase tracking-wider opacity-80 mb-2">Efficiency</span>
+                        <div className="text-2xl font-semibold tabular-nums tracking-tight">{stats.efficiencyScore}%</div>
                     </div>
 
-                    <div className="glass-regular rounded-2xl p-4 flex flex-col justify-between hover:border-amber-500/30 transition-all duration-300">
-                        <div className="flex items-center gap-2 mb-2 text-amber-400">
-                            <Clock size={14} />
-                            <span className="text-[10px] font-bold uppercase tracking-wider">Focus</span>
-                        </div>
-                        <div className="text-xl font-bold text-[var(--text-primary)] font-mono truncate" title={stats.totalFocusDisplay}>
+                    <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-4 flex flex-col justify-between shadow-sm">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] mb-2">Focus</span>
+                        <div className="text-xl font-semibold text-[var(--text-primary)] tabular-nums tracking-tight truncate" title={stats.totalFocusDisplay}>
                             {stats.totalFocusDisplay}
                         </div>
                     </div>

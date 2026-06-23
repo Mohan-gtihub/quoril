@@ -1,4 +1,4 @@
-import { Clock, Briefcase } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 interface FocusTimeReportProps {
     stats: any // Using specific type would be better but keeping flexible for now matching controller output
@@ -9,16 +9,14 @@ export function FocusTimeReport({ stats }: FocusTimeReportProps) {
 
     return (
         <div className="space-y-6">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--text-tertiary)] flex items-center gap-2">
-                <Briefcase className="w-4 h-4" />
+            <h2 className="text-[24px] font-semibold tracking-tight text-[var(--text-primary)]">
                 Task Breakdown
             </h2>
 
             {/* Focus Per Task */}
-            <div className="glass-panel rounded-xl p-6">
+            <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-6 shadow-sm">
                 {focusPerTask.length === 0 ? (
                     <div className="text-center py-12">
-                        <Clock className="w-10 h-10 text-[var(--text-muted)] mx-auto mb-4" />
                         <p className="text-sm text-[var(--text-secondary)] font-medium">No activity recorded yet</p>
                     </div>
                 ) : (
@@ -42,10 +40,12 @@ export function FocusTimeReport({ stats }: FocusTimeReportProps) {
                                             {Math.floor(task.minutes / 60)}h {task.minutes % 60}m
                                         </span>
                                     </div>
-                                    <div className="h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-indigo-500/80 rounded-full transition-all duration-500 group-hover:bg-indigo-500"
-                                            style={{ width: `${widthPercent}%` }}
+                                    <div className="h-2 bg-[var(--bg-hover)] rounded-full overflow-hidden">
+                                        <motion.div
+                                            className="h-full bg-[var(--accent-primary)]/80 rounded-full group-hover:bg-[var(--accent-primary)]"
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${widthPercent}%` }}
+                                            transition={{ duration: 0.6, delay: index * 0.04, ease: 'easeOut' }}
                                         />
                                     </div>
                                 </div>

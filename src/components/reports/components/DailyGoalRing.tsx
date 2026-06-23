@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+﻿import { useMemo } from 'react'
+import { motion } from 'framer-motion'
 import { cn } from '@/utils/helpers'
 
 interface DailyGoalRingProps {
@@ -36,45 +37,38 @@ export function DailyGoalRing({
 
     return (
         <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-            {/* Glow / Background Effect */}
-            {isCompleted && (
-                <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full" />
-            )}
-
             <svg width={size} height={size} className="transform -rotate-90 relative z-10">
                 {/* Background Ring */}
                 <circle
                     cx={size / 2}
                     cy={size / 2}
                     r={radius}
-                    stroke="currentColor"
+                    stroke="var(--bg-hover)"
                     strokeWidth={strokeWidth}
                     fill="transparent"
-                    className="text-[var(--text-muted)]/20"
                 />
 
                 {/* Progress Ring */}
-                <circle
+                <motion.circle
                     cx={size / 2}
                     cy={size / 2}
                     r={radius}
-                    stroke={isCompleted ? '#10b981' : '#6366f1'}
+                    stroke={isCompleted ? '#10b981' : 'var(--accent-primary)'}
                     strokeWidth={strokeWidth}
                     fill="transparent"
                     strokeDasharray={circumference}
-                    strokeDashoffset={offset}
                     strokeLinecap="round"
-                    className={cn(
-                        "transition-all duration-1000 ease-out",
-                        isCompleted ? "drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]"
-                    )}
+                    initial={{ strokeDashoffset: circumference }}
+                    animate={{ strokeDashoffset: offset }}
+                    transition={{ duration: 1, ease: 'easeOut' }}
+                    style={{ filter: isCompleted ? undefined : 'drop-shadow(0 0 6px var(--accent-glow))' }}
                 />
             </svg>
 
             {/* Center Content */}
             <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
                 <span className={cn(
-                    "text-2xl font-black tracking-tighter",
+                    "text-2xl font-semibold tracking-tighter",
                     isCompleted ? "text-emerald-400" : "text-[var(--text-primary)]"
                 )}>
                     {timeLabel}
@@ -83,7 +77,7 @@ export function DailyGoalRing({
                     {goalLabel}
                 </span>
                 {isCompleted && (
-                    <span className="absolute -bottom-8 px-2 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded border border-emerald-500/20 animate-in fade-in slide-in-from-bottom-2">
+                    <span className="absolute -bottom-8 px-2 py-1 bg-emerald-500/10 text-emerald-400 text-[11px] font-semibold uppercase tracking-widest rounded border border-emerald-500/20">
                         Goal Met!
                     </span>
                 )}

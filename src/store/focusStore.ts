@@ -566,7 +566,7 @@ export const useFocusStore = create<FocusState>()(
 
                 const MAX_DELTA = 3600 // 1 hour — anything larger means system was asleep
                 if (delta > MAX_DELTA) {
-                    toast("Session paused — long inactivity detected. Resume when ready.", { icon: '⏸️' })
+                    toast("Session paused — long inactivity detected. Resume when ready.")
                     get().pauseSession(false)
                     return
                 }
@@ -583,7 +583,7 @@ export const useFocusStore = create<FocusState>()(
                             isPaused: true,
                             startTime: null
                         })
-                        toast("Break complete!", { icon: '🔔' })
+                        toast("Break complete!")
                     }
                     return // EXIT early
                 }
@@ -597,7 +597,7 @@ export const useFocusStore = create<FocusState>()(
                         set({ pomodoroRemaining: 0 }) // Sync update
 
                         // Trigger Break
-                        toast("Focus session complete! Take a break.", { icon: '☕' })
+                        toast("Focus session complete! Take a break.")
                         get().startBreak()
                         return // EXIT to avoid double-process
                     }
@@ -616,7 +616,7 @@ export const useFocusStore = create<FocusState>()(
 
                     if (currentElapsed >= s.lastAlertElapsed + intervalSeconds) {
                         soundService.playAlert(settings.alertSound)
-                        toast("Stay Focused! 🎯", { icon: '⚡' })
+                        toast("Stay Focused!")
                         set({ lastAlertElapsed: currentElapsed })
                     }
                 }

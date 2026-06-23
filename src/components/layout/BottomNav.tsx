@@ -1,22 +1,15 @@
 import { NavLink } from 'react-router-dom'
-import { Home, BarChart3, HelpCircle } from 'lucide-react'
+import { Home, Kanban, Folders, BarChart3 } from 'lucide-react'
 import { cn } from '@/utils/helpers'
 
 export function BottomNav() {
     return (
-        <div className="h-14 glass-thick border-t border-white/5 flex items-center px-6 justify-between shrink-0 md:hidden">
-            <div className="flex items-center gap-6">
-                <BottomLink to="/dashboard" icon={<Home className="w-4 h-4" />} label="Home" />
-                <BottomLink to="/reports" icon={<BarChart3 className="w-4 h-4" />} label="Reports" />
-            </div>
-
-            <div className="flex items-center gap-4">
-                <button className="p-2 text-gray-500 hover:text-white transition">
-                    <HelpCircle className="w-5 h-5" />
-                </button>
-                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-                    <span className="text-white text-xs font-black">M</span>
-                </div>
+        <div className="md:hidden shrink-0 px-4 pb-4 pt-2 bg-gradient-to-t from-[var(--bg-primary)] to-transparent">
+            <div className="flex items-center justify-around gap-1 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-full px-2 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
+                <BottomLink to="/dashboard" icon={<Home className="w-[18px] h-[18px]" />} label="Home" />
+                <BottomLink to="/planner" icon={<Kanban className="w-[18px] h-[18px]" />} label="Planner" />
+                <BottomLink to="/workspaces" icon={<Folders className="w-[18px] h-[18px]" />} label="Spaces" />
+                <BottomLink to="/reports" icon={<BarChart3 className="w-[18px] h-[18px]" />} label="Reports" />
             </div>
         </div>
     )
@@ -27,8 +20,10 @@ function BottomLink({ to, icon, label }: { to: string; icon: React.ReactNode; la
         <NavLink
             to={to}
             className={({ isActive }) => cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition",
-                isActive ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"
+                "flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-full text-[10px] font-semibold transition-all",
+                isActive
+                    ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-[0_4px_14px_var(--accent-glow)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             )}
         >
             {icon}

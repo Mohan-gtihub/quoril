@@ -142,9 +142,31 @@ function createWindow() {
         )
     }
 
-    mainWindow.once('ready-to-show', () => {
-        mainWindow?.show()
-    })
+    const showMainWindow = () => {
+        if (!mainWindow || mainWindow.isDestroyed()) return
+        mainWindow.show()
+        mainWindow.focus()
+        // Windows: transparent + frameless windows can paint as fully
+        // invisible until the compositor is nudged. Toggle always-on-top and
+        // force a 1px repaint to guarantee the window actually appears.
+        if (process.platform === 'win32') {
+            mainWindow.setAlwaysOnTop(true)
+            mainWindow.setAlwaysOnTop(false)
+            const bounds = mainWindow.getBounds()
+            mainWindow.setBounds({ ...bounds, width: bounds.width + 1 })
+            mainWindow.setBounds(bounds)
+        }
+    }
+
+    mainWindow.once('ready-to-show', showMainWindow)
+
+    // Fallback: if `ready-to-show` is delayed (e.g. slow dev-server first
+    // paint), show the window anyway so it never stays stuck hidden.
+    setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+            showMainWindow()
+        }
+    }, 3000)
 
     if (isDev) {
         globalShortcut.register('CommandOrControl+Shift+I', () => {
@@ -531,6 +553,11 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
     ipcMain.handle('db:markSynced', (_, table, id) => {
         if (!SYNC_TABLES.has(table)) throw new Error(`Invalid sync table: ${table}`)
         return safe(() => dbOps.markSynced(table, id))
+    })
+
+    ipcMain.handle('db:upsertFromCloud', (_, table, rows) => {
+        if (!SYNC_TABLES.has(table)) throw new Error(`Invalid sync table: ${table}`)
+        return safe(() => dbOps.upsertFromCloud(table, rows))
     })
 
     /* Named update handlers (db:exec removed — no raw SQL from renderer) */

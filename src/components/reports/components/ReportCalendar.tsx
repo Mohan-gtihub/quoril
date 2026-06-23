@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import {
     format,
     startOfMonth,
@@ -39,7 +39,7 @@ export function ReportCalendar({ selectedDate, onSelectDate, onSelectMonth, sele
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
+                    <div className="p-2 bg-[var(--accent-lime-100)] rounded-lg text-[var(--accent-primary)]">
                         <CalendarIcon size={18} />
                     </div>
                     <span className="font-bold text-[var(--text-primary)] text-sm">
@@ -65,7 +65,7 @@ export function ReportCalendar({ selectedDate, onSelectDate, onSelectMonth, sele
             {/* Week Days */}
             <div className="grid grid-cols-7 mb-2">
                 {weekDays.map(day => (
-                    <div key={day} className="text-center text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest py-2">
+                    <div key={day} className="text-center text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest py-2">
                         {day}
                     </div>
                 ))}
@@ -86,15 +86,15 @@ export function ReportCalendar({ selectedDate, onSelectDate, onSelectMonth, sele
                                 h-9 rounded-lg flex items-center justify-center text-xs font-medium transition-all relative
                                 ${!isCurrentMonth ? 'text-[var(--text-muted)] opacity-50' : 'text-[var(--text-secondary)]'}
                                 ${isSelected
-                                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 z-10 scale-110 font-bold'
+                                    ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-lg shadow-[var(--accent-glow)] z-10 scale-110 font-bold'
                                     : 'hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
                                 }
-                                ${isTodayDate && !isSelected ? 'text-indigo-400 font-bold border border-indigo-500/30' : ''}
+                                ${isTodayDate && !isSelected ? 'text-[var(--accent-primary)] font-bold border border-[var(--accent-primary)]/40' : ''}
                             `}
                         >
                             {format(day, 'd')}
                             {isTodayDate && (
-                                <span className={`absolute bottom-1 w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-indigo-500'}`} />
+                                <span className={`absolute bottom-1 w-1 h-1 rounded-full ${isSelected ? 'bg-[var(--accent-contrast)]' : 'bg-[var(--accent-primary)]'}`} />
                             )}
                         </button>
                     )

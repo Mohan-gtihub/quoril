@@ -1,8 +1,8 @@
-import { useState, FormEvent, useEffect } from 'react'
+﻿import { useState, FormEvent, useEffect } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { useNavigate } from 'react-router-dom'
 import { validateEmail, validatePassword } from '@/utils/securityUtils'
-import { Shield, Lock, Mail, Eye, EyeOff, AlertTriangle, CheckCircle2, Zap, Target, BarChart3, Clock } from 'lucide-react'
+import { Eye, EyeOff, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 
 export function LoginScreen() {
@@ -110,12 +110,9 @@ export function LoginScreen() {
         return (
             <div className="h-full flex items-center justify-center bg-[var(--bg-primary)] select-none">
                 <div className="text-center max-w-sm px-8 py-10 rounded-2xl border border-white/8 bg-white/[0.02]">
-                    <div className="w-16 h-16 rounded-full bg-emerald-500/15 ring-1 ring-emerald-500/30 flex items-center justify-center mx-auto mb-5">
-                        <Mail className="w-8 h-8 text-emerald-400" />
-                    </div>
-                    <h2 className="text-xl font-bold text-white mb-2">Check your inbox</h2>
+                    <h2 className="text-2xl font-semibold text-white mb-3">Check your inbox</h2>
                     <p className="text-sm text-white/40 mb-1">Verification link sent to</p>
-                    <p className="text-sm text-blue-400 font-medium mb-6">{email}</p>
+                    <p className="text-sm text-[var(--accent-primary)] font-medium mb-6">{email}</p>
                     <p className="text-xs text-white/30 mb-6">Click the link in the email to activate your account. Check spam if you don't see it.</p>
                     <button
                         onClick={() => { setSuccess(''); setIsSignUp(false); setEmail(''); setPassword('') }}
@@ -133,82 +130,60 @@ export function LoginScreen() {
         <div className="h-full flex overflow-hidden bg-[var(--bg-primary)] select-none font-sans">
 
             {/* ── LEFT PANEL ── */}
-            <div className="hidden lg:flex flex-col w-[45%] relative overflow-hidden bg-gradient-to-br from-blue-950/60 to-[#09090b] border-r border-white/5">
-                {/* Glow orbs */}
-                <div className="absolute top-[-10%] left-[-10%] w-72 h-72 bg-blue-600/20 blur-[120px] rounded-full pointer-events-none" />
-                <div className="absolute bottom-[10%] right-[-10%] w-64 h-64 bg-purple-600/15 blur-[120px] rounded-full pointer-events-none" />
-
-                {/* Grid */}
-                <div className="absolute inset-0 opacity-[0.025]" style={{
-                    backgroundImage: 'linear-gradient(rgba(96,165,250,1) 1px, transparent 1px), linear-gradient(90deg, rgba(96,165,250,1) 1px, transparent 1px)',
-                    backgroundSize: '40px 40px'
-                }} />
-
-                <div className="relative z-10 flex flex-col h-full p-10">
+            <div className="hidden lg:flex flex-col w-[45%] bg-[var(--bg-secondary)] border-r border-[var(--border-default)]">
+                <div className="flex flex-col h-full p-12">
                     {/* Logo */}
-                    <div className="flex items-center gap-2.5 mb-auto">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                            <Zap className="w-4 h-4 text-white" />
-                        </div>
-                        <span className="text-xl font-black text-white tracking-tight">Quoril<span className="text-blue-500">_</span></span>
+                    <div className="mb-auto">
+                        <span className="text-xl font-semibold text-white tracking-tight">Quoril<span className="text-[var(--accent-primary)]">.</span></span>
                     </div>
 
                     {/* Hero text */}
                     <div className="mb-auto">
-                        <h1 className="text-4xl font-black text-white leading-tight mb-4">
+                        <h1 className="text-5xl font-semibold text-white leading-[1.05] tracking-tight mb-5">
                             Focus deeper.<br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Ship faster.</span>
+                            <span className="text-[var(--accent-primary)]">Ship faster.</span>
                         </h1>
-                        <p className="text-sm text-white/40 leading-relaxed max-w-xs">
+                        <p className="text-[15px] text-white/45 leading-relaxed max-w-sm">
                             The productivity workspace built for deep work — task management, focus timer, and screen time analytics in one place.
                         </p>
                     </div>
 
-                    {/* Feature pills */}
-                    <div className="space-y-3 mb-12">
+                    {/* Features — plain list */}
+                    <ul className="space-y-4 mb-12">
                         {[
-                            { icon: Target, label: 'Kanban task management', sub: 'Backlog → Today → Done' },
-                            { icon: Clock, label: 'Pomodoro focus timer', sub: 'Sessions, breaks & reflections' },
-                            { icon: BarChart3, label: 'Screen time analytics', sub: 'Know where your time goes' },
-                        ].map(({ icon: Icon, label, sub }) => (
-                            <div key={label} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.06]">
-                                <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center flex-shrink-0">
-                                    <Icon className="w-4 h-4 text-blue-400" />
-                                </div>
+                            { label: 'Kanban task management', sub: 'Backlog → Today → Done' },
+                            { label: 'Pomodoro focus timer', sub: 'Sessions, breaks & reflections' },
+                            { label: 'Screen time analytics', sub: 'Know where your time goes' },
+                        ].map(({ label, sub }) => (
+                            <li key={label} className="flex items-baseline gap-3">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] shrink-0 translate-y-[5px]" />
                                 <div>
-                                    <p className="text-xs font-semibold text-white/80">{label}</p>
-                                    <p className="text-[10px] text-white/30">{sub}</p>
+                                    <p className="text-sm font-medium text-white/85">{label}</p>
+                                    <p className="text-xs text-white/35 mt-0.5">{sub}</p>
                                 </div>
-                            </div>
+                            </li>
                         ))}
-                    </div>
+                    </ul>
 
                     {/* Footer */}
-                    <div className="flex items-center gap-2 text-[10px] text-white/20 font-mono tracking-widest uppercase">
-                        <Shield className="w-3 h-3" />
-                        <span>End-to-end encrypted · Your data, your control</span>
-                    </div>
+                    <p className="text-[11px] text-white/25 tracking-wide">
+                        End-to-end encrypted · Your data, your control
+                    </p>
                 </div>
             </div>
 
             {/* ── RIGHT PANEL ── */}
-            <div className="flex-1 flex flex-col items-center justify-center p-6 lg:p-10 relative overflow-hidden">
-                {/* Subtle glow */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-600/5 blur-[150px] rounded-full pointer-events-none" />
-
-                <div className="relative z-10 w-full max-w-[380px]">
+            <div className="flex-1 flex flex-col items-center justify-center p-6 lg:p-10">
+                <div className="w-full max-w-[380px]">
 
                     {/* Mobile logo */}
-                    <div className="flex lg:hidden items-center gap-2 mb-8">
-                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
-                            <Zap className="w-3.5 h-3.5 text-white" />
-                        </div>
-                        <span className="text-lg font-black text-white">Quoril<span className="text-blue-500">_</span></span>
+                    <div className="flex lg:hidden items-center mb-8">
+                        <span className="text-lg font-semibold text-white">Quoril<span className="text-[var(--accent-primary)]">.</span></span>
                     </div>
 
                     {/* Header */}
                     <div className="mb-7">
-                        <h2 className="text-2xl font-black text-white mb-1">
+                        <h2 className="text-2xl font-semibold text-white mb-1">
                             {isSignUp ? 'Create account' : 'Welcome back'}
                         </h2>
                         <p className="text-sm text-white/35">
@@ -245,7 +220,7 @@ export function LoginScreen() {
                     {/* Divider */}
                     <div className="relative flex items-center gap-3 mb-5">
                         <div className="flex-1 h-px bg-white/8" />
-                        <span className="text-[10px] font-semibold uppercase tracking-widest text-white/20">or</span>
+                        <span className="text-[11px] font-semibold uppercase tracking-widest text-white/20">or</span>
                         <div className="flex-1 h-px bg-white/8" />
                     </div>
 
@@ -254,8 +229,7 @@ export function LoginScreen() {
 
                         {/* Email */}
                         <div>
-                            <label htmlFor="email" className="flex items-center gap-1.5 text-[11px] font-bold text-white/40 uppercase tracking-widest mb-2">
-                                <Mail className="w-3 h-3" />
+                            <label htmlFor="email" className="block text-[11px] font-semibold text-white/40 uppercase tracking-widest mb-2">
                                 Email
                             </label>
                             <div className="relative">
@@ -270,7 +244,7 @@ export function LoginScreen() {
                                         ? 'border-red-500/40 focus:border-red-500/70'
                                         : email && !emailError
                                             ? 'border-emerald-500/40 focus:border-emerald-500/70'
-                                            : 'border-white/8 focus:border-blue-500/50'
+                                            : 'border-white/8 focus:border-[var(--accent-primary)]/50'
                                         } rounded-xl text-white text-sm placeholder-white/20 focus:outline-none transition-colors duration-200`}
                                     placeholder="you@example.com"
                                 />
@@ -292,8 +266,7 @@ export function LoginScreen() {
 
                         {/* Password */}
                         <div>
-                            <label htmlFor="password" className="flex items-center gap-1.5 text-[11px] font-bold text-white/40 uppercase tracking-widest mb-2">
-                                <Lock className="w-3 h-3" />
+                            <label htmlFor="password" className="block text-[11px] font-semibold text-white/40 uppercase tracking-widest mb-2">
                                 Password
                             </label>
                             <div className="relative">
@@ -308,7 +281,7 @@ export function LoginScreen() {
                                         ? 'border-red-500/40 focus:border-red-500/70'
                                         : isSignUp && password && !passwordError
                                             ? 'border-emerald-500/40 focus:border-emerald-500/70'
-                                            : 'border-white/8 focus:border-blue-500/50'
+                                            : 'border-white/8 focus:border-[var(--accent-primary)]/50'
                                         } rounded-xl text-white text-sm placeholder-white/20 focus:outline-none transition-colors duration-200 font-mono`}
                                     placeholder="••••••••"
                                 />
@@ -333,7 +306,7 @@ export function LoginScreen() {
                                             }}
                                         />
                                     </div>
-                                    <p className="mt-1 text-[10px] text-white/30">
+                                    <p className="mt-1 text-[11px] text-white/30">
                                         Strength: <span style={{ color: strengthColor(passwordStrength.strength) }}>{strengthLabel(passwordStrength.strength)}</span>
                                         {isSignUp && !password && ' · 8+ chars, upper, lower, number'}
                                     </p>
@@ -342,7 +315,7 @@ export function LoginScreen() {
 
                             {/* Requirements hint when field is empty on signup */}
                             {isSignUp && !password && (
-                                <p className="mt-1.5 text-[10px] text-white/25">8+ chars · uppercase · lowercase · number</p>
+                                <p className="mt-1.5 text-[11px] text-white/25">8+ chars · uppercase · lowercase · number</p>
                             )}
 
                             {passwordError && isSignUp && (
@@ -364,18 +337,17 @@ export function LoginScreen() {
                         <button
                             type="submit"
                             disabled={loading || !!emailError || (isSignUp && !!passwordError)}
-                            className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white rounded-xl font-bold text-sm transition-all duration-150 shadow-lg shadow-blue-600/25 hover:shadow-blue-500/35 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99] flex items-center justify-center gap-2"
+                            className="w-full py-3.5 bg-[var(--accent-primary)] hover:brightness-105 active:brightness-95 text-[var(--accent-contrast)] rounded-xl font-bold text-sm transition-all duration-150 shadow-[0_4px_20px_var(--accent-glow)] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99] flex items-center justify-center gap-2"
                         >
                             {loading ? (
                                 <>
                                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    <span className="text-[11px] font-black uppercase tracking-wider">
+                                    <span className="text-[11px] font-semibold uppercase tracking-wider">
                                         {isSignUp ? 'Creating...' : 'Signing in...'}
                                     </span>
                                 </>
                             ) : (
-                                <span className="text-[11px] font-black uppercase tracking-wider flex items-center gap-2">
-                                    <Shield className="w-3.5 h-3.5" />
+                                <span className="text-[11px] font-bold uppercase tracking-wider">
                                     {isSignUp ? 'Create Account' : 'Sign In'}
                                 </span>
                             )}
@@ -388,7 +360,7 @@ export function LoginScreen() {
                         <button
                             type="button"
                             onClick={() => { setIsSignUp(!isSignUp); setError(''); setPassword(''); setPasswordError('') }}
-                            className="text-blue-400 hover:text-blue-300 font-semibold transition-colors"
+                            className="text-[var(--accent-primary)] hover:brightness-110 font-semibold transition-colors"
                         >
                             {isSignUp ? 'Sign in' : 'Create one'}
                         </button>

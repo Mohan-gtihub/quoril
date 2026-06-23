@@ -172,7 +172,7 @@ export function ActivityDashboard() {
                         <Monitor size={64} />
                     </div>
                     <h3 className="text-[var(--text-secondary)] font-medium mb-1">Top Application</h3>
-                    <div className="text-2xl font-bold text-blue-400 truncate">
+                    <div className="text-2xl font-bold text-[var(--accent-primary)] truncate">
                         {topApps[0]?.app_id || 'None'}
                     </div>
                     <div className="text-lg text-[var(--text-secondary)]">
@@ -188,7 +188,7 @@ export function ActivityDashboard() {
                 {/* Top Apps Chart */}
                 <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-default)]">
                     <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                        <Monitor size={18} className="text-blue-400" />
+                        <Monitor size={18} className="text-[var(--accent-primary)]" />
                         Top Applications
                     </h3>
                     <div className="h-[300px] w-full">
@@ -212,7 +212,7 @@ export function ActivityDashboard() {
                                 />
                                 <Bar dataKey="total_seconds" radius={[0, 4, 4, 0]}>
                                     {topApps.map((_, index) => (
-                                        <Cell key={`cell-${index}`} fill={['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe'][index] || '#3b82f6'} />
+                                        <Cell key={`cell-${index}`} fill={['#c4f82a', '#aadb22', '#cdf94f', '#dcfb7d', '#e9fdac'][index] || '#c4f82a'} />
                                     ))}
                                 </Bar>
                             </BarChart>

@@ -1,5 +1,6 @@
-import { memo } from 'react'
+﻿import { memo } from 'react'
 import { NodeResizer, Handle, Position } from '@xyflow/react'
+import { Lock } from 'lucide-react'
 import { useBlocksStore } from '@/store/canvas/blocksStore'
 import { behaviors } from './behaviors/registry'
 
@@ -54,7 +55,7 @@ export const Block = memo(function Block({
     if (tier === 'card') {
         return (
             <div style={wrapStyle} className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-card)] p-2 overflow-hidden">
-                <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{block.kind}</div>
+                <div className="text-[11px] uppercase tracking-wider text-[var(--text-muted)]">{block.kind}</div>
                 <div className="text-xs text-[var(--text-primary)] line-clamp-3 mt-1">
                     {block.content.kind === 'idea' ? block.content.data.text
                         : block.content.kind === 'link' ? (block.content.data.title ?? block.content.data.url)
@@ -89,7 +90,7 @@ export const Block = memo(function Block({
             <Handle type="target" position={Position.Top} id="t" style={{ opacity: selected ? 1 : 0, background: 'var(--accent-primary)' }} />
             <Render block={block} selected={selected} zoom={1} />
             {locked && (
-                <div className="absolute top-1 left-1 text-[10px] px-1.5 py-0.5 rounded bg-black/70 text-white pointer-events-none">🔒 waiting</div>
+                <div className="absolute top-1 left-1 flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-black/70 text-white pointer-events-none"><Lock size={10} /> waiting</div>
             )}
         </div>
     )

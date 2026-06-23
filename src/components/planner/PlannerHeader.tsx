@@ -1,8 +1,7 @@
-import { ChevronDown, Trash2, Search } from 'lucide-react'
+import { ChevronDown, Trash2 } from 'lucide-react'
 import { useListStore } from '@/store/listStore'
 import { useState } from 'react'
 import { DateNavigator } from './DateNavigator'
-import { IconButton } from '../dashboard/Dashboard'
 import { confirm } from '@/components/ui/ConfirmDialog'
 
 export function PlannerHeader() {
@@ -11,7 +10,6 @@ export function PlannerHeader() {
     const [hoveredListId, setHoveredListId] = useState<string | null>(null)
 
     const selectedList = lists.find(l => l.id === selectedListId)
-
 
     const handleDeleteList = async (listId: string, listName: string, e: React.MouseEvent) => {
         e.stopPropagation()
@@ -24,24 +22,21 @@ export function PlannerHeader() {
     }
 
     return (
-        <div className="flex items-center justify-between p-4 border-b relative z-50" style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-default)' }}>
+        <div className="flex items-center justify-between gap-4 px-6 md:px-10 py-5 relative z-50">
             {/* Workspace Selector */}
             <div className="relative group z-50">
                 <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
-                    style={{ backgroundColor: 'transparent' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    className="flex items-center gap-3 pl-2 pr-3.5 py-2 rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] hover:border-[var(--border-hover)] transition-colors"
                 >
-                    <div className="w-8 h-8 rounded bg-[var(--accent-primary)] flex items-center justify-center text-white font-bold">
+                    <div className="w-8 h-8 rounded-full bg-[var(--accent-primary)] flex items-center justify-center text-[var(--accent-contrast)] font-bold text-sm">
                         {selectedListId === 'all' ? 'A' : (selectedList?.name.charAt(0) || 'L')}
                     </div>
                     <div className="text-left">
-                        <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                        <div className="text-sm font-semibold leading-none text-[var(--text-primary)]">
                             {selectedListId === 'all' ? 'All Tasks' : (selectedList?.name || 'Select List')}
                         </div>
-                        <div className="text-xs flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                        <div className="text-[11px] flex items-center gap-1 mt-1 text-[var(--text-tertiary)]">
                             {selectedListId === 'all' ? 'Master View' : 'Workspace'} <ChevronDown className="w-3 h-3" />
                         </div>
                     </div>
@@ -49,24 +44,21 @@ export function PlannerHeader() {
 
                 {/* Dropdown */}
                 {isDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-2 w-64 border rounded-xl shadow-2xl glass-thick z-50 overflow-hidden py-1" style={{ borderColor: 'var(--border-default)' }}>
-                        <div className="px-3 py-2 text-xs font-bold uppercase" style={{ color: 'var(--text-muted)' }}>Views</div>
+                    <div className="absolute top-full left-0 mt-2 w-64 rounded-2xl shadow-2xl glass-thick z-50 overflow-hidden py-1.5 border border-[var(--border-default)]">
+                        <div className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Views</div>
                         <button
                             onClick={() => {
                                 setSelectedList('all')
                                 setIsDropdownOpen(false)
                             }}
-                            className={`w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors ${selectedListId === 'all' ? 'bg-blue-500/10 text-blue-500' : ''}`}
-                            style={selectedListId !== 'all' ? { color: 'var(--text-secondary)' } : {}}
-                            onMouseEnter={(e) => { if (selectedListId !== 'all') e.currentTarget.style.backgroundColor = 'var(--bg-hover)' }}
-                            onMouseLeave={(e) => { if (selectedListId !== 'all') e.currentTarget.style.backgroundColor = 'transparent' }}
+                            className={`w-full flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${selectedListId === 'all' ? 'text-[var(--accent-primary)] font-semibold' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'}`}
                         >
                             All Tasks
                         </button>
 
-                        <div className="my-1 border-t" style={{ borderColor: 'var(--border-default)' }} />
+                        <div className="my-1.5 border-t border-[var(--border-default)]" />
 
-                        <div className="px-3 py-2 text-xs font-bold uppercase" style={{ color: 'var(--text-muted)' }}>My Lists</div>
+                        <div className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">My Lists</div>
                         {lists.map(list => (
                             <div
                                 key={list.id}
@@ -79,17 +71,14 @@ export function PlannerHeader() {
                                         setSelectedList(list.id)
                                         setIsDropdownOpen(false)
                                     }}
-                                    className={`w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors ${selectedListId === list.id ? 'bg-blue-500/10 text-blue-500' : ''}`}
-                                    style={selectedListId !== list.id ? { color: 'var(--text-secondary)' } : {}}
-                                    onMouseEnter={(e) => { if (selectedListId !== list.id) e.currentTarget.style.backgroundColor = 'var(--bg-hover)' }}
-                                    onMouseLeave={(e) => { if (selectedListId !== list.id) e.currentTarget.style.backgroundColor = 'transparent' }}
+                                    className={`w-full flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${selectedListId === list.id ? 'text-[var(--accent-primary)] font-semibold' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'}`}
                                 >
                                     <div className={`w-2 h-2 rounded-full ${list.color || 'bg-gray-400'}`} />
-                                    <span className="flex-1 text-left">{list.name}</span>
+                                    <span className="flex-1 text-left truncate">{list.name}</span>
                                     {hoveredListId === list.id && (
                                         <button
                                             onClick={(e) => handleDeleteList(list.id, list.name, e)}
-                                            className="p-1 hover:bg-red-500/20 rounded transition-colors text-gray-500 hover:text-red-400"
+                                            className="p-1 hover:bg-[var(--error)]/15 rounded-md transition-colors text-[var(--text-muted)] hover:text-[var(--error)]"
                                             title="Delete list"
                                         >
                                             <Trash2 className="w-3 h-3" />
@@ -103,18 +92,16 @@ export function PlannerHeader() {
             </div>
 
             {/* Center: Date Selection */}
-            <div className="flex-1 max-w-lg mx-8">
+            <div className="flex-1 flex justify-center">
                 <DateNavigator />
             </div>
 
             {/* Right Controls */}
-            <div className="flex items-center gap-1">
-                <IconButton icon={<Search size={16} />} />
-                <button className="px-3 py-1.5 bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-orange-500 text-[10px] font-black rounded-xl border border-orange-500/20 hover:bg-orange-500/30 transition-all uppercase tracking-widest mr-2">
+            <div className="flex items-center gap-3">
+                <button className="px-4 py-2 text-xs font-semibold rounded-full bg-[var(--accent-violet)] text-white hover:brightness-110 active:scale-95 transition-all shadow-[0_8px_24px_var(--accent-violet-glow)]">
                     Premium
                 </button>
-
-                <div className="w-9 h-9 rounded-xl bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20 flex items-center justify-center text-[var(--accent-primary)] font-bold text-sm">
+                <div className="w-9 h-9 rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] flex items-center justify-center text-[var(--text-secondary)] font-semibold text-sm">
                     {selectedListId === 'all' ? 'A' : (selectedList?.name.charAt(0) || 'U')}
                 </div>
             </div>

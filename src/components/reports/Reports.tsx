@@ -1,11 +1,10 @@
-import { useState, useMemo } from 'react'
+﻿import { useState, useMemo } from 'react'
 import { format, parseISO } from 'date-fns'
 import {
     ArrowLeft, ChevronDown, ChevronUp,
-    Clock, CheckCircle2, Zap, Activity,
-    Monitor, Repeat, TrendingUp, RefreshCw,
-    AlertCircle, BarChart3, Brain
+    RefreshCw, AlertCircle
 } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useReportsData, getLast7DaysRange } from './hooks/useReportsData'
 import { INTERRUPT_PENALTY_SECONDS } from './hooks/useFocusReport'
@@ -27,14 +26,13 @@ function pct(v: number, max: number) {
 /* ─── Primitive components ──────────────────────────────────── */
 
 function Skeleton({ h = 'h-20' }: { h?: string }) {
-    return <div className={`animate-pulse bg-white/[0.04] rounded-2xl ${h}`} />
+    return <div className={`animate-pulse bg-[var(--bg-hover)] rounded-2xl ${h}`} />
 }
 
-function EmptyState({ icon: Icon, msg }: { icon: any; msg: string }) {
+function EmptyState({ msg }: { msg: string }) {
     return (
-        <div className="flex flex-col items-center gap-2 py-10 opacity-40">
-            <Icon className="w-8 h-8 text-white/30" />
-            <p className="text-xs text-white/40">{msg}</p>
+        <div className="flex flex-col items-center gap-2 py-10">
+            <p className="text-xs text-[var(--text-muted)]">{msg}</p>
         </div>
     )
 }
@@ -47,27 +45,19 @@ function Kpi({
     label: string; value: string; sub?: string
     color?: 'default' | 'blue' | 'emerald' | 'purple' | 'amber' | 'red'
 }) {
-    const accent = {
-        default: 'border-white/[0.06]',
-        blue: 'border-blue-500/25 bg-blue-500/[0.06]',
-        emerald: 'border-emerald-500/25 bg-emerald-500/[0.06]',
-        purple: 'border-purple-500/25 bg-purple-500/[0.06]',
-        amber: 'border-amber-500/25 bg-amber-500/[0.06]',
-        red: 'border-red-500/25 bg-red-500/[0.06]',
-    }[color]
     const text = {
-        default: 'text-white',
-        blue: 'text-blue-300',
+        default: 'text-[var(--text-primary)]',
+        blue: 'text-[var(--accent-primary)]',
         emerald: 'text-emerald-300',
-        purple: 'text-purple-300',
+        purple: 'text-[var(--accent-violet)]',
         amber: 'text-amber-300',
         red: 'text-red-300',
     }[color]
     return (
-        <div className={`rounded-2xl p-4 border bg-white/[0.02] ${accent}`}>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-white/25 mb-1">{label}</p>
-            <p className={`text-xl font-black leading-tight ${text}`}>{value}</p>
-            {sub && <p className="text-[10px] text-white/25 mt-0.5">{sub}</p>}
+        <div className="rounded-2xl p-5 bg-[var(--bg-hover)]">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-1.5">{label}</p>
+            <p className={`text-2xl font-semibold leading-tight tracking-tight tabular-nums ${text}`}>{value}</p>
+            {sub && <p className="text-[11px] text-[var(--text-muted)] mt-1">{sub}</p>}
         </div>
     )
 }
@@ -75,29 +65,28 @@ function Kpi({
 // ── Collapsible Section ───────────────────────────────────────
 
 function Section({
-    title, icon: Icon, accent, children, defaultOpen = true
+    title, children, defaultOpen = true
 }: {
-    title: string; icon: any; accent: string
+    title: string
     children: React.ReactNode; defaultOpen?: boolean
 }) {
     const [open, setOpen] = useState(defaultOpen)
     return (
-        <div className="border border-white/[0.07] rounded-2xl overflow-hidden">
+        <div className="rounded-[var(--radius-tile)] overflow-hidden bg-[var(--bg-card)] border border-[var(--border-default)] shadow-sm">
             <button
                 onClick={() => setOpen(o => !o)}
-                className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/[0.02] transition-colors"
+                className="w-full flex items-center gap-3 px-6 py-5"
             >
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${accent}`}>
-                    <Icon className="w-3.5 h-3.5" />
-                </div>
-                <span className="text-sm font-bold text-white/80 text-left flex-1">{title}</span>
-                {open
-                    ? <ChevronUp className="w-4 h-4 text-white/20" />
-                    : <ChevronDown className="w-4 h-4 text-white/20" />}
+                <span className="text-lg font-semibold tracking-tight text-[var(--text-primary)] text-left flex-1">{title}</span>
+                <span className="w-7 h-7 rounded-full bg-[var(--bg-hover)] flex items-center justify-center text-[var(--text-secondary)]">
+                    {open
+                        ? <ChevronUp className="w-4 h-4" />
+                        : <ChevronDown className="w-4 h-4" />}
+                </span>
             </button>
             {open && (
-                <div className="px-5 pb-5 space-y-4 border-t border-white/[0.05]">
-                    <div className="pt-4 space-y-4">{children}</div>
+                <div className="px-6 pb-6 space-y-5">
+                    <div className="space-y-5">{children}</div>
                 </div>
             )}
         </div>
@@ -106,18 +95,21 @@ function Section({
 
 // ── Horizontal bar ────────────────────────────────────────────
 
-function Bar({ value, max, color = '#3b82f6', label, sub }: {
+function Bar({ value, max, color = '#c4f82a', label, sub }: {
     value: number; max: number; color?: string; label: string; sub?: string
 }) {
     return (
         <div>
-            <div className="flex justify-between text-[11px] mb-1">
-                <span className="text-white/60">{label}</span>
-                {sub && <span className="text-white/30">{sub}</span>}
+            <div className="flex justify-between text-[11px] mb-1.5">
+                <span className="text-[var(--text-secondary)] font-medium">{label}</span>
+                {sub && <span className="text-[var(--text-muted)] tabular-nums">{sub}</span>}
             </div>
-            <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-700"
-                    style={{ width: `${pct(value, max)}%`, backgroundColor: color }} />
+            <div className="h-2 bg-[var(--bg-hover)] rounded-full overflow-hidden">
+                <motion.div className="h-full rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct(value, max)}%` }}
+                    transition={{ duration: 0.7, ease: 'easeOut' }}
+                    style={{ backgroundColor: color }} />
             </div>
         </div>
     )
@@ -125,36 +117,38 @@ function Bar({ value, max, color = '#3b82f6', label, sub }: {
 
 // ── Day bar chart ────────────────────────────────────────────
 
-function DayBars({ points, max, color = '#3b82f6', days }: {
+function DayBars({ points, max, color = '#c4f82a', days }: {
     points: number[]; max: number; color?: string; days: string[]
 }) {
-    if (max === 0) return <EmptyState icon={TrendingUp} msg="No data yet for this range" />
+    if (max === 0) return <EmptyState msg="No data yet for this range" />
     const peakIdx = points.indexOf(Math.max(...points))
     return (
-        <div className="flex flex-col gap-1">
-            <div className="flex items-end gap-1 h-20">
+        <div className="flex flex-col gap-2">
+            <div className="flex items-end gap-1.5 h-24">
                 {points.map((v, i) => (
                     <div key={i} className="flex-1 flex flex-col justify-end relative group" title={`${format(parseISO(days[i]), 'EEE MMM d')}: ${v}`}>
                         {/* Peak label */}
                         {i === peakIdx && v > 0 && (
-                            <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] font-bold whitespace-nowrap tabular-nums" style={{ color }}>
+                            <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[11px] font-bold whitespace-nowrap tabular-nums" style={{ color }}>
                                 {v}
                             </span>
                         )}
-                        <div
-                            className="rounded-t transition-all duration-500 w-full"
+                        <motion.div
+                            className="rounded-full w-full"
+                            initial={{ height: 0 }}
+                            animate={{ height: `${Math.max(2, pct(v, max))}%` }}
+                            transition={{ duration: 0.6, delay: i * 0.04, ease: 'easeOut' }}
                             style={{
-                                height: `${Math.max(2, pct(v, max))}%`,
-                                backgroundColor: v > 0 ? color : 'rgba(255,255,255,0.05)',
-                                minHeight: '2px',
+                                backgroundColor: v > 0 ? color : 'var(--bg-hover)',
+                                minHeight: '4px',
                             }}
                         />
                     </div>
                 ))}
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-1.5">
                 {days.map((d, i) => (
-                    <div key={i} className="flex-1 text-center text-[8px] text-white/20">
+                    <div key={i} className="flex-1 text-center text-[11px] text-[var(--text-muted)]">
                         {format(parseISO(d), 'EEE')[0]}
                     </div>
                 ))}
@@ -172,7 +166,7 @@ function Gauge({ score, size = 80 }: { score: number; size?: number }) {
     const color = score >= 70 ? '#22c55e' : score >= 40 ? '#f59e0b' : '#ef4444'
     return (
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="flex-shrink-0">
-            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="7" />
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--bg-hover)" strokeWidth="7" />
             <circle cx={size / 2} cy={size / 2} r={r} fill="none"
                 stroke={color} strokeWidth="7"
                 strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
@@ -180,7 +174,7 @@ function Gauge({ score, size = 80 }: { score: number; size?: number }) {
                 style={{ transition: 'stroke-dasharray 0.8s ease' }}
             />
             <text x={size / 2} y={size / 2} textAnchor="middle" dominantBaseline="central"
-                fill="white" fontSize={size * 0.22} fontWeight="900">{score}</text>
+                fill="var(--text-primary)" fontSize={size * 0.22} fontWeight="900">{score}</text>
         </svg>
     )
 }
@@ -209,29 +203,27 @@ export function Reports() {
     const maxWsFocus = useMemo(() => Math.max(1, ...workspaceStats.map((w: any) => w.focusSeconds ?? 0)), [workspaceStats])
 
     return (
-        <div className="h-full flex flex-col bg-transparent select-none">
+        <div className="flex-1 overflow-y-auto w-full h-full custom-scrollbar select-none pb-24">
+            <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-10 space-y-5">
 
             {/* ── Header ── */}
-            <div className="flex-shrink-0 flex items-center justify-between px-5 py-3.5 border-b border-white/[0.06]">
-                <div className="flex items-center gap-3">
+            <header className="flex flex-wrap items-end justify-between gap-4 mb-3">
+                <div className="flex items-center gap-4">
                     <button onClick={() => navigate(-1)}
-                        className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-colors">
-                        <ArrowLeft className="w-4 h-4 text-white/50" />
+                        className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] hover:bg-[var(--bg-hover)] flex items-center justify-center transition-colors">
+                        <ArrowLeft className="w-4 h-4 text-[var(--text-secondary)]" />
                     </button>
                     <div>
-                        <h1 className="text-sm font-black text-white">Analytics</h1>
-                        <p className="text-[9px] text-white/25 uppercase tracking-widest">Performance Report</p>
+                        <p className="text-sm font-medium text-[var(--text-tertiary)] mb-1">Performance report</p>
+                        <h1 className="text-[30px] leading-none font-semibold tracking-tight text-[var(--text-primary)]">Analytics</h1>
                     </div>
                 </div>
                 <DateRangePicker value={range} onChange={setRange} />
-            </div>
-
-            {/* ── Scrollable body ── */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-5 space-y-4">
+            </header>
 
                 {/* Error banner */}
                 {error && (
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-red-500/10 border border-red-500/20">
                         <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
                         <p className="text-xs text-red-300 flex-1">{error}</p>
                         <button onClick={() => setRetryKey(k => k + 1)} className="text-[11px] text-red-400 flex items-center gap-1">
@@ -249,8 +241,8 @@ export function Reports() {
                 ) : (
                     <>
                         {/* ══ 1. DAILY SNAPSHOT ═══════════════════════════════ */}
-                        <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/20 mb-3 px-1">
+                        <div className="rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] p-6 shadow-sm">
+                            <p className="text-lg font-semibold tracking-tight text-[var(--text-primary)] mb-5">
                                 Daily Snapshot
                             </p>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -264,21 +256,21 @@ export function Reports() {
                         </div>
 
                         {/* ══ 2. PERFORMANCE TRENDS ════════════════════════════ */}
-                        <Section title="Performance Trends" icon={BarChart3} accent="bg-blue-500/15 text-blue-400">
+                        <Section title="Performance Trends">
                             {/* Focus trend */}
                             <div>
                                 <div className="flex justify-between items-center mb-2">
-                                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider">Focus minutes / day</p>
-                                    <p className="text-[10px] text-white/20">7d avg: {movingAvg[movingAvg.length - 1]}m</p>
+                                    <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Focus minutes / day</p>
+                                    <p className="text-[11px] text-[var(--text-muted)]">7d avg: {movingAvg[movingAvg.length - 1]}m</p>
                                 </div>
-                                <DayBars points={trendByDay.map(d => d.focusMinutes)} max={maxFocusMin} color="#3b82f6" days={days} />
+                                <DayBars points={trendByDay.map(d => d.focusMinutes)} max={maxFocusMin} color="#c4f82a" days={days} />
                             </div>
 
                             {/* Focus quality trend */}
                             <div>
-                                <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">
+                                <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
                                     Focus quality / day
-                                    <span className="ml-1 text-white/15 normal-case">(penalty: {INTERRUPT_PENALTY_SECONDS}s/interruption)</span>
+                                    <span className="ml-1 text-[var(--text-muted)] normal-case">(penalty: {INTERRUPT_PENALTY_SECONDS}s/interruption)</span>
                                 </p>
                                 <DayBars points={qualityByDay.map(d => d.qualityScore)} max={100} color="#8b5cf6" days={days} />
                             </div>
@@ -288,22 +280,22 @@ export function Reports() {
                                 <Gauge score={productivityScore.score} />
                                 <div className="flex-1 space-y-2.5">
                                     <Bar value={productivityScore.focusSeconds} max={productivityScore.totalActiveSeconds}
-                                        color="#3b82f6" label="Focus time" sub={fmt(productivityScore.focusSeconds)} />
+                                        color="#c4f82a" label="Focus time" sub={fmt(productivityScore.focusSeconds)} />
                                     <Bar value={productivityScore.productiveAppSeconds} max={productivityScore.totalActiveSeconds}
                                         color="#8b5cf6" label="Productive apps" sub={fmt(productivityScore.productiveAppSeconds)} />
-                                    <p className="text-[9px] text-white/15">score = (focus + work apps) / total active</p>
+                                    <p className="text-[11px] text-[var(--text-muted)]">score = (focus + work apps) / total active</p>
                                 </div>
                             </div>
                         </Section>
 
                         {/* ══ 3. WORK EXECUTION ════════════════════════════════ */}
-                        <Section title="Work Execution" icon={CheckCircle2} accent="bg-emerald-500/15 text-emerald-400">
+                        <Section title="Work Execution">
                             {/* Completion breakdown */}
                             <div className="space-y-2.5">
-                                <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider">Task Breakdown</p>
+                                <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Task Breakdown</p>
                                 {[
                                     { label: 'Completed', v: completed, color: '#22c55e' },
-                                    { label: 'In Progress', v: taskReport.inProgress, color: '#3b82f6' },
+                                    { label: 'In Progress', v: taskReport.inProgress, color: '#6366f1' },
                                     { label: 'Todo', v: taskReport.todo, color: 'rgba(255,255,255,0.15)' },
                                 ].map(({ label, v, color }) => (
                                     <Bar key={label} label={label} value={v} max={maxTaskComp} color={color} sub={String(v)} />
@@ -316,17 +308,17 @@ export function Reports() {
                                     <div className="flex items-center gap-4 py-2">
                                         <Gauge score={Math.min(100, overallAccuracy)} size={72} />
                                         <div>
-                                            <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-1">Estimation Accuracy</p>
-                                            <p className="text-lg font-black text-white">{overallAccuracy}%</p>
-                                            <p className="text-[10px] text-white/20">100% = perfect estimate</p>
+                                            <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">Estimation Accuracy</p>
+                                            <p className="text-lg font-semibold text-white">{overallAccuracy}%</p>
+                                            <p className="text-[11px] text-[var(--text-muted)]">100% = perfect estimate</p>
                                         </div>
                                     </div>
                                     {mostUnderestimated.length > 0 && (
                                         <div className="space-y-1">
-                                            <p className="text-[10px] font-bold text-white/20 flex items-center gap-1"><Zap className="w-3 h-3 text-red-400" /> Most Underestimated</p>
+                                            <p className="text-[11px] font-bold text-[var(--text-muted)]">Most Underestimated</p>
                                             {mostUnderestimated.slice(0, 3).map(t => (
-                                                <div key={t.id} className="flex justify-between text-[11px] py-1.5 border-b border-white/[0.05]">
-                                                    <span className="text-white/60 truncate max-w-[60%]">{t.title}</span>
+                                                <div key={t.id} className="flex justify-between text-[11px] py-1.5 border-b border-[var(--border-default)]">
+                                                    <span className="text-[var(--text-secondary)] truncate max-w-[60%]">{t.title}</span>
                                                     <span className="text-red-400 font-bold">{t.estimatedMin}m est → {t.actualMin}m actual</span>
                                                 </div>
                                             ))}
@@ -334,10 +326,10 @@ export function Reports() {
                                     )}
                                     {mostOverestimated.length > 0 && (
                                         <div className="space-y-1">
-                                            <p className="text-[10px] font-bold text-white/20 flex items-center gap-1"><Clock className="w-3 h-3 text-amber-400" /> Most Overestimated</p>
+                                            <p className="text-[11px] font-bold text-[var(--text-muted)]">Most Overestimated</p>
                                             {mostOverestimated.slice(0, 3).map(t => (
-                                                <div key={t.id} className="flex justify-between text-[11px] py-1.5 border-b border-white/[0.05]">
-                                                    <span className="text-white/60 truncate max-w-[60%]">{t.title}</span>
+                                                <div key={t.id} className="flex justify-between text-[11px] py-1.5 border-b border-[var(--border-default)]">
+                                                    <span className="text-[var(--text-secondary)] truncate max-w-[60%]">{t.title}</span>
                                                     <span className="text-amber-400 font-bold">{t.estimatedMin}m est → {t.actualMin}m actual</span>
                                                 </div>
                                             ))}
@@ -346,25 +338,25 @@ export function Reports() {
                                 </div>
                             )}
                             {overallAccuracy === null && (
-                                <EmptyState icon={Brain} msg="Complete tasks with estimates to see accuracy" />
+                                <EmptyState msg="Complete tasks with estimates to see accuracy" />
                             )}
 
                             {/* Workspace breakdown */}
                             {workspaceStats.length > 0 && (
                                 <div>
-                                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">Workspace Productivity</p>
+                                    <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">Workspace Productivity</p>
                                     <div className="space-y-3">
                                         {workspaceStats.map((ws: any) => (
                                             <div key={ws.workspaceId}>
                                                 <div className="flex justify-between text-[11px] mb-1">
-                                                    <span className="flex items-center gap-1.5 text-white/60">
+                                                    <span className="flex items-center gap-1.5 text-[var(--text-secondary)]">
                                                         <span className="w-2 h-2 rounded-full inline-block flex-shrink-0"
                                                             style={{ backgroundColor: ws.workspaceColor || '#6366f1' }} />
                                                         {ws.workspaceName}
                                                     </span>
-                                                    <span className="text-white/30">{ws.completedCount}/{ws.taskCount} · {fmt(ws.focusSeconds ?? 0)}</span>
+                                                    <span className="text-[var(--text-muted)]">{ws.completedCount}/{ws.taskCount} · {fmt(ws.focusSeconds ?? 0)}</span>
                                                 </div>
-                                                <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                                                <div className="h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
                                                     <div className="h-full rounded-full"
                                                         style={{ width: `${pct(ws.focusSeconds ?? 0, maxWsFocus)}%`, backgroundColor: ws.workspaceColor || '#6366f1' }} />
                                                 </div>
@@ -376,7 +368,7 @@ export function Reports() {
                         </Section>
 
                         {/* ══ 4. ATTENTION & BEHAVIOR ═══════════════════════════ */}
-                        <Section title="Attention & Behavior" icon={Monitor} accent="bg-purple-500/15 text-purple-400">
+                        <Section title="Attention & Behavior">
                             {/* Idle ratio */}
                             <div className="grid grid-cols-2 gap-3">
                                 <Kpi label="Active Ratio" value={`${100 - idleRatio}%`} color="emerald" />
@@ -385,9 +377,9 @@ export function Reports() {
 
                             {/* Top apps */}
                             <div>
-                                <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">Top Apps — Active Time</p>
+                                <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">Top Apps — Active Time</p>
                                 {topApps.length === 0
-                                    ? <EmptyState icon={Monitor} msg="Screen time is tracked while the app is running" />
+                                    ? <EmptyState msg="Screen time is tracked while the app is running" />
                                     : <div className="space-y-2.5">
                                         {topApps.slice(0, 8).map((app, i) => (
                                             <Bar key={i} label={app.appName} value={app.activeSeconds}
@@ -401,7 +393,7 @@ export function Reports() {
                             {/* Category breakdown */}
                             {categoryBreakdown.length > 0 && (
                                 <div>
-                                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">By Category</p>
+                                    <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">By Category</p>
                                     <div className="space-y-2">
                                         {categoryBreakdown.map(c => (
                                             <Bar key={c.category} label={c.category} value={c.seconds}
@@ -414,23 +406,23 @@ export function Reports() {
                             {/* Context switching per day */}
                             <div>
                                 <div className="flex justify-between items-center mb-2">
-                                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider">Context Switches / Day</p>
-                                    <p className="text-[10px] text-white/20">avg: {avgDailySwitches}/day</p>
+                                    <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Context Switches / Day</p>
+                                    <p className="text-[11px] text-[var(--text-muted)]">avg: {avgDailySwitches}/day</p>
                                 </div>
                                 {contextByDay.length === 0
-                                    ? <EmptyState icon={Activity} msg="App tracking records context switches automatically" />
+                                    ? <EmptyState msg="App tracking records context switches automatically" />
                                     : <div className="space-y-1.5">
                                         {contextByDay.map(d => (
                                             <div key={d.day} className="flex items-center gap-2">
-                                                <span className="text-[9px] text-white/25 w-16 flex-shrink-0">{d.day}</span>
-                                                <div className="flex-1 h-2 bg-white/[0.05] rounded-full overflow-hidden">
+                                                <span className="text-[11px] text-[var(--text-muted)] w-16 flex-shrink-0">{d.day}</span>
+                                                <div className="flex-1 h-2 bg-[var(--bg-hover)] rounded-full overflow-hidden">
                                                     <div className="h-full rounded-full transition-all"
                                                         style={{
                                                             width: `${pct(d.sessionCount, Math.max(...contextByDay.map(x => x.sessionCount)) || 1)}%`,
                                                             backgroundColor: d.label === 'Deep Work' ? '#22c55e' : d.label === 'Balanced' ? '#f59e0b' : '#ef4444'
                                                         }} />
                                                 </div>
-                                                <span className={`text-[9px] font-bold flex-shrink-0 ${d.label === 'Deep Work' ? 'text-emerald-400' : d.label === 'Balanced' ? 'text-amber-400' : 'text-red-400'}`}>
+                                                <span className={`text-[11px] font-bold flex-shrink-0 ${d.label === 'Deep Work' ? 'text-emerald-400' : d.label === 'Balanced' ? 'text-amber-400' : 'text-red-400'}`}>
                                                     {d.sessionCount}
                                                 </span>
                                             </div>
@@ -441,19 +433,19 @@ export function Reports() {
                         </Section>
 
                         {/* ══ 5. HABIT CONSISTENCY ════════════════════════════ */}
-                        <Section title="Habit Consistency" icon={Repeat} accent="bg-amber-500/15 text-amber-400" defaultOpen={false}>
+                        <Section title="Habit Consistency" defaultOpen={false}>
                             <div className="grid grid-cols-2 gap-3">
                                 <Kpi label="Recurring Tasks" value={String(recurringData.length)} />
                                 <Kpi label="Done Today" value={String(recurringCompletedCount)} color={recurringCompletedCount > 0 ? 'emerald' : 'default'} />
                             </div>
                             {recurringData.length === 0
-                                ? <EmptyState icon={Repeat} msg="Mark tasks as recurring to track habit consistency" />
+                                ? <EmptyState msg="Mark tasks as recurring to track habit consistency" />
                                 : <div className="space-y-1.5">
                                     {recurringData.map(r => (
-                                        <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-white/[0.05] last:border-0">
-                                            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${r.isCompleted ? 'bg-emerald-400' : 'bg-white/15'}`} />
-                                            <span className="text-sm text-white/60 flex-1 truncate">{r.title}</span>
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.isCompleted ? 'bg-emerald-500/15 text-emerald-400' : 'bg-white/[0.05] text-white/20'}`}>
+                                        <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-[var(--border-default)] last:border-0">
+                                            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${r.isCompleted ? 'bg-emerald-400' : 'bg-[var(--bg-hover)]'}`} />
+                                            <span className="text-sm text-[var(--text-secondary)] flex-1 truncate">{r.title}</span>
+                                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${r.isCompleted ? 'bg-emerald-500/15 text-emerald-400' : 'bg-[var(--bg-hover)] text-[var(--text-muted)]'}`}>
                                                 {r.isCompleted ? '✓ Done' : 'Pending'}
                                             </span>
                                         </div>

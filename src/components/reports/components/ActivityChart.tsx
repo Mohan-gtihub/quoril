@@ -1,4 +1,4 @@
-import {
+﻿import {
     BarChart,
     Bar,
     XAxis,
@@ -34,22 +34,22 @@ export function ActivityChart({ data }: ActivityChartProps) {
                                         <div className="space-y-2">
                                             <div className="flex items-center justify-between gap-4">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                                                    <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Deep Focus</span>
+                                                    <div className="w-2 h-2 rounded-full bg-[#6366f1]" />
+                                                    <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider">Deep Focus</span>
                                                 </div>
                                                 <span className="text-xs font-mono font-bold text-[var(--text-primary)]">{d.focusHours}h</span>
                                             </div>
                                             <div className="flex items-center justify-between gap-4">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-[var(--text-muted)]/20" />
-                                                    <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Total Active</span>
+                                                    <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider">Total Active</span>
                                                 </div>
                                                 <span className="text-xs font-mono font-bold text-[var(--text-tertiary)]">{totalActivityHrs.toFixed(1)}h</span>
                                             </div>
                                             <div className="flex items-center justify-between gap-4 border-t border-[var(--border-default)] pt-2">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-emerald-500/50" />
-                                                    <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Breaks</span>
+                                                    <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider">Breaks</span>
                                                 </div>
                                                 <span className="text-xs font-mono font-bold text-[var(--text-secondary)]">{d.breakHours}h</span>
                                             </div>

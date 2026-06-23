@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+﻿import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, closestCorners, useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
@@ -6,7 +6,8 @@ import { useListStore } from '@/store/listStore'
 import { useTaskStore } from '@/store/taskStore'
 import { useFocusStore } from '@/store/focusStore'
 import { useSettingsStore } from '@/store/settingsStore'
-import { Activity, Coffee, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
+import { motion } from 'framer-motion'
 import type { TaskColumn } from '@/types/list'
 import type { Task } from '@/types/database'
 import { CreateTaskModal } from './CreateTaskModal'
@@ -63,62 +64,58 @@ function BoardColumn({
     return (
         <div
             ref={setNodeRef}
-            className={`flex flex-col h-full rounded-xl transition-all duration-300 flex-shrink-0 ${isToday ? 'w-80 lg:w-96 min-w-[280px] ring-1 ring-white/10' : 'w-64 lg:w-72 min-w-[240px]'
-                } glass-regular`}
-            style={{
-                borderColor: 'var(--border-default)',
-            }}
+            className={`flex flex-col h-full rounded-[var(--radius-tile)] transition-all duration-300 flex-shrink-0 border border-[var(--border-default)] bg-[var(--bg-card)] shadow-sm ${isToday ? 'w-80 lg:w-96 min-w-[280px]' : 'w-64 lg:w-72 min-w-[240px]'
+                }`}
         >
             {/* Column Header */}
-            <div className="p-4 border-b rounded-t-xl glass-thin" style={{ borderColor: 'var(--border-default)' }}>
-                <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${column.color}`}></div>
-                            <div className="min-w-0">
-                                <h2 className="font-bold text-sm leading-none truncate" style={{ color: 'var(--text-primary)' }}>{column.title}</h2>
-                                <p className="text-[10px] font-medium truncate" style={{ color: 'var(--text-muted)' }}>{column.subtitle}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            {column.id === 'done' ? (
-                                !hideEstDoneTimes && (
-                                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded font-bold" style={{ color: 'var(--accent-green-400)', backgroundColor: 'var(--accent-green-100)' }}>
-                                        {count} Completed
-                                    </span>
-                                )
-                            ) : (
-                                !hideEstDoneTimes && totalMinutes > 0 && (
-                                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ color: 'var(--text-tertiary)', backgroundColor: 'var(--accent-gray-800)' }}>
-                                        {formatTime(totalMinutes)}
-                                    </span>
-                                )
-                            )}
-
-                            {column.id !== 'done' && (
-                                <button
-                                    onClick={() => setShowCreateModal({ column: column.id, position: 'top' })}
-                                    className="p-1 hover:bg-gray-700 rounded transition-colors"
-                                    style={{ color: 'var(--text-tertiary)' }}
-                                    title="Add task to top"
-                                >
-                                    <Plus className="w-3 h-3" />
-                                </button>
-                            )}
+            <div className="p-5 pb-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${column.color}`}></div>
+                        <div className="min-w-0">
+                            <h2 className="text-base font-semibold leading-none tracking-tight truncate text-[var(--text-primary)]">{column.title}</h2>
+                            <p className="text-[11px] font-medium truncate text-[var(--text-tertiary)] mt-1">{column.subtitle}</p>
                         </div>
                     </div>
 
-                    {/* Progress Bar for specific columns */}
-                    {(column.id === 'this_week' || column.id === 'today') && (
-                        <div className="w-full h-1 rounded-full overflow-hidden mt-2" style={{ backgroundColor: 'var(--accent-gray-700)' }}>
-                            <div
-                                className={`h-full ${column.id === 'today' ? 'bg-blue-500' : 'bg-purple-500'}`}
-                                style={{ width: `${displayProgress}%` }}
-                            />
-                        </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {column.id === 'done' ? (
+                            !hideEstDoneTimes && (
+                                <span className="text-[11px] font-semibold tabular-nums px-2.5 py-1 rounded-full" style={{ color: 'var(--accent-green-400)', backgroundColor: 'var(--accent-green-100)' }}>
+                                    {count} done
+                                </span>
+                            )
+                        ) : (
+                            !hideEstDoneTimes && totalMinutes > 0 && (
+                                <span className="text-[11px] font-semibold tabular-nums px-2.5 py-1 rounded-full bg-[var(--bg-hover)] text-[var(--text-tertiary)]">
+                                    {formatTime(totalMinutes)}
+                                </span>
+                            )
+                        )}
+
+                        {column.id !== 'done' && (
+                            <button
+                                onClick={() => setShowCreateModal({ column: column.id, position: 'top' })}
+                                className="w-7 h-7 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                                title="Add task to top"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                    </div>
                 </div>
+
+                {/* Progress Bar for specific columns */}
+                {(column.id === 'this_week' || column.id === 'today') && (
+                    <div className="w-full h-2 rounded-full overflow-hidden mt-4 bg-[var(--bg-hover)]">
+                        <motion.div
+                            className="h-full rounded-full bg-[var(--accent-primary)]"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${displayProgress}%` }}
+                            transition={{ duration: 0.8, ease: 'easeOut' }}
+                        />
+                    </div>
+                )}
 
                 {/* Blitz Button for Today */}
                 {isToday && tasks.length > 0 && (
@@ -129,17 +126,15 @@ function BoardColumn({
                                 onBlitz(topTask)
                             }
                         }}
-                        className="w-full mt-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-xs font-bold rounded-lg shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02]"
-                        style={{ color: 'var(--text-primary)' }}
+                        className="w-full mt-4 py-2.5 text-sm font-semibold rounded-full flex items-center justify-center gap-2 transition-all bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105 active:scale-95 shadow-[0_8px_24px_var(--accent-glow)]"
                     >
-                        <Activity className="w-3 h-3" />
-                        IGNITE FLOW 🔥
+                        Start focus
                     </button>
                 )}
             </div>
 
             {/* Task List */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar flex flex-col">
+            <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-3 custom-scrollbar flex flex-col">
                 <SortableContext
                     id={column.id}
                     items={tasks.map(t => t.id)}
@@ -167,13 +162,13 @@ function BoardColumn({
 
                                     return (
                                         <div key={day}>
-                                            <div className="flex items-center justify-between text-[10px] uppercase font-bold text-white/30 mt-6 mb-2 tracking-wider px-1">
+                                            <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--text-tertiary)] mt-5 mb-2 px-1">
                                                 <span>
                                                     {isToday ? 'Today' : date.toLocaleDateString(undefined, { weekday: 'short' })},
                                                     {' '}
                                                     {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                                 </span>
-                                                <span className="bg-white/5 px-1.5 py-0.5 rounded text-white/20">
+                                                <span className="bg-[var(--bg-hover)] px-2 py-0.5 rounded-full text-[var(--text-muted)] tabular-nums">
                                                     {dayTasks.length} {dayTasks.length === 1 ? 'task' : 'tasks'}
                                                 </span>
                                             </div>
@@ -205,32 +200,15 @@ function BoardColumn({
                     )}
                 </SortableContext>
 
-                {/* Done Column Extras */}
-                {column.id === 'done' && (
-                    <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border-default)' }}>
-                        <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Recent Activity</p>
-                        <div className="space-y-2 opacity-60">
-                            <div className="flex items-center gap-2 text-xs p-2 rounded" style={{ color: 'var(--text-tertiary)', backgroundColor: 'rgba(31, 41, 55, 0.5)' }}>
-                                <Coffee className="w-3 h-3 text-orange-400" />
-                                <span>Break - 10 min</span>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 {/* Empty State / Add Button */}
                 {column.id !== 'done' && (
-                    <div className="mt-2 text-center">
+                    <div className="mt-2">
                         <button
                             onClick={() => setShowCreateModal({ column: column.id, position: 'bottom' })}
-                            className="w-full py-2 border-2 border-dashed rounded-lg text-xs transition-all flex items-center justify-center gap-2"
-                            style={{
-                                borderColor: 'var(--border-default)',
-                                color: 'var(--text-muted)'
-                            }}
+                            className="w-full py-2.5 border border-dashed border-[var(--border-default)] rounded-2xl text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-hover)] transition-all flex items-center justify-center gap-2"
                         >
-                            <Plus className="w-3 h-3" />
-                            Add Task
+                            <Plus className="w-3.5 h-3.5" />
+                            Add task
                         </button>
                     </div>
                 )}
@@ -459,7 +437,7 @@ export function Planner() {
                 await endSession(undefined, undefined, undefined, false, true)
             }
 
-            toast.success(currentColumn === 'done' ? 'Task reopened' : 'Task completed! 🎉')
+            toast.success(currentColumn === 'done' ? 'Task reopened' : 'Task completed')
         } catch {
             toast.error('Failed to update task')
         }
@@ -477,7 +455,7 @@ export function Planner() {
         }
 
         startSession(task.id)
-        toast.success("Focus Mode Started! 🚀")
+        toast.success("Focus Mode Started")
     }
 
     if (!selectedList && selectedListId !== 'all') {
@@ -495,8 +473,8 @@ export function Planner() {
                 onDragEnd={handleDragEnd}
             >
                 {/* Board Columns container */}
-                <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 lg:p-6">
-                    <div className="flex h-full gap-4 lg:gap-6">
+                <div className="flex-1 overflow-x-auto overflow-y-hidden px-6 md:px-10 pb-6">
+                    <div className="flex h-full gap-4">
                         {columns_def.map((col) => {
                             if (col.id === 'today') {
                                 return (

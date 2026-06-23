@@ -7,6 +7,7 @@ export function DateNavigator() {
     const { selectedDate, setSelectedDate, goToToday, goToNextDay, goToPrevDay } = usePlannerStore()
     const inputRef = useRef<HTMLInputElement>(null)
     const today = startOfToday()
+    const isToday = isSameDay(selectedDate, today)
 
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.value) {
@@ -15,32 +16,32 @@ export function DateNavigator() {
     }
 
     return (
-        <div className="flex items-center gap-6 select-none">
-            {/* Legend / Date Display */}
+        <div className="flex items-center gap-4 select-none">
+            {/* Date Display */}
             <div className="flex flex-col">
-                <h2 className="text-sm font-black text-[var(--text-primary)] leading-none tracking-tight">
-                    {isSameDay(selectedDate, today) ? 'Today' : format(selectedDate, 'EEEE')}
+                <h2 className="text-lg font-semibold text-[var(--text-primary)] leading-none tracking-tight">
+                    {isToday ? 'Today' : format(selectedDate, 'EEEE')}
                 </h2>
-                <p className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest mt-1">
+                <p className="text-xs font-medium text-[var(--text-tertiary)] tabular-nums mt-1">
                     {format(selectedDate, 'MMM d, yyyy')}
                 </p>
             </div>
 
-            {/* Simple Chevron Navigation */}
-            <div className="flex items-center gap-3 bg-[var(--bg-hover)] p-1 rounded-lg border border-[var(--border-default)]">
+            {/* Chevron Navigation pill */}
+            <div className="flex items-center gap-1 bg-[var(--bg-hover)] p-1 rounded-full border border-[var(--border-default)]">
                 <button
                     onClick={goToPrevDay}
-                    className="p-1 px-2 hover:text-[var(--text-primary)] text-[var(--text-tertiary)] transition-colors rounded-md hover:bg-[var(--bg-tertiary)]"
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors active:scale-95"
                 >
-                    <ChevronLeft size={14} />
+                    <ChevronLeft size={15} />
                 </button>
 
-                <div
+                <button
                     onClick={() => inputRef.current?.showPicker()}
-                    className="flex items-center gap-2 px-2 cursor-pointer group"
+                    className="flex items-center gap-2 px-3 h-7 rounded-full cursor-pointer group hover:bg-[var(--bg-card)] transition-colors"
                 >
-                    <CalendarIcon size={12} className="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors" />
-                    <span className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-[0.1em]">
+                    <CalendarIcon size={13} className="text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors" />
+                    <span className="text-xs font-semibold text-[var(--text-secondary)] tabular-nums">
                         {format(selectedDate, 'MMM yyyy')}
                     </span>
                     <input
@@ -50,22 +51,22 @@ export function DateNavigator() {
                         onChange={handleDateChange}
                         value={format(selectedDate, 'yyyy-MM-dd')}
                     />
-                </div>
+                </button>
 
                 <button
                     onClick={goToNextDay}
-                    className="p-1 px-2 hover:text-[var(--text-primary)] text-[var(--text-tertiary)] transition-colors rounded-md hover:bg-[var(--bg-tertiary)]"
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors active:scale-95"
                 >
-                    <ChevronRight size={14} />
+                    <ChevronRight size={15} />
                 </button>
             </div>
 
-            {!isSameDay(selectedDate, today) && (
+            {!isToday && (
                 <button
                     onClick={goToToday}
-                    className="text-[9px] font-black text-[var(--accent-primary)] uppercase tracking-[0.2em] hover:text-white transition-colors"
+                    className="px-3 py-1.5 rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] text-xs font-semibold hover:brightness-105 active:scale-95 transition-all"
                 >
-                    Jump Today
+                    Jump to today
                 </button>
             )}
         </div>

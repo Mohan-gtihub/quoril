@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from 'react-router-dom'
+﻿import { useNavigate, useLocation } from 'react-router-dom'
 import { LayoutGrid, Settings, LogOut, BarChart3, Plus, Edit2, Trash2, Check, MoreHorizontal, FolderKanban, Archive, ChevronDown, Folders, Kanban, Smartphone, Map } from 'lucide-react'
 import { confirm as confirmDialog } from '@/components/ui/ConfirmDialog'
 import { useAuthStore } from '@/store/authStore'
@@ -73,8 +73,8 @@ function WorkspaceRow({ ws, isActive, onClick }: { ws: Workspace; isActive: bool
                     ))}
                 </div>
                 <div className="flex gap-1.5 pt-1">
-                    <button onClick={handleSave} className="flex-1 py-1 px-2 text-[10px] font-bold bg-[var(--accent-primary)] text-white rounded-md">Save</button>
-                    <button onClick={() => setIsEditing(false)} className="flex-1 py-1 px-2 text-[10px] font-bold text-[var(--text-muted)] border border-[var(--border-default)] hover:text-[var(--text-primary)] transition-colors rounded-md">Cancel</button>
+                    <button onClick={handleSave} className="flex-1 py-1 px-2 text-[11px] font-bold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-md">Save</button>
+                    <button onClick={() => setIsEditing(false)} className="flex-1 py-1 px-2 text-[11px] font-bold text-[var(--text-muted)] border border-[var(--border-default)] hover:text-[var(--text-primary)] transition-colors rounded-md">Cancel</button>
                 </div>
             </div>
         )
@@ -167,10 +167,10 @@ function CreateWsInline({ onDone }: { onDone: () => void }) {
                 </div>
                 <div className="flex gap-1.5 pt-1">
                     <button disabled={!name.trim() || loading} onClick={handle}
-                        className="flex-1 py-1 px-2 text-[10px] font-bold bg-[var(--accent-primary)] disabled:opacity-40 text-white rounded-md">
+                        className="flex-1 py-1 px-2 text-[11px] font-bold bg-[var(--accent-primary)] disabled:opacity-40 text-[var(--accent-contrast)] rounded-md">
                         {loading ? '…' : 'Create'}
                     </button>
-                    <button onClick={onDone} className="flex-1 py-1 px-2 text-[10px] font-bold text-[var(--text-muted)] border border-[var(--border-default)] hover:text-[var(--text-primary)] transition-colors rounded-md">Cancel</button>
+                    <button onClick={onDone} className="flex-1 py-1 px-2 text-[11px] font-bold text-[var(--text-muted)] border border-[var(--border-default)] hover:text-[var(--text-primary)] transition-colors rounded-md">Cancel</button>
                 </div>
             </div>
         </motion.div>
@@ -208,25 +208,35 @@ export function Sidebar() {
                 navigate(path)
             }}
             className={cn(
-                'w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-[13px] font-medium transition-all text-left outline-none',
-                active ? 'bg-[var(--accent-primary)]/10 text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+                'w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-all text-left outline-none',
+                active
+                    ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-[0_6px_18px_var(--accent-glow)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
             )}
         >
-            <span className={cn("flex items-center justify-center scale-90", active ? "text-[var(--accent-primary)]" : "text-[var(--text-muted)]")}>{icon}</span>
+            <span className={cn("flex items-center justify-center", active ? "text-[var(--accent-contrast)]" : "text-[var(--text-muted)]")}>{icon}</span>
             <span className="flex-1 truncate">{label}</span>
         </button>
     )
 
     return (
-        <aside className="w-[220px] bg-[var(--bg-secondary)] border-r border-[var(--border-default)] flex flex-col h-full shrink-0 hidden lg:flex transition-colors duration-500 relative z-40">
+        <aside className="w-[228px] bg-[var(--bg-secondary)] border-r border-[var(--border-default)] flex flex-col h-full shrink-0 hidden lg:flex transition-colors duration-500 relative z-40">
+
+            {/* Brand */}
+            <div className="px-4 pt-5 pb-1 flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-xl bg-[var(--accent-primary)] flex items-center justify-center shadow-[0_4px_14px_var(--accent-glow)]">
+                    <LayoutGrid size={15} className="text-[var(--accent-contrast)]" />
+                </div>
+                <span className="text-[15px] font-bold tracking-tight text-[var(--text-primary)]">Quoril</span>
+            </div>
 
             {/* Top User Profile / Dropdown */}
-            <div ref={userMenuRef} className="relative px-2 pt-4 pb-2">
+            <div ref={userMenuRef} className="relative px-2 pt-3 pb-2">
                 <button
                     onClick={() => setShowUserMenu(v => !v)}
                     className="w-full flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-[var(--bg-hover)] transition-colors text-left outline-none"
                 >
-                    <div className="w-5 h-5 rounded-md bg-[var(--accent-primary)] flex items-center justify-center text-white text-[10px] font-black shrink-0">
+                    <div className="w-5 h-5 rounded-md bg-[var(--accent-primary)] flex items-center justify-center text-[var(--accent-contrast)] text-[11px] font-semibold shrink-0">
                         {user?.email?.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -249,7 +259,7 @@ export function Sidebar() {
                             <button onClick={() => { setShowUserMenu(false); navigate('/settings') }} className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition">
                                 <Settings size={14} /> Settings
                             </button>
-                            <button onClick={async () => { try { await signOut() } catch (e) { } }} className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--error)] hover:bg-[var(--error)]/10 transition mt-1 border-t border-[var(--border-default)] pt-1.5">
+                            <button onClick={async () => { try { await signOut() } catch (e) { /* noop */ } }} className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--error)] hover:bg-[var(--error)]/10 transition mt-1 border-t border-[var(--border-default)] pt-1.5">
                                 <LogOut size={14} /> Log out
                             </button>
                         </motion.div>
@@ -264,11 +274,11 @@ export function Sidebar() {
                     <button
                         onClick={() => { setActiveWorkspace(null as any); navigate('/dashboard') }}
                         className={cn(
-                            'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[13px] font-medium transition-all text-left outline-none',
-                            isDashboard && !activeWorkspaceId ? 'bg-[var(--accent-primary)]/10 text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+                            'w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-all text-left outline-none',
+                            isDashboard && !activeWorkspaceId ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-[0_6px_18px_var(--accent-glow)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                         )}
                     >
-                        <LayoutGrid size={14} className={cn(isDashboard && !activeWorkspaceId ? "text-[var(--accent-primary)]" : "text-[var(--text-muted)]")} />
+                        <LayoutGrid size={14} className={cn(isDashboard && !activeWorkspaceId ? "text-[var(--accent-contrast)]" : "text-[var(--text-muted)]")} />
                         <span className="flex-1">Home</span>
                     </button>
                     <NavItem icon={<Kanban size={14} />} label="Planner" path="/planner" active={location.pathname === '/planner'} />
@@ -338,13 +348,13 @@ export function Sidebar() {
                 <button
                     onClick={() => navigate('/settings')}
                     className={cn(
-                        'w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-[13px] font-medium transition-all text-left outline-none',
+                        'w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-all text-left outline-none',
                         location.pathname === '/settings'
-                            ? 'bg-[var(--accent-primary)]/10 text-[var(--text-primary)]'
+                            ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-[0_6px_18px_var(--accent-glow)]'
                             : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                     )}
                 >
-                    <Settings size={14} className={cn(location.pathname === '/settings' ? "text-[var(--accent-primary)]" : "text-[var(--text-muted)]")} />
+                    <Settings size={14} className={cn(location.pathname === '/settings' ? "text-[var(--accent-contrast)]" : "text-[var(--text-muted)]")} />
                     <span className="flex-1">Settings</span>
                 </button>
             </div>

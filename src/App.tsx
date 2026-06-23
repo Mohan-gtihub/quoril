@@ -24,6 +24,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { CanvasApp } from '@/components/canvas/CanvasApp'
 
 import { cn } from '@/utils/helpers'
+import { isElectron } from '@/hooks/useElectron'
 
 
 import { dataSyncService } from '@/services/dataSyncService'
@@ -153,7 +154,7 @@ function App() {
                 if (url.includes('resume') || url.includes('focus')) {
                     const store = useFocusStore.getState()
                     if (store.isActive && store.isPaused) {
-                        toast("Resuming Mission... 🚀", { icon: '▶️' })
+                        toast("Resuming Mission...")
                         store.resumeSession()
                     }
                     return
@@ -232,7 +233,7 @@ function App() {
                         !settings.superFocusMode ? "bg-[var(--bg-primary)]" : "bg-transparent super-focus",
                         "text-[var(--text-primary)]"
                     )}>
-                        {!settings.superFocusMode && <TitleBar />}
+                        {!settings.superFocusMode && isElectron() && <TitleBar />}
                         <div className="flex-1 overflow-hidden">
                             {user ? (
                                 settings.superFocusMode ? (

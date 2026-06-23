@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Check, MoreHorizontal } from 'lucide-react'
+import { Plus, Check, MoreHorizontal, ArrowUpRight, ListTodo, CheckCircle2, Sparkles, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useWorkspaceStore, Workspace } from '@/store/workspaceStore'
 import { useListStore } from '@/store/listStore'
@@ -13,6 +13,29 @@ const PALETTE = [
     '#f97316', '#a3e635',
 ]
 
+/* ─────────────────────────────────────────
+   COLOR PICKER (shared by create + edit)
+───────────────────────────────────────── */
+function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
+    return (
+        <div className="flex flex-wrap gap-2.5">
+            {PALETTE.map(c => (
+                <button key={c} onClick={() => onChange(c)}
+                    className="w-7 h-7 rounded-full relative transition-transform hover:scale-110 active:scale-95"
+                    style={{
+                        backgroundColor: c,
+                        boxShadow: value === c ? `0 0 0 2px var(--bg-card), 0 0 0 4px ${c}, 0 4px 12px ${c}66` : `0 2px 6px ${c}33`,
+                    }}>
+                    {value === c && <Check size={13} strokeWidth={3} className="text-white absolute inset-0 m-auto drop-shadow" />}
+                </button>
+            ))}
+        </div>
+    )
+}
+
+/* ─────────────────────────────────────────
+   WORKSPACE CARD
+───────────────────────────────────────── */
 function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
     const navigate = useNavigate()
     const { lists } = useListStore()
@@ -31,8 +54,10 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
     const pendingTasks = wsTasks.filter((t: any) => t.status !== 'done')
     const doneTasks = wsTasks.filter((t: any) => t.status === 'done')
     const progress = wsTasks.length ? Math.round((doneTasks.length / wsTasks.length) * 100) : 0
+    const isComplete = progress === 100 && wsTasks.length > 0
 
     const accent = ws.color
+    const barColor = isComplete ? '#10b981' : accent
 
     const handleSave = async () => {
         if (!editName.trim()) return
@@ -48,47 +73,42 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
     }
 
     const handleCardClick = (e: React.MouseEvent) => {
-        // Prevent click if we're clicking an action button/menu
         const target = e.target as HTMLElement
         if (target.closest('.no-drag')) return
-
         setActiveWorkspace(ws.id)
         navigate('/dashboard')
     }
 
     if (isEditing) {
         return (
-            <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-hover)] p-5 flex flex-col justify-between shadow-xl">
-                <div className="space-y-4">
+            <motion.div
+                layout
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-[var(--bg-card)] rounded-[var(--radius-tile)] border border-[var(--accent-primary)]/50 p-6 flex flex-col justify-between shadow-lg ring-1 ring-[var(--accent-primary)]/20"
+            >
+                <div className="space-y-5">
                     <div>
-                        <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2 block">Name</label>
+                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.12em] mb-2 block">Name</label>
                         <input
                             autoFocus
                             value={editName}
                             onChange={e => setEditName(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false) }}
-                            className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-default)] focus:border-[var(--accent-primary)] rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--text-primary)] outline-none"
+                            className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-default)] focus:border-[var(--accent-primary)] rounded-xl px-3.5 py-2.5 text-sm font-medium text-[var(--text-primary)] outline-none transition-colors"
                             maxLength={50}
                         />
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2 block">Theme Color</label>
-                        <div className="flex flex-wrap gap-2">
-                            {PALETTE.map(c => (
-                                <button key={c} onClick={() => setEditColor(c)}
-                                    className="w-6 h-6 rounded-full hover:scale-110 transition-transform relative border border-white/10"
-                                    style={{ backgroundColor: c }}>
-                                    {editColor === c && <Check size={12} className="text-white absolute inset-0 m-auto" />}
-                                </button>
-                            ))}
-                        </div>
+                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.12em] mb-2.5 block">Theme Color</label>
+                        <ColorPicker value={editColor} onChange={setEditColor} />
                     </div>
                 </div>
                 <div className="flex gap-2 mt-6">
-                    <button onClick={handleSave} className="flex-1 py-2 text-xs font-bold bg-[var(--accent-primary)] text-white rounded-xl shadow-lg hover:brightness-110 transition-all">Save Changes</button>
-                    <button onClick={() => setIsEditing(false)} className="py-2 px-4 text-xs font-bold text-[var(--text-secondary)] bg-[var(--bg-tertiary)] border border-[var(--border-default)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] transition-all rounded-xl">Cancel</button>
+                    <button onClick={handleSave} className="flex-1 py-2.5 text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full hover:brightness-105 active:scale-95 transition-all shadow-[0_8px_24px_var(--accent-glow)]">Save Changes</button>
+                    <button onClick={() => setIsEditing(false)} className="py-2.5 px-4 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)] transition-all rounded-full">Cancel</button>
                 </div>
-            </div>
+            </motion.div>
         )
     }
 
@@ -97,165 +117,246 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
             layout
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="group relative h-full bg-[var(--bg-card)] rounded-2xl border border-[var(--border-default)] hover:border-[var(--border-hover)] hover:shadow-2xl hover:-translate-y-1 overflow-hidden transition-all duration-300 cursor-pointer flex flex-col"
+            whileHover={{ y: -5 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            className="group relative h-full overflow-hidden bg-[var(--bg-card)] rounded-[var(--radius-tile)] border border-[var(--border-default)] hover:border-[var(--border-hover)] shadow-sm hover:shadow-xl transition-[border-color,box-shadow] duration-200 cursor-pointer flex flex-col p-6"
             onClick={handleCardClick}
         >
+            {/* Ambient accent wash */}
+            <div
+                className="pointer-events-none absolute -top-16 -right-16 w-44 h-44 rounded-full blur-3xl opacity-25 group-hover:opacity-40 transition-opacity duration-300"
+                style={{ background: accent }}
+            />
+
             {/* Header Area */}
-            <div className="p-6 pb-4 relative z-10 flex-1">
-                <div className="flex items-start justify-between mb-4">
-                    <div
-                        className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg"
-                        style={{
-                            background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
-                            boxShadow: `0 8px 20px -4px ${accent}60`
-                        }}
-                    >
-                        {ws.name.charAt(0).toUpperCase()}
+            <div className="relative flex-1">
+                <div className="flex items-start justify-between mb-5">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <span
+                            className="w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center text-white font-bold text-base"
+                            style={{ background: `linear-gradient(135deg, ${accent}, ${accent}bb)`, boxShadow: `0 6px 18px ${accent}55` }}
+                        >
+                            {ws.name.charAt(0).toUpperCase()}
+                        </span>
+                        <div className="min-w-0">
+                            <h3 className="text-lg font-semibold tracking-tight text-[var(--text-primary)] truncate leading-tight">{ws.name}</h3>
+                            <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+                                {wsLists.length} {wsLists.length === 1 ? 'list' : 'lists'} · {wsTasks.length} {wsTasks.length === 1 ? 'task' : 'tasks'}
+                            </p>
+                        </div>
                     </div>
 
-                    <div className="relative no-drag">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
-                            className="p-1.5 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors opacity-0 group-hover:opacity-100"
-                        >
-                            <MoreHorizontal size={18} />
-                        </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="relative no-drag">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
+                                className="w-7 h-7 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                                <MoreHorizontal size={16} />
+                            </button>
 
-                        <AnimatePresence>
-                            {showMenu && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: -5, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: -5, scale: 0.95 }}
-                                    className="absolute right-0 top-full mt-2 w-40 glass-thick border border-[var(--border-default)] rounded-xl z-50 shadow-2xl py-1 overflow-hidden pointer-events-auto"
-                                    onClick={e => e.stopPropagation()}
-                                >
-                                    <button onClick={() => { setIsEditing(true); setShowMenu(false) }} className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors">
-                                        Edit Workspace
-                                    </button>
-                                    <button onClick={() => { handleDelete(); setShowMenu(false) }} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-400/10 transition-colors">
-                                        Delete Workspace
-                                    </button>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                            <AnimatePresence>
+                                {showMenu && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setShowMenu(false) }} />
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -5, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: -5, scale: 0.95 }}
+                                            className="absolute right-0 top-full mt-2 w-44 glass-thick border border-[var(--border-default)] rounded-xl z-50 shadow-2xl py-1 overflow-hidden pointer-events-auto"
+                                            onClick={e => e.stopPropagation()}
+                                        >
+                                            <button onClick={() => { setIsEditing(true); setShowMenu(false) }} className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors">
+                                                Edit Workspace
+                                            </button>
+                                            <button onClick={() => { handleDelete(); setShowMenu(false) }} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-400/10 transition-colors">
+                                                Delete Workspace
+                                            </button>
+                                        </motion.div>
+                                    </>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                        <span className="w-7 h-7 rounded-full bg-[var(--bg-hover)] group-hover:bg-[var(--accent-primary)] flex items-center justify-center text-[var(--text-muted)] group-hover:text-[var(--accent-contrast)] transition-colors">
+                            <ArrowUpRight size={14} />
+                        </span>
                     </div>
                 </div>
 
-                <h3 className="text-xl font-bold text-[var(--text-primary)] mb-1 truncate">{ws.name}</h3>
-                <p className="text-sm text-[var(--text-secondary)]">{wsLists.length} lists · {pendingTasks.length} pending tasks</p>
+                {/* List preview chips */}
+                {wsLists.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                        {wsLists.slice(0, 4).map(l => (
+                            <span
+                                key={l.id}
+                                className="inline-flex items-center gap-1.5 max-w-[140px] rounded-full bg-[var(--bg-hover)] pl-2 pr-2.5 py-1 text-[11px] text-[var(--text-secondary)]"
+                            >
+                                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: (l as any).color || accent }} />
+                                <span className="truncate">{l.name}</span>
+                            </span>
+                        ))}
+                        {wsLists.length > 4 && (
+                            <span className="inline-flex items-center rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] text-[var(--text-muted)] tabular-nums">
+                                +{wsLists.length - 4}
+                            </span>
+                        )}
+                    </div>
+                )}
             </div>
 
-            {/* Progress Footer */}
-            <div className="p-6 pt-0 mt-auto">
-                <div className="flex items-center justify-between text-xs font-medium text-[var(--text-muted)] mb-2">
-                    <span>{progress}% Completed</span>
-                    <span>{doneTasks.length} / {wsTasks.length}</span>
+            {/* Stats + Progress Footer */}
+            <div className="relative mt-6">
+                <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-1.5 rounded-full bg-[var(--bg-hover)] px-2.5 py-1">
+                        <ListTodo size={12} className="text-[var(--text-muted)]" />
+                        <span className="text-xs font-semibold text-[var(--text-primary)] tabular-nums">{pendingTasks.length}</span>
+                        <span className="text-[11px] text-[var(--text-tertiary)]">pending</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 rounded-full bg-[var(--bg-hover)] px-2.5 py-1">
+                        <CheckCircle2 size={12} className="text-emerald-400" />
+                        <span className="text-xs font-semibold text-[var(--text-primary)] tabular-nums">{doneTasks.length}</span>
+                        <span className="text-[11px] text-[var(--text-tertiary)]">done</span>
+                    </div>
                 </div>
-                <div className="h-1.5 bg-[var(--bg-tertiary)] w-full rounded-full overflow-hidden">
+
+                <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-medium text-[var(--text-tertiary)]">
+                        {isComplete ? 'All caught up' : `${progress}% completed`}
+                    </span>
+                    <span className="text-[11px] font-medium text-[var(--text-muted)] tabular-nums">{doneTasks.length} / {wsTasks.length}</span>
+                </div>
+                <div className="h-1.5 bg-[var(--bg-hover)] w-full rounded-full overflow-hidden">
                     <motion.div
-                        className="h-full rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]"
-                        style={{ backgroundColor: progress === 100 ? '#10b981' : accent }}
+                        className="h-full rounded-full"
+                        style={{ background: `linear-gradient(90deg, ${barColor}aa, ${barColor})`, boxShadow: `0 0 8px ${barColor}66` }}
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
                         transition={{ duration: 1, ease: 'easeOut' }}
                     />
                 </div>
             </div>
-
-            {/* Ambient background glow */}
-            <div
-                className="absolute inset-x-0 -bottom-32 h-64 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity duration-500 pointer-events-none blur-3xl rounded-full"
-                style={{ backgroundColor: accent }}
-            />
         </motion.div>
     )
 }
 
-function CreateWorkspaceCard() {
+/* ─────────────────────────────────────────
+   CREATE WORKSPACE CARD
+───────────────────────────────────────── */
+function CreateWorkspaceCard({ autoOpen, onClose }: { autoOpen?: boolean; onClose?: () => void }) {
     const { createWorkspace } = useWorkspaceStore()
-    const [isCreating, setIsCreating] = useState(false)
+    const [isCreating, setIsCreating] = useState(!!autoOpen)
     const [name, setName] = useState('')
     const [color, setColor] = useState(PALETTE[0])
     const [loading, setLoading] = useState(false)
+
+    const close = () => { setIsCreating(false); onClose?.() }
 
     const handleCreate = async () => {
         if (!name.trim()) return
         setLoading(true)
         await createWorkspace({ name: name.trim(), color })
         setLoading(false)
-        setIsCreating(false)
+        close()
         setName('')
     }
 
     if (isCreating) {
         return (
-            <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--accent-primary)] p-5 flex flex-col justify-between shadow-[0_0_30px_var(--accent-glow)] ring-1 ring-[var(--accent-primary)]/50">
-                <div className="space-y-4">
-                    <div>
-                        <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2 block">New Workspace</label>
-                        <input
-                            autoFocus
-                            value={name}
-                            onChange={e => setName(e.target.value)}
-                            onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setIsCreating(false) }}
-                            placeholder="Engineering, Personal, etc."
-                            className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-default)] focus:border-[var(--accent-primary)] rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--text-primary)] outline-none"
-                            maxLength={50}
-                        />
+            <motion.div
+                layout
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-[var(--bg-card)] rounded-[var(--radius-tile)] border border-[var(--accent-primary)] p-6 flex flex-col justify-between shadow-lg ring-1 ring-[var(--accent-primary)]/20"
+            >
+                <div className="space-y-5">
+                    <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.12em] block">New Workspace</label>
+                        <button onClick={close} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"><X size={14} /></button>
                     </div>
+                    <input
+                        autoFocus
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') close() }}
+                        placeholder="Engineering, Personal, etc."
+                        className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-default)] focus:border-[var(--accent-primary)] rounded-xl px-3.5 py-2.5 text-sm font-medium text-[var(--text-primary)] outline-none transition-colors"
+                        maxLength={50}
+                    />
                     <div>
-                        <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2 block">Theme Color</label>
-                        <div className="flex flex-wrap gap-2">
-                            {PALETTE.map(c => (
-                                <button key={c} onClick={() => setColor(c)}
-                                    className="w-6 h-6 rounded-full hover:scale-110 transition-transform relative border border-white/10"
-                                    style={{ backgroundColor: c }}>
-                                    {color === c && <Check size={12} className="text-white absolute inset-0 m-auto" />}
-                                </button>
-                            ))}
-                        </div>
+                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.12em] mb-2.5 block">Theme Color</label>
+                        <ColorPicker value={color} onChange={setColor} />
                     </div>
                 </div>
                 <div className="flex gap-2 mt-6">
-                    <button disabled={!name.trim() || loading} onClick={handleCreate} className="flex-1 py-2 text-xs font-bold bg-[var(--accent-primary)] text-white rounded-xl shadow-lg hover:brightness-110 disabled:opacity-50 transition-all">
-                        {loading ? 'Creating...' : 'Create Workspace'}
+                    <button disabled={!name.trim() || loading} onClick={handleCreate} className="flex-1 py-2.5 text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full hover:brightness-105 active:scale-95 disabled:opacity-50 transition-all shadow-[0_8px_24px_var(--accent-glow)]">
+                        {loading ? 'Creating…' : 'Create Workspace'}
                     </button>
-                    <button onClick={() => setIsCreating(false)} className="py-2 px-4 text-xs font-bold text-[var(--text-secondary)] bg-[var(--bg-tertiary)] border border-[var(--border-default)] hover:text-[var(--text-primary)] transition-all rounded-xl">Cancel</button>
+                    <button onClick={close} className="py-2.5 px-4 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)] transition-all rounded-full">Cancel</button>
                 </div>
-            </div>
+            </motion.div>
         )
     }
 
     return (
         <button
             onClick={() => setIsCreating(true)}
-            className="group h-full min-h-[220px] bg-[var(--bg-tertiary)] rounded-2xl border border-dashed border-[var(--border-hover)] hover:border-[var(--accent-primary)] flex flex-col items-center justify-center gap-3 transition-all duration-300 hover:bg-[var(--accent-primary)]/5 cursor-pointer"
+            className="group h-full min-h-[200px] bg-[var(--bg-hover)]/40 rounded-[var(--radius-tile)] border border-dashed border-[var(--border-hover)] hover:border-[var(--accent-primary)] hover:bg-[var(--bg-hover)] flex flex-col items-center justify-center gap-3 transition-all duration-200 cursor-pointer"
         >
-            <div className="w-12 h-12 rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] group-hover:border-[var(--accent-primary)]/50 group-hover:bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--text-secondary)] group-hover:text-[var(--accent-primary)] transition-all group-hover:scale-110 group-hover:shadow-lg">
-                <Plus size={24} />
-            </div>
-            <span className="font-bold text-[var(--text-secondary)] group-hover:text-[var(--accent-primary)] transition-colors">Create Workspace</span>
+            <span className="w-12 h-12 rounded-2xl bg-[var(--bg-card)] group-hover:bg-[var(--accent-primary)] flex items-center justify-center transition-all group-hover:shadow-[0_8px_24px_var(--accent-glow)] group-hover:scale-105">
+                <Plus size={22} className="text-[var(--text-muted)] group-hover:text-[var(--accent-contrast)] transition-colors" />
+            </span>
+            <span className="font-semibold text-sm text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">Create Workspace</span>
         </button>
     )
 }
 
+/* ─────────────────────────────────────────
+   PAGE
+───────────────────────────────────────── */
 export function WorkspacesOverview() {
     const { workspaces } = useWorkspaceStore()
+    const { lists } = useListStore()
+    const { tasks } = useTaskStore()
+    const [creating, setCreating] = useState(false)
+
+    const totalLists = Object.values(lists).filter((l: any) => !l.deleted_at).length
+    const activeTasks = tasks.filter((t: any) => !t.deleted_at && t.status !== 'done').length
 
     return (
-        <div className="h-full overflow-y-auto w-full flex flex-col bg-[var(--bg-primary)] p-8">
-            <div className="max-w-7xl mx-auto w-full">
-                <div className="mb-8">
-                    <h1 className="text-4xl font-black text-[var(--text-primary)] tracking-tight">Workspaces</h1>
-                    <p className="text-[var(--text-secondary)] mt-2 text-lg">Manage your project environments and high-level goals.</p>
-                </div>
+        <div className="flex-1 overflow-y-auto w-full h-full custom-scrollbar pb-24 bg-[var(--bg-primary)]">
+            <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-10">
+                {/* Hero header */}
+                <header className="mb-9 flex flex-wrap items-end justify-between gap-5">
+                    <div>
+                        <div className="flex items-center gap-2 mb-3 text-[var(--accent-primary)]">
+                            <Sparkles size={13} />
+                            <p className="text-[11px] font-bold uppercase tracking-[0.14em]">Overview</p>
+                        </div>
+                        <h1 className="text-[38px] leading-[1.05] font-semibold tracking-tight text-[var(--text-primary)]">
+                            Your <span className="text-[var(--accent-primary)]">workspaces</span>
+                        </h1>
+                        <p className="text-sm text-[var(--text-tertiary)] mt-2.5 tabular-nums">
+                            {workspaces.length} {workspaces.length === 1 ? 'workspace' : 'workspaces'}
+                            <span className="mx-2 text-[var(--border-default)]">·</span>
+                            {totalLists} {totalLists === 1 ? 'list' : 'lists'}
+                            <span className="mx-2 text-[var(--border-default)]">·</span>
+                            {activeTasks} active {activeTasks === 1 ? 'task' : 'tasks'}
+                        </p>
+                    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-[220px]">
-                    <CreateWorkspaceCard />
+                    <button
+                        onClick={() => setCreating(true)}
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full hover:brightness-105 active:scale-95 transition-all shadow-[0_8px_24px_var(--accent-glow)]"
+                    >
+                        <Plus size={16} /> New Workspace
+                    </button>
+                </header>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-[minmax(220px,auto)] items-stretch">
                     {workspaces.map(ws => (
                         <WorkspaceBentoCard key={ws.id} ws={ws} />
                     ))}
+                    <CreateWorkspaceCard autoOpen={creating} onClose={() => setCreating(false)} />
                 </div>
             </div>
         </div>

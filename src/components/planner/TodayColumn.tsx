@@ -1,7 +1,7 @@
 
 import { Task } from '@/types/database'
 import { TaskCard } from './TaskCard'
-import { Rocket, Plus, Clock } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { TaskColumn } from '@/types/list'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useDroppable } from '@dnd-kit/core'
@@ -34,30 +34,31 @@ export function TodayColumn({ title = "Today", tasks, columnId, onTaskComplete, 
     return (
         <div
             ref={setNodeRef}
-            className="flex flex-col h-full rounded-xl border shadow-lg overflow-hidden"
-            style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-default)' }}
+            className="flex flex-col h-full rounded-[var(--radius-tile)] border border-[var(--border-default)] bg-[var(--bg-card)] shadow-sm overflow-hidden"
         >
-            {/* Header (Clean Quoril Style) */}
-            <div className="p-4 border-b flex-shrink-0" style={{ backgroundColor: 'var(--bg-hover)', borderColor: 'var(--border-default)' }}>
-                <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-[var(--text-primary)] font-bold text-lg flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)] shadow-[0_0_8px_var(--accent-glow)]"></span>
-                        {title}
-                    </h2>
+            {/* Header */}
+            <div className="p-5 pb-4 flex-shrink-0">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-primary)] shadow-[0_0_8px_var(--accent-glow)]" />
+                        <h2 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
+                            {title}
+                        </h2>
+                    </div>
 
                     <div className="flex items-center gap-2">
                         {/* Task Count Badge */}
-                        <div className="px-2 py-0.5 bg-[var(--bg-tertiary)] rounded text-xs text-[var(--text-muted)] font-mono">
+                        <div className="px-2.5 py-1 bg-[var(--bg-hover)] rounded-full text-[11px] font-semibold text-[var(--text-tertiary)] tabular-nums">
                             {tasks.length}
                         </div>
 
                         {onAddTask && (
                             <button
                                 onClick={onAddTask}
-                                className="p-1 hover:bg-[var(--bg-hover)] rounded transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                                className="w-7 h-7 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                                 title="Add task"
                             >
-                                <Plus className="w-4 h-4" />
+                                <Plus className="w-3.5 h-3.5" />
                             </button>
                         )}
                     </div>
@@ -65,17 +66,14 @@ export function TodayColumn({ title = "Today", tasks, columnId, onTaskComplete, 
 
                 {/* Simple Stats Row */}
                 {!hideEstDoneTimes && (
-                    <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
-                        <div className="flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5" />
-                            <span>Est: {formatTime(totalMinutes)}</span>
-                        </div>
+                    <div className="text-xs text-[var(--text-tertiary)] mt-3">
+                        Est <span className="tabular-nums font-medium text-[var(--text-secondary)]">{formatTime(totalMinutes)}</span>
                     </div>
                 )}
             </div>
 
             {/* Unified Kanban List */}
-            <div className="flex-1 p-3 overflow-y-auto space-y-3 custom-scrollbar flex flex-col">
+            <div className="flex-1 px-3 pb-3 overflow-y-auto space-y-3 custom-scrollbar flex flex-col">
                 <SortableContext
                     id={columnId}
                     items={tasks.map(t => t.id)}
@@ -92,9 +90,9 @@ export function TodayColumn({ title = "Today", tasks, columnId, onTaskComplete, 
                             </div>
                         ))
                     ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center opacity-20 py-12 min-h-[200px]">
-                            <Rocket className="w-12 h-12 mb-2" />
-                            <p className="text-xs font-bold uppercase text-center">Ready for Action<br /><span className="font-normal normal-case">Drag tasks here</span></p>
+                        <div className="flex-1 flex flex-col items-center justify-center py-12 min-h-[200px] text-[var(--text-muted)]">
+                            <p className="text-sm font-semibold text-[var(--text-tertiary)]">Nothing scheduled</p>
+                            <p className="text-xs mt-1">Drag tasks here</p>
                         </div>
                     )}
                 </SortableContext>
@@ -103,22 +101,21 @@ export function TodayColumn({ title = "Today", tasks, columnId, onTaskComplete, 
                 {onAddTask && (
                     <button
                         onClick={onAddTask}
-                        className="group w-full py-2 flex items-center gap-3 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors px-2 rounded-lg hover:bg-[var(--bg-hover)]"
+                        className="group w-full py-2.5 flex items-center gap-3 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors px-3 rounded-2xl hover:bg-[var(--bg-hover)]"
                     >
                         <Plus className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]" />
-                        <span className="text-xs font-medium uppercase tracking-wider">Add Task</span>
+                        <span className="text-xs font-medium">Add task</span>
                     </button>
                 )}
             </div>
 
             {/* Quoril Now CTA at the bottom */}
             {tasks.length > 0 && (
-                <div className="p-4 border-t flex-shrink-0" style={{ backgroundColor: 'var(--bg-hover)', borderColor: 'var(--border-default)' }}>
+                <div className="p-4 border-t border-[var(--border-default)] flex-shrink-0">
                     <button
                         onClick={() => tasks[0] && onStartNow(tasks[0])}
-                        className="w-full py-3 bg-gradient-to-r from-[var(--accent-primary)] to-[var(--accent-secondary)] hover:opacity-90 text-white font-bold rounded-xl shadow-lg shadow-[var(--accent-primary)]/40 flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                        className="w-full py-3 bg-[var(--accent-primary)] hover:brightness-105 active:scale-95 text-[var(--accent-contrast)] font-semibold rounded-full flex items-center justify-center gap-2 transition-all shadow-[0_8px_24px_var(--accent-glow)]"
                     >
-                        <Rocket className="w-4 h-4" />
                         <span>Quoril now</span>
                     </button>
                 </div>

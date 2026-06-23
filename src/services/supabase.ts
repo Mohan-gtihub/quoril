@@ -10,11 +10,18 @@ if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(errorMsg)
 }
 
+// In Electron the OAuth callback arrives via the quoril:// deep link and is
+// exchanged manually (see App.tsx), so URL detection must stay OFF there.
+// In a normal browser the callback comes back as ?code=... on this origin and
+// Supabase must auto-detect & exchange it, otherwise Google login never lands.
+const isElectronEnv = typeof window !== 'undefined' && !!(window as any).electronAPI
+
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: false,
+        detectSessionInUrl: !isElectronEnv,
+        flowType: 'pkce',
     },
 })
 

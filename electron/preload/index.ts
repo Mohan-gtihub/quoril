@@ -83,6 +83,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         taskExists: (taskId: string) => ipcRenderer.invoke('db:taskExists', taskId),
         getPending: (table: string, limit?: number) => ipcRenderer.invoke('db:getPending', table, limit),
         markSynced: (table: string, id: string) => ipcRenderer.invoke('db:markSynced', table, id),
+        upsertFromCloud: (table: string, rows: any[]) => ipcRenderer.invoke('db:upsertFromCloud', table, rows),
         requeueWorkspace: (workspaceId: string) => ipcRenderer.invoke('db:requeueWorkspace', workspaceId),
         getWorkspaceForList: (workspaceId: string) => ipcRenderer.invoke('db:getWorkspaceForList', workspaceId),
         getWorkspaces: (userId: string) => ipcRenderer.invoke('db:getWorkspaces', userId),
@@ -235,6 +236,7 @@ export interface ElectronAPI {
         taskExists: (taskId: string) => Promise<boolean>
         getPending: (table: string) => Promise<any[]>
         markSynced: (table: string, id: string) => Promise<void>
+        upsertFromCloud: (table: string, rows: any[]) => Promise<number>
         requeueWorkspace: (workspaceId: string) => Promise<void>
         getWorkspaceForList: (workspaceId: string) => Promise<any[]>
         getWorkspaces: (userId: string) => Promise<any[]>

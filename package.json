@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Desktop productivity and focus tracking application",
   "author": "Mohan Kilari",
-  "main": "dist-electron/index.js",
+  "main": "dist-electron/index.cjs",
   "scripts": {
     "dev": "vite",
     "dev:electron": "vite",
@@ -81,6 +81,7 @@
     "zustand": "^4.5.7"
   },
   "devDependencies": {
+    "@electron/notarize": "^3.1.1",
     "@tanstack/react-query-devtools": "^5.91.3",
     "@types/better-sqlite3": "^7.6.13",
     "@types/canvas-confetti": "^1.9.0",
@@ -143,8 +144,17 @@
       "target": [
         "dmg"
       ],
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSAppleEventsUsageDescription": "Quoril needs to detect the active window to track your focus and productivity.",
+        "NSAccessibilityUsageDescription": "Quoril needs Accessibility access to read the active window title for focus tracking."
+      }
     },
+    "afterSign": "build/notarize.cjs",
     "linux": {
       "icon": "public/icon.png",
       "target": [

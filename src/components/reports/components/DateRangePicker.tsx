@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+﻿import { useState, useRef, useEffect } from 'react'
 import { format, subDays, startOfMonth, endOfMonth, startOfToday, endOfToday, endOfDay } from 'date-fns'
 import { Calendar as CalendarIcon, ChevronDown, Check } from 'lucide-react'
 import { cn } from '@/utils/helpers'
@@ -46,7 +46,7 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
                     <CalendarIcon size={14} />
                 </div>
                 <div className="flex flex-col items-start">
-                    <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-none mb-0.5">
+                    <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-none mb-0.5">
                         Period
                     </span>
                     <span className="text-xs font-bold text-[var(--text-primary)] leading-none">

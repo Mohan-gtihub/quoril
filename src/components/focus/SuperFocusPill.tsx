@@ -1,4 +1,4 @@
-import { Play, Pause, Maximize2, Coffee, SkipForward, CheckCircle2, ListTodo, Check, GripVertical, Plus } from 'lucide-react'
+﻿import { Play, Pause, Maximize2, Coffee, SkipForward, CheckCircle2, ListTodo, Check, GripVertical, Plus } from 'lucide-react'
 import { useFocusStore } from '@/store/focusStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useTimerDisplay } from '@/hooks/useTimerDisplay'
@@ -105,7 +105,7 @@ export function SuperFocusPill() {
                 {/* POMODORO BADGE: Half-on-air, Centered Top */}
                 {!isBreak && settings.pomodorosEnabled && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center pointer-events-none">
-                        <div className="bg-[var(--bg-primary)] border border-red-500/30 text-red-500 text-[9px] font-black px-2 py-0.5 rounded-full tracking-widest uppercase">
+                        <div className="bg-[var(--bg-primary)] border border-red-500/30 text-red-500 text-[11px] font-semibold px-2 py-0.5 rounded-full tracking-widest uppercase">
                             POMO {formatShortTime(pomodoroRemaining)}
                         </div>
                     </div>
@@ -202,8 +202,8 @@ export function SuperFocusPill() {
                     style={{ WebkitAppRegion: 'no-drag' } as any}
                 >
                     <div className="flex items-center justify-between mb-2 px-1">
-                        <span className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">Mission Objectives</span>
-                        <span className="text-[9px] text-[var(--accent-primary)]/80 font-mono font-bold">
+                        <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.2em]">Mission Objectives</span>
+                        <span className="text-[11px] text-[var(--accent-primary)]/80 font-mono font-bold">
                             {currentSubtasks.filter(s => s.completed).length}/{currentSubtasks.length}
                         </span>
                     </div>
@@ -231,7 +231,7 @@ export function SuperFocusPill() {
                         ))}
                         {currentSubtasks.length === 0 && (
                             <div className="py-4 text-center border border-dashed border-[var(--border-default)] rounded-xl bg-[var(--bg-tertiary)]">
-                                <span className="text-[10px] text-[var(--text-muted)] uppercase font-bold tracking-widest">Target is locked. No sub-missions.</span>
+                                <span className="text-[11px] text-[var(--text-muted)] uppercase font-bold tracking-widest">Target is locked. No sub-missions.</span>
                             </div>
                         )}
                     </div>

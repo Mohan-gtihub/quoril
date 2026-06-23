@@ -27,6 +27,8 @@ class DataSyncService {
 
     /* ================= START / STOP ================= */
 
+    private pulledOnce = false
+
     start() {
         if (this.timer) return
         this.aborted = false
@@ -36,14 +38,98 @@ class DataSyncService {
             SYNC_INTERVAL
         )
 
-        this.syncPendings()
+        // First: restore the user's past cloud data DOWN into local SQLite,
+        // then run the normal push loop. pull() guards itself to run once per session.
+        this.pull()
+            .catch(err => console.error('[Sync] Initial cloud pull failed:', err))
+            .finally(() => this.syncPendings())
     }
 
     stop() {
         this.aborted = true
+        this.pulledOnce = false
         if (this.timer) {
             clearInterval(this.timer)
             this.timer = null
+        }
+    }
+
+    /* ================= PULL (cloud → local restore) ================= */
+
+    /**
+     * Download the signed-in user's existing cloud data and merge it into local
+     * SQLite. This is what makes a returning user / fresh install / new device
+     * see their past tasks, lists, workspaces, subtasks and focus sessions again.
+     *
+     * Runs once per session (guarded by pulledOnce). Last-write-wins is enforced
+     * in the main process (upsertFromCloud), so locally-newer edits aren't clobbered.
+     */
+    async pull(force = false) {
+        if (this.pulledOnce && !force) return
+        if (!navigator.onLine) return
+        if (!window.electronAPI?.db?.upsertFromCloud) return
+
+        const { data: { session } } = await supabase.auth.getSession()
+        const user = session?.user
+        if (!user) return
+
+        const sync = useSyncStore.getState()
+        sync.setSyncing(true)
+
+        try {
+            for (const table of SYNC_ORDER) {
+                if (this.aborted) return
+
+                let restored = 0
+                const PAGE = 1000
+                let from = 0
+
+                // Page through every cloud row for this user (Supabase caps at 1000/req)
+                while (true) {
+                    const { data, error } = await (supabase.from(table) as any)
+                        .select('*')
+                        .eq('user_id', user.id)
+                        .order('updated_at', { ascending: true })
+                        .range(from, from + PAGE - 1)
+
+                    if (error) {
+                        console.error(`[Sync] Pull failed for ${table}:`, error.message)
+                        break
+                    }
+                    if (!data?.length) break
+
+                    restored += await window.electronAPI.db.upsertFromCloud(table, data)
+
+                    if (data.length < PAGE) break
+                    from += PAGE
+                }
+
+                if (restored > 0) {
+                    console.log(`[Sync] Restored ${restored} ${table} row(s) from cloud`)
+                }
+            }
+
+            this.pulledOnce = true
+            useSyncStore.getState().setLastSync(Date.now())
+
+            // Refresh in-memory stores so restored cloud data shows up immediately
+            try {
+                const [{ useWorkspaceStore }, { useListStore }, { useTaskStore }] = await Promise.all([
+                    import('@/store/workspaceStore'),
+                    import('@/store/listStore'),
+                    import('@/store/taskStore'),
+                ])
+                await useWorkspaceStore.getState().loadWorkspaces().catch(() => { })
+                await useListStore.getState().fetchLists().catch(() => { })
+                await useTaskStore.getState().fetchTasks().catch(() => { })
+            } catch (e) {
+                console.warn('[Sync] Post-pull store refresh failed:', e)
+            }
+        } catch (err: any) {
+            console.error('[Sync] Pull error:', err)
+            useSyncStore.getState().setError(err?.message ?? 'Cloud restore failed')
+        } finally {
+            useSyncStore.getState().setSyncing(false)
         }
     }
 

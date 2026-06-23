@@ -60,8 +60,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const fingerprint = generateBrowserFingerprint()
             set({ sessionFingerprint: fingerprint })
 
-            // 1. Get initial session
-            const { data: { session } } = await supabase.auth.getSession()
+            // 1. Get initial session.
+            // getSession() can hang in the browser (Web Locks contention or an
+            // unprocessed OAuth code in the URL). Race it with a timeout so the
+            // app never gets stuck on the "Initializing System..." spinner.
+            const sessionResult = await Promise.race([
+                supabase.auth.getSession(),
+                new Promise<{ data: { session: null } }>(resolve =>
+                    setTimeout(() => resolve({ data: { session: null } }), 4000)
+                ),
+            ])
+            const session = sessionResult.data.session
 
             if (session) {
                 // Notify main process for synchronization engine
@@ -270,6 +279,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
             set({ loading: true })
 
+            const isElectronEnv = typeof window !== 'undefined' && !!window.electronAPI
+
+            // Browser (web) flow: use a normal http(s) redirect back to this app
+            // and let Supabase navigate the current tab. The quoril:// scheme is
+            // only registered by the desktop app, so using it in a browser would
+            // hand the OAuth callback to Electron instead of the web app.
+            if (!isElectronEnv) {
+                const { error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: window.location.origin,
+                    },
+                })
+
+                if (error) {
+                    set({ loading: false })
+                    return { success: false, error: error.message }
+                }
+
+                // Supabase redirects the tab to Google; loading stays true.
+                return { success: true }
+            }
+
+            // Electron flow —
             // skipBrowserRedirect: true → get the OAuth URL without navigating
             // This is critical for Electron: we must NOT navigate the main window
             // away from the app. Instead we open the URL in the system browser.
