@@ -452,3 +452,56 @@ body.super-focus,
   box-shadow: none !important;
   border: none !important;
 }
+
+/* -------------------------------------------------- */
+/* Focus PiP — pinned fallback panel & pip content    */
+/* -------------------------------------------------- */
+
+.focus-pinned-panel {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 9999;
+  min-width: 180px;
+  background: var(--bg-card, #1a1a1a);
+  border: 1px solid var(--border-default, rgba(255,255,255,0.1));
+  border-radius: 1rem;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  pointer-events: all;
+}
+
+.focus-pip-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  font-family: inherit;
+}
+
+.focus-pip-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-primary, #c4f82a);
+}
+
+.focus-pip-time {
+  font-family: monospace;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+  letter-spacing: -0.02em;
+}
+
+.focus-pip-task {
+  font-size: 0.75rem;
+  color: var(--text-secondary, rgba(255,255,255,0.6));
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}

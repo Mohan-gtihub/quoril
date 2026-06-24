@@ -8,6 +8,8 @@ import { TaskCard } from '../planner/TaskCard'
 import { CreateTaskModal } from '../planner/CreateTaskModal'
 import { cn } from '@/utils/helpers'
 import { confirm } from '@/components/ui/ConfirmDialog'
+import { platform } from '@/services/platform'
+import { FocusPiP } from './FocusPiP'
 
 import {
     Play,
@@ -704,6 +706,10 @@ export function FocusTimerPanel() {
                     Close Session
                 </button>
             </div>
+
+            {!platform.capabilities.nativeOverlay && (
+                <FocusPiP />
+            )}
 
             {
                 showCreateModal && (
