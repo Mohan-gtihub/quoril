@@ -13,9 +13,9 @@ function parseJSON<T>(s: any, fallback: T): T {
   try { return JSON.parse(s) } catch { return fallback }
 }
 
-async function getUserId(): Promise<string> {
-  const { data } = await supabase.auth.getUser()
-  return data.user?.id ?? ''
+async function getUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession()
+  return data.session?.user?.id ?? null
 }
 
 /* ---- hydration (mirrors electron/main/canvas/repo.ts) ---- */

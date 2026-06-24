@@ -3,7 +3,8 @@ import { useBlocksStore } from '@/store/canvas/blocksStore'
 import type { BlockBehavior, BlockRenderProps } from './registry'
 import type { VideoContent } from '@/types/canvas'
 import { Youtube, ExternalLink } from 'lucide-react'
-import { parseYouTubeId } from '../hooks/useSmartPaste'
+import { parseYouTubeId } from '../hooks/useSmartPaste'
+import { platform } from '@/services/platform'
 
 const titleCache: Map<string, { title: string; author?: string }> = new Map()
 
@@ -140,7 +141,7 @@ function Render({ block }: BlockRenderProps) {
                 </div>
                 <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); window.electronAPI.file.openExternal(watchUrl) }}
+                    onClick={(e) => { e.stopPropagation(); platform.links.openExternal(watchUrl) }}
                     className="p-1 hover:bg-[var(--bg-hover)] rounded text-[var(--text-muted)]"
                     title="Open on YouTube"
                 >

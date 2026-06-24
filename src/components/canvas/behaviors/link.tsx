@@ -61,7 +61,7 @@ function Render({ block }: BlockRenderProps) {
 
     const onOpen = (e: React.MouseEvent) => {
         e.stopPropagation()
-        if (data.url) window.electronAPI.file.openExternal(data.url)
+        if (data.url) platform.links.openExternal(data.url)
     }
 
     if (!data.url) {
