@@ -23,7 +23,10 @@ export function AppUsageReport({ dateRange }: AppUsageReportProps) {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        if (!appTracking) return
+        if (!appTracking) {
+            setLoading(false)
+            return
+        }
 
         const load = async () => {
             setLoading(true)
