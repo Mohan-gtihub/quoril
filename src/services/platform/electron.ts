@@ -30,6 +30,8 @@ export const electronPlatform: Platform = {
     setAlwaysOnTop(flag) { legacy()?.setAlwaysOnTop?.(flag) },
     resize(w, h, x, y) { legacy()?.resizeWindow?.(w, h, x, y) },
     restore() { legacy()?.restoreWindow?.() },
+    setResizable(flag) { legacy()?.setResizable?.(flag) },
+    closeDevTools() { legacy()?.closeDevTools?.() },
   },
   store: {
     async get(key) { return api().store?.get(key) ?? null },
@@ -39,5 +41,18 @@ export const electronPlatform: Platform = {
     async getSession() { return null },
     async signInWithPassword() { throw new Error('electron auth uses deep-link flow') },
     async signOut() {},
+    onDeepLink(cb) { return api().auth?.onDeepLink?.(cb) ?? { available: false as const } },
+    setUser(userId, accessToken) { return api().auth?.setUser?.(userId, accessToken) },
+  },
+  windowControls: {
+    minimize() { api().window?.minimize?.() },
+    maximize() { api().window?.maximize?.() },
+    close() { api().window?.close?.() },
+  },
+  tracker: {
+    setContext(taskId) { api().tracker?.setContext?.(taskId) },
+  },
+  links: {
+    openExternal(url) { api().file?.openExternal?.(url) },
   },
 }

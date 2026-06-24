@@ -29,6 +29,8 @@ export const webPlatform: Platform = {
     setAlwaysOnTop() { return UNAVAILABLE },
     resize() { return UNAVAILABLE },
     restore() { return UNAVAILABLE },
+    setResizable() { return UNAVAILABLE },
+    closeDevTools() { return UNAVAILABLE },
   },
   store: {
     async get(key) { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null },
@@ -38,5 +40,18 @@ export const webPlatform: Platform = {
     async getSession() { const { data } = await supabase.auth.getSession(); return data.session },
     async signInWithPassword(email, password) { return supabase.auth.signInWithPassword({ email, password }) },
     async signOut() { await supabase.auth.signOut() },
+    onDeepLink() { return UNAVAILABLE },
+    setUser() { return UNAVAILABLE },
+  },
+  windowControls: {
+    minimize() { return UNAVAILABLE },
+    maximize() { return UNAVAILABLE },
+    close() { return UNAVAILABLE },
+  },
+  tracker: {
+    setContext() { return UNAVAILABLE },
+  },
+  links: {
+    openExternal() { return UNAVAILABLE },
   },
 }

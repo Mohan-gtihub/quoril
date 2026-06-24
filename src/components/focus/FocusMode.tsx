@@ -18,6 +18,7 @@ import { HoldButton } from '../ui/HoldButton'
 import { cn } from '@/utils/helpers'
 import { SuperFocusPill } from './SuperFocusPill'
 import type { Task } from '@/types/database'
+import { platform } from '@/services/platform'
 
 export function FocusMode() {
     const navigate = useNavigate()
@@ -82,20 +83,20 @@ export function FocusMode() {
 
     // Window resizing for Focus Mode entry/exit (Blitzit Parity)
     useEffect(() => {
-        if (!settings.superFocusMode && window.electron) {
+        if (!settings.superFocusMode && platform.capabilities.nativeOverlay) {
             // Blitzit-style: 1/6 of screen width, full height, anchored left
             const sidebarWidth = Math.max(380, Math.round(window.screen.availWidth / 6))
             const screenHeight = window.screen.availHeight
 
-            window.electron.resizeWindow(sidebarWidth, screenHeight, 0, 0)
-            window.electron.setAlwaysOnTop(true)
+            platform.focusWindow.resize(sidebarWidth, screenHeight, 0, 0)
+            platform.focusWindow.setAlwaysOnTop(true)
         }
 
         return () => {
             // Restore to standard Planner size: 1400x900 on exit
-            if (!settings.superFocusMode && window.electron) {
-                window.electron.restoreWindow()
-                window.electron.setAlwaysOnTop(false)
+            if (!settings.superFocusMode && platform.capabilities.nativeOverlay) {
+                platform.focusWindow.restore()
+                platform.focusWindow.setAlwaysOnTop(false)
             }
         }
     }, [settings.superFocusMode])

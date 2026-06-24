@@ -11,6 +11,7 @@ import {
     initRateLimitStore,
 } from '@/utils/securityUtils'
 import { SECURITY_CONFIG } from '@/config/security'
+import { platform } from '@/services/platform'
 
 interface AuthState {
     user: User | null
@@ -74,9 +75,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
             if (session) {
                 // Notify main process for synchronization engine
-                if (window.electronAPI?.auth) {
-                    window.electronAPI.auth.setUser(session.user.id, session.access_token).catch(console.error)
-                }
+                platform.auth.setUser(session.user.id, session.access_token)
 
                 set({
                     session,
@@ -108,9 +107,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                         loading: false,
                         lastActivity: Date.now(),
                     })
-                    if (window.electronAPI?.auth) {
-                        window.electronAPI.auth.setUser(session.user.id, session.access_token).catch(console.error)
-                    }
+                    platform.auth.setUser(session.user.id, session.access_token)
                     startSessionMonitoring()
                 } else if (event === 'SIGNED_OUT') {
                     stopSessionMonitoring()
@@ -184,9 +181,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 lastActivity: Date.now(),
             })
 
-            if (window.electronAPI?.auth) {
-                window.electronAPI.auth.setUser(data.user.id, data.session.access_token).catch(console.error)
-            }
+            platform.auth.setUser(data.user.id, data.session.access_token)
 
             // 6. Start session monitoring
             startSessionMonitoring()
@@ -251,10 +246,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     lastActivity: Date.now(),
                 })
 
-                if (window.electronAPI?.auth) {
-                    window.electronAPI.auth.setUser(data.user.id, data.session.access_token).catch(console.error)
-                }
-
+                platform.auth.setUser(data.user.id, data.session.access_token)
                 startSessionMonitoring()
             } else {
                 // Email confirmation required
@@ -323,9 +315,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 // Open Google OAuth in the system browser
                 // The PKCE code_verifier stays in this app's localStorage
                 // so when the deep link callback arrives, we can exchange it
-                if (window.electronAPI?.file?.openExternal) {
-                    await window.electronAPI.file.openExternal(data.url)
-                } else {
+                const openResult = platform.links.openExternal(data.url)
+                if (openResult && typeof openResult === 'object' && 'available' in openResult && !openResult.available) {
                     // Fallback: window.open() is caught by setWindowOpenHandler
                     window.open(data.url, '_blank')
                 }
@@ -348,9 +339,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             // 1. Stop session monitoring
             stopSessionMonitoring()
 
-            if (window.electronAPI?.auth) {
-                window.electronAPI.auth.setUser(null, null).catch(console.error)
-            }
+            platform.auth.setUser(null, null)
 
             // 3. Sign out from Supabase
             await supabase.auth.signOut()

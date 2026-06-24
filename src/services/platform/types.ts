@@ -29,6 +29,8 @@ export interface FocusWindowPort {
   setAlwaysOnTop(flag: boolean): void | Unavailable
   resize(w: number, h: number, x?: number, y?: number): void | Unavailable
   restore(): void | Unavailable
+  setResizable(flag: boolean): void | Unavailable
+  closeDevTools(): void | Unavailable
 }
 
 export interface KeyValuePort {
@@ -40,6 +42,22 @@ export interface AuthPort {
   getSession(): Promise<any | null>
   signInWithPassword(email: string, password: string): Promise<any>
   signOut(): Promise<void>
+  onDeepLink(cb: (url: string) => void): (() => void) | Unavailable
+  setUser(userId: string | null, accessToken?: string | null): void | Unavailable
+}
+
+export interface WindowControlsPort {
+  minimize(): void | Unavailable
+  maximize(): void | Unavailable
+  close(): void | Unavailable
+}
+
+export interface TrackerPort {
+  setContext(taskId: any): void | Unavailable
+}
+
+export interface LinksPort {
+  openExternal(url: string): void | Unavailable
 }
 
 export interface Platform {
@@ -49,4 +67,7 @@ export interface Platform {
   focusWindow: FocusWindowPort
   store: KeyValuePort
   auth: AuthPort
+  windowControls: WindowControlsPort
+  tracker: TrackerPort
+  links: LinksPort
 }

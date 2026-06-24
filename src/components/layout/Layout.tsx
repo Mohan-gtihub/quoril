@@ -8,19 +8,21 @@ interface LayoutProps {
 import { useFocusStore } from '@/store/focusStore'
 import { FocusTimerPanel } from '../focus/FocusTimerPanel'
 import { BottomNav } from './BottomNav'
+import { platform } from '@/services/platform'
 
 export function Layout({ children }: LayoutProps) {
     const { showFocusPanel } = useFocusStore()
 
     // Resize window when focus panel state changes
     useEffect(() => {
+        if (!platform.capabilities.nativeOverlay) return
         if (showFocusPanel) {
             // Resize to compact widget (Sidebar Mode)
             const height = window.screen.availHeight - 40
-            window.electron?.resizeWindow(340, height, 20, 20)
+            platform.focusWindow.resize(340, height, 20, 20)
         } else {
             // Restore to normal size
-            window.electron?.restoreWindow()
+            platform.focusWindow.restore()
         }
     }, [showFocusPanel])
 

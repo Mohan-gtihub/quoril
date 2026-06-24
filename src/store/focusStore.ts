@@ -11,6 +11,7 @@ import { hydrateElapsed, getTaskEstimate } from '@/utils/sessionUtils'
 import { sanitizeSessionData, mapSessionTypeToDB } from '@/utils/dataValidation'
 import { useTaskStore } from './taskStore'
 import { useSettingsStore } from './settingsStore'
+import { platform } from '@/services/platform'
 
 /* ---------------------------------------------
    CONSTANTS
@@ -309,7 +310,7 @@ export const useFocusStore = create<FocusState>()(
                                 set(s => (s.taskId === taskId && s.isActive ? { currentSessionId: data.id } : {}))
                             }
                         }
-                        window.electronAPI?.tracker?.setContext(taskId)
+                        platform.tracker.setContext(taskId)
                     } catch (e) {
                         console.error('[Focus] Failed to create session record', e)
                     }
@@ -527,7 +528,7 @@ export const useFocusStore = create<FocusState>()(
                         breakRemaining: 0
                     })
 
-                    window.electronAPI?.tracker?.setContext(null)
+                    platform.tracker.setContext(null)
                 } catch (e) {
                     console.error('[Focus] end failed', e)
                     get().reset()

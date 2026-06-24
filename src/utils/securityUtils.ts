@@ -1,4 +1,5 @@
 import { SECURITY_CONFIG, COMMON_PASSWORDS, VALIDATION_PATTERNS } from '@/config/security'
+import { platform } from '@/services/platform'
 
 /**
  * Security Utilities
@@ -190,7 +191,7 @@ const RATE_LIMIT_STORE_KEY = 'rateLimitStore'
 
 async function loadRateLimitStore(): Promise<Record<string, RateLimitRecord>> {
     try {
-        const stored = await window.electronAPI?.store?.get(RATE_LIMIT_STORE_KEY)
+        const stored = await platform.store.get<Record<string, RateLimitRecord>>(RATE_LIMIT_STORE_KEY)
         return stored ?? {}
     } catch {
         return {}
@@ -199,7 +200,7 @@ async function loadRateLimitStore(): Promise<Record<string, RateLimitRecord>> {
 
 async function saveRateLimitStore(data: Record<string, RateLimitRecord>): Promise<void> {
     try {
-        await window.electronAPI?.store?.set(RATE_LIMIT_STORE_KEY, data)
+        await platform.store.set(RATE_LIMIT_STORE_KEY, data)
     } catch {
         // non-fatal — in-memory mirror still works
     }

@@ -1,6 +1,7 @@
 import { Minus, Square, Copy, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSyncStore } from '@/store/syncStore'
+import { platform } from '@/services/platform'
 
 export function TitleBar() {
     const { syncing, pendingCount, lastSync, error } = useSyncStore()
@@ -24,16 +25,16 @@ export function TitleBar() {
     }, [])
 
     const handleMinimize = () => {
-        window.electronAPI?.window.minimize()
+        platform.windowControls.minimize()
     }
 
     const handleMaximize = () => {
-        window.electronAPI?.window.maximize()
+        platform.windowControls.maximize()
         setIsMaximized(v => !v)
     }
 
     const handleClose = () => {
-        window.electronAPI?.window.close()
+        platform.windowControls.close()
     }
 
     return (

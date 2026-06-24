@@ -24,7 +24,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { CanvasApp } from '@/components/canvas/CanvasApp'
 
 import { cn } from '@/utils/helpers'
-import { isElectron } from '@/hooks/useElectron'
+import { platform } from '@/services/platform'
 
 
 import { dataSyncService } from '@/services/dataSyncService'
@@ -144,9 +144,7 @@ function App() {
 
     // DEEP LINK HANDLING (Email Verification + Password Reset)
     useEffect(() => {
-        if (!window.electronAPI?.auth?.onDeepLink) return
-
-        const unsubscribe = window.electronAPI.auth.onDeepLink(async (url) => {
+        const result = platform.auth.onDeepLink(async (url) => {
             console.log('[DeepLink] Received:', url)
 
             try {
@@ -206,7 +204,9 @@ function App() {
             }
         })
 
-        return () => unsubscribe()
+        if (typeof result === 'function') {
+            return () => result()
+        }
     }, [])
 
     if (!initialized) {
@@ -233,7 +233,7 @@ function App() {
                         !settings.superFocusMode ? "bg-[var(--bg-primary)]" : "bg-transparent super-focus",
                         "text-[var(--text-primary)]"
                     )}>
-                        {!settings.superFocusMode && isElectron() && <TitleBar />}
+                        {!settings.superFocusMode && platform.capabilities.nativeOverlay && <TitleBar />}
                         <div className="flex-1 overflow-hidden">
                             {user ? (
                                 settings.superFocusMode ? (

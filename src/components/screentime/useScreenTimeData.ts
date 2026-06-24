@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { format, subDays } from 'date-fns'
+import { platform } from '@/services/platform'
 
 /* ─── Types ──────────────────────────────────────────────── */
 
@@ -85,7 +86,7 @@ export function useScreenTimeData(): ScreenTimeData {
 
     useEffect(() => {
         setLoading(true)
-        window.electronAPI?.screenTime?.getData({ date })
+        platform.screenTime.getData({ date })
             .then((data: any) => {
                 setRaw(data)
                 setLoading(false)
@@ -101,7 +102,7 @@ export function useScreenTimeData(): ScreenTimeData {
         const today = format(new Date(), 'yyyy-MM-dd')
         if (date !== today) return
         const interval = setInterval(() => {
-            window.electronAPI?.screenTime?.getData({ date })
+            platform.screenTime.getData({ date })
                 .then((data: any) => setRaw(data))
                 .catch(() => {})
         }, 30000)

@@ -5,6 +5,7 @@ import { useTimerDisplay } from '@/hooks/useTimerDisplay'
 import { useTaskStore } from '@/store/taskStore'
 import { cn } from '@/utils/helpers'
 import { useEffect, useState } from 'react'
+import { platform } from '@/services/platform'
 
 export function SuperFocusPill() {
     const {
@@ -37,10 +38,10 @@ export function SuperFocusPill() {
     }, [taskId, fetchSubtasks])
 
     useEffect(() => {
-        if (window.electron) {
+        if (platform.capabilities.nativeOverlay) {
             const performResize = () => {
-                window.electron.closeDevTools()
-                window.electron.setResizable(true)
+                platform.focusWindow.closeDevTools()
+                platform.focusWindow.setResizable(true)
                 // Precise height: Badge(12) + Pill(48) + Gap(8) + Container
                 // Precise height: Badge(12) + Pill(48) + Gap(8) + Container
                 const itemsCount = currentSubtasks.length
@@ -50,9 +51,9 @@ export function SuperFocusPill() {
                 const baseHeight = 48 + 20 // 48 pill + 16 badge space + 4 bottom padding for rounded corners
                 const height = isExpanded ? (baseHeight + 8 + containerHeight) : baseHeight
 
-                window.electron.resizeWindow(340, height, 40, 40)
-                window.electron.setAlwaysOnTop(true)
-                window.electron.setResizable(false)
+                platform.focusWindow.resize(340, height, 40, 40)
+                platform.focusWindow.setAlwaysOnTop(true)
+                platform.focusWindow.setResizable(false)
             }
 
             performResize()
@@ -62,9 +63,9 @@ export function SuperFocusPill() {
             return () => {
                 clearTimeout(t1)
                 clearTimeout(t2)
-                window.electron.setResizable(true)
-                window.electron.restoreWindow()
-                window.electron.setAlwaysOnTop(false)
+                platform.focusWindow.setResizable(true)
+                platform.focusWindow.restore()
+                platform.focusWindow.setAlwaysOnTop(false)
             }
         }
     }, [isExpanded, currentSubtasks.length])
