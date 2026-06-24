@@ -271,7 +271,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
             set({ loading: true })
 
-            const isElectronEnv = typeof window !== 'undefined' && !!window.electronAPI
+            const isElectronEnv = platform.capabilities.nativeOverlay
 
             // Browser (web) flow: use a normal http(s) redirect back to this app
             // and let Supabase navigate the current tab. The quoril:// scheme is

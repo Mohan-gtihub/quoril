@@ -42,7 +42,7 @@ export const electronPlatform: Platform = {
     async signInWithPassword() { throw new Error('electron auth uses deep-link flow') },
     async signOut() {},
     onDeepLink(cb) { return api().auth?.onDeepLink?.(cb) ?? { available: false as const } },
-    setUser(userId, accessToken) { return api().auth?.setUser?.(userId, accessToken) },
+    setUser(userId, accessToken) { const r = api().auth?.setUser?.(userId, accessToken); if (r && typeof r.catch === 'function') r.catch(console.error); return r },
   },
   windowControls: {
     minimize() { api().window?.minimize?.() },
