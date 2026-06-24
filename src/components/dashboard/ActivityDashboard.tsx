@@ -7,6 +7,8 @@ import {
     TrendingUp,
     Zap
 } from 'lucide-react'
+import { platform } from '@/services/platform'
+import { TrackingUnavailable } from '@/components/reports/components/TrackingUnavailable'
 import {
     BarChart,
     Bar,
@@ -29,12 +31,17 @@ interface DomainUsage {
     total_seconds: number
 }
 
+const appTracking = platform.capabilities.appTracking
+
 export function ActivityDashboard() {
+    // All hooks must run unconditionally — appTracking is a module-level constant.
     const [appUsage, setAppUsage] = useState<AppUsage[]>([])
     const [domainUsage, setDomainUsage] = useState<DomainUsage[]>([])
     const [loading, setLoading] = useState(true)
+    const [categoryMap, setCategoryMap] = useState<Record<string, string>>({})
 
     useEffect(() => {
+        if (!appTracking) return
         loadData()
         const interval = setInterval(loadData, 5000) // Poll every 5s for live updates
         return () => clearInterval(interval)
@@ -56,10 +63,9 @@ export function ActivityDashboard() {
         }
     }
 
-    const [categoryMap, setCategoryMap] = useState<Record<string, string>>({})
-
     // Load app categories for accurate productivity scoring
     useEffect(() => {
+        if (!appTracking) return
         const today = format(new Date(), 'yyyy-MM-dd')
         window.electronAPI?.db?.getAppUsage(today + 'T00:00:00', today + 'T23:59:59')
             .then((rows: any[]) => {
@@ -103,7 +109,18 @@ export function ActivityDashboard() {
         return `${m}m`
     }
 
-
+    // ── Web: app tracking unavailable ──────────────────────────────────────────
+    if (!appTracking) {
+        return (
+            <div className="flex flex-col h-full overflow-y-auto bg-[var(--bg-primary)] p-8 text-[var(--text-primary)]">
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold tracking-tight">Activity</h1>
+                    <p className="text-[var(--text-secondary)] mt-1">Your digital footprint</p>
+                </div>
+                <TrackingUnavailable />
+            </div>
+        )
+    }
 
     if (loading && !appUsage.length) {
         return (

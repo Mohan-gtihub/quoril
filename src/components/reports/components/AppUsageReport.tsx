@@ -1,4 +1,6 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
+import { platform } from '@/services/platform'
+import { TrackingUnavailable } from './TrackingUnavailable'
 
 interface AppUsage {
     appName: string
@@ -14,11 +16,15 @@ interface AppUsageReportProps {
     }
 }
 
+const appTracking = platform.capabilities.appTracking
+
 export function AppUsageReport({ dateRange }: AppUsageReportProps) {
     const [usage, setUsage] = useState<AppUsage[]>([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
+        if (!appTracking) return
+
         const load = async () => {
             setLoading(true)
             try {
@@ -39,6 +45,11 @@ export function AppUsageReport({ dateRange }: AppUsageReportProps) {
         }
         load()
     }, [dateRange])
+
+    // App tracking is desktop-only — show empty state on web
+    if (!appTracking) {
+        return <TrackingUnavailable />
+    }
 
     const totalTime = usage.reduce((acc, curr) => acc + curr.totalSeconds, 0)
 

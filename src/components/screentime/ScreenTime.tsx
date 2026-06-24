@@ -7,6 +7,8 @@ import {
 import { motion } from 'framer-motion'
 import { useScreenTimeData, type CategoryEntry, type ProductivityBucket } from './useScreenTimeData'
 import { cn } from '@/utils/helpers'
+import { platform } from '@/services/platform'
+import { TrackingUnavailable } from '@/components/reports/components/TrackingUnavailable'
 
 /* ═══════════════════════════════════════════════════════════════
    HELPERS
@@ -426,8 +428,12 @@ function Kpi({ label, value, children }: { label: string; value: string | number
    MAIN PAGE
 ═══════════════════════════════════════════════════════════════ */
 
+const appTracking = platform.capabilities.appTracking
+
 export function ScreenTime() {
     const navigate = useNavigate()
+    // Hook must always run — capability is a module-level constant so conditional
+    // rendering is safe: the hook result is simply unused on web.
     const data = useScreenTimeData()
     const { loading, date, setDate, hourly, apps, categories, domains, weekly, timeline, totals, productivity, peakHour, avgDailySeconds, todayVsAvg } = data
 
@@ -441,6 +447,27 @@ export function ScreenTime() {
         setDate(format(next, 'yyyy-MM-dd'))
     }
     const canGoForward = !isViewingToday
+
+    // App tracking is desktop-only — show empty state on web (all hooks already ran above)
+    if (!appTracking) {
+        return (
+            <div className="flex-1 overflow-y-auto w-full h-full custom-scrollbar select-none pb-24">
+                <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-10">
+                    <header className="mb-8 flex items-end gap-4">
+                        <button onClick={() => navigate(-1)}
+                            className="w-9 h-9 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+                            <ArrowLeft className="w-4 h-4" />
+                        </button>
+                        <div>
+                            <p className="text-sm font-medium text-[var(--text-tertiary)] mb-1.5">Digital Wellbeing</p>
+                            <h1 className="text-[30px] leading-none font-semibold tracking-tight text-[var(--text-primary)]">Screen Time</h1>
+                        </div>
+                    </header>
+                    <TrackingUnavailable />
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="flex-1 overflow-y-auto w-full h-full custom-scrollbar select-none pb-24">

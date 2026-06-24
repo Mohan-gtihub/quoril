@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useFocusReport } from './useFocusReport'
 import { useTaskReport } from './useTaskReport'
 import { useAppReport } from './useAppReport'
+import { platform } from '@/services/platform'
 import type { DateRange } from '../components/ReportsDatePicker'
 
 /* ─── Default range ──────────────────────────────────────────── */
@@ -35,6 +36,14 @@ export function useReportsData(range: DateRange, retryKey = 0) {
 
         setLoading(true)
         setError(null)
+
+        if (!platform.capabilities.appTracking) {
+            // Web: no app-tracking IPC available — resolve with empty payload so
+            // focus-session sub-hooks (which use Supabase) still render correctly.
+            setRaw(null)
+            setLoading(false)
+            return
+        }
 
         window.electronAPI?.reports?.getDashboardData({ userId: user.id, startDate, endDate })
             .then((data: any) => {
