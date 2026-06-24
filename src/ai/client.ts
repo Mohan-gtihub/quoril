@@ -17,7 +17,7 @@ import type { ChatMessage } from './types'
 
 const NVIDIA_CHAT_URL = 'https://integrate.api.nvidia.com/v1/chat/completions'
 const GROQ_TRANSCRIBE_URL = 'https://api.groq.com/openai/v1/audio/transcriptions'
-const DEFAULT_MODEL = 'minimaxai/minimax-m3'
+const DEFAULT_MODEL = 'meta/llama-3.3-70b-instruct'
 const DEFAULT_STT_MODEL = 'whisper-large-v3-turbo'
 
 function getModel(): string {

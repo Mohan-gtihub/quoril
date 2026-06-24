@@ -65,6 +65,29 @@ describe('TaskVoiceAgent', () => {
         expect(second[3]).toEqual({ role: 'user', content: 'call mom' })
     })
 
+    it('does not echo a reasoning model\'s chain-of-thought into later turns', async () => {
+        // Turn 1 wraps its JSON in a long <think> block; turn 2 is the answer.
+        const noisy =
+            '<think>' + 'reasoning '.repeat(200) + '</think>\n' +
+            JSON.stringify({ status: 'needs_input', question: 'Which task?' })
+        const done = JSON.stringify({ status: 'complete', title: 'Call mom' })
+        const { agent, calls } = makeAgent([noisy, done])
+
+        await agent.send('add a task')
+        await agent.send('call mom')
+
+        // The assistant message replayed on turn 2 must be the compact canonical
+        // JSON — not the raw chain-of-thought that bloats the prompt.
+        const assistant = calls[1][2]
+        expect(assistant.role).toBe('assistant')
+        expect(assistant.content).not.toContain('<think>')
+        expect(assistant.content).not.toContain('reasoning')
+        expect(assistant.content.length).toBeLessThan(200)
+        // …yet it still carries the prior decision forward.
+        expect(assistant.content).toContain('needs_input')
+        expect(assistant.content).toContain('Which task?')
+    })
+
     it('recovers gracefully from unparseable model output', async () => {
         const { agent } = makeAgent(['I cannot help with that.'])
         const turn = await agent.send('do something')

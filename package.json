@@ -146,8 +146,13 @@
         "dmg"
       ],
       "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Quoril uses your microphone to capture spoken tasks and turn them into focus missions."
+        "NSMicrophoneUsageDescription": "Quoril uses your microphone to capture spoken tasks and turn them into focus missions.",
+        "NSAccessibilityUsageDescription": "Quoril uses accessibility access to detect the active app and window title for focus tracking."
       }
     },
     "linux": {

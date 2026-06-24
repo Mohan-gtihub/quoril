@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Mic, Square, Loader2, Volume2, Keyboard, Send, AlertCircle, Sparkles } from 'lucide-react'
 import { useTaskVoiceAgent } from '@/ai'
 import type { TaskDraft } from '@/ai'
+import { nextMicAction } from '@/ai/react/micAction'
 
 interface Props {
     onDraft: (draft: TaskDraft) => void
@@ -46,8 +47,19 @@ export function VoiceTaskWidget({ onDraft, onComplete, disabled, autoStart }: Pr
     const useTypedInput = showTyped || !voice.sttSupported
 
     function handleMicClick() {
-        if (active) voice.stop()
-        else voice.start()
+        switch (nextMicAction(voice.status, voice.question !== null)) {
+            case 'stop':
+                voice.stop()
+                break
+            case 'resume':
+                voice.resume()
+                break
+            case 'start':
+                voice.start()
+                break
+            case 'ignore':
+                break
+        }
     }
 
     function handleTypedSubmit(e: React.FormEvent) {
@@ -73,7 +85,15 @@ export function VoiceTaskWidget({ onDraft, onComplete, disabled, autoStart }: Pr
                         type="button"
                         disabled={disabled}
                         onClick={handleMicClick}
-                        aria-label={active ? 'Stop' : 'Start voice capture'}
+                        aria-label={
+                            voice.status === 'listening'
+                                ? 'Stop listening'
+                                : voice.status === 'speaking'
+                                    ? 'Answer now'
+                                    : voice.question
+                                        ? 'Answer the question'
+                                        : 'Start voice capture'
+                        }
                         className={`relative flex items-center justify-center w-11 h-11 rounded-full transition-colors shrink-0 disabled:opacity-50 ${
                             voice.listening
                                 ? 'bg-[var(--accent-primary)] text-white'

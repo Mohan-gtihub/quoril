@@ -17,6 +17,16 @@ import { useSpeechSynthesis } from '../voice/useSpeechSynthesis'
 
 export type VoiceAgentStatus = 'idle' | 'listening' | 'thinking' | 'speaking' | 'error'
 
+/**
+ * Rough upper bound on how long it takes to speak `text`, used to size the
+ * resume-listening watchdog. Deliberately generous (slow ~2.5 words/sec plus a
+ * buffer) so we never cut the question off, and capped so we never hang.
+ */
+function estimateSpeechMs(text: string): number {
+    const words = text.trim().split(/\s+/).filter(Boolean).length
+    return Math.min(12000, Math.round((words / 2.5) * 1000) + 1500)
+}
+
 export interface UseTaskVoiceAgentOptions {
     /** Called on every turn with the latest (cumulative) draft, to autofill the form. */
     onDraft: (draft: TaskDraft) => void
@@ -36,6 +46,8 @@ export interface TaskVoiceAgentApi {
     error: string | null
     /** Begin a fresh voice conversation (resets prior context). */
     start: () => void
+    /** Resume listening to answer a follow-up question, keeping conversation context. */
+    resume: () => void
     /** Stop listening / speaking and return to idle. */
     stop: () => void
     /** Feed a typed utterance through the same pipeline (fallback path). */
@@ -48,6 +60,20 @@ export function useTaskVoiceAgent(options: UseTaskVoiceAgentOptions): TaskVoiceA
     const [status, setStatus] = useState<VoiceAgentStatus>('idle')
     const [question, setQuestion] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
+
+    // Latest status, readable from timers/callbacks without re-subscribing.
+    const statusRef = useRef(status)
+    statusRef.current = status
+
+    // Fallback timer that resumes listening if a spoken question's `onEnd`
+    // never fires (Electron's Chromium speechSynthesis is unreliable here).
+    const resumeWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const clearResumeWatchdog = useCallback(() => {
+        if (resumeWatchdogRef.current !== null) {
+            clearTimeout(resumeWatchdogRef.current)
+            resumeWatchdogRef.current = null
+        }
+    }, [])
 
     // Stable agent instance for the lifetime of the hook.
     const agentRef = useRef<TaskVoiceAgent>()
@@ -92,21 +118,33 @@ export function useTaskVoiceAgent(options: UseTaskVoiceAgentOptions): TaskVoiceA
                 return
             }
 
-            // needs_input: ask, then resume listening (if available).
+            // needs_input: speak the question, then resume listening for the
+            // answer. We resume on TTS end OR on a watchdog timeout — whichever
+            // first — so a missed `onEnd` can't strand us on 'speaking' forever.
             const ask = turn.question ?? 'Could you tell me a bit more?'
             setQuestion(ask)
             setStatus('speaking')
-            synthesisRef.current.speak(ask, () => {
-                if (startListeningRef.current) startListeningRef.current()
-                else setStatus('idle')
-            })
+
+            let resumed = false
+            const resumeListening = () => {
+                if (resumed) return
+                resumed = true
+                clearResumeWatchdog()
+                startListeningRef.current()
+            }
+
+            synthesisRef.current.speak(ask, resumeListening)
+            clearResumeWatchdog()
+            resumeWatchdogRef.current = setTimeout(() => {
+                if (statusRef.current === 'speaking') resumeListening()
+            }, estimateSpeechMs(ask))
         } catch (err) {
             const message = err instanceof Error ? err.message : 'The voice assistant failed.'
             setError(message)
             setStatus('error')
             synthesisRef.current.speak('Sorry, something went wrong. Please try again.')
         }
-    }, [])
+    }, [clearResumeWatchdog])
 
     const handleUtteranceRef = useRef(handleUtterance)
     handleUtteranceRef.current = handleUtterance
@@ -161,25 +199,40 @@ export function useTaskVoiceAgent(options: UseTaskVoiceAgentOptions): TaskVoiceA
     }, [listening])
 
     const start = useCallback(() => {
+        clearResumeWatchdog()
         agentRef.current?.reset()
         setQuestion(null)
         setError(null)
         synthesisRef.current.cancel()
-        startListeningRef.current?.()
-    }, [])
+        startListeningRef.current()
+    }, [clearResumeWatchdog])
+
+    // Resume listening to answer the pending follow-up — keeps the agent's
+    // conversation history (unlike `start`, which begins a fresh task). Also the
+    // manual escape hatch when a spoken question didn't auto-resume the mic.
+    const resume = useCallback(() => {
+        clearResumeWatchdog()
+        setError(null)
+        synthesisRef.current.cancel()
+        startListeningRef.current()
+    }, [clearResumeWatchdog])
 
     const stop = useCallback(() => {
+        clearResumeWatchdog()
         recognition.stop()
         recorder.stop()
         synthesisRef.current.cancel()
         setStatus('idle')
-    }, [recognition, recorder])
+    }, [recognition, recorder, clearResumeWatchdog])
 
     const submitText = useCallback((text: string) => {
         const trimmed = text.trim()
         if (!trimmed) return
         void handleUtteranceRef.current(trimmed)
     }, [])
+
+    // Don't leave the resume watchdog running after unmount.
+    useEffect(() => clearResumeWatchdog, [clearResumeWatchdog])
 
     return {
         status,
@@ -190,6 +243,7 @@ export function useTaskVoiceAgent(options: UseTaskVoiceAgentOptions): TaskVoiceA
         question,
         error,
         start,
+        resume,
         stop,
         submitText,
     }

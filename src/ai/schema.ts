@@ -99,3 +99,23 @@ export function parseAgentTurn(raw: unknown): AgentTurn {
 
     return { status, draft, question, message }
 }
+
+/**
+ * Serialize a turn back into the compact snake_case JSON the prompt documents.
+ *
+ * Used to record the assistant's reply in conversation history *without* any
+ * chain-of-thought or prose a reasoning model may have wrapped around its JSON.
+ * Replaying this minimal form keeps each follow-up turn's prompt small and fast.
+ */
+export function serializeAgentTurn(turn: AgentTurn): string {
+    return JSON.stringify({
+        status: turn.status,
+        title: turn.draft.title,
+        minutes: turn.draft.minutes,
+        priority: turn.draft.priority,
+        is_recurring: turn.draft.isRecurring,
+        auto_start: turn.draft.autoStart,
+        question: turn.question,
+        message: turn.message,
+    })
+}

@@ -141,7 +141,14 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
             }
         }
 
-        const win = await activeWin()
+        // active-win defaults `accessibilityPermission` to `true`, which makes it raise
+        // the macOS "control this computer using accessibility" prompt on every call.
+        // That permission is only used by active-win to read a browser's URL, which we
+        // never consume — so disable it to stop the persistent, duplicate popups.
+        // `screenRecordingPermission` is left enabled because we need `win.title`.
+        const win = await activeWin({
+            accessibilityPermission: false,
+        })
         if (!win) return null
 
         const idleTime = powerMonitor.getSystemIdleTime()

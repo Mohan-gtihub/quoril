@@ -2,7 +2,7 @@ import type { AgentTurn, ChatMessage } from './types'
 import { emptyDraft } from './types'
 import { buildSystemPrompt } from './prompt'
 import { safeParseJsonObject } from './json'
-import { AgentParseError, parseAgentTurn } from './schema'
+import { AgentParseError, parseAgentTurn, serializeAgentTurn } from './schema'
 
 /**
  * Dependencies injected into the agent. Keeping the transport and clock
@@ -63,21 +63,25 @@ export class TaskVoiceAgent {
 
         const raw = await this.deps.chat(messages)
 
-        // Persist the assistant's raw reply so later turns keep full context.
-        this.history.push({ role: 'assistant', content: raw })
-
+        let turn: AgentTurn
         try {
-            return parseAgentTurn(safeParseJsonObject(raw))
+            turn = parseAgentTurn(safeParseJsonObject(raw))
         } catch (err) {
-            if (err instanceof AgentParseError) {
-                return {
-                    status: 'needs_input',
-                    draft: emptyDraft(),
-                    question: "Sorry, I didn't quite catch that. Could you say it again?",
-                    message: null,
-                }
+            if (!(err instanceof AgentParseError)) throw err
+            turn = {
+                status: 'needs_input',
+                draft: emptyDraft(),
+                question: "Sorry, I didn't quite catch that. Could you say it again?",
+                message: null,
             }
-            throw err
         }
+
+        // Persist a compact, canonical version of the reply — never the raw model
+        // output, which for a reasoning model can carry a large chain-of-thought.
+        // Replaying that on every later turn balloons the prompt and slows things
+        // down; the normalized JSON keeps follow-ups small and fast.
+        this.history.push({ role: 'assistant', content: serializeAgentTurn(turn) })
+
+        return turn
     }
 }
