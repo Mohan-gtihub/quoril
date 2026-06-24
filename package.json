@@ -20,7 +20,8 @@
     "dist:win": "npm run build -- --win",
     "dist:mac": "npm run build -- --mac",
     "dist:linux": "npm run build -- --linux",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "check:web": "node scripts/check-web-bundle.mjs"
   },
   "dependencies": {
     "@dagrejs/graphlib": "^4.0.1",
