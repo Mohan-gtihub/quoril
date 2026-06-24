@@ -65,6 +65,7 @@ export interface ElectronAPI {
         taskExists: (taskId: string) => Promise<boolean>
         getPending: (table: string, limit?: number) => Promise<any[]>
         markSynced: (table: string, id: string) => Promise<void>
+        upsertFromCloud: (table: string, rows: any[]) => Promise<number>
         requeueWorkspace: (workspaceId: string) => Promise<void>
         getWorkspaceForList: (workspaceId: string) => Promise<any[]>
         getWorkspaces: (userId: string) => Promise<any[]>
