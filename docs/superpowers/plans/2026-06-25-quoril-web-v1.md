@@ -523,64 +523,69 @@ git commit -m "build: add web bundle native-module guard"
 
 ---
 
-## Task 7: Migrate components from window.electron* to platform
+## Task 7: Migrate the app SHELL native surfaces to platform (incremental)
+
+> **Re-scoped (2026-06-25):** the codebase has ~70 `window.electron*` call sites across ~30 files — far more than originally assumed, concentrated in canvas, data-sync, reports, and dashboard. Per the incremental decision, this task migrates ONLY the app-shell native surfaces. Data/sync (Task 9), reports/dashboard (Task 10), and canvas (Task 11) migrate their own `window.electron*` calls. The global "no direct electron" guard test moves to Task 14, after every module is converted.
+
+**Scope of THIS task — migrate these surfaces only:**
+- Window controls: `src/components/layout/TitleBar.tsx` (`window.minimize/maximize/close`), `src/components/layout/Layout.tsx` (`resizeWindow`/`restoreWindow`).
+- Focus overlay: `src/components/focus/FocusMode.tsx`, `src/components/focus/SuperFocusPill.tsx` (`setAlwaysOnTop`, `resizeWindow`, `restoreWindow`, `setResizable`, `closeDevTools`), `src/components/focus/Settings.tsx`.
+- Key-value store: `src/utils/securityUtils.ts` (`store.get/set`).
+- Screen-time display: `src/components/screentime/useScreenTimeData.ts` (`screenTime.getData`).
+- Tracker context: `src/store/focusStore.ts` (`tracker.setContext`).
+- Auth + external links: `src/App.tsx` (`auth.onDeepLink`), `src/store/authStore.ts` (`auth.setUser`, `auth`, `file.openExternal`).
+- `src/hooks/useElectron.ts` — keep `isElectron()` (it's a capability probe, allowed), but it may delegate to `platform.capabilities` internally.
+
+**Explicitly OUT of scope (leave `window.electronAPI.*` calls untouched here):** `*.db.*` (Task 9), `*.reports.*` + dashboard `db.getAppUsage*` (Task 10), `*.canvas.*` (Task 11), and `dataSyncService.ts` / `backupService.ts` db internals (Task 9).
 
 **Files:**
-- Modify: `src/App.tsx`, `src/components/layout/Layout.tsx`, `src/components/layout/TitleBar.tsx`, `src/components/planner/TaskDetailsPanel.tsx`, `src/components/screentime/useScreenTimeData.ts`, `src/components/focus/Settings.tsx`, `src/components/focus/FocusMode.tsx`, `src/components/focus/SuperFocusPill.tsx`, `src/utils/securityUtils.ts`
-- Test: `src/services/platform/__tests__/no-direct-electron.test.ts`
+- Modify: `src/services/platform/types.ts` (extend interface), `src/services/platform/web.ts`, `src/services/platform/electron.ts` (add the shell ports), plus the in-scope component files above.
+- Test: `src/services/platform/__tests__/shell-ports.test.ts`
 
-**Interfaces:**
-- Consumes: `platform` from `@/services/platform`.
+**Interfaces — extend `Platform` with shell ports:**
+- `windowControls: { minimize(): void|Unavailable; maximize(): void|Unavailable; close(): void|Unavailable }`
+- extend `FocusWindowPort` with `setResizable(flag): void|Unavailable; closeDevTools(): void|Unavailable`
+- `tracker: { setContext(ctx: any): void|Unavailable }`
+- extend `AuthPort` with `onDeepLink(cb: (url: string) => void): (() => void) | Unavailable; setUser(user: any): void|Unavailable`
+- `links: { openExternal(url: string): void|Unavailable }`
+- On web all of these return `UNAVAILABLE`; on electron they call the existing bridge. Add matching `capabilities` if a consumer needs to branch (reuse `nativeOverlay` for window controls/overlay).
 
-- [ ] **Step 1: Write a guard test that no `src` file (except platform/electron.ts) references `window.electron`**
+- [ ] **Step 1: Write failing test for the new shell ports on web**
 
 ```ts
-import { describe, it, expect } from 'vitest'
-import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join } from 'node:path'
-function walk(d: string): string[] {
-  return readdirSync(d).flatMap(f => {
-    const p = join(d, f)
-    return statSync(p).isDirectory() ? walk(p) : [p]
-  })
-}
-describe('no direct electron access', () => {
-  it('only electron.ts touches window.electron', () => {
-    const files = walk('src').filter(f => /\.(ts|tsx)$/.test(f) && !f.endsWith('platform/electron.ts'))
-    const offenders = files.filter(f => /window\.electron(API)?/.test(readFileSync(f, 'utf8')))
-    expect(offenders).toEqual([])
+import { describe, it, expect, vi } from 'vitest'
+vi.mock('@/services/supabase', () => ({ supabase: {} }))
+import { webPlatform } from '../web'
+describe('web shell ports', () => {
+  it('window controls and tracker are unavailable on web', () => {
+    expect(webPlatform.windowControls.minimize()).toEqual({ available: false })
+    expect(webPlatform.tracker.setContext({})).toEqual({ available: false })
+    expect(webPlatform.links.openExternal('https://x.com')).toEqual({ available: false })
   })
 })
 ```
 
-- [ ] **Step 2: Run test, verify it fails (lists current offenders)**
+- [ ] **Step 2: Run test, verify fail**
 
-Run: `npm test` → Expected: FAIL listing the 8-9 files above.
+Run: `npm test` → Expected: FAIL (properties don't exist yet).
 
-- [ ] **Step 3: Migrate each call site**
+- [ ] **Step 3: Extend interface + both impls**
 
-For each file, replace direct calls. Examples:
-- `window.electron?.setAlwaysOnTop(true)` → `platform.focusWindow.setAlwaysOnTop(true)`
-- `window.electron?.resizeWindow(w,h,x,y)` → `platform.focusWindow.resize(w,h,x,y)`
-- `window.electronAPI?.screenTime?.getData({date})` → `platform.screenTime.getData({date})`
-- `window.electronAPI?.store?.get(k)` → `platform.store.get(k)`
-- `window.electronAPI.db.getAppUsageByTask(id)` → add `getAppUsageByTask` to `DataPort` (web returns `UNAVAILABLE`) and call `platform.data.getAppUsageByTask(id)`.
+Add the ports to `types.ts`; implement on `web.ts` (all return `UNAVAILABLE`, except `onDeepLink` returns `UNAVAILABLE`); implement on `electron.ts` mapping to the real bridge (`api().window.minimize()`, `legacy().setResizable(f)`, `api().tracker.setContext(ctx)`, `api().auth.onDeepLink(cb)` returning its unsubscribe, `api().auth.setUser(u)`, `api().file.openExternal(url)`). Verify the exact bridge names against `electron/preload/index.ts`.
 
-Guard desktop-only UI with `platform.capabilities` instead of `isElectron()` where the feature is native (e.g. `TitleBar`, `SuperFocusPill` resize → check `capabilities.nativeOverlay`).
+- [ ] **Step 4: Migrate the in-scope call sites**
 
-- [ ] **Step 4: Run guard test + typecheck**
+Replace each in-scope `window.electron*` call with the `platform.*` equivalent. Guard desktop-only UI with `platform.capabilities.nativeOverlay` (e.g. TitleBar window buttons, SuperFocusPill/FocusMode resize) instead of bare `window.electron` truthiness. Do NOT touch out-of-scope db/canvas/reports calls.
 
-Run: `npm test && npx tsc --noEmit` → Expected: guard test PASS, no new type errors.
+- [ ] **Step 5: Run tests + typecheck + both builds**
 
-- [ ] **Step 5: Verify both targets still build**
-
-Run: `npm run build:web && npm run check:web && npm run build` → Expected: all succeed, bundle clean.
+Run: `npm test && npx tsc --noEmit && npm run build:web && npm run check:web` → Expected: all pass, tsc 0 errors, bundle clean. (Electron `npm run build` packaging may fail on environment grounds — only the vite portion needs to run; note if so.)
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add src
-git commit -m "refactor: route native access through platform layer"
+git commit -m "refactor: route app-shell native access through platform layer"
 ```
 
 ---
@@ -914,7 +919,32 @@ npm run build:web && npm run check:web
 npm run build
 ```
 
-- [ ] **Step 3: E2E smoke on the built web app**
+- [ ] **Step 3: Add the global "no direct electron" guard test (deferred from Task 7)**
+
+Now that every module (shell T7, data T9, reports T10, canvas T11, PiP T12) routes through `platform`, add `src/services/platform/__tests__/no-direct-electron.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
+function walk(d: string): string[] {
+  return readdirSync(d).flatMap(f => {
+    const p = join(d, f)
+    return statSync(p).isDirectory() ? walk(p) : [p]
+  })
+}
+describe('no direct electron access', () => {
+  it('only electron.ts touches window.electron', () => {
+    const files = walk('src').filter(f => /\.(ts|tsx)$/.test(f) && !f.endsWith('platform/electron.ts'))
+    const offenders = files.filter(f => /window\.electron(API)?/.test(readFileSync(f, 'utf8')))
+    expect(offenders).toEqual([])
+  })
+})
+```
+
+Run: `npm test` → Expected: PASS (no offenders). If any remain, migrate them through `platform` before proceeding.
+
+- [ ] **Step 4: E2E smoke on the built web app**
 
 Run: `npm run preview` (or serve `dist`) → sign in, create task, reload (persists), open/close PiP, reports render with empty-state for tracking.
 
