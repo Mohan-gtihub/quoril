@@ -5,11 +5,14 @@ import path from 'path'
 
 import pkg from './package.json'
 
+const isWeb = process.env.VITE_TARGET === 'web'
+
 // https://vitejs.dev/config/
 export default defineConfig({
+    define: { __VITE_TARGET__: JSON.stringify(process.env.VITE_TARGET ?? 'electron') },
     plugins: [
         react(),
-        electron({
+        ...(isWeb ? [] : [electron({
             main: {
                 // NOTE: `entry` is intentionally omitted here. When set, the
                 // plugin injects its own `build.lib` with formats based on
@@ -47,7 +50,7 @@ export default defineConfig({
                     },
                 },
             },
-        }),
+        })]),
     ],
     resolve: {
         alias: {
