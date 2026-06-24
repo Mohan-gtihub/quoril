@@ -13,7 +13,7 @@
 - Default `VITE_TARGET` is `electron`; the existing `npm run build` and Electron behavior must not change.
 - The web bundle must contain **no** `electron`, `better-sqlite3`, or `active-win` imports.
 - Native-only methods on web return a typed `{ available: false }` value and never throw.
-- Reuse the existing Supabase schema and RLS — no schema migrations in v1.
+- Reuse existing Supabase tables (`lists`, `tasks`, `subtasks`, `focus_sessions`, `profiles`) as-is. New tables `workspaces` and canvas tables (`canvases`, `blocks`, `connections`, `zones`) are added via a Supabase migration (Task 2.5) with RLS matching the existing per-user pattern. No changes to existing table columns.
 - Routing stays hash-based (`base: './'`) so the web build works on static hosts.
 - All direct `window.electron` / `window.electronAPI` access lives only inside `src/services/platform/electron.ts`.
 
@@ -179,6 +179,39 @@ git commit -m "feat: add platform interface and capability types"
 
 ---
 
+## Task 2.5: Supabase schema migration (workspaces + canvas)
+
+**Files:**
+- Create: `supabase/web_v1_workspaces_canvas.sql`
+
+**Interfaces:**
+- Produces: Supabase tables `workspaces`, `canvases`, `blocks`, `connections`, `zones` with RLS, mirroring the Electron SQLite shapes in `electron/main/db.ts` (workspaces) and `electron/main/canvas/repo.ts` (canvas family).
+
+**Context:** Cloud schema currently lacks these tables; the Electron SQLite has them. This migration brings them to Supabase so web Canvas/Workspaces can persist. Match the existing per-user RLS pattern used by `subtasks` in `supabase/emergency_fix.sql` (policies keyed on `auth.uid() = user_id`). This SQL is applied manually by the user in the Supabase SQL editor (consistent with other files in `supabase/`).
+
+- [ ] **Step 1: Read the source shapes**
+
+Run: `sed -n '170,200p' electron/main/db.ts` (workspaces columns) and `sed -n '80,260p' electron/main/canvas/repo.ts` (canvases/blocks/connections/zones columns). Record exact column names/types.
+
+- [ ] **Step 2: Write the migration SQL**
+
+Create `supabase/web_v1_workspaces_canvas.sql`. For each table: `CREATE TABLE IF NOT EXISTS public.<t>` with a `user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE`, the columns observed in Step 1 (use `UUID`/`TEXT`/`INTEGER`/`BOOLEAN`/`TIMESTAMPTZ`/`JSONB` as appropriate, with `deleted_at TIMESTAMPTZ`), and child tables (`blocks`,`connections`,`zones`) referencing `canvases(id) ON DELETE CASCADE` via `canvas_id`. Then for every table: `ENABLE ROW LEVEL SECURITY` and four policies (select/insert/update/delete) each `USING (auth.uid() = user_id)` / `WITH CHECK (auth.uid() = user_id)`, following the `subtasks` block in `supabase/emergency_fix.sql` verbatim in style. Add indexes on `(user_id, deleted_at)` for parents and `(canvas_id)` for children.
+
+- [ ] **Step 3: Validate SQL parses**
+
+Run: `grep -c "CREATE TABLE" supabase/web_v1_workspaces_canvas.sql` → Expected: 5. Visually confirm every table has RLS enabled and 4 policies.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add supabase/web_v1_workspaces_canvas.sql
+git commit -m "feat(db): add supabase migration for workspaces and canvas tables"
+```
+
+> **User action required before web Canvas/Workspaces work end-to-end:** run this SQL in the Supabase SQL editor. Flag this in the Task 14 README notes.
+
+---
+
 ## Task 3: Web platform implementation
 
 **Files:**
@@ -228,8 +261,8 @@ export const webPlatform: Platform = {
     async deleteTask(id) { await supabase.from('tasks').delete().eq('id', id) },
     async listLists() { const { data } = await supabase.from('lists').select('*'); return data ?? [] },
     async listWorkspaces() { const { data } = await supabase.from('workspaces').select('*'); return data ?? [] },
-    async listCanvasDocs() { const { data } = await supabase.from('canvas_documents').select('*'); return data ?? [] },
-    async saveCanvasDoc(d) { const { data } = await supabase.from('canvas_documents').upsert(d).select().single(); return data },
+    async listCanvasDocs() { const { data } = await supabase.from('canvases').select('*'); return data ?? [] },
+    async saveCanvasDoc(d) { const { data } = await supabase.from('canvases').upsert(d).select().single(); return data },
     async saveSession(s) { const { data } = await supabase.from('focus_sessions').upsert(s).select().single(); return data },
     async listSessions(range) {
       let q = supabase.from('focus_sessions').select('*')
@@ -258,7 +291,7 @@ export const webPlatform: Platform = {
 }
 ```
 
-> Note: confirm the actual Supabase table names (`tasks`, `lists`, `workspaces`, `canvas_documents`, `focus_sessions`) against `supabase/` migrations during implementation and adjust to the real names before writing data tasks.
+> Table names confirmed against `supabase/` + Task 2.5 migration: `tasks`, `lists`, `subtasks`, `focus_sessions` (existing) and `workspaces`, `canvases` (added in Task 2.5).
 
 - [ ] **Step 4: Run test, verify pass**
 
