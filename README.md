@@ -813,6 +813,39 @@ npm run lint         # ESLint check
 
 ---
 
+## Web build
+
+Quoril ships a web-only build (no Electron, no native modules) suitable for deployment on Vercel or any static host.
+
+### Development
+
+```bash
+npm run dev:web        # start the web dev server (no Electron)
+npm run build:web      # production web build → dist/
+npm run check:web      # verify no native-module references leaked into the web bundle
+```
+
+### Deployment
+
+`vercel.json` at the repo root configures Vercel:
+```json
+{ "buildCommand": "npm run build:web", "outputDirectory": "dist", "framework": null }
+```
+Run `vercel --prod` (or push to the linked branch) to deploy.
+
+**Required one-time setup:** Run `supabase/web_v1_workspaces_canvas.sql` in the Supabase SQL editor before using Workspaces or Canvas on the web — those tables are not created by the default Electron migration.
+
+### Known web limitations
+
+| Feature | Web behaviour |
+|---|---|
+| App / website screen-time tracking | **Desktop-only.** Web shows an "install the desktop app" empty state — the OS APIs (`active-win`, always-on-top overlay) are unavailable in a browser. |
+| Floating focus widget | Uses the **Document Picture-in-Picture API** (Chromium 116+). Firefox and Safari fall back to an in-page pinned panel instead. |
+| Focus-session charts in Reports | Currently **sparse on web** — the Supabase aggregation path that populates historical chart data is a planned future task. |
+| Local SQLite database | Not available; all persistence goes through Supabase. Offline mode is unavailable on web. |
+
+---
+
 ## Troubleshooting
 
 ### Dev server won't start
