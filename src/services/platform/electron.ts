@@ -55,4 +55,23 @@ export const electronPlatform: Platform = {
   links: {
     openExternal(url) { api().file?.openExternal?.(url) },
   },
+  canvas: {
+    list: (userId) => api().canvas.list(userId),
+    get: (id) => api().canvas.get(id),
+    create: (c) => api().canvas.create(c),
+    update: (id, patch) => api().canvas.update(id, patch),
+    softDelete: (id) => api().canvas.softDelete(id),
+    listBlocks: (canvasId) => api().canvas.listBlocks(canvasId),
+    upsertBlock: (b) => api().canvas.upsertBlock(b),
+    upsertBlocksBatch: (bs) => api().canvas.upsertBlocksBatch(bs),
+    softDeleteBlock: (id) => api().canvas.softDeleteBlock(id),
+    softDeleteBlocksBatch: (ids) => api().canvas.softDeleteBlocksBatch(ids),
+    listConnections: (canvasId) => api().canvas.listConnections(canvasId),
+    upsertConnection: (c) => api().canvas.upsertConnection(c),
+    softDeleteConnection: (id) => api().canvas.softDeleteConnection(id),
+    listZones: (canvasId) => api().canvas.listZones(canvasId),
+    upsertZone: (z) => api().canvas.upsertZone(z),
+    softDeleteZone: (id) => api().canvas.softDeleteZone(id),
+    unfurlLink: (url) => api().canvas.unfurlLink(url),
+  },
 }

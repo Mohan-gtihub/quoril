@@ -1,6 +1,7 @@
 import { useCanvasStore } from '@/store/canvas/canvasStore'
 import { useReactFlow } from '@xyflow/react'
 import { MousePointer2, Square, Home, Focus, Download } from 'lucide-react'
+import { platform } from '@/services/platform'
 
 export function CanvasToolbar({ canvasId, onExport }: { canvasId: string; onExport: (format: 'json' | 'png') => void }) {
     const mode = useCanvasStore((s) => s.mode)
@@ -9,10 +10,10 @@ export function CanvasToolbar({ canvasId, onExport }: { canvasId: string; onExpo
 
     const setHome = async () => {
         const vp = rf.getViewport()
-        await window.electronAPI.canvas.update(canvasId, { homeViewport: { x: vp.x, y: vp.y, zoom: vp.zoom } }).catch(() => {})
+        await platform.canvas.update(canvasId, { homeViewport: { x: vp.x, y: vp.y, zoom: vp.zoom } }).catch(() => {})
     }
     const goHome = async () => {
-        const c = await window.electronAPI.canvas.get(canvasId)
+        const c = await platform.canvas.get(canvasId)
         const hv = (c as any)?.homeViewport
         if (hv) rf.setViewport({ x: hv.x, y: hv.y, zoom: hv.zoom }, { duration: 300 })
         else rf.fitView({ duration: 300 })

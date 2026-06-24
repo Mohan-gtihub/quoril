@@ -1,6 +1,7 @@
 ﻿import { useMemo, useRef, useState } from 'react'
 import { useViewport, useReactFlow } from '@xyflow/react'
 import { useZonesStore } from '@/store/canvas/zonesStore'
+import { platform } from '@/services/platform'
 import type { Zone, ZonePattern } from '@/types/canvas'
 import { Trash2, X } from 'lucide-react'
 
@@ -72,7 +73,7 @@ export function ZoneLayer({ canvasId }: { canvasId: string }) {
             window.removeEventListener('mouseup', up)
             if (st) {
                 const cur = useZonesStore.getState().byId[st.id]
-                if (cur) window.electronAPI.canvas.upsertZone(cur).catch(() => {})
+                if (cur) platform.canvas.upsertZone(cur).catch(() => {})
             }
         }
         window.addEventListener('mousemove', move)
@@ -174,7 +175,7 @@ function ZoneInspector({ zone, screen, onClose }: { zone: Zone; screen: { x: num
     const patch = (patchObj: Partial<Zone>) => {
         const next = { ...zone, ...patchObj, updatedAt: new Date().toISOString() } as Zone
         upsert(next, true)
-        window.electronAPI.canvas.upsertZone(next).catch(() => {})
+        platform.canvas.upsertZone(next).catch(() => {})
     }
     return (
         <div
@@ -222,7 +223,7 @@ function ZoneInspector({ zone, screen, onClose }: { zone: Zone; screen: { x: num
             <button
                 onClick={() => {
                     remove(zone.id)
-                    window.electronAPI.canvas.softDeleteZone(zone.id).catch(() => {})
+                    platform.canvas.softDeleteZone(zone.id).catch(() => {})
                     onClose()
                 }}
                 className="w-full flex items-center justify-center gap-1 text-xs text-red-500 hover:bg-red-500/10 rounded px-2 py-1"

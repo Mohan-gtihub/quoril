@@ -3,6 +3,7 @@ import { useConnectionsStore } from '@/store/canvas/connectionsStore'
 import { useBlocksStore } from '@/store/canvas/blocksStore'
 import { useTaskStore } from '@/store/taskStore'
 import { useFocusStore } from '@/store/focusStore'
+import { platform } from '@/services/platform'
 import type { Block, Connection, EdgeCondition } from '@/types/canvas'
 import toast from 'react-hot-toast'
 
@@ -67,7 +68,7 @@ export function PipelineEngine({ canvasId, userId }: { canvasId: string; userId:
 
                 const merged: Connection = { ...conn, condition: { ...cond, lastFiredAt: ts }, updatedAt: ts }
                 useConnectionsStore.getState().upsert(merged, true)
-                window.electronAPI.canvas.upsertConnection(merged).catch(() => {})
+                platform.canvas.upsertConnection(merged).catch(() => {})
             }
         }
 

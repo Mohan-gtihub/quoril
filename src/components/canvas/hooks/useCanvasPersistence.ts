@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useBlocksStore } from '@/store/canvas/blocksStore'
 import { useCanvasStore } from '@/store/canvas/canvasStore'
+import { platform } from '@/services/platform'
 
 const FLUSH_MS = 400
 
@@ -13,7 +14,7 @@ export function useCanvasPersistence(canvasId: string) {
         if (dirty.length === 0) return
         const ids = dirty.map((b) => b.id)
         try {
-            await window.electronAPI.canvas.upsertBlocksBatch(dirty)
+            await platform.canvas.upsertBlocksBatch(dirty)
             useBlocksStore.getState().clearDirty(ids)
         } catch (e) {
             console.error('[canvas] flush blocks failed', e)
@@ -41,7 +42,7 @@ export function useCanvasPersistence(canvasId: string) {
             if (!canvasId) return
             window.clearTimeout((useCanvasPersistence as any)._vpT)
             ;(useCanvasPersistence as any)._vpT = window.setTimeout(() => {
-                window.electronAPI.canvas.update(canvasId, { viewport: useCanvasStore.getState().viewport }).catch(() => {})
+                platform.canvas.update(canvasId, { viewport: useCanvasStore.getState().viewport }).catch(() => {})
             }, 600)
         })
         return () => unsub()

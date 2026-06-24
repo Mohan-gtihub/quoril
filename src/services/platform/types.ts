@@ -60,6 +60,30 @@ export interface LinksPort {
   openExternal(url: string): void | Unavailable
 }
 
+export interface CanvasPort {
+  list(userId: string): Promise<any[]>
+  get(id: string): Promise<any | null>
+  create(c: any): Promise<any>
+  update(id: string, patch: any): Promise<any>
+  softDelete(id: string): Promise<void>
+
+  listBlocks(canvasId: string): Promise<any[]>
+  upsertBlock(b: any): Promise<any>
+  upsertBlocksBatch(bs: any[]): Promise<any>
+  softDeleteBlock(id: string): Promise<void>
+  softDeleteBlocksBatch(ids: string[]): Promise<void>
+
+  listConnections(canvasId: string): Promise<any[]>
+  upsertConnection(c: any): Promise<any>
+  softDeleteConnection(id: string): Promise<void>
+
+  listZones(canvasId: string): Promise<any[]>
+  upsertZone(z: any): Promise<any>
+  softDeleteZone(id: string): Promise<void>
+
+  unfurlLink(url: string): Promise<{ url: string; title: string; description: string; image?: string; siteName?: string; fetchedAt?: number }>
+}
+
 export interface Platform {
   capabilities: Capabilities
   data: DataPort
@@ -70,4 +94,5 @@ export interface Platform {
   windowControls: WindowControlsPort
   tracker: TrackerPort
   links: LinksPort
+  canvas: CanvasPort
 }

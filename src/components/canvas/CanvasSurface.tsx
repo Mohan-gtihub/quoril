@@ -36,6 +36,7 @@ import { ReferenceEdge, FlowEdge, DependencyEdge, EDGE_COLORS } from './edges/Ca
 import { EdgeInspector } from './edges/EdgeInspector'
 import { EdgeContextMenu, useEdgeContextMenu } from './edges/EdgeContextMenu'
 import { PipelineEngine } from './pipeline/PipelineEngine'
+import { platform } from '@/services/platform'
 import type { Block, Connection, Zone } from '@/types/canvas'
 
 const nodeTypes = { block: BlockNode }
@@ -183,7 +184,7 @@ function Inner({ canvasId, userId }: { canvasId: string; userId: string }) {
         for (const ch of changes) {
             if (ch.type === 'remove') {
                 removeConn(ch.id)
-                window.electronAPI.canvas.softDeleteConnection(ch.id).catch(() => {})
+                platform.canvas.softDeleteConnection(ch.id).catch(() => {})
             }
         }
     }, [removeConn])
@@ -201,7 +202,7 @@ function Inner({ canvasId, userId }: { canvasId: string; userId: string }) {
             createdAt: now, updatedAt: now,
         }
         upsertConn(c, true)
-        window.electronAPI.canvas.upsertConnection(c).catch(() => {})
+        platform.canvas.upsertConnection(c).catch(() => {})
     }, [canvasId, userId, upsertConn])
 
     const onMoveEnd: OnMove = useCallback((_, vp: RFViewport) => {
@@ -317,7 +318,7 @@ function Inner({ canvasId, userId }: { canvasId: string; userId: string }) {
                         createdAt: now, updatedAt: now,
                     }
                     upsertZone(z, true)
-                    window.electronAPI.canvas.upsertZone(z).catch(() => {})
+                    platform.canvas.upsertZone(z).catch(() => {})
                 }
                 return null
             })
@@ -366,7 +367,7 @@ function Inner({ canvasId, userId }: { canvasId: string; userId: string }) {
             if (meta && e.key.toLowerCase() === 'h') {
                 e.preventDefault()
                 const vp = rf.getViewport()
-                window.electronAPI.canvas.update(canvasId, { homeViewport: { x: vp.x, y: vp.y, zoom: vp.zoom } }).catch(() => {})
+                platform.canvas.update(canvasId, { homeViewport: { x: vp.x, y: vp.y, zoom: vp.zoom } }).catch(() => {})
                 return
             }
             if (meta && e.key === '.') {

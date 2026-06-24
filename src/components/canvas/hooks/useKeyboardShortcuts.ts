@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid'
 import { useBlocksStore } from '@/store/canvas/blocksStore'
 import { useCanvasStore } from '@/store/canvas/canvasStore'
 import { useHistoryStore } from '@/store/canvas/historyStore'
+import { platform } from '@/services/platform'
 import type { Block } from '@/types/canvas'
 
 function isEditable(el: EventTarget | null): boolean {
@@ -60,7 +61,7 @@ export function useKeyboardShortcuts(canvasId: string, userId: string, openSlash
                 e.preventDefault()
                 for (const id of sel) useBlocksStore.getState().remove(id)
                 useCanvasStore.getState().clearSelection()
-                window.electronAPI.canvas.softDeleteBlocksBatch(sel).catch(() => {})
+                platform.canvas.softDeleteBlocksBatch(sel).catch(() => {})
                 return
             }
 

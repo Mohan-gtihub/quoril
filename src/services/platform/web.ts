@@ -1,6 +1,7 @@
 import type { Platform } from './types'
 import { UNAVAILABLE } from './types'
 import { supabase } from '@/services/supabase'
+import { webCanvas } from './webCanvas'
 
 const hasPiP = typeof window !== 'undefined' && 'documentPictureInPicture' in window
 
@@ -54,4 +55,5 @@ export const webPlatform: Platform = {
   links: {
     openExternal() { return UNAVAILABLE },
   },
+  canvas: webCanvas,
 }

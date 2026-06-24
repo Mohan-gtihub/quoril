@@ -10,10 +10,11 @@ import { CanvasSurface } from './CanvasSurface'
 import { MetaCanvas } from './MetaCanvas'
 import { OverlayHost } from './overlays/OverlayHost'
 import { CanvasErrorBoundary } from './CanvasErrorBoundary'
+import { platform } from '@/services/platform'
 import type { Canvas } from '@/types/canvas'
 
 async function ensureCanvas(userId: string): Promise<string> {
-    const api = window.electronAPI.canvas
+    const api = platform.canvas
     let list = (await api.list(userId)) as Canvas[]
     if (list.length === 0) {
         const now = new Date().toISOString()
@@ -59,7 +60,7 @@ export function CanvasApp() {
         if (!activeId || !user) return
         let cancelled = false
         ;(async () => {
-            const api = window.electronAPI.canvas
+            const api = platform.canvas
             const [blocks, conns, zones] = await Promise.all([
                 api.listBlocks(activeId),
                 api.listConnections(activeId),
@@ -96,7 +97,7 @@ export function CanvasApp() {
                     onPick={(id) => { setActive(id); setShowMeta(false) }}
                     onNew={async () => {
                         const now = new Date().toISOString()
-                        const created = await window.electronAPI.canvas.create({
+                        const created = await platform.canvas.create({
                             id: uuid(),
                             userId: user.id,
                             title: 'Untitled',

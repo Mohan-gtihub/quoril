@@ -1,4 +1,5 @@
 ﻿import { useConnectionsStore } from '@/store/canvas/connectionsStore'
+import { platform } from '@/services/platform'
 import type { Connection, ConnectionKind } from '@/types/canvas'
 import { EDGE_COLORS } from './CanvasEdges'
 import { X } from 'lucide-react'
@@ -22,7 +23,7 @@ export function EdgeInspector({ edgeId, onClose }: { edgeId: string; onClose: ()
     const patch = (next: Partial<Connection>) => {
         const merged = { ...conn, ...next, updatedAt: new Date().toISOString() }
         upsert(merged, true)
-        window.electronAPI.canvas.upsertConnection(merged).catch(() => {})
+        platform.canvas.upsertConnection(merged).catch(() => {})
     }
 
     const setKind = (kind: ConnectionKind) => patch({ kind })

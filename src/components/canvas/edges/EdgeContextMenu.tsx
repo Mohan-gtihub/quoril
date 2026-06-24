@@ -1,4 +1,5 @@
 ﻿import { useEffect, useState } from 'react'
+import { platform } from '@/services/platform'
 import { useConnectionsStore } from '@/store/canvas/connectionsStore'
 import type { ConnectionKind } from '@/types/canvas'
 import { ConditionEditor } from '../pipeline/ConditionEditor'
@@ -31,7 +32,7 @@ export function EdgeContextMenu({ pos, onClose, onOpenInspector }: { pos: { x: n
     const patch = (next: Partial<typeof conn>) => {
         const merged = { ...conn, ...next, updatedAt: new Date().toISOString() }
         upsert(merged, true)
-        window.electronAPI.canvas.upsertConnection(merged).catch(() => {})
+        platform.canvas.upsertConnection(merged).catch(() => {})
     }
 
     const setKind = (k: ConnectionKind) => { patch({ kind: k }); onClose() }
@@ -62,7 +63,7 @@ export function EdgeContextMenu({ pos, onClose, onOpenInspector }: { pos: { x: n
                 <div className="h-px bg-[var(--border-default)] my-1" />
                 <button className={`${itemCls} text-red-500`} onClick={() => {
                     remove(conn.id)
-                    window.electronAPI.canvas.softDeleteConnection(conn.id).catch(() => {})
+                    platform.canvas.softDeleteConnection(conn.id).catch(() => {})
                     onClose()
                 }}>Delete</button>
             </div>

@@ -5,6 +5,7 @@ import { useConnectionsStore } from '@/store/canvas/connectionsStore'
 import { useFocusStore } from '@/store/focusStore'
 import { useTaskStore } from '@/store/taskStore'
 import { useListStore } from '@/store/listStore'
+import { platform } from '@/services/platform'
 import type { Block } from '@/types/canvas'
 
 /**
@@ -71,7 +72,7 @@ export function useExecutionLoop(canvasId: string, userId: string) {
                     updatedAt: now,
                 }
                 useConnectionsStore.getState().upsert(conn as any, true)
-                window.electronAPI.canvas.upsertConnection(conn).catch(() => {})
+                platform.canvas.upsertConnection(conn).catch(() => {})
             }
         })
         return () => unsub()
