@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Check, MoreHorizontal, ArrowUpRight, ListTodo, CheckCircle2, Sparkles, X } from 'lucide-react'
+import { Plus, Check, MoreHorizontal, ArrowUpRight, ListTodo, CheckCircle2, Sparkles, X, UserPlus, Mail } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useWorkspaceStore, Workspace } from '@/store/workspaceStore'
 import { useListStore } from '@/store/listStore'
 import { useTaskStore } from '@/store/taskStore'
 import { confirm } from '@/components/ui/ConfirmDialog'
+import { useAuthStore } from '@/store/authStore'
 
 const PALETTE = [
     '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b',
@@ -40,12 +41,25 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
     const navigate = useNavigate()
     const { lists } = useListStore()
     const { tasks } = useTaskStore()
-    const { updateWorkspace, deleteWorkspace, setActiveWorkspace, workspaces } = useWorkspaceStore()
+    const { updateWorkspace, deleteWorkspace, setActiveWorkspace, workspaces, inviteToWorkspace, loadWorkspaceMembers, membersByWorkspace } = useWorkspaceStore()
+    const user = useAuthStore(s => s.user)
 
     const [isEditing, setIsEditing] = useState(false)
+    const [isSharing, setIsSharing] = useState(false)
     const [editName, setEditName] = useState(ws.name)
     const [editColor, setEditColor] = useState(ws.color)
     const [showMenu, setShowMenu] = useState(false)
+    const [inviteEmail, setInviteEmail] = useState('')
+    const [inviteLoading, setInviteLoading] = useState(false)
+
+    const members = membersByWorkspace[ws.id] || []
+    const isOwner = user?.id === ws.user_id
+
+    useEffect(() => {
+        if (isSharing) {
+            loadWorkspaceMembers(ws.id)
+        }
+    }, [isSharing, loadWorkspaceMembers, ws.id])
 
     // Calculate stats
     const wsLists = Object.values(lists).filter(l => l.workspace_id === ws.id && !l.deleted_at)
@@ -70,6 +84,14 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
         if (await confirm({ message: `Delete workspace "${ws.name}"? Lists inside won't be deleted.`, variant: 'danger', confirmLabel: 'Delete' })) {
             await deleteWorkspace(ws.id)
         }
+    }
+
+    const handleInvite = async () => {
+        if (!inviteEmail.trim()) return
+        setInviteLoading(true)
+        const ok = await inviteToWorkspace(ws.id, inviteEmail)
+        setInviteLoading(false)
+        if (ok) setInviteEmail('')
     }
 
     const handleCardClick = (e: React.MouseEvent) => {
@@ -112,6 +134,65 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
         )
     }
 
+    if (isSharing) {
+        return (
+            <motion.div
+                layout
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-[var(--bg-card)] rounded-[var(--radius-tile)] border border-[var(--border-default)] p-6 flex flex-col justify-between shadow-lg"
+            >
+                <div className="space-y-5">
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.12em] mb-1">Share Workspace</p>
+                            <h3 className="text-base font-semibold text-[var(--text-primary)] truncate">{ws.name}</h3>
+                        </div>
+                        <button onClick={() => setIsSharing(false)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"><X size={14} /></button>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.12em] block">Teammate Email</label>
+                        <div className="relative">
+                            <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                            <input
+                                value={inviteEmail}
+                                onChange={e => setInviteEmail(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') handleInvite(); if (e.key === 'Escape') setIsSharing(false) }}
+                                placeholder="teammate@example.com"
+                                type="email"
+                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-default)] focus:border-[var(--accent-primary)] rounded-xl pl-9 pr-3.5 py-2.5 text-sm font-medium text-[var(--text-primary)] outline-none transition-colors"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.12em]">People With Access</p>
+                        {members.length === 0 ? (
+                            <p className="text-xs text-[var(--text-tertiary)] py-2">No teammates invited yet.</p>
+                        ) : (
+                            <div className="space-y-1.5 max-h-24 overflow-y-auto custom-scrollbar">
+                                {members.map(member => (
+                                    <div key={member.id} className="flex items-center justify-between gap-2 rounded-xl bg-[var(--bg-hover)] px-3 py-2">
+                                        <span className="text-xs text-[var(--text-secondary)] truncate">{member.email}</span>
+                                        <span className="text-[10px] font-semibold text-[var(--text-muted)] uppercase">{member.role}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex gap-2 mt-6">
+                    <button disabled={!inviteEmail.trim() || inviteLoading} onClick={handleInvite} className="flex-1 py-2.5 text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full hover:brightness-105 active:scale-95 disabled:opacity-50 transition-all shadow-[0_8px_24px_var(--accent-glow)]">
+                        {inviteLoading ? 'Granting…' : 'Grant Access'}
+                    </button>
+                    <button onClick={() => setIsSharing(false)} className="py-2.5 px-4 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)] transition-all rounded-full">Done</button>
+                </div>
+            </motion.div>
+        )
+    }
+
     return (
         <motion.div
             layout
@@ -147,6 +228,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
+                        {isOwner && (
                         <div className="relative no-drag">
                             <button
                                 onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
@@ -169,6 +251,10 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                                             <button onClick={() => { setIsEditing(true); setShowMenu(false) }} className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors">
                                                 Edit Workspace
                                             </button>
+                                            <button onClick={() => { setIsSharing(true); setShowMenu(false) }} className="w-full flex items-center gap-2 text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors">
+                                                <UserPlus size={14} />
+                                                Invite Teammate
+                                            </button>
                                             <button onClick={() => { handleDelete(); setShowMenu(false) }} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-400/10 transition-colors">
                                                 Delete Workspace
                                             </button>
@@ -177,6 +263,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                                 )}
                             </AnimatePresence>
                         </div>
+                        )}
                         <span className="w-7 h-7 rounded-full bg-[var(--bg-hover)] group-hover:bg-[var(--accent-primary)] flex items-center justify-center text-[var(--text-muted)] group-hover:text-[var(--accent-contrast)] transition-colors">
                             <ArrowUpRight size={14} />
                         </span>
@@ -234,6 +321,19 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                         transition={{ duration: 1, ease: 'easeOut' }}
                     />
                 </div>
+
+                {isOwner && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            setIsSharing(true)
+                        }}
+                        className="no-drag mt-4 w-full flex items-center justify-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--bg-hover)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:text-[var(--text-primary)] transition-colors"
+                    >
+                        <UserPlus size={14} />
+                        Invite teammate
+                    </button>
+                )}
             </div>
         </motion.div>
     )

@@ -20,8 +20,21 @@ export interface Workspace {
     synced: number
 }
 
+export interface WorkspaceMember {
+    id: string
+    workspace_id: string
+    email: string
+    role: 'editor' | 'viewer'
+    invited_by: string
+    accepted_at: string | null
+    created_at: string
+    updated_at: string
+    deleted_at: string | null
+}
+
 interface WorkspaceState {
     workspaces: Workspace[]
+    membersByWorkspace: Record<string, WorkspaceMember[]>
     activeWorkspaceId: string | null
     loading: boolean
     error: string | null
@@ -31,6 +44,8 @@ interface WorkspaceState {
     createWorkspace: (data: { name: string; color?: string; icon?: string }) => Promise<Workspace | null>
     updateWorkspace: (id: string, data: Partial<Workspace>) => Promise<void>
     deleteWorkspace: (id: string) => Promise<void>
+    inviteToWorkspace: (workspaceId: string, email: string) => Promise<boolean>
+    loadWorkspaceMembers: (workspaceId: string) => Promise<void>
     setActiveWorkspace: (id: string | null) => void
     subscribeRealtime: () => () => void
     reset: () => void
@@ -48,6 +63,8 @@ const COLORS = [
     '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b',
     '#10b981', '#3b82f6', '#ef4444', '#14b8a6',
 ]
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function pickColor(existing: Workspace[]): string {
     const used = new Set(existing.map(w => w.color))
@@ -95,6 +112,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
             /* ---- State ---- */
             workspaces: [],
+            membersByWorkspace: {},
             activeWorkspaceId: null,
             loading: false,
             error: null,
@@ -119,7 +137,6 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                     try {
                         const { data, error: sbErr } = await (supabase.from('workspaces') as any)
                             .select('*')
-                            .eq('user_id', userId)
                             .is('deleted_at', null)
                             .order('sort_order', { ascending: true })
 
@@ -134,8 +151,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                                         await (window as any).electronAPI.db.saveWorkspace({ ...remote, synced: 1 })
                                     }
                                 }
-                                // Re-read after merge
-                                rows = (await (window as any).electronAPI.db.getWorkspaces(userId)) as Workspace[]
+                                const byId = new Map<string, Workspace>()
+                                for (const row of rows) byId.set(row.id, row)
+                                for (const remote of data as Workspace[]) byId.set(remote.id, { ...remote, synced: 1 })
+                                rows = [...byId.values()].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
                             } else {
                                 rows = data as Workspace[]
                             }
@@ -203,6 +222,102 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                     toast.error('Failed to create workspace')
                     return null
                 }
+            },
+
+
+            /* ---- Members ---- */
+
+            loadWorkspaceMembers: async (workspaceId) => {
+                const userId = getUserId()
+                if (!userId || !workspaceId) return
+
+                const { data, error } = await (supabase.from('workspace_members') as any)
+                    .select('*')
+                    .eq('workspace_id', workspaceId)
+                    .is('deleted_at', null)
+                    .order('created_at', { ascending: true })
+
+                if (error) {
+                    console.error('[WorkspaceStore] loadWorkspaceMembers failed:', error.message)
+                    return
+                }
+
+                set(state => ({
+                    membersByWorkspace: {
+                        ...state.membersByWorkspace,
+                        [workspaceId]: data || []
+                    }
+                }))
+            },
+
+            inviteToWorkspace: async (workspaceId, email) => {
+                const userId = getUserId()
+                const workspace = get().workspaces.find(w => w.id === workspaceId)
+                const normalizedEmail = email.trim().toLowerCase()
+
+                if (!userId || !workspace) {
+                    toast.error('Workspace unavailable')
+                    return false
+                }
+
+                if (workspace.user_id !== userId) {
+                    toast.error('Only the workspace owner can invite teammates')
+                    return false
+                }
+
+                if (!EMAIL_RE.test(normalizedEmail)) {
+                    toast.error('Enter a valid email address')
+                    return false
+                }
+
+                const currentEmail = useAuthStore.getState().user?.email?.toLowerCase()
+                if (currentEmail && normalizedEmail === currentEmail) {
+                    toast.error("You already own this workspace")
+                    return false
+                }
+
+                const now = new Date().toISOString()
+                const member: WorkspaceMember = {
+                    id: crypto.randomUUID(),
+                    workspace_id: workspaceId,
+                    email: normalizedEmail,
+                    role: 'editor',
+                    invited_by: userId,
+                    accepted_at: now,
+                    created_at: now,
+                    updated_at: now,
+                    deleted_at: null,
+                }
+
+                const previousMembers = get().membersByWorkspace[workspaceId] || []
+                if (previousMembers.some(m => !m.deleted_at && m.email.toLowerCase() === normalizedEmail)) {
+                    toast.error('That teammate already has access')
+                    return false
+                }
+
+                set(state => ({
+                    membersByWorkspace: {
+                        ...state.membersByWorkspace,
+                        [workspaceId]: [...previousMembers, member]
+                    }
+                }))
+
+                const { error } = await (supabase.from('workspace_members') as any)
+                    .upsert(member, { onConflict: 'workspace_id,email' })
+
+                if (error) {
+                    set(state => ({
+                        membersByWorkspace: {
+                            ...state.membersByWorkspace,
+                            [workspaceId]: previousMembers
+                        }
+                    }))
+                    toast.error(error.message || 'Failed to invite teammate')
+                    return false
+                }
+
+                toast.success('Workspace access granted')
+                return true
             },
 
 
@@ -336,7 +451,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
             setActiveWorkspace: (id) => set({ activeWorkspaceId: id }),
 
-            reset: () => set({ workspaces: [], activeWorkspaceId: null }),
+            reset: () => set({ workspaces: [], membersByWorkspace: {}, activeWorkspaceId: null }),
 
         }),
 

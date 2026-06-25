@@ -67,7 +67,6 @@ export const localService = {
                 let query = supabase
                     .from('tasks')
                     .select('*')
-                    .eq('user_id', user.id)
                     .is('deleted_at', null)
 
                 if (listId && listId !== 'all') {
@@ -287,7 +286,6 @@ export const localService = {
                 const { data, error } = await supabase
                     .from('lists')
                     .select('*')
-                    .eq('user_id', user.id)
                     .is('deleted_at', null)
                     .order('sort_order')
 
