@@ -15,7 +15,7 @@ export function StreaksReport({ stats }: StreaksReportProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Daily Focus Streak */}
                 <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-8 shadow-sm">
-                    <h3 className="text-xs font-bold text-orange-400 uppercase tracking-widest mb-4">
+                    <h3 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-4">
                         Daily Focus Streak
                     </h3>
 
@@ -37,7 +37,7 @@ export function StreaksReport({ stats }: StreaksReportProps) {
                         {Array.from({ length: Math.min(stats.dailyFocusStreak, 30) }, (_, i) => (
                             <motion.div
                                 key={i}
-                                className="h-2 flex-1 rounded-full bg-orange-500"
+                                className="h-2 flex-1 rounded-full bg-[var(--accent-primary)]"
                                 initial={{ opacity: 0, scaleY: 0.4 }}
                                 animate={{ opacity: Math.max(0.3, 1 - (i * 0.02)), scaleY: 1 }}
                                 transition={{ duration: 0.3, delay: i * 0.02 }}
@@ -46,7 +46,7 @@ export function StreaksReport({ stats }: StreaksReportProps) {
                     </div>
 
                     {stats.dailyFocusStreak > 30 && (
-                        <p className="text-[11px] text-orange-400/60 mt-2 text-center font-bold">
+                        <p className="text-[11px] text-[var(--accent-primary)] mt-2 text-center font-bold">
                             +{stats.dailyFocusStreak - 30} more days
                         </p>
                     )}
@@ -54,7 +54,7 @@ export function StreaksReport({ stats }: StreaksReportProps) {
 
                 {/* Daily Task Completion Streak */}
                 <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-8 shadow-sm">
-                    <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-4">
+                    <h3 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-4">
                         Task Completion Streak
                     </h3>
 
@@ -76,7 +76,7 @@ export function StreaksReport({ stats }: StreaksReportProps) {
                         {Array.from({ length: Math.min(stats.dailyCompletionStreak, 30) }, (_, i) => (
                             <motion.div
                                 key={i}
-                                className="h-2 flex-1 rounded-full bg-emerald-500"
+                                className="h-2 flex-1 rounded-full bg-[var(--accent-primary)]"
                                 initial={{ opacity: 0, scaleY: 0.4 }}
                                 animate={{ opacity: Math.max(0.3, 1 - (i * 0.02)), scaleY: 1 }}
                                 transition={{ duration: 0.3, delay: i * 0.02 }}
@@ -85,7 +85,7 @@ export function StreaksReport({ stats }: StreaksReportProps) {
                     </div>
 
                     {stats.dailyCompletionStreak > 30 && (
-                        <p className="text-[11px] text-emerald-400/60 mt-2 text-center font-bold">
+                        <p className="text-[11px] text-[var(--accent-primary)] mt-2 text-center font-bold">
                             +{stats.dailyCompletionStreak - 30} more days
                         </p>
                     )}

@@ -71,7 +71,7 @@ export function ConfirmDialog() {
     }, [open, close])
 
     const iconColor = variant === 'danger' ? 'text-red-400 bg-red-500/10' : variant === 'warning' ? 'text-amber-400 bg-amber-500/10' : 'text-blue-400 bg-blue-500/10'
-    const btnColor = variant === 'danger' ? 'bg-red-500 hover:bg-red-600' : variant === 'warning' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-[var(--accent-primary)] hover:brightness-110'
+    const btnColor = variant === 'danger' ? 'bg-[var(--error)] hover:brightness-110' : variant === 'warning' ? 'bg-[var(--warning)] hover:brightness-110' : 'bg-[var(--accent-primary)] hover:brightness-110'
     const Icon = variant === 'danger' ? Trash2 : AlertTriangle
 
     return (
@@ -95,7 +95,7 @@ export function ConfirmDialog() {
 
                     {/* Dialog */}
                     <motion.div
-                        className="relative w-full max-w-[360px] mx-4 bg-[#0c0e14] border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden"
+                        className="relative w-full max-w-[360px] mx-4 bg-[var(--bg-card)] border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden"
                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}

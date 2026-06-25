@@ -74,7 +74,7 @@ export function FocusPopup() {
             <div className="flex-1 flex flex-col justify-center space-y-6 max-w-sm mx-auto w-full">
                 {/* Timer Display */}
                 <div className="text-center p-6 rounded-xl border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-default)' }}>
-                    <div className={`text-6xl font-mono font-bold tracking-tighter mb-2`} style={{ color: isOvertime ? 'var(--accent-red-500)' : 'var(--text-primary)' }}>
+                    <div className={`text-6xl font-mono font-bold tracking-tighter mb-2`} style={{ color: isOvertime ? 'var(--error)' : 'var(--text-primary)' }}>
                         {isStopwatch ? formatTimer(elapsed) : formatTimer(remainingTime)}
                     </div>
                     <div className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>
@@ -83,10 +83,10 @@ export function FocusPopup() {
 
                     {/* Progress Bar */}
                     {!isStopwatch && (
-                        <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--accent-gray-700)' }}>
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
                             <div
                                 className="h-full transition-all duration-1000"
-                                style={{ width: `${isOvertime ? 100 : progress}%`, backgroundColor: isOvertime ? 'var(--accent-red-500)' : 'var(--accent-primary)' }}
+                                style={{ width: `${isOvertime ? 100 : progress}%`, backgroundColor: isOvertime ? 'var(--error)' : 'var(--accent-primary)' }}
                             />
                         </div>
                     )}
@@ -108,8 +108,8 @@ export function FocusPopup() {
                         onClick={() => isPaused ? resumeSession() : pauseSession()}
                         className="flex flex-col items-center justify-center gap-2 py-4 rounded-lg transition-all"
                         style={{
-                            backgroundColor: isPaused ? 'var(--accent-yellow-100)' : 'var(--bg-hover)',
-                            color: isPaused ? 'var(--accent-yellow-400)' : 'var(--text-secondary)'
+                            backgroundColor: isPaused ? 'var(--accent-lime-100)' : 'var(--bg-hover)',
+                            color: isPaused ? 'var(--accent-primary)' : 'var(--text-secondary)'
                         }}
                     >
                         {isPaused ? <Play className="w-6 h-6 fill-current" /> : <Pause className="w-6 h-6 fill-current" />}
@@ -119,7 +119,7 @@ export function FocusPopup() {
                     <button
                         onClick={handleDone}
                         className="flex flex-col items-center justify-center gap-2 py-4 rounded-lg transition-all"
-                        style={{ backgroundColor: 'var(--accent-green-100)', color: 'var(--accent-green-400)' }}
+                        style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--accent-contrast)' }}
                     >
                         <CheckCircle2 className="w-6 h-6" />
                         <span className="text-xs font-bold uppercase">Done</span>
@@ -128,7 +128,7 @@ export function FocusPopup() {
                     <button
                         onClick={handleSkip}
                         className="flex flex-col items-center justify-center gap-2 py-4 rounded-lg transition-all"
-                        style={{ backgroundColor: 'var(--accent-gray-800)', color: 'var(--text-tertiary)', borderColor: 'var(--accent-gray-700)' }}
+                        style={{ backgroundColor: 'var(--bg-hover)', color: 'var(--text-secondary)', borderColor: 'var(--border-default)' }}
                     >
                         <SkipForward className="w-6 h-6" />
                         <span className="text-xs font-bold uppercase">Skip</span>

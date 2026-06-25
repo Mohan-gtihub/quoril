@@ -34,7 +34,7 @@ const getTaskStateStyles = (isActive: boolean, isPaused: boolean, isCompleted: b
     }
     if (isActive) {
         if (isPaused) {
-            return "bg-amber-500/10 border-amber-500/30"
+            return "bg-[var(--warning)]/10 border-[var(--warning)]/30"
         } else {
             return "bg-[var(--accent-primary)]/10 border-[var(--accent-primary)]/40"
         }
@@ -182,7 +182,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
             {...attributes}
             {...listeners}
             className={cn(
-                "group rounded-2xl p-3.5 mb-2 transition-all duration-300 border relative",
+                "group rounded-xl p-3.5 mb-2 transition-all duration-300 border relative",
                 stateStyles
             )}
             style={style}
@@ -278,7 +278,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                         className={cn(
                             "p-1.5 rounded-lg transition-colors",
                             task.is_recurring
-                                ? "bg-emerald-500/10 text-emerald-400"
+                                ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
                                 : "hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                         )}
                         title={task.is_recurring ? "Daily Recurrence On" : "Enable Daily Recurrence"}
@@ -344,7 +344,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                                             "h-7 px-2.5 rounded-full text-[11px] font-semibold flex items-center justify-center transition-all active:scale-95",
                                             timer.isPaused
                                                 ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105"
-                                                : "bg-amber-500/20 text-amber-500 border border-amber-500/30 hover:bg-amber-500/30"
+                                                : "bg-[var(--warning)]/20 text-[var(--warning)] border border-[var(--warning)]/30 hover:bg-[var(--warning)]/30"
                                         )}
                                         title={timer.isPaused ? "Resume Mission" : "Hold Mission"}
                                     >

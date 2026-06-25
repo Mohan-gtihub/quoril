@@ -100,6 +100,22 @@ function App() {
         }
     }, [settings.superFocusMode])
 
+    // Mirror the active theme class onto <body> so the page backdrop matches
+    // the app surface (prevents a dark flash behind the light Daylight theme).
+    useEffect(() => {
+        const classes = ['theme-daylight', 'theme-light', 'theme-blue', 'theme-red', 'theme-nebula']
+        document.body.classList.remove(...classes)
+        const map: Record<string, string> = {
+            daylight: 'theme-daylight',
+            light: 'theme-light',
+            blue: 'theme-blue',
+            red: 'theme-red',
+            nebula: 'theme-nebula',
+        }
+        const cls = map[settings.theme]
+        if (cls) document.body.classList.add(cls)
+    }, [settings.theme])
+
     // Keep store elapsed in sync for persistence and endSession; use getState() so effect doesn't re-run
     useEffect(() => {
         if (!isActive || (isPaused && !isBreak)) return
@@ -226,6 +242,7 @@ function App() {
                 <HashRouter>
                     <div className={cn(
                         "flex flex-col h-screen overflow-hidden transition-all duration-500",
+                        settings.theme === 'daylight' && "theme-daylight",
                         settings.theme === 'light' && "theme-light",
                         settings.theme === 'blue' && "theme-blue",
                         settings.theme === 'red' && "theme-red",

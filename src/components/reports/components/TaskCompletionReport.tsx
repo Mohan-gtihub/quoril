@@ -75,7 +75,7 @@ export function TaskCompletionReport({ stats }: TaskCompletionReportProps) {
                                                 {list.listName}
                                             </span>
                                         </div>
-                                        <span className="text-sm font-mono font-bold text-emerald-400 ml-4 tabular-nums">
+                                        <span className="text-sm font-mono font-bold text-[var(--text-secondary)] ml-4 tabular-nums">
                                             {list.count} {list.count === 1 ? 'task' : 'tasks'}
                                         </span>
                                     </div>

@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 
 interface SettingsState {
     hideEstDoneTimes: boolean
-    theme: 'system' | 'dark' | 'light' | 'blue' | 'red' | 'nebula'
+    theme: 'system' | 'daylight' | 'dark' | 'light' | 'blue' | 'red' | 'nebula'
     timezone: string
 
     // Blitz mode / Focus Settings
@@ -37,7 +37,7 @@ export const useSettingsStore = create<SettingsState>()(
     persist(
         (set) => ({
             hideEstDoneTimes: false,
-            theme: 'dark',
+            theme: 'daylight',
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 
             pomodorosEnabled: false,
@@ -64,6 +64,15 @@ export const useSettingsStore = create<SettingsState>()(
         }),
         {
             name: 'settings-storage',
+            version: 1,
+            // v1: Daylight (monochrome) becomes the primary theme. Flip the
+            // old persisted 'dark' default over so the redesign actually shows.
+            migrate: (persisted: any, version) => {
+                if (version < 1 && persisted && persisted.theme === 'dark') {
+                    persisted.theme = 'daylight'
+                }
+                return persisted
+            },
         }
     )
 )

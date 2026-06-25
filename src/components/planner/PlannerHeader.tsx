@@ -44,7 +44,7 @@ export function PlannerHeader() {
 
                 {/* Dropdown */}
                 {isDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-2 w-64 rounded-2xl shadow-2xl glass-thick z-50 overflow-hidden py-1.5 border border-[var(--border-default)]">
+                    <div className="absolute top-full left-0 mt-2 w-64 rounded-[var(--radius-card)] shadow-sm bg-[var(--bg-elevated)] z-50 overflow-hidden py-1.5 border border-[var(--border-default)]">
                         <div className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Views</div>
                         <button
                             onClick={() => {
@@ -73,7 +73,7 @@ export function PlannerHeader() {
                                     }}
                                     className={`w-full flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${selectedListId === list.id ? 'text-[var(--accent-primary)] font-semibold' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'}`}
                                 >
-                                    <div className={`w-2 h-2 rounded-full ${list.color || 'bg-gray-400'}`} />
+                                    <div className={`w-2 h-2 rounded-full ${list.color || 'bg-[var(--text-muted)]'}`} />
                                     <span className="flex-1 text-left truncate">{list.name}</span>
                                     {hoveredListId === list.id && (
                                         <button
@@ -98,7 +98,7 @@ export function PlannerHeader() {
 
             {/* Right Controls */}
             <div className="flex items-center gap-3">
-                <button className="px-4 py-2 text-xs font-semibold rounded-full bg-[var(--accent-violet)] text-white hover:brightness-110 active:scale-95 transition-all shadow-[0_8px_24px_var(--accent-violet-glow)]">
+                <button className="px-4 py-2 text-xs font-semibold rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105 active:scale-95 transition-all">
                     Premium
                 </button>
                 <div className="w-9 h-9 rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] flex items-center justify-center text-[var(--text-secondary)] font-semibold text-sm">

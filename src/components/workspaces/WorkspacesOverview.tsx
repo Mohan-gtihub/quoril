@@ -25,9 +25,9 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
                     className="w-7 h-7 rounded-full relative transition-transform hover:scale-110 active:scale-95"
                     style={{
                         backgroundColor: c,
-                        boxShadow: value === c ? `0 0 0 2px var(--bg-card), 0 0 0 4px ${c}, 0 4px 12px ${c}66` : `0 2px 6px ${c}33`,
+                        boxShadow: value === c ? `0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent-primary)` : `0 0 0 1px var(--border-default)`,
                     }}>
-                    {value === c && <Check size={13} strokeWidth={3} className="text-white absolute inset-0 m-auto drop-shadow" />}
+                    {value === c && <Check size={13} strokeWidth={3} className="text-[var(--accent-contrast)] absolute inset-0 m-auto drop-shadow" />}
                 </button>
             ))}
         </div>
@@ -71,7 +71,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
     const isComplete = progress === 100 && wsTasks.length > 0
 
     const accent = ws.color
-    const barColor = isComplete ? '#10b981' : accent
+    const barColor = isComplete ? 'var(--success)' : accent
 
     const handleSave = async () => {
         if (!editName.trim()) return
@@ -107,7 +107,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                 layout
                 initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-[var(--bg-card)] rounded-[var(--radius-tile)] border border-[var(--accent-primary)]/50 p-6 flex flex-col justify-between shadow-lg ring-1 ring-[var(--accent-primary)]/20"
+                className="bg-[var(--bg-card)] rounded-[var(--radius-card)] border border-[var(--border-default)] p-6 flex flex-col justify-between shadow-sm"
             >
                 <div className="space-y-5">
                     <div>
@@ -127,7 +127,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                     </div>
                 </div>
                 <div className="flex gap-2 mt-6">
-                    <button onClick={handleSave} className="flex-1 py-2.5 text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full hover:brightness-105 active:scale-95 transition-all shadow-[0_8px_24px_var(--accent-glow)]">Save Changes</button>
+                    <button onClick={handleSave} className="flex-1 py-2.5 text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full hover:brightness-105 active:scale-95 transition-all shadow-sm">Save Changes</button>
                     <button onClick={() => setIsEditing(false)} className="py-2.5 px-4 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)] transition-all rounded-full">Cancel</button>
                 </div>
             </motion.div>
@@ -140,7 +140,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                 layout
                 initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-[var(--bg-card)] rounded-[var(--radius-tile)] border border-[var(--border-default)] p-6 flex flex-col justify-between shadow-lg"
+                className="bg-[var(--bg-card)] rounded-[var(--radius-card)] border border-[var(--border-default)] p-6 flex flex-col justify-between shadow-sm"
             >
                 <div className="space-y-5">
                     <div className="flex items-start justify-between gap-3">
@@ -184,7 +184,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                 </div>
 
                 <div className="flex gap-2 mt-6">
-                    <button disabled={!inviteEmail.trim() || inviteLoading} onClick={handleInvite} className="flex-1 py-2.5 text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full hover:brightness-105 active:scale-95 disabled:opacity-50 transition-all shadow-[0_8px_24px_var(--accent-glow)]">
+                    <button disabled={!inviteEmail.trim() || inviteLoading} onClick={handleInvite} className="flex-1 py-2.5 text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full hover:brightness-105 active:scale-95 disabled:opacity-50 transition-all shadow-sm">
                         {inviteLoading ? 'Granting…' : 'Grant Access'}
                     </button>
                     <button onClick={() => setIsSharing(false)} className="py-2.5 px-4 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)] transition-all rounded-full">Done</button>
@@ -198,26 +198,20 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
             layout
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ y: -5 }}
+            whileHover={{ y: -2 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className="group relative h-full overflow-hidden bg-[var(--bg-card)] rounded-[var(--radius-tile)] border border-[var(--border-default)] hover:border-[var(--border-hover)] shadow-sm hover:shadow-xl transition-[border-color,box-shadow] duration-200 cursor-pointer flex flex-col p-6"
+            className="group relative h-full overflow-hidden bg-[var(--bg-card)] rounded-[var(--radius-card)] border border-[var(--border-default)] hover:border-[var(--border-hover)] shadow-sm transition-[border-color,box-shadow] duration-200 cursor-pointer flex flex-col p-6"
             onClick={handleCardClick}
         >
-            {/* Ambient accent wash */}
-            <div
-                className="pointer-events-none absolute -top-16 -right-16 w-44 h-44 rounded-full blur-3xl opacity-25 group-hover:opacity-40 transition-opacity duration-300"
-                style={{ background: accent }}
-            />
-
             {/* Header Area */}
             <div className="relative flex-1">
                 <div className="flex items-start justify-between mb-5">
                     <div className="flex items-center gap-3 min-w-0">
                         <span
-                            className="w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center text-white font-bold text-base"
-                            style={{ background: `linear-gradient(135deg, ${accent}, ${accent}bb)`, boxShadow: `0 6px 18px ${accent}55` }}
+                            className="relative w-10 h-10 rounded-xl shrink-0 flex items-center justify-center bg-[var(--bg-tertiary)] border border-[var(--border-default)] text-[var(--text-primary)] font-bold text-base"
                         >
                             {ws.name.charAt(0).toUpperCase()}
+                            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
                         </span>
                         <div className="min-w-0">
                             <h3 className="text-lg font-semibold tracking-tight text-[var(--text-primary)] truncate leading-tight">{ws.name}</h3>
@@ -245,7 +239,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                                             initial={{ opacity: 0, y: -5, scale: 0.95 }}
                                             animate={{ opacity: 1, y: 0, scale: 1 }}
                                             exit={{ opacity: 0, y: -5, scale: 0.95 }}
-                                            className="absolute right-0 top-full mt-2 w-44 glass-thick border border-[var(--border-default)] rounded-xl z-50 shadow-2xl py-1 overflow-hidden pointer-events-auto"
+                                            className="absolute right-0 top-full mt-2 w-44 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-xl z-50 shadow-sm py-1 overflow-hidden pointer-events-auto"
                                             onClick={e => e.stopPropagation()}
                                         >
                                             <button onClick={() => { setIsEditing(true); setShowMenu(false) }} className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors">
@@ -255,7 +249,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                                                 <UserPlus size={14} />
                                                 Invite Teammate
                                             </button>
-                                            <button onClick={() => { handleDelete(); setShowMenu(false) }} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-400/10 transition-colors">
+                                            <button onClick={() => { handleDelete(); setShowMenu(false) }} className="w-full text-left px-4 py-2 text-sm text-[var(--error)] hover:bg-[var(--error)]/10 transition-colors">
                                                 Delete Workspace
                                             </button>
                                         </motion.div>
@@ -300,7 +294,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                         <span className="text-[11px] text-[var(--text-tertiary)]">pending</span>
                     </div>
                     <div className="flex items-center gap-1.5 rounded-full bg-[var(--bg-hover)] px-2.5 py-1">
-                        <CheckCircle2 size={12} className="text-emerald-400" />
+                        <CheckCircle2 size={12} className="text-[var(--text-muted)]" />
                         <span className="text-xs font-semibold text-[var(--text-primary)] tabular-nums">{doneTasks.length}</span>
                         <span className="text-[11px] text-[var(--text-tertiary)]">done</span>
                     </div>
@@ -315,7 +309,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                 <div className="h-1.5 bg-[var(--bg-hover)] w-full rounded-full overflow-hidden">
                     <motion.div
                         className="h-full rounded-full"
-                        style={{ background: `linear-gradient(90deg, ${barColor}aa, ${barColor})`, boxShadow: `0 0 8px ${barColor}66` }}
+                        style={{ background: barColor }}
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
                         transition={{ duration: 1, ease: 'easeOut' }}
@@ -366,7 +360,7 @@ function CreateWorkspaceCard({ autoOpen, onClose }: { autoOpen?: boolean; onClos
                 layout
                 initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-[var(--bg-card)] rounded-[var(--radius-tile)] border border-[var(--accent-primary)] p-6 flex flex-col justify-between shadow-lg ring-1 ring-[var(--accent-primary)]/20"
+                className="bg-[var(--bg-card)] rounded-[var(--radius-card)] border border-[var(--border-default)] p-6 flex flex-col justify-between shadow-sm"
             >
                 <div className="space-y-5">
                     <div className="flex items-center justify-between">
@@ -388,7 +382,7 @@ function CreateWorkspaceCard({ autoOpen, onClose }: { autoOpen?: boolean; onClos
                     </div>
                 </div>
                 <div className="flex gap-2 mt-6">
-                    <button disabled={!name.trim() || loading} onClick={handleCreate} className="flex-1 py-2.5 text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full hover:brightness-105 active:scale-95 disabled:opacity-50 transition-all shadow-[0_8px_24px_var(--accent-glow)]">
+                    <button disabled={!name.trim() || loading} onClick={handleCreate} className="flex-1 py-2.5 text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full hover:brightness-105 active:scale-95 disabled:opacity-50 transition-all shadow-sm">
                         {loading ? 'Creating…' : 'Create Workspace'}
                     </button>
                     <button onClick={close} className="py-2.5 px-4 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)] transition-all rounded-full">Cancel</button>
@@ -400,9 +394,9 @@ function CreateWorkspaceCard({ autoOpen, onClose }: { autoOpen?: boolean; onClos
     return (
         <button
             onClick={() => setIsCreating(true)}
-            className="group h-full min-h-[200px] bg-[var(--bg-hover)]/40 rounded-[var(--radius-tile)] border border-dashed border-[var(--border-hover)] hover:border-[var(--accent-primary)] hover:bg-[var(--bg-hover)] flex flex-col items-center justify-center gap-3 transition-all duration-200 cursor-pointer"
+            className="group h-full min-h-[200px] bg-[var(--bg-secondary)] rounded-[var(--radius-card)] border border-dashed border-[var(--border-default)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-hover)] flex flex-col items-center justify-center gap-3 transition-all duration-200 cursor-pointer"
         >
-            <span className="w-12 h-12 rounded-2xl bg-[var(--bg-card)] group-hover:bg-[var(--accent-primary)] flex items-center justify-center transition-all group-hover:shadow-[0_8px_24px_var(--accent-glow)] group-hover:scale-105">
+            <span className="w-12 h-12 rounded-xl bg-[var(--bg-card)] border border-[var(--border-default)] group-hover:bg-[var(--accent-primary)] group-hover:border-[var(--accent-primary)] flex items-center justify-center transition-all">
                 <Plus size={22} className="text-[var(--text-muted)] group-hover:text-[var(--accent-contrast)] transition-colors" />
             </span>
             <span className="font-semibold text-sm text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">Create Workspace</span>
@@ -446,7 +440,7 @@ export function WorkspacesOverview() {
 
                     <button
                         onClick={() => setCreating(true)}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full hover:brightness-105 active:scale-95 transition-all shadow-[0_8px_24px_var(--accent-glow)]"
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full hover:brightness-105 active:scale-95 transition-all shadow-sm"
                     >
                         <Plus size={16} /> New Workspace
                     </button>

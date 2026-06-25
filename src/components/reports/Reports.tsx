@@ -26,7 +26,7 @@ function pct(v: number, max: number) {
 /* ─── Primitive components ──────────────────────────────────── */
 
 function Skeleton({ h = 'h-20' }: { h?: string }) {
-    return <div className={`animate-pulse bg-[var(--bg-hover)] rounded-2xl ${h}`} />
+    return <div className={`animate-pulse bg-[var(--bg-hover)] rounded-[var(--radius-card)] ${h}`} />
 }
 
 function EmptyState({ msg }: { msg: string }) {
@@ -47,14 +47,14 @@ function Kpi({
 }) {
     const text = {
         default: 'text-[var(--text-primary)]',
-        blue: 'text-[var(--accent-primary)]',
-        emerald: 'text-emerald-300',
-        purple: 'text-[var(--accent-violet)]',
-        amber: 'text-amber-300',
-        red: 'text-red-300',
+        blue: 'text-[var(--text-primary)]',
+        emerald: 'text-[var(--text-primary)]',
+        purple: 'text-[var(--text-primary)]',
+        amber: 'text-[var(--warning)]',
+        red: 'text-[var(--error)]',
     }[color]
     return (
-        <div className="rounded-2xl p-5 bg-[var(--bg-hover)]">
+        <div className="rounded-[var(--radius-card)] p-5 bg-[var(--bg-secondary)] border border-[var(--border-default)]">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-1.5">{label}</p>
             <p className={`text-2xl font-semibold leading-tight tracking-tight tabular-nums ${text}`}>{value}</p>
             {sub && <p className="text-[11px] text-[var(--text-muted)] mt-1">{sub}</p>}
@@ -72,7 +72,7 @@ function Section({
 }) {
     const [open, setOpen] = useState(defaultOpen)
     return (
-        <div className="rounded-[var(--radius-tile)] overflow-hidden bg-[var(--bg-card)] border border-[var(--border-default)] shadow-sm">
+        <div className="rounded-[var(--radius-card)] overflow-hidden bg-[var(--bg-card)] border border-[var(--border-default)] shadow-sm">
             <button
                 onClick={() => setOpen(o => !o)}
                 className="w-full flex items-center gap-3 px-6 py-5"
@@ -95,7 +95,7 @@ function Section({
 
 // ── Horizontal bar ────────────────────────────────────────────
 
-function Bar({ value, max, color = '#c4f82a', label, sub }: {
+function Bar({ value, max, color = 'var(--accent-primary)', label, sub }: {
     value: number; max: number; color?: string; label: string; sub?: string
 }) {
     return (
@@ -117,7 +117,7 @@ function Bar({ value, max, color = '#c4f82a', label, sub }: {
 
 // ── Day bar chart ────────────────────────────────────────────
 
-function DayBars({ points, max, color = '#c4f82a', days }: {
+function DayBars({ points, max, color = 'var(--accent-primary)', days }: {
     points: number[]; max: number; color?: string; days: string[]
 }) {
     if (max === 0) return <EmptyState msg="No data yet for this range" />
@@ -163,7 +163,7 @@ function Gauge({ score, size = 80 }: { score: number; size?: number }) {
     const r = (size / 2) - 8
     const circ = 2 * Math.PI * r
     const dash = circ * (score / 100)
-    const color = score >= 70 ? '#22c55e' : score >= 40 ? '#f59e0b' : '#ef4444'
+    const color = 'var(--accent-primary)'
     return (
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="flex-shrink-0">
             <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--bg-hover)" strokeWidth="7" />
@@ -223,10 +223,10 @@ export function Reports() {
 
                 {/* Error banner */}
                 {error && (
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-red-500/10 border border-red-500/20">
-                        <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                        <p className="text-xs text-red-300 flex-1">{error}</p>
-                        <button onClick={() => setRetryKey(k => k + 1)} className="text-[11px] text-red-400 flex items-center gap-1">
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-[var(--radius-card)] bg-[var(--bg-card)] border border-[var(--border-default)]">
+                        <AlertCircle className="w-4 h-4 text-[var(--error)] flex-shrink-0" />
+                        <p className="text-xs text-[var(--text-secondary)] flex-1">{error}</p>
+                        <button onClick={() => setRetryKey(k => k + 1)} className="text-[11px] text-[var(--text-secondary)] flex items-center gap-1">
                             <RefreshCw className="w-3 h-3" /> Retry
                         </button>
                     </div>
@@ -241,7 +241,7 @@ export function Reports() {
                 ) : (
                     <>
                         {/* ══ 1. DAILY SNAPSHOT ═══════════════════════════════ */}
-                        <div className="rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] p-6 shadow-sm">
+                        <div className="rounded-[var(--radius-card)] bg-[var(--bg-card)] border border-[var(--border-default)] p-6 shadow-sm">
                             <p className="text-lg font-semibold tracking-tight text-[var(--text-primary)] mb-5">
                                 Daily Snapshot
                             </p>
@@ -263,7 +263,7 @@ export function Reports() {
                                     <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Focus minutes / day</p>
                                     <p className="text-[11px] text-[var(--text-muted)]">7d avg: {movingAvg[movingAvg.length - 1]}m</p>
                                 </div>
-                                <DayBars points={trendByDay.map(d => d.focusMinutes)} max={maxFocusMin} color="#c4f82a" days={days} />
+                                <DayBars points={trendByDay.map(d => d.focusMinutes)} max={maxFocusMin} color="var(--accent-primary)" days={days} />
                             </div>
 
                             {/* Focus quality trend */}
@@ -272,7 +272,7 @@ export function Reports() {
                                     Focus quality / day
                                     <span className="ml-1 text-[var(--text-muted)] normal-case">(penalty: {INTERRUPT_PENALTY_SECONDS}s/interruption)</span>
                                 </p>
-                                <DayBars points={qualityByDay.map(d => d.qualityScore)} max={100} color="#8b5cf6" days={days} />
+                                <DayBars points={qualityByDay.map(d => d.qualityScore)} max={100} color="var(--text-muted)" days={days} />
                             </div>
 
                             {/* Productivity score */}
@@ -280,9 +280,9 @@ export function Reports() {
                                 <Gauge score={productivityScore.score} />
                                 <div className="flex-1 space-y-2.5">
                                     <Bar value={productivityScore.focusSeconds} max={productivityScore.totalActiveSeconds}
-                                        color="#c4f82a" label="Focus time" sub={fmt(productivityScore.focusSeconds)} />
+                                        color="var(--accent-primary)" label="Focus time" sub={fmt(productivityScore.focusSeconds)} />
                                     <Bar value={productivityScore.productiveAppSeconds} max={productivityScore.totalActiveSeconds}
-                                        color="#8b5cf6" label="Productive apps" sub={fmt(productivityScore.productiveAppSeconds)} />
+                                        color="var(--text-muted)" label="Productive apps" sub={fmt(productivityScore.productiveAppSeconds)} />
                                     <p className="text-[11px] text-[var(--text-muted)]">score = (focus + work apps) / total active</p>
                                 </div>
                             </div>
@@ -294,9 +294,9 @@ export function Reports() {
                             <div className="space-y-2.5">
                                 <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Task Breakdown</p>
                                 {[
-                                    { label: 'Completed', v: completed, color: '#22c55e' },
-                                    { label: 'In Progress', v: taskReport.inProgress, color: '#6366f1' },
-                                    { label: 'Todo', v: taskReport.todo, color: 'rgba(255,255,255,0.15)' },
+                                    { label: 'Completed', v: completed, color: 'var(--accent-primary)' },
+                                    { label: 'In Progress', v: taskReport.inProgress, color: 'var(--text-muted)' },
+                                    { label: 'Todo', v: taskReport.todo, color: 'var(--bg-hover)' },
                                 ].map(({ label, v, color }) => (
                                     <Bar key={label} label={label} value={v} max={maxTaskComp} color={color} sub={String(v)} />
                                 ))}
@@ -309,7 +309,7 @@ export function Reports() {
                                         <Gauge score={Math.min(100, overallAccuracy)} size={72} />
                                         <div>
                                             <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">Estimation Accuracy</p>
-                                            <p className="text-lg font-semibold text-white">{overallAccuracy}%</p>
+                                            <p className="text-lg font-semibold text-[var(--text-primary)]">{overallAccuracy}%</p>
                                             <p className="text-[11px] text-[var(--text-muted)]">100% = perfect estimate</p>
                                         </div>
                                     </div>
@@ -319,7 +319,7 @@ export function Reports() {
                                             {mostUnderestimated.slice(0, 3).map(t => (
                                                 <div key={t.id} className="flex justify-between text-[11px] py-1.5 border-b border-[var(--border-default)]">
                                                     <span className="text-[var(--text-secondary)] truncate max-w-[60%]">{t.title}</span>
-                                                    <span className="text-red-400 font-bold">{t.estimatedMin}m est → {t.actualMin}m actual</span>
+                                                    <span className="text-[var(--error)] font-bold">{t.estimatedMin}m est → {t.actualMin}m actual</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -330,7 +330,7 @@ export function Reports() {
                                             {mostOverestimated.slice(0, 3).map(t => (
                                                 <div key={t.id} className="flex justify-between text-[11px] py-1.5 border-b border-[var(--border-default)]">
                                                     <span className="text-[var(--text-secondary)] truncate max-w-[60%]">{t.title}</span>
-                                                    <span className="text-amber-400 font-bold">{t.estimatedMin}m est → {t.actualMin}m actual</span>
+                                                    <span className="text-[var(--warning)] font-bold">{t.estimatedMin}m est → {t.actualMin}m actual</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -351,14 +351,14 @@ export function Reports() {
                                                 <div className="flex justify-between text-[11px] mb-1">
                                                     <span className="flex items-center gap-1.5 text-[var(--text-secondary)]">
                                                         <span className="w-2 h-2 rounded-full inline-block flex-shrink-0"
-                                                            style={{ backgroundColor: ws.workspaceColor || '#6366f1' }} />
+                                                            style={{ backgroundColor: ws.workspaceColor || 'var(--accent-primary)' }} />
                                                         {ws.workspaceName}
                                                     </span>
                                                     <span className="text-[var(--text-muted)]">{ws.completedCount}/{ws.taskCount} · {fmt(ws.focusSeconds ?? 0)}</span>
                                                 </div>
                                                 <div className="h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
                                                     <div className="h-full rounded-full"
-                                                        style={{ width: `${pct(ws.focusSeconds ?? 0, maxWsFocus)}%`, backgroundColor: ws.workspaceColor || '#6366f1' }} />
+                                                        style={{ width: `${pct(ws.focusSeconds ?? 0, maxWsFocus)}%`, backgroundColor: ws.workspaceColor || 'var(--accent-primary)' }} />
                                                 </div>
                                             </div>
                                         ))}
@@ -383,7 +383,7 @@ export function Reports() {
                                     : <div className="space-y-2.5">
                                         {topApps.slice(0, 8).map((app, i) => (
                                             <Bar key={i} label={app.appName} value={app.activeSeconds}
-                                                max={topApps[0]?.activeSeconds ?? 1} color="#8b5cf6"
+                                                max={topApps[0]?.activeSeconds ?? 1} color="var(--accent-primary)"
                                                 sub={`${app.category} · ${fmt(app.activeSeconds)}`} />
                                         ))}
                                     </div>
@@ -397,7 +397,7 @@ export function Reports() {
                                     <div className="space-y-2">
                                         {categoryBreakdown.map(c => (
                                             <Bar key={c.category} label={c.category} value={c.seconds}
-                                                max={categoryBreakdown[0]?.seconds ?? 1} color="#a78bfa" sub={fmt(c.seconds)} />
+                                                max={categoryBreakdown[0]?.seconds ?? 1} color="var(--text-muted)" sub={fmt(c.seconds)} />
                                         ))}
                                     </div>
                                 </div>
@@ -419,10 +419,10 @@ export function Reports() {
                                                     <div className="h-full rounded-full transition-all"
                                                         style={{
                                                             width: `${pct(d.sessionCount, Math.max(...contextByDay.map(x => x.sessionCount)) || 1)}%`,
-                                                            backgroundColor: d.label === 'Deep Work' ? '#22c55e' : d.label === 'Balanced' ? '#f59e0b' : '#ef4444'
+                                                            backgroundColor: d.label === 'Deep Work' ? 'var(--accent-primary)' : d.label === 'Balanced' ? 'var(--warning)' : 'var(--error)'
                                                         }} />
                                                 </div>
-                                                <span className={`text-[11px] font-bold flex-shrink-0 ${d.label === 'Deep Work' ? 'text-emerald-400' : d.label === 'Balanced' ? 'text-amber-400' : 'text-red-400'}`}>
+                                                <span className={`text-[11px] font-bold flex-shrink-0 ${d.label === 'Deep Work' ? 'text-[var(--text-primary)]' : d.label === 'Balanced' ? 'text-[var(--warning)]' : 'text-[var(--error)]'}`}>
                                                     {d.sessionCount}
                                                 </span>
                                             </div>
@@ -443,9 +443,9 @@ export function Reports() {
                                 : <div className="space-y-1.5">
                                     {recurringData.map(r => (
                                         <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-[var(--border-default)] last:border-0">
-                                            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${r.isCompleted ? 'bg-emerald-400' : 'bg-[var(--bg-hover)]'}`} />
+                                            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${r.isCompleted ? 'bg-[var(--accent-primary)]' : 'bg-[var(--bg-hover)]'}`} />
                                             <span className="text-sm text-[var(--text-secondary)] flex-1 truncate">{r.title}</span>
-                                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${r.isCompleted ? 'bg-emerald-500/15 text-emerald-400' : 'bg-[var(--bg-hover)] text-[var(--text-muted)]'}`}>
+                                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${r.isCompleted ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)]' : 'bg-[var(--bg-hover)] text-[var(--text-muted)]'}`}>
                                                 {r.isCompleted ? '✓ Done' : 'Pending'}
                                             </span>
                                         </div>

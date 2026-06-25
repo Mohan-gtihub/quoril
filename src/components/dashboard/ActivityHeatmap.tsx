@@ -12,8 +12,8 @@ import {
 import { Tooltip } from 'react-tooltip'
 import { useFocusStore } from '@/store/focusStore'
 import { cn } from '@/utils/helpers'
-import { Award, CalendarDays, Flame } from 'lucide-react'
-import { calculateStreak, isFocusType } from '@/utils/timeCalculations'
+import { Award, CalendarDays } from 'lucide-react'
+import { isFocusType } from '@/utils/timeCalculations'
 
 export function ActivityHeatmap() {
     const { sessions, isActive, startTime, sessionType } = useFocusStore()
@@ -55,10 +55,10 @@ export function ActivityHeatmap() {
 
     const getColorClass = (minutes: number) => {
         if (minutes === 0) return 'bg-[var(--bg-hover)]'
-        if (minutes < 30) return 'bg-[#10b981]/30'
-        if (minutes < 60) return 'bg-[#10b981]/50'
-        if (minutes < 120) return 'bg-[#10b981]/80 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
-        return 'bg-[#10b981] shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+        if (minutes < 30) return 'bg-[var(--accent-primary)]/25'
+        if (minutes < 60) return 'bg-[var(--accent-primary)]/50'
+        if (minutes < 120) return 'bg-[var(--accent-primary)]/75'
+        return 'bg-[var(--accent-primary)]'
     }
 
     // 3. Contextual Stats (This Month, Best Day, Current Streak)
@@ -91,16 +91,15 @@ export function ActivityHeatmap() {
         return {
             monthStr: fmtHrs(monthMins),
             bestStr: bestDay.date ? `${format(new Date(bestDay.date), 'EEEE')} (${fmtHrs(bestDay.mins)})` : 'None yet',
-            streakCount: calculateStreak(sessions)
         }
-    }, [activityMap, sessions])
+    }, [activityMap])
 
     return (
         <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-3xl p-6 w-full flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-500 shadow-sm relative overflow-hidden">
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h2 className="text-[15px] font-bold text-[var(--text-primary)] uppercase tracking-widest flex items-center gap-2 mb-1">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                        <span className="w-2.5 h-2.5 rounded-sm bg-[var(--accent-primary)]" />
                         Focus Map
                     </h2>
                     <p className="text-xs text-[var(--text-muted)] font-medium">Daily deep work</p>
@@ -113,12 +112,8 @@ export function ActivityHeatmap() {
                         <span className="text-[11px] font-bold text-[var(--text-primary)]">{stats.monthStr} <span className="text-[var(--text-muted)] font-medium">this month</span></span>
                     </div>
                     <div className="bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-lg px-2.5 py-1 flex items-center gap-1.5">
-                        <Award size={12} className="text-amber-400" />
+                        <Award size={12} className="text-[var(--accent-primary)]" />
                         <span className="text-[11px] font-bold text-[var(--text-primary)]">Best: <span className="text-[var(--text-muted)] font-medium">{stats.bestStr}</span></span>
-                    </div>
-                    <div className="bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-lg px-2.5 py-1 flex items-center gap-1.5">
-                        <Flame size={12} className={stats.streakCount > 0 ? "text-orange-500 animate-pulse" : "text-[var(--text-muted)]"} />
-                        <span className="text-[11px] font-bold text-[var(--text-primary)]">{stats.streakCount} Day <span className="text-[var(--text-muted)] font-medium">Streak</span></span>
                     </div>
                 </div>
             </div>
@@ -171,10 +166,10 @@ export function ActivityHeatmap() {
                 <div className="flex items-center justify-end gap-1.5 mt-2 text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest pt-2 border-t border-[var(--border-default)]">
                     <span className="mr-1">Less</span>
                     <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--bg-hover)]" />
-                    <div className="w-[10px] h-[10px] rounded-[2px] bg-[#10b981]/30" />
-                    <div className="w-[10px] h-[10px] rounded-[2px] bg-[#10b981]/50" />
-                    <div className="w-[10px] h-[10px] rounded-[2px] bg-[#10b981]/80" />
-                    <div className="w-[10px] h-[10px] rounded-[2px] bg-[#10b981] shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
+                    <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--accent-primary)]/25" />
+                    <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--accent-primary)]/50" />
+                    <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--accent-primary)]/75" />
+                    <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--accent-primary)]" />
                     <span className="ml-1">More</span>
                 </div>
             </div>

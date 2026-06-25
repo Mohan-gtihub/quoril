@@ -51,13 +51,13 @@ export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProp
                         />
                         <Bar
                             dataKey="focusMinutes"
-                            fill="#6366f1"
+                            fill="var(--accent-primary)"
                             name="Focus Minutes"
                             radius={[8, 8, 0, 0]}
                         />
                         <Bar
                             dataKey="tasksCompleted"
-                            fill="#10b981"
+                            fill="var(--text-secondary)"
                             name="Tasks Completed"
                             radius={[8, 8, 0, 0]}
                         />
@@ -103,19 +103,19 @@ export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProp
                         <Line
                             type="monotone"
                             dataKey="focusMinutes"
-                            stroke="#6366f1"
+                            stroke="var(--accent-primary)"
                             strokeWidth={3}
                             name="Focus Minutes"
-                            dot={{ fill: '#6366f1', r: 4 }}
+                            dot={{ fill: 'var(--accent-primary)', r: 4 }}
                             activeDot={{ r: 6 }}
                         />
                         <Line
                             type="monotone"
                             dataKey="tasksCompleted"
-                            stroke="#10b981"
+                            stroke="var(--text-secondary)"
                             strokeWidth={3}
                             name="Tasks Completed"
-                            dot={{ fill: '#10b981', r: 4 }}
+                            dot={{ fill: 'var(--text-secondary)', r: 4 }}
                             activeDot={{ r: 6 }}
                         />
                     </LineChart>
@@ -146,7 +146,7 @@ export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProp
                                     </div>
                                     <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-gradient-to-r from-[var(--accent-primary)] to-purple-500 rounded-full transition-all duration-500"
+                                            className="h-full bg-gradient-to-r from-[var(--accent-primary)] to-[var(--text-secondary)] rounded-full transition-all duration-500"
                                             style={{ width: `${widthPercent}%` }}
                                         />
                                     </div>
@@ -185,13 +185,13 @@ export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProp
                                                     {time.label}
                                                 </span>
                                             </div>
-                                            <span className="text-xs font-mono font-bold text-amber-400 tabular-nums">
+                                            <span className="text-xs font-mono font-bold text-[var(--text-secondary)] tabular-nums">
                                                 {time.avgMinutes}m avg
                                             </span>
                                         </div>
                                         <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                                             <div
-                                                className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
+                                                className="h-full bg-gradient-to-r from-[var(--text-secondary)] to-[var(--text-muted)] rounded-full transition-all duration-500"
                                                 style={{ width: `${widthPercent}%` }}
                                             />
                                         </div>

@@ -80,7 +80,7 @@ function BoardColumn({
                     <div className="flex items-center gap-2">
                         {column.id === 'done' ? (
                             !hideEstDoneTimes && (
-                                <span className="text-[11px] font-semibold tabular-nums px-2.5 py-1 rounded-full" style={{ color: 'var(--accent-green-400)', backgroundColor: 'var(--accent-green-100)' }}>
+                                <span className="text-[11px] font-semibold tabular-nums px-2.5 py-1 rounded-full bg-[var(--bg-hover)] text-[var(--text-tertiary)]">
                                     {count} done
                                 </span>
                             )
@@ -125,7 +125,7 @@ function BoardColumn({
                                 onBlitz(topTask)
                             }
                         }}
-                        className="w-full mt-4 py-2.5 text-sm font-semibold rounded-full flex items-center justify-center gap-2 transition-all bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105 active:scale-95 shadow-[0_8px_24px_var(--accent-glow)]"
+                        className="w-full mt-4 py-2.5 text-sm font-semibold rounded-full flex items-center justify-center gap-2 transition-all bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105 active:scale-95"
                     >
                         Start focus
                     </button>
@@ -204,7 +204,7 @@ function BoardColumn({
                     <div className="mt-2">
                         <button
                             onClick={() => setShowCreateModal({ column: column.id, position: 'bottom' })}
-                            className="w-full py-2.5 border border-dashed border-[var(--border-default)] rounded-2xl text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-hover)] transition-all flex items-center justify-center gap-2"
+                            className="w-full py-2.5 border border-dashed border-[var(--border-default)] rounded-xl text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-hover)] transition-all flex items-center justify-center gap-2"
                         >
                             <Plus className="w-3.5 h-3.5" />
                             Add task
@@ -227,10 +227,10 @@ export function Planner() {
         const isSelectedToday = isSameDay(selectedDate, startOfToday())
         const dayName = format(selectedDate, 'EEEE')
         return [
-            { id: 'backlog', title: 'Backlog', subtitle: 'Idea Storage', color: 'bg-gray-500' },
-            { id: 'this_week', title: 'This Week', subtitle: 'Short-term Plan', color: 'bg-purple-500' },
-            { id: 'today', title: isSelectedToday ? 'Today' : dayName, subtitle: 'Execution Center', color: 'bg-blue-500' },
-            { id: 'done', title: 'Done', subtitle: 'History & Motivation', color: 'bg-green-500' },
+            { id: 'backlog', title: 'Backlog', subtitle: 'Idea Storage', color: 'bg-[var(--text-muted)]' },
+            { id: 'this_week', title: 'This Week', subtitle: 'Short-term Plan', color: 'bg-[var(--text-muted)]' },
+            { id: 'today', title: isSelectedToday ? 'Today' : dayName, subtitle: 'Execution Center', color: 'bg-[var(--accent-primary)]' },
+            { id: 'done', title: 'Done', subtitle: 'History & Motivation', color: 'bg-[var(--text-muted)]' },
         ]
     }, [selectedDate])
 
@@ -375,7 +375,7 @@ export function Planner() {
     }
 
     if (!selectedList && selectedListId !== 'all') {
-        return <div className="p-8 text-gray-400">Loading workspace...</div>
+        return <div className="p-8 text-[var(--text-muted)]">Loading workspace...</div>
     }
 
     return (

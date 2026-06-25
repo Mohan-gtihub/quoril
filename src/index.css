@@ -8,6 +8,10 @@
   line-height: 1.5;
   font-weight: 400;
 
+  /* Shared marketing-site type system */
+  --font-sans: "Inter", system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-heading: "Poppins", "Inter", system-ui, sans-serif;
+
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -76,6 +80,71 @@
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-border-silver: rgba(255, 255, 255, 0.08);
   --glass-shadow: rgba(0, 0, 0, 0.45);
+}
+
+/* ───────────────────────────────────────────────────────────────
+   Daylight — primary monochrome theme (mirrors the marketing site).
+   Near-monochrome: warm paper surfaces, near-black ink, soft greys.
+   Emphasis comes from ink weight & whitespace, not chromatic accent.
+   ─────────────────────────────────────────────────────────────── */
+.theme-daylight {
+  /* surfaces — clean neutral greys, macOS light look */
+  --bg-primary: #f5f5f7;   /* window background (apple light grey) */
+  --bg-secondary: #fbfbfd;
+  --bg-tertiary: #eeeef1;  /* inputs, tracks, chips */
+  --bg-card: #ffffff;      /* white content cards */
+  --bg-elevated: #ffffff;
+  --bg-hover: rgba(0, 0, 0, 0.04);
+
+  /* hairline borders — gentle, cool grey */
+  --border-default: #e4e4e8;
+  --border-hover: #d4d4da;
+
+  /* neutral ink ramp — softened, never pure black */
+  --text-primary: #2e2e32;   /* soft near-black */
+  --text-secondary: #6e6e76;
+  --text-tertiary: #8c8c94;
+  --text-muted: #b0b0b8;
+
+  /* Monochrome accent — graphite ink for highlights (black-on-white) */
+  --accent-primary: #2e2e32;
+  --accent-secondary: #44444a;
+  --accent-glow: rgba(0, 0, 0, 0.06);
+  --accent-contrast: #ffffff;
+
+  --accent-lime-50: rgba(0, 0, 0, 0.03);
+  --accent-lime-100: rgba(0, 0, 0, 0.05);
+  --accent-lime-200: rgba(0, 0, 0, 0.09);
+  --accent-lime-300: rgba(0, 0, 0, 0.15);
+  --accent-lime-400: #44444a;
+  --accent-lime-500: #2e2e32;
+
+  --accent-violet: #2e2e32;
+  --accent-violet-glow: rgba(0, 0, 0, 0.06);
+  --accent-violet-100: rgba(0, 0, 0, 0.045);
+
+  /* no chromatic "success" — highlight with ink, not green.
+     warning/error stay desaturated for genuine alerts only. */
+  --success: #2e2e32;
+  --warning: #9a7b3f;
+  --error: #c25a52;
+  --accent-green-400: #2e2e32;
+  --accent-green-100: rgba(0, 0, 0, 0.05);
+  --accent-gray-700: rgba(0, 0, 0, 0.05);
+  --accent-gray-800: rgba(0, 0, 0, 0.03);
+
+  /* balanced, professional radii (matches the site) */
+  --radius-tile: 20px;
+  --radius-card: 14px;
+  --radius-pill: 999px;
+
+  /* light/silver glass */
+  --glass-bg-thin: rgba(255, 255, 255, 0.5);
+  --glass-bg-regular: rgba(255, 255, 255, 0.7);
+  --glass-bg-thick: rgba(251, 251, 250, 0.9);
+  --glass-border: rgba(22, 22, 15, 0.08);
+  --glass-border-silver: rgba(22, 22, 15, 0.1);
+  --glass-shadow: rgba(22, 22, 15, 0.08);
 }
 
 /* Light Theme (Lunar) */
@@ -205,9 +274,16 @@ html, body {
 
 body {
   min-width: 320px;
+  font-family: var(--font-sans);
   background-color: var(--bg-primary);
   color: var(--text-primary);
   transition: background-color var(--transition-speed), color var(--transition-speed);
+}
+
+/* Headings use Poppins (the marketing-site display face) */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.02em;
 }
 
 body.super-focus {
@@ -219,6 +295,38 @@ body.super-focus {
   width: 100%;
   height: 100%;
   overflow: hidden;
+}
+
+/* ───────────────────────────────────────────────────────────────
+   Daylight "calm" pass — neutralises the over-styled / "funky" look
+   app-wide so every screen reads as quiet & professional without
+   rewriting each component. Scoped to the monochrome theme only.
+   ─────────────────────────────────────────────────────────────── */
+.theme-daylight {
+  /* softer, balanced corner radii everywhere */
+  --radius-tile: 16px;
+  --radius-card: 12px;
+}
+/* strip neon/accent glow drop-shadows (focus rings, timer rings, etc.) */
+.theme-daylight [style*="drop-shadow"],
+.theme-daylight .glow,
+.theme-daylight [class*="shadow-[0_"] {
+  filter: none;
+}
+/* quiet, single-layer elevation instead of heavy coloured glows */
+.theme-daylight .shadow-soft,
+.theme-daylight [class*="shadow-["] {
+  box-shadow: 0 1px 2px rgba(40, 39, 32, 0.04),
+              0 8px 24px -16px rgba(40, 39, 32, 0.12) !important;
+}
+/* tame the big blurred ambient "wash" circles */
+.theme-daylight .blur-3xl {
+  opacity: 0.06 !important;
+}
+/* gentler selection */
+.theme-daylight ::selection {
+  background: rgba(40, 39, 32, 0.12);
+  color: var(--text-primary);
 }
 
 @layer utilities {

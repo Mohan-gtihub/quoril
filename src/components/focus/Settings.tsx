@@ -38,7 +38,7 @@ function ToggleRow({ label, description, value, onChange }: any) {
             />
             <div className={cn(
                 "relative w-12 h-6 rounded-full transition-colors duration-300 ease-in-out shrink-0",
-                value ? "bg-[var(--accent-primary)] shadow-[0_4px_14px_var(--accent-glow)]" : "bg-[var(--border-hover)]"
+                value ? "bg-[var(--accent-primary)]" : "bg-[var(--border-hover)]"
             )}>
                 <div className={cn(
                     "absolute top-[2px] w-[20px] h-[20px] bg-white rounded-full transition-transform duration-300 ease-in-out shadow-sm",
@@ -63,8 +63,8 @@ function SegmentedControl({ label, options, value, onChange }: any) {
                             className={cn(
                                 "flex-1 min-w-[80px] px-3 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap",
                                 active
-                                    ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-[0_4px_14px_var(--accent-glow)]"
-                                    : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-hover)]"
+                                    ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)]"
+                                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-hover)]"
                             )}
                         >
                             {opt.label}
@@ -93,8 +93,8 @@ function OptionGrid({ label, options, value, onChange, onPreview }: any) {
                             className={cn(
                                 "flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all group",
                                 active
-                                    ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-[0_4px_14px_var(--accent-glow)]"
-                                    : "bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)]"
+                                    ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)]"
+                                    : "bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)]"
                             )}
                         >
                             <span className="truncate">{opt.label}</span>
@@ -195,6 +195,7 @@ export function Settings() {
                             value={settings.theme}
                             onChange={(v: string) => settings.updateSettings({ theme: v as any })}
                             options={[
+                                { label: 'Daylight', value: 'daylight' },
                                 { label: 'Onyx Dark', value: 'dark' },
                                 { label: 'Arcade Blue', value: 'blue' },
                                 { label: 'Sunset Red', value: 'red' },
@@ -378,7 +379,7 @@ export function Settings() {
                                 settings.updateSettings({ notificationAlertsEnabled: v })
                             }}
                         />
-                        <div className="border-t border-white/[0.05] my-2" />
+                        <div className="border-t border-[var(--border-default)] my-2" />
                         <ToggleRow
                             label="Success Checksum Reward"
                             description="Play a celebratory chime when marking tasks complete."
@@ -488,7 +489,7 @@ function AccessibilityPermissionCard() {
                     </div>
                     <button
                         onClick={handleRequest}
-                        className="w-full py-3 px-5 bg-[var(--accent-primary)] hover:brightness-105 active:scale-95 text-[var(--accent-contrast)] text-sm font-semibold rounded-full transition-all shadow-[0_8px_24px_var(--accent-glow)]"
+                        className="w-full py-3 px-5 bg-[var(--accent-primary)] hover:brightness-105 active:scale-95 text-[var(--accent-contrast)] text-sm font-semibold rounded-full transition-all shadow-sm"
                     >
                         Grant Accessibility Access
                     </button>

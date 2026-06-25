@@ -40,7 +40,7 @@ export function TodayColumn({ title = "Today", tasks, columnId, onTaskComplete, 
             <div className="p-5 pb-4 flex-shrink-0">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-primary)] shadow-[0_0_8px_var(--accent-glow)]" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-primary)]" />
                         <h2 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
                             {title}
                         </h2>
@@ -101,7 +101,7 @@ export function TodayColumn({ title = "Today", tasks, columnId, onTaskComplete, 
                 {onAddTask && (
                     <button
                         onClick={onAddTask}
-                        className="group w-full py-2.5 flex items-center gap-3 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors px-3 rounded-2xl hover:bg-[var(--bg-hover)]"
+                        className="group w-full py-2.5 flex items-center gap-3 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors px-3 rounded-xl hover:bg-[var(--bg-hover)]"
                     >
                         <Plus className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]" />
                         <span className="text-xs font-medium">Add task</span>
@@ -114,7 +114,7 @@ export function TodayColumn({ title = "Today", tasks, columnId, onTaskComplete, 
                 <div className="p-4 border-t border-[var(--border-default)] flex-shrink-0">
                     <button
                         onClick={() => tasks[0] && onStartNow(tasks[0])}
-                        className="w-full py-3 bg-[var(--accent-primary)] hover:brightness-105 active:scale-95 text-[var(--accent-contrast)] font-semibold rounded-full flex items-center justify-center gap-2 transition-all shadow-[0_8px_24px_var(--accent-glow)]"
+                        className="w-full py-3 bg-[var(--accent-primary)] hover:brightness-105 active:scale-95 text-[var(--accent-contrast)] font-semibold rounded-full flex items-center justify-center gap-2 transition-all"
                     >
                         <span>Quoril now</span>
                     </button>

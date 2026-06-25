@@ -34,7 +34,7 @@ export function ActivityChart({ data }: ActivityChartProps) {
                                         <div className="space-y-2">
                                             <div className="flex items-center justify-between gap-4">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 rounded-full bg-[#6366f1]" />
+                                                    <div className="w-2 h-2 rounded-full bg-[var(--accent-primary)]" />
                                                     <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider">Deep Focus</span>
                                                 </div>
                                                 <span className="text-xs font-mono font-bold text-[var(--text-primary)]">{d.focusHours}h</span>
@@ -48,7 +48,7 @@ export function ActivityChart({ data }: ActivityChartProps) {
                                             </div>
                                             <div className="flex items-center justify-between gap-4 border-t border-[var(--border-default)] pt-2">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 rounded-full bg-emerald-500/50" />
+                                                    <div className="w-2 h-2 rounded-full bg-[var(--text-muted)]/40" />
                                                     <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider">Breaks</span>
                                                 </div>
                                                 <span className="text-xs font-mono font-bold text-[var(--text-secondary)]">{d.breakHours}h</span>
@@ -69,8 +69,8 @@ export function ActivityChart({ data }: ActivityChartProps) {
                         radius={[4, 4, 4, 4]}
                         isAnimationActive={false}
                     />
-                    <Bar dataKey="focusHours" stackId="a" fill="#6366f1" radius={[0, 0, 4, 4]} />
-                    <Bar dataKey="breakHours" stackId="a" fill="rgba(16, 185, 129, 0.3)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="focusHours" stackId="a" fill="var(--accent-primary)" radius={[0, 0, 4, 4]} />
+                    <Bar dataKey="breakHours" stackId="a" fill="var(--text-muted)" fillOpacity={0.3} radius={[4, 4, 0, 0]} />
                 </BarChart>
             </ResponsiveContainer>
         </div>

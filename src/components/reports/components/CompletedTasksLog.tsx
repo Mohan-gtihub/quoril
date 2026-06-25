@@ -23,7 +23,7 @@ export function CompletedTasksLog({ taskGroups }: CompletedTasksLogProps) {
 
                 {taskGroups.map(({ date, items }) => (
                     <div key={date} className="relative pl-6 border-l border-[var(--border-default)] space-y-4 mb-8">
-                        <span className="absolute -left-[3px] top-0 w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-[var(--bg-primary)]"></span>
+                        <span className="absolute -left-[3px] top-0 w-1.5 h-1.5 rounded-full bg-[var(--text-primary)] ring-2 ring-[var(--bg-primary)]"></span>
                         <h4 className="text-xs font-bold text-[var(--text-secondary)]">{format(parseISO(date), 'EEEE, MMM do')}</h4>
 
                         <div className="space-y-2">
@@ -57,7 +57,7 @@ export function CompletedTasksLog({ taskGroups }: CompletedTasksLogProps) {
                                     <div className="text-right flex items-center gap-2">
                                         <div className="flex flex-col items-end">
                                             <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-tight">Time Taken</span>
-                                            <span className="text-xs font-bold font-mono text-emerald-400">
+                                            <span className="text-xs font-bold font-mono text-[var(--text-secondary)]">
                                                 {task.totalDurationFormatted}
                                             </span>
                                         </div>

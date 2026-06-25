@@ -53,7 +53,7 @@ export function DailyGoalRing({
                     cx={size / 2}
                     cy={size / 2}
                     r={radius}
-                    stroke={isCompleted ? '#10b981' : 'var(--accent-primary)'}
+                    stroke={isCompleted ? 'var(--success)' : 'var(--accent-primary)'}
                     strokeWidth={strokeWidth}
                     fill="transparent"
                     strokeDasharray={circumference}
@@ -69,7 +69,7 @@ export function DailyGoalRing({
             <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
                 <span className={cn(
                     "text-2xl font-semibold tracking-tighter",
-                    isCompleted ? "text-emerald-400" : "text-[var(--text-primary)]"
+                    isCompleted ? "text-[var(--success)]" : "text-[var(--text-primary)]"
                 )}>
                     {timeLabel}
                 </span>
@@ -77,7 +77,7 @@ export function DailyGoalRing({
                     {goalLabel}
                 </span>
                 {isCompleted && (
-                    <span className="absolute -bottom-8 px-2 py-1 bg-emerald-500/10 text-emerald-400 text-[11px] font-semibold uppercase tracking-widest rounded border border-emerald-500/20">
+                    <span className="absolute -bottom-8 px-2 py-1 bg-[var(--success)]/10 text-[var(--success)] text-[11px] font-semibold uppercase tracking-widest rounded border border-[var(--success)]/20">
                         Goal Met!
                     </span>
                 )}

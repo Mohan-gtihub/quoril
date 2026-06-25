@@ -35,14 +35,14 @@ function pct(v: number, max: number) {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-    Development: '#3b82f6',
-    Work: '#22c55e',
-    Communication: '#f59e0b',
-    Web: '#8b5cf6',
-    Entertainment: '#ef4444',
-    Gaming: '#f97316',
-    Other: '#6b7280',
-    Idle: '#374151',
+    Development: 'color-mix(in srgb, var(--text-primary) 85%, transparent)',
+    Work: 'color-mix(in srgb, var(--text-primary) 70%, transparent)',
+    Communication: 'color-mix(in srgb, var(--text-primary) 55%, transparent)',
+    Web: 'color-mix(in srgb, var(--text-primary) 42%, transparent)',
+    Entertainment: 'color-mix(in srgb, var(--text-primary) 30%, transparent)',
+    Gaming: 'color-mix(in srgb, var(--text-primary) 22%, transparent)',
+    Other: 'color-mix(in srgb, var(--text-primary) 15%, transparent)',
+    Idle: 'color-mix(in srgb, var(--text-primary) 8%, transparent)',
 }
 
 function getCategoryColor(cat: string) {
@@ -110,7 +110,7 @@ function HourlyHeatmap({ hourly, peakHour }: { hourly: { hour: number; totalSeco
                                     backgroundColor: h.totalSeconds > 0
                                         ? isPeak
                                             ? 'var(--accent-primary)'
-                                            : `rgba(99, 102, 241, ${0.3 + intensity * 0.6})`
+                                            : `rgba(46, 46, 50, ${0.3 + intensity * 0.6})`
                                         : 'var(--bg-hover)',
                                 }}
                             />
@@ -152,7 +152,7 @@ function WeeklyChart({ weekly, selectedDate }: { weekly: { day: string; totalSec
                                 animate={{ height: `${height}%` }}
                                 transition={{ duration: 0.6, delay: i * 0.05, ease: 'easeOut' }}
                                 style={{
-                                    backgroundColor: isSelected ? 'var(--accent-primary)' : d.totalSeconds > 0 ? 'rgba(99,102,241,0.5)' : 'var(--bg-hover)',
+                                    backgroundColor: isSelected ? 'var(--accent-primary)' : d.totalSeconds > 0 ? 'rgba(46,46,50,0.42)' : 'var(--bg-hover)',
                                 }}
                             />
                             <span className={cn('text-[11px] mt-2 font-medium', isSelected ? 'text-[var(--text-primary)] font-bold' : 'text-[var(--text-muted)]')}>
@@ -264,26 +264,26 @@ function ProductivityBar({ productivity, totalSeconds }: { productivity: Product
             </div>
             <div className="h-3 bg-[var(--bg-hover)] rounded-full overflow-hidden flex">
                 {data.productive > 0 && (
-                    <motion.div className="h-full rounded-l-full" initial={{ width: 0 }} animate={{ width: `${prodPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: '#22c55e' }} />
+                    <motion.div className="h-full rounded-l-full" initial={{ width: 0 }} animate={{ width: `${prodPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: 'var(--accent-primary)' }} />
                 )}
                 {data.neutral > 0 && (
-                    <motion.div className="h-full" initial={{ width: 0 }} animate={{ width: `${neutralPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: '#6b7280' }} />
+                    <motion.div className="h-full" initial={{ width: 0 }} animate={{ width: `${neutralPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: 'var(--border-hover)' }} />
                 )}
                 {data.unproductive > 0 && (
-                    <motion.div className="h-full rounded-r-full" initial={{ width: 0 }} animate={{ width: `${unprodPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: '#ef4444' }} />
+                    <motion.div className="h-full rounded-r-full" initial={{ width: 0 }} animate={{ width: `${unprodPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: 'var(--error)' }} />
                 )}
             </div>
             <div className="flex justify-between mt-3">
                 <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--accent-primary)' }} />
                     <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">Productive {fmt(data.productive)}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-gray-500" />
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-hover)' }} />
                     <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">Neutral {fmt(data.neutral)}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--error)' }} />
                     <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">Distracting {fmt(data.unproductive)}</span>
                 </div>
             </div>
@@ -356,7 +356,7 @@ function DomainList({ domains }: { domains: { domain: string; totalSeconds: numb
                                 initial={{ width: 0 }}
                                 animate={{ width: `${pct(d.totalSeconds, maxSec)}%` }}
                                 transition={{ duration: 0.6, delay: i * 0.03, ease: 'easeOut' }}
-                                style={{ backgroundColor: 'var(--accent-violet)' }}
+                                style={{ backgroundColor: 'var(--accent-primary)' }}
                             />
                         </div>
                     </div>
@@ -489,7 +489,7 @@ export function ScreenTime() {
                     {/* Date navigation */}
                     <div className="flex items-center gap-2">
                         {isViewingToday && (
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-[0_8px_24px_var(--accent-glow)]">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-sm">
                                 <span className="w-1.5 h-1.5 bg-[var(--accent-contrast)] rounded-full animate-pulse" />
                                 <span className="text-[11px] font-bold uppercase tracking-wider">Live</span>
                             </div>
@@ -530,7 +530,7 @@ export function ScreenTime() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <Kpi label="Screen Time" value={fmt(totals.totalScreenTime)}>
                                 <div className="flex items-center gap-1">
-                                    {todayVsAvg > 0 ? <TrendingUp className="w-3.5 h-3.5 text-red-400" /> : todayVsAvg < 0 ? <TrendingDown className="w-3.5 h-3.5 text-green-400" /> : <Minus className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
+                                    {todayVsAvg > 0 ? <TrendingUp className="w-3.5 h-3.5 text-[var(--text-secondary)]" /> : todayVsAvg < 0 ? <TrendingDown className="w-3.5 h-3.5 text-[var(--accent-primary)]" /> : <Minus className="w-3.5 h-3.5 text-[var(--text-muted)]" />}
                                     <p className="text-[11px] text-[var(--text-tertiary)]">
                                         {todayVsAvg === 0 ? 'On average' : `${Math.abs(todayVsAvg)}% ${todayVsAvg > 0 ? 'above' : 'below'} avg`}
                                     </p>

@@ -43,7 +43,7 @@ export function StatsOverview({ stats, dailyFocusGoalMinutes }: StatsOverviewPro
                 {/* Completed Tasks Card */}
                 <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-5 flex flex-col justify-between flex-1 min-h-[140px] shadow-sm">
                     <div className="flex items-start justify-between">
-                        <h4 className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest mb-1">
+                        <h4 className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1">
                             Completed
                         </h4>
                         <div className="text-3xl font-semibold text-[var(--text-primary)] tabular-nums tracking-tight">
@@ -53,7 +53,7 @@ export function StatsOverview({ stats, dailyFocusGoalMinutes }: StatsOverviewPro
 
                     <div className="mt-4">
                         <div className="w-full bg-[var(--bg-hover)] h-1.5 rounded-full overflow-hidden mb-2">
-                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: '60%' }}></div>
+                            <div className="h-full bg-[var(--accent-primary)] rounded-full" style={{ width: '60%' }}></div>
                         </div>
                         <p className="text-xs text-[var(--text-tertiary)] font-medium">
                             {stats.taskCompletion.completedToday > 0

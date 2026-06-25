@@ -44,10 +44,10 @@ export function ReportsHeader({ navigate, dateRange, setDateRange }: ReportsHead
 
                 <button
                     onClick={handleClearHistory}
-                    className="h-10 px-4 rounded-full bg-red-500/10 border border-red-500/20 flex items-center gap-2 hover:bg-red-500/20 hover:border-red-500/30 transition-colors group"
+                    className="h-10 px-4 rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] flex items-center gap-2 hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] transition-colors group"
                 >
-                    <Trash2 size={16} className="text-red-400/70 group-hover:text-red-400 transition-colors" />
-                    <span className="text-xs font-medium text-red-400/70 group-hover:text-red-400">Clear Data</span>
+                    <Trash2 size={16} className="text-[var(--text-tertiary)] group-hover:text-[var(--error)] transition-colors" />
+                    <span className="text-xs font-medium text-[var(--text-tertiary)] group-hover:text-[var(--error)]">Clear Data</span>
                 </button>
             </div>
         </header>

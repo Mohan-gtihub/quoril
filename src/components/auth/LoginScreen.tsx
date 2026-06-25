@@ -100,7 +100,7 @@ export function LoginScreen() {
     }
 
     const strengthColor = (s: string) =>
-        s === 'very-strong' ? '#10b981' : s === 'strong' ? '#22c55e' : s === 'medium' ? '#f59e0b' : '#ef4444'
+        s === 'very-strong' ? 'var(--success)' : s === 'strong' ? 'var(--accent-primary)' : s === 'medium' ? 'var(--warning)' : 'var(--error)'
 
     const strengthLabel = (s: string) =>
         s === 'very-strong' ? 'Very Strong' : s === 'strong' ? 'Strong' : s === 'medium' ? 'Medium' : 'Weak'
@@ -243,7 +243,7 @@ export function LoginScreen() {
                                     className={`w-full px-4 py-3 bg-white/[0.04] border ${emailError
                                         ? 'border-red-500/40 focus:border-red-500/70'
                                         : email && !emailError
-                                            ? 'border-emerald-500/40 focus:border-emerald-500/70'
+                                            ? 'border-[var(--success)]/40 focus:border-[var(--success)]/70'
                                             : 'border-white/8 focus:border-[var(--accent-primary)]/50'
                                         } rounded-xl text-white text-sm placeholder-white/20 focus:outline-none transition-colors duration-200`}
                                     placeholder="you@example.com"
@@ -252,7 +252,7 @@ export function LoginScreen() {
                                     <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
                                         {emailError
                                             ? <AlertTriangle className="w-4 h-4 text-red-400" />
-                                            : <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                            : <CheckCircle2 className="w-4 h-4 text-[var(--success)]" />
                                         }
                                     </div>
                                 )}
@@ -280,7 +280,7 @@ export function LoginScreen() {
                                     className={`w-full px-4 py-3 pr-11 bg-white/[0.04] border ${passwordError
                                         ? 'border-red-500/40 focus:border-red-500/70'
                                         : isSignUp && password && !passwordError
-                                            ? 'border-emerald-500/40 focus:border-emerald-500/70'
+                                            ? 'border-[var(--success)]/40 focus:border-[var(--success)]/70'
                                             : 'border-white/8 focus:border-[var(--accent-primary)]/50'
                                         } rounded-xl text-white text-sm placeholder-white/20 focus:outline-none transition-colors duration-200 font-mono`}
                                     placeholder="••••••••"

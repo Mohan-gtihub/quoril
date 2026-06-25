@@ -20,11 +20,11 @@ export function ReflectionModal({ isOpen, onSubmit, onSkip }: ReflectionModalPro
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg-primary)]/90 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="w-full max-w-md glass-thick rounded-2xl shadow-2xl p-6 transform scale-100 transition-all">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-white">Session Reflection</h2>
-                    <button onClick={onSkip} className="text-gray-500 hover:text-white transition-colors">
+                    <h2 className="text-xl font-bold text-[var(--text-primary)]">Session Reflection</h2>
+                    <button onClick={onSkip} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -32,13 +32,13 @@ export function ReflectionModal({ isOpen, onSubmit, onSkip }: ReflectionModalPro
                 <div className="space-y-8">
                     {/* Focus Score */}
                     <div className="space-y-3">
-                        <label className="text-sm font-medium text-gray-400 uppercase tracking-wider">Focus Quality</label>
+                        <label className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Focus Quality</label>
                         <div className="flex justify-center gap-2">
                             {[1, 2, 3, 4, 5].map((star) => (
                                 <button
                                     key={star}
                                     onClick={() => setFocusScore(star)}
-                                    className={`p-2 rounded-lg transition-all transform hover:scale-110 ${focusScore >= star ? 'text-yellow-400 scale-110' : 'text-gray-600 hover:text-yellow-400'
+                                    className={`p-2 rounded-lg transition-all transform hover:scale-110 ${focusScore >= star ? 'text-[var(--accent-primary)] scale-110' : 'text-[var(--text-tertiary)] hover:text-[var(--accent-primary)]'
                                         }`}
                                 >
                                     <Star className="w-8 h-8 fill-current" />
@@ -49,23 +49,23 @@ export function ReflectionModal({ isOpen, onSubmit, onSkip }: ReflectionModalPro
 
                     {/* Energy Level */}
                     <div className="space-y-3">
-                        <label className="text-sm font-medium text-gray-400 uppercase tracking-wider">Energy Left</label>
+                        <label className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Energy Left</label>
                         <div className="flex justify-center gap-4">
                             {[
-                                { val: 1, label: 'Low', color: 'bg-red-500' },
-                                { val: 3, label: 'Med', color: 'bg-yellow-500' },
-                                { val: 5, label: 'High', color: 'bg-green-500' }
+                                { val: 1, label: 'Low', color: 'bg-[var(--error)]' },
+                                { val: 3, label: 'Med', color: 'bg-[var(--warning)]' },
+                                { val: 5, label: 'High', color: 'bg-[var(--success)]' }
                             ].map((level) => (
                                 <button
                                     key={level.val}
                                     onClick={() => setEnergyLevel(level.val)}
                                     className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all border-2 ${energyLevel === level.val
                                         ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10'
-                                        : 'border-transparent hover:bg-gray-800'
+                                        : 'border-transparent hover:bg-[var(--bg-hover)]'
                                         }`}
                                 >
                                     <div className={`w-3 h-8 rounded-full ${level.color} ${energyLevel === level.val ? '' : 'opacity-40'}`}></div>
-                                    <span className={`text-xs font-bold ${energyLevel === level.val ? 'text-white' : 'text-gray-500'}`}>{level.label}</span>
+                                    <span className={`text-xs font-bold ${energyLevel === level.val ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'}`}>{level.label}</span>
                                 </button>
                             ))}
                         </div>
@@ -73,12 +73,12 @@ export function ReflectionModal({ isOpen, onSubmit, onSkip }: ReflectionModalPro
 
                     {/* Notes */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-400 uppercase tracking-wider">Notes (Optional)</label>
+                        <label className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Notes (Optional)</label>
                         <textarea
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
                             placeholder="What blocked you? What went well?"
-                            className="w-full h-24 bg-[#1a1f2e] border border-gray-700 rounded-lg p-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[var(--accent-primary)] transition-colors resize-none"
+                            className="w-full h-24 bg-[var(--bg-tertiary)] border border-[var(--border-default)] rounded-lg p-3 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors resize-none"
                         />
                     </div>
                 </div>

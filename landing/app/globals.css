@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #fbfbfa;
+  color: #16160f;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: #16160f;
+  color: #fbfbfa;
+}
+
+/* tabular numerals for any timer / metric */
+.mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* subtle dotted backdrop — quiet texture, not noise */
+.dotgrid {
+  background-image: radial-gradient(rgba(22, 22, 15, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* hairline helper (sub-pixel crisp on hi-dpi) */
+.hairline {
+  box-shadow: 0 0 0 1px #ebeae6;
+}
+
+/* thin custom scrollbar */
+::-webkit-scrollbar {
+  width: 11px;
+}
+::-webkit-scrollbar-track {
+  background: #fbfbfa;
+}
+::-webkit-scrollbar-thumb {
+  background: #dcdbd5;
+  border-radius: 999px;
+  border: 3px solid #fbfbfa;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c7c6bf;
+}
+
+/* very slow sheen on the waitlist card edge — monochrome, restrained */
+.sheen {
+  position: relative;
+}
+.sheen::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    120deg,
+    transparent 35%,
+    rgba(22, 22, 15, 0.18) 50%,
+    transparent 65%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  background-size: 280% 100%;
+  animation: sheen 6s linear infinite;
+  pointer-events: none;
+}
+@keyframes sheen {
+  to {
+    background-position: -280% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheen::before {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}

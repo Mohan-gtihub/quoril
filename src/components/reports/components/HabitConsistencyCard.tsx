@@ -47,9 +47,9 @@ export function HabitConsistencyCard({
                                     className={cn(
                                         "w-full aspect-[4/5] rounded-md",
                                         d.goalMet
-                                            ? "bg-emerald-500"
+                                            ? "bg-[var(--accent-primary)]"
                                             : d.minutes > 0
-                                                ? "bg-emerald-500/20 border border-emerald-500/20"
+                                                ? "bg-[var(--accent-primary)]/20 border border-[var(--accent-primary)]/20"
                                                 : "bg-[var(--bg-hover)] border border-[var(--border-default)]"
                                     )}
                                     title={`${format(d.date, 'MMM d')}: ${d.minutes}m`}

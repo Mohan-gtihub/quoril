@@ -97,7 +97,7 @@ export function SuperFocusPill() {
             <div
                 className={cn(
                     "w-[340px] h-[48px] flex items-center gap-3 px-4 transition-all duration-300 pointer-events-auto shrink-0 relative",
-                    "bg-[#0f1117] border border-white/10 rounded-full group hover:border-[#3b82f6]/50"
+                    "bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-full group hover:border-[var(--accent-primary)]/50"
                 )}
                 style={{ WebkitAppRegion: 'no-drag' } as any}
                 onMouseEnter={() => setIsHovered(true)}
@@ -106,7 +106,7 @@ export function SuperFocusPill() {
                 {/* POMODORO BADGE: Half-on-air, Centered Top */}
                 {!isBreak && settings.pomodorosEnabled && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center pointer-events-none">
-                        <div className="bg-[var(--bg-primary)] border border-red-500/30 text-red-500 text-[11px] font-semibold px-2 py-0.5 rounded-full tracking-widest uppercase">
+                        <div className="bg-[var(--bg-primary)] border border-[var(--accent-primary)]/30 text-[var(--accent-primary)] text-[11px] font-semibold px-2 py-0.5 rounded-full tracking-widest uppercase">
                             POMO {formatShortTime(pomodoroRemaining)}
                         </div>
                     </div>
@@ -131,7 +131,7 @@ export function SuperFocusPill() {
                         </div>
                         <span className={cn(
                             "font-mono font-bold text-sm tabular-nums tracking-tight shrink-0",
-                            isOvertime ? "text-red-400" : (isBreak ? "text-amber-400" : "text-emerald-400")
+                            isOvertime ? "text-[var(--error)]" : (isBreak ? "text-[var(--warning)]" : "text-[var(--accent-primary)]")
                         )}>
                             {formatShortTime(time)}
                         </span>
@@ -144,7 +144,7 @@ export function SuperFocusPill() {
                                 onClick={() => isBreak ? stopBreak() : startBreak()}
                                 className={cn(
                                     "p-2 rounded-lg transition-colors",
-                                    isBreak ? "text-amber-400 bg-amber-400/10" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+                                    isBreak ? "text-[var(--accent-primary)] bg-[var(--accent-primary)]/10" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
                                 )}
                                 title="Break"
                             >
@@ -155,7 +155,7 @@ export function SuperFocusPill() {
                                 onClick={() => setIsExpanded(!isExpanded)}
                                 className={cn(
                                     "p-2 rounded-lg transition-colors",
-                                    isExpanded ? "text-blue-400 bg-blue-400/10" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+                                    isExpanded ? "text-[var(--accent-primary)] bg-[var(--accent-primary)]/10" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
                                 )}
                                 title="Subtasks"
                             >
@@ -167,7 +167,7 @@ export function SuperFocusPill() {
                             onClick={() => isPaused ? resumeSession() : pauseSession()}
                             className={cn(
                                 "flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wide transition-all shadow-sm",
-                                isPaused ? "bg-blue-500 text-white shadow-blue-500/20" : "bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+                                isPaused ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-[var(--accent-glow)]" : "bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
                             )}
                         >
                             {isPaused ? <Play size={10} className="fill-current" /> : <Pause size={10} className="fill-current" />}
@@ -178,7 +178,7 @@ export function SuperFocusPill() {
                             <button onClick={() => skipToNext()} className="p-2 rounded-lg hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors" title="Skip">
                                 <SkipForward size={16} />
                             </button>
-                            <button onClick={handleDone} className="p-2 rounded-lg hover:bg-emerald-500/20 text-emerald-500 transition-colors" title="Done">
+                            <button onClick={handleDone} className="p-2 rounded-lg hover:bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] transition-colors" title="Done">
                                 <CheckCircle2 size={16} />
                             </button>
                             <button
@@ -199,7 +199,7 @@ export function SuperFocusPill() {
             {/* Subtasks Panel (Floating Accordion) */}
             {isExpanded && (
                 <div
-                    className="mx-2 w-[324px] bg-[#0f1117] border border-white/10 rounded-2xl p-3 shadow-[0_10px_40px_rgba(0,0,0,0.8)] animate-in slide-in-from-top-4 fade-in duration-300 pointer-events-auto overflow-hidden shrink-0"
+                    className="mx-2 w-[324px] bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-2xl p-3 shadow-[0_10px_40px_rgba(0,0,0,0.8)] animate-in slide-in-from-top-4 fade-in duration-300 pointer-events-auto overflow-hidden shrink-0"
                     style={{ WebkitAppRegion: 'no-drag' } as any}
                 >
                     <div className="flex items-center justify-between mb-2 px-1">
@@ -218,7 +218,7 @@ export function SuperFocusPill() {
                             >
                                 <div className={cn(
                                     "w-4 h-4 rounded border border-[var(--border-default)] flex items-center justify-center transition-all shrink-0",
-                                    subtask.completed ? "bg-emerald-500 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "group-hover/sub:border-[var(--border-hover)]"
+                                    subtask.completed ? "bg-[var(--success)] border-[var(--success)] shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "group-hover/sub:border-[var(--border-hover)]"
                                 )}>
                                     {subtask.completed && <Check size={11} className="text-white" />}
                                 </div>

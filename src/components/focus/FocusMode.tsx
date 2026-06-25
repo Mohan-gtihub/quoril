@@ -187,7 +187,7 @@ export function FocusMode() {
     const ringPct = Math.min(100, isBreak
         ? (breakRemaining / (settings.defaultBreakLength * 60)) * 100
         : (settings.pomodorosEnabled ? (pomodoroRemaining / pomodoroTotal) * 100 : progress))
-    const ringStroke = isBreak ? 'var(--accent-violet)' : 'var(--accent-primary)'
+    const ringStroke = 'var(--accent-primary)'
     const isOver = isOvertime && !isBreak && !settings.pomodorosEnabled
 
     return (
@@ -201,7 +201,7 @@ export function FocusMode() {
                     <div className="flex items-center gap-3">
                         <span className={cn(
                             "w-2 h-2 rounded-full",
-                            isActive && !isPaused ? "bg-[var(--accent-primary)] animate-pulse shadow-[0_0_8px_var(--accent-glow)]" : "bg-[var(--text-muted)]"
+                            isActive && !isPaused ? "bg-[var(--accent-primary)] animate-pulse" : "bg-[var(--text-muted)]"
                         )} />
                         <h1 className="text-[24px] font-semibold tracking-tight">
                             {isBreak ? 'Break' : 'Focus'}
@@ -211,7 +211,7 @@ export function FocusMode() {
                     {/* POMODORO BADGE: Centered Top */}
                     {!isBreak && settings.pomodorosEnabled && (
                         <div className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-                            <div className="px-3 py-1 rounded-full bg-[var(--accent-violet)] text-white text-xs font-semibold tracking-wide shadow-[0_8px_24px_var(--accent-violet-glow)] tabular-nums">
+                            <div className="px-3 py-1 rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] text-xs font-semibold tracking-wide tabular-nums">
                                 POMO {formatTimerTime(pomodoroRemaining)}
                             </div>
                         </div>
@@ -249,9 +249,9 @@ export function FocusMode() {
                         <div className="rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-sm p-6 flex flex-col items-center justify-center">
                             <div className="mb-4 h-7 flex items-center">
                                 {isBreak ? (
-                                    <span className="text-xs font-semibold tracking-wide text-[var(--accent-violet)] bg-[var(--accent-violet-100)] px-3 py-1 rounded-full">Recovery Mode</span>
+                                    <span className="text-xs font-semibold tracking-wide text-[var(--text-secondary)] bg-[var(--bg-hover)] px-3 py-1 rounded-full">Recovery Mode</span>
                                 ) : settings.pomodorosEnabled ? (
-                                    <span className="text-xs font-semibold tracking-wide text-[var(--accent-primary)] bg-[var(--accent-lime-100)] px-3 py-1 rounded-full">Focus Session</span>
+                                    <span className="text-xs font-semibold tracking-wide text-[var(--text-secondary)] bg-[var(--bg-hover)] px-3 py-1 rounded-full">Focus Session</span>
                                 ) : (
                                     <span className="text-xs font-medium text-[var(--text-tertiary)]">Open focus</span>
                                 )}
@@ -265,13 +265,12 @@ export function FocusMode() {
                                         strokeDasharray={ringCirc}
                                         animate={{ strokeDashoffset: ringCirc - (ringPct / 100) * ringCirc }}
                                         transition={{ duration: 0.8, ease: 'easeOut' }}
-                                        style={{ filter: 'drop-shadow(0 0 6px var(--accent-glow))' }}
                                     />
                                 </svg>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                                     <span className={cn(
                                         "font-semibold text-[52px] leading-none tabular-nums tracking-tight",
-                                        isOver ? "text-[var(--accent-violet)]" : "text-[var(--text-primary)]"
+                                        isOver ? "text-[var(--accent-primary)]" : "text-[var(--text-primary)]"
                                     )}>
                                         {formatTimerTime(displayTime)}
                                     </span>
@@ -290,7 +289,7 @@ export function FocusMode() {
                                     className={cn(
                                         "flex items-center gap-2 px-6 h-12 rounded-full font-semibold transition-all active:scale-95",
                                         isPaused
-                                            ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105 shadow-[0_8px_24px_var(--accent-glow)]"
+                                            ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105 shadow-sm"
                                             : "bg-[var(--bg-hover)] text-[var(--text-primary)] hover:bg-[var(--border-hover)]"
                                     )}
                                 >
@@ -301,7 +300,7 @@ export function FocusMode() {
                                 <HoldButton
                                     onTrigger={() => activeTask && handleCompleteTask(activeTask.id)}
                                     duration={1500}
-                                    className="flex items-center gap-2 px-6 h-12 rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] font-semibold hover:brightness-105 active:scale-95 transition-all shadow-[0_8px_24px_var(--accent-glow)]"
+                                    className="flex items-center gap-2 px-6 h-12 rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] font-semibold hover:brightness-105 active:scale-95 transition-all shadow-sm"
                                     fillClassName="bg-black/10"
                                 >
                                     <CheckCircle2 className="w-5 h-5" />
@@ -313,7 +312,7 @@ export function FocusMode() {
                                     className={cn(
                                         "w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-95",
                                         isBreak
-                                            ? "bg-[var(--accent-violet)] text-white shadow-[0_8px_24px_var(--accent-violet-glow)]"
+                                            ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-sm"
                                             : "bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)]"
                                     )}
                                     title={isBreak ? 'End Break' : 'Take Break'}
@@ -339,14 +338,14 @@ export function FocusMode() {
                                 className={cn(
                                     "rounded-[var(--radius-tile)] border shadow-sm transition-all p-5 relative",
                                     isOverActive
-                                        ? "bg-[var(--accent-lime-100)] border-[var(--accent-primary)] border-dashed"
+                                        ? "bg-[var(--bg-hover)] border-[var(--border-hover)] border-dashed"
                                         : "bg-[var(--bg-card)] border-[var(--border-default)]"
                                 )}
                             >
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-base font-semibold text-[var(--text-primary)]">Active task</h2>
                                     {syncError ? (
-                                        <span className="text-xs text-[var(--accent-violet)]">Sync error</span>
+                                        <span className="text-xs text-[var(--error)]">Sync error</span>
                                     ) : syncing ? (
                                         <span className="text-xs text-[var(--text-tertiary)] animate-pulse">Syncing…</span>
                                     ) : pendingCount > 0 ? (
@@ -364,14 +363,14 @@ export function FocusMode() {
                                         />
                                     ) : (
                                         <div className="rounded-2xl bg-[var(--bg-hover)] py-10 flex flex-col items-center justify-center text-center gap-2">
-                                            <Play className="w-7 h-7 text-[var(--accent-primary)] opacity-60" />
+                                            <Play className="w-7 h-7 text-[var(--text-muted)]" />
                                             <p className="text-sm text-[var(--text-tertiary)]">Drag a task here<br />to start a session</p>
                                         </div>
                                     )}
                                 </div>
 
                                 {isOverActive && (
-                                    <div className="absolute inset-0 bg-[var(--accent-primary)]/15 backdrop-blur-sm rounded-[var(--radius-tile)] flex items-center justify-center z-50">
+                                    <div className="absolute inset-0 bg-[var(--bg-hover)]/80 backdrop-blur-sm rounded-[var(--radius-tile)] flex items-center justify-center z-50">
                                         <Play className="w-12 h-12 text-[var(--accent-primary)] fill-[var(--accent-primary)] animate-pulse" />
                                     </div>
                                 )}
@@ -396,7 +395,7 @@ export function FocusMode() {
                                         className={cn(
                                             "px-4 py-1.5 rounded-full text-sm font-semibold transition-colors",
                                             rightPanelTab === 'history'
-                                                ? "bg-[var(--accent-violet)] text-white"
+                                                ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)]"
                                                 : "bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                                         )}
                                     >
@@ -433,7 +432,7 @@ export function FocusMode() {
                                         <div className="space-y-2">
                                             {allStoreTasks.filter(t => t.status === 'done' && t.completed_at?.startsWith(new Date().toISOString().split('T')[0])).length === 0 && (
                                                 <div className="py-12 flex flex-col items-center justify-center text-center gap-2">
-                                                    <CheckCircle2 className="w-7 h-7 text-[var(--accent-primary)] opacity-50" />
+                                                    <CheckCircle2 className="w-7 h-7 text-[var(--text-muted)]" />
                                                     <p className="text-sm text-[var(--text-tertiary)]">No tasks completed yet today</p>
                                                 </div>
                                             )}
@@ -485,14 +484,14 @@ export function FocusMode() {
 
                 {isBreak && (
                     <div className="fixed inset-0 bg-[var(--bg-secondary)]/95 backdrop-blur-xl z-[100] flex flex-col items-center justify-center p-8 animate-in fade-in duration-500">
-                        <span className="text-xs font-semibold tracking-wide text-[var(--accent-violet)] bg-[var(--accent-violet-100)] px-3 py-1 rounded-full mb-6">Recovery Mode</span>
+                        <span className="text-xs font-semibold tracking-wide text-[var(--text-secondary)] bg-[var(--bg-hover)] px-3 py-1 rounded-full mb-6">Recovery Mode</span>
                         <h2 className="text-[30px] font-semibold tracking-tight text-[var(--text-primary)] mb-2">Take a breather</h2>
                         <div className="font-semibold text-[64px] leading-none text-[var(--text-primary)] my-10 tabular-nums tracking-tight">
                             {formatTimerTime(breakRemaining)}
                         </div>
                         <button
                             onClick={() => stopBreak()}
-                            className="px-10 py-3.5 rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] font-semibold hover:brightness-105 active:scale-95 transition-all shadow-[0_8px_24px_var(--accent-glow)]"
+                            className="px-10 py-3.5 rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] font-semibold hover:brightness-105 active:scale-95 transition-all shadow-sm"
                         >Resume focus</button>
                     </div>
                 )}

@@ -33,10 +33,10 @@ import { calculateRealTimeFocus } from '@/utils/timeCalculations'
    HELPERS
 ───────────────────────────────────────── */
 const P_INFO: Record<string, { label: string; color: string }> = {
-    critical: { label: 'Critical', color: '#ef4444' },
-    high: { label: 'High', color: '#f97316' },
-    medium: { label: 'Medium', color: '#eab308' },
-    low: { label: 'Low', color: '#3b82f6' },
+    critical: { label: 'Critical', color: 'var(--text-primary)' },
+    high: { label: 'High', color: 'var(--text-secondary)' },
+    medium: { label: 'Medium', color: 'var(--text-tertiary)' },
+    low: { label: 'Low', color: 'var(--text-muted)' },
 }
 
 function fmtDue(due: string | null | undefined) {
@@ -176,16 +176,15 @@ export function Dashboard() {
                             {/* NEW Workspace Switcher Dropdown */}
                             <div className="relative flex items-center gap-3">
                                 {ws?.color && !isArchived && activeWorkspaceId !== 'unassigned' && (
-                                    <span className="w-9 h-9 rounded-2xl shrink-0 flex items-center justify-center text-white font-bold text-base"
-                                        style={{ background: `linear-gradient(135deg, ${ws.color}, ${ws.color}bb)`, boxShadow: `0 6px 18px ${ws.color}55` }}>
-                                        {ws.name.charAt(0).toUpperCase()}
+                                    <span className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center bg-[var(--bg-tertiary)] border border-[var(--border-default)] text-[var(--text-primary)] font-semibold text-base">
+                                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ws.color }} />
                                     </span>
                                 )}
                                 <button
                                     onClick={() => setShowWsMenu(!showWsMenu)}
                                     className="flex items-center gap-2 group hover:opacity-80 transition-opacity outline-none"
                                 >
-                                    <h1 className="text-[26px] leading-none font-semibold text-[var(--text-primary)] tracking-tight">
+                                    <h1 className="text-[22px] leading-none font-semibold text-[var(--text-primary)] tracking-tight">
                                         {isArchived ? 'Archived' : activeWorkspaceId === 'unassigned' ? 'Unassigned' : ws?.name}
                                     </h1>
                                     <ChevronDown size={18} className="text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors" />
@@ -270,7 +269,7 @@ export function Dashboard() {
                                 {!isArchived && (
                                     <button
                                         onClick={() => setShowCreateList(true)}
-                                        className="flex items-center gap-1.5 px-3.5 py-2 bg-[var(--accent-primary)] text-[var(--accent-contrast)] text-xs font-semibold rounded-full transition-all active:scale-95 hover:brightness-105 shadow-[0_6px_18px_var(--accent-glow)]"
+                                        className="flex items-center gap-1.5 px-3.5 py-2 bg-[var(--accent-primary)] text-[var(--accent-contrast)] text-xs font-semibold rounded-full transition-all active:scale-95 hover:opacity-90"
                                     >
                                         <ListPlus size={13} /> New List
                                     </button>
@@ -282,20 +281,20 @@ export function Dashboard() {
                         {!isArchived && (
                             <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                                 <span className="flex items-center gap-1.5 shrink-0 rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] text-[var(--text-tertiary)]">
-                                    <Zap size={11} className="text-amber-400" />
+                                    <Zap size={11} className="text-[var(--text-muted)]" />
                                     <span className="font-semibold text-[var(--text-primary)] tabular-nums">{fmtMin(stats.focusMin)}</span> focus
                                 </span>
                                 <span className="flex items-center gap-1.5 shrink-0 rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] text-[var(--text-tertiary)]">
-                                    <CheckCircle2 size={11} className="text-emerald-400" />
+                                    <CheckCircle2 size={11} className="text-[var(--text-muted)]" />
                                     <span className="font-semibold text-[var(--text-primary)] tabular-nums">{stats.doneToday}</span> done today
                                 </span>
                                 <span className="flex items-center gap-1.5 shrink-0 rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] text-[var(--text-tertiary)]">
-                                    <Target size={11} className="text-blue-400" />
+                                    <Target size={11} className="text-[var(--text-muted)]" />
                                     <span className="font-semibold text-[var(--text-primary)] tabular-nums">{stats.active}</span> active
                                     {stats.totalEst > 0 && <span className="text-[var(--text-muted)]">· {fmtMin(stats.totalEst)} est.</span>}
                                 </span>
                                 {isActive && (
-                                    <span className="flex items-center gap-1.5 shrink-0 rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] font-semibold px-2.5 py-1 text-[11px] animate-pulse">
+                                    <span className="flex items-center gap-1.5 shrink-0 rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] font-semibold px-2.5 py-1 text-[11px]">
                                         <Flame size={11} /> Live session
                                     </span>
                                 )}
@@ -362,7 +361,7 @@ export function Dashboard() {
                                                 onClick={() => setShowCreateList(true)}
                                                 className="group rounded-2xl border border-dashed border-[var(--border-hover)] bg-[var(--bg-hover)]/30 hover:bg-[var(--bg-hover)] hover:border-[var(--accent-primary)] flex flex-col items-center justify-center gap-2.5 transition-all duration-200 col-span-1 row-span-1 min-h-[186px]"
                                             >
-                                                <div className="w-11 h-11 rounded-2xl bg-[var(--bg-card)] group-hover:bg-[var(--accent-primary)] flex items-center justify-center transition-all group-hover:scale-105 group-hover:shadow-[0_8px_24px_var(--accent-glow)]">
+                                                <div className="w-11 h-11 rounded-xl bg-[var(--bg-card)] border border-[var(--border-default)] group-hover:bg-[var(--accent-primary)] group-hover:border-[var(--accent-primary)] flex items-center justify-center transition-all">
                                                     <Plus size={20} className="text-[var(--text-muted)] group-hover:text-[var(--accent-contrast)] transition-colors" />
                                                 </div>
                                                 <span className="text-xs text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors font-semibold">New List</span>
@@ -403,7 +402,7 @@ export function Dashboard() {
             <AnimatePresence>
                 {showWsModal && <ManageWorkspacesModal isOpen={showWsModal} onClose={() => setShowWsModal(false)} />}
                 {movingList && (
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-[var(--text-primary)]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 8 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -473,7 +472,7 @@ function BentoListCard({
     isMenuOpen, isArchived, isDragging, onOpenMenu, onClick,
     onDuplicate, onEdit, onArchive, onMove, onRestore, onPermanentDelete, search
 }: CardProps) {
-    const accent = list.color || '#6366f1'
+    const accent = list.color || 'var(--accent-primary)'
     const taskLimit = size === 'sm' ? 2 : size === 'md' ? 6 : 4
     const previewTasks = pending.slice(0, taskLimit)
 
@@ -481,7 +480,7 @@ function BentoListCard({
         if (!q) return <>{text}</>
         const i = text.toLowerCase().indexOf(q.toLowerCase())
         if (i === -1) return <>{text}</>
-        return <>{text.slice(0, i)}<mark className="bg-yellow-400/25 text-inherit rounded">{text.slice(i, i + q.length)}</mark>{text.slice(i + q.length)}</>
+        return <>{text.slice(0, i)}<mark className="bg-[var(--accent-primary)]/15 text-inherit rounded px-0.5">{text.slice(i, i + q.length)}</mark>{text.slice(i + q.length)}</>
     }
 
     return (
@@ -490,39 +489,23 @@ function BentoListCard({
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: isDragging ? 0.4 : 1, scale: 1 }}
             className={cn(
-                "group relative h-full overflow-hidden bg-[var(--bg-card)] rounded-2xl border border-[var(--border-default)] flex flex-col transition-all duration-200",
-                !isArchived && "cursor-pointer hover:shadow-xl hover:border-[var(--border-hover)] hover:-translate-y-0.5",
+                "group relative h-full overflow-hidden bg-[var(--bg-card)] rounded-[var(--radius-card)] border border-[var(--border-default)] flex flex-col transition-all duration-200",
+                !isArchived && "cursor-pointer hover:border-[var(--border-hover)] hover:-translate-y-0.5",
                 isArchived && "cursor-default opacity-60",
-                hasActive && "ring-1 ring-[var(--accent-primary)]/40 shadow-md",
-                isDragging && "shadow-2xl scale-[1.02]",
-                isMenuOpen ? "z-50 shadow-2xl border-[var(--border-hover)]" : "z-10"
+                hasActive && "ring-1 ring-[var(--accent-primary)]/30",
+                isMenuOpen ? "z-50 border-[var(--border-hover)]" : "z-10"
             )}
             onClick={onClick}
         >
-            {/* Ambient accent wash */}
-            <div
-                className="pointer-events-none absolute -top-12 -right-12 w-32 h-32 rounded-full blur-3xl opacity-20 group-hover:opacity-30 transition-opacity duration-300"
-                style={{ background: accent }}
-            />
-
-            {/* ── Gradient header ── */}
-            <div
-                className="relative flex items-start justify-between px-4 pt-4 pb-3 shrink-0 rounded-t-2xl"
-                style={{ background: `linear-gradient(135deg, ${accent}1f 0%, ${accent}05 100%)` }}
-            >
+            {/* ── Header ── */}
+            <div className="relative flex items-start justify-between px-4 pt-4 pb-3 shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0">
-                    {/* Avatar */}
-                    <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold text-base shrink-0 shadow-md"
-                        style={{
-                            background: `linear-gradient(135deg, ${accent}, ${accent}bb)`,
-                            boxShadow: `0 4px 12px ${accent}40`
-                        }}
-                    >
-                        {list.name.charAt(0).toUpperCase()}
+                    {/* Avatar — neutral tile with a single colour dot */}
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--bg-tertiary)] border border-[var(--border-default)] shrink-0">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: accent }} />
                     </div>
                     <div className="min-w-0">
-                        <h3 className="font-bold text-sm text-[var(--text-primary)] truncate leading-tight">
+                        <h3 className="font-semibold text-sm text-[var(--text-primary)] truncate leading-tight">
                             {hl(list.name, search)}
                         </h3>
                         <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
@@ -534,7 +517,7 @@ function BentoListCard({
                 <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                     {hasActive && <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] animate-pulse" />}
                     {!isArchived && (
-                        <button className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-black/10" onClick={onOpenMenu}>
+                        <button className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]" onClick={onOpenMenu}>
                             <MoreHorizontal size={13} />
                         </button>
                     )}
@@ -587,8 +570,7 @@ function BentoListCard({
                             transition={{ duration: 0.8, ease: 'easeOut' }}
                             className="h-full rounded-full"
                             style={{
-                                background: progress === 100 ? 'linear-gradient(90deg,#10b981aa,#10b981)' : `linear-gradient(90deg, ${accent}aa, ${accent})`,
-                                boxShadow: `0 0 8px ${progress === 100 ? '#10b981' : accent}66`,
+                                background: progress === 100 ? 'var(--success)' : 'var(--accent-primary)',
                             }}
                         />
                     </div>
@@ -602,7 +584,7 @@ function BentoListCard({
                     <div className="flex flex-col items-center justify-center h-full gap-1.5 text-[var(--text-muted)]">
                         {tasks.length === 0
                             ? <><Layers size={20} className="opacity-15" /><p className="text-[11px] opacity-40">No tasks yet</p></>
-                            : <><CheckCircle2 size={20} className="text-emerald-500 opacity-40" /><p className="text-[11px] text-emerald-500/50 font-semibold">All done!</p></>
+                            : <><CheckCircle2 size={20} className="text-[var(--success)] opacity-50" /><p className="text-[11px] text-[var(--text-tertiary)] font-semibold">All done</p></>
                         }
                     </div>
                 ) : (
@@ -657,7 +639,7 @@ function BentoListCard({
                     )}
                 </div>
                 <div className="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
-                    <CheckCircle2 size={9} className="text-emerald-500" />
+                    <CheckCircle2 size={9} className="text-[var(--text-tertiary)]" />
                     <span className="tabular-nums">{done.length}/{tasks.length}</span>
                 </div>
             </div>
@@ -713,19 +695,19 @@ function EmptyState({ kind, onCreate, search }: { kind: string; onCreate: () => 
         <div className="flex flex-col items-center justify-center py-20 gap-4">
             <FolderKanban size={32} className="text-[var(--accent-primary)] opacity-30" />
             <div className="text-center"><h3 className="font-bold mb-1">No workspaces yet</h3><p className="text-sm text-[var(--text-muted)]">Create a workspace to start organising</p></div>
-            <button onClick={onCreate} className="flex items-center gap-2 px-5 py-2.5 bg-[var(--accent-primary)] text-white text-sm font-semibold rounded-xl active:scale-95"><Plus size={14} />Create Workspace</button>
+            <button onClick={onCreate} className="flex items-center gap-2 px-5 py-2.5 bg-[var(--accent-primary)] text-[var(--accent-contrast)] text-sm font-semibold rounded-xl active:scale-95"><Plus size={14} />Create Workspace</button>
         </div>
     )
     return (
         <div className="flex flex-col items-center justify-center py-20 gap-4 text-[var(--text-muted)]">
             <Layers size={32} className="opacity-20" />
             <div className="text-center"><p className="text-sm opacity-60">No lists in this workspace</p></div>
-            <button onClick={onCreate} className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-primary)] text-white text-sm font-semibold rounded-lg active:scale-95"><Plus size={13} />Add List</button>
+            <button onClick={onCreate} className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-primary)] text-[var(--accent-contrast)] text-sm font-semibold rounded-lg active:scale-95"><Plus size={13} />Add List</button>
         </div>
     )
 }
 
 
 export function IconButton({ icon, onClick, className = "" }: { icon: React.ReactNode; onClick?: () => void; className?: string }) {
-    return <button onClick={onClick} className={`p-2 rounded-xl text-gray-500 hover:text-white hover:bg-white/5 ${className}`}>{icon}</button>
+    return <button onClick={onClick} className={`p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--border-hover)] ${className}`}>{icon}</button>
 }

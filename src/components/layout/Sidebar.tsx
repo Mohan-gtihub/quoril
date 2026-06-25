@@ -1,5 +1,5 @@
 ﻿import { useNavigate, useLocation } from 'react-router-dom'
-import { LayoutGrid, Settings, LogOut, BarChart3, Plus, Edit2, Trash2, Check, MoreHorizontal, FolderKanban, Archive, ChevronDown, Folders, Kanban, Smartphone, Map } from 'lucide-react'
+import { LayoutGrid, Settings, LogOut, BarChart3, Plus, Edit2, Trash2, Check, MoreHorizontal, FolderKanban, Archive, ChevronDown, Folders, Kanban, Smartphone, Map, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { confirm as confirmDialog } from '@/components/ui/ConfirmDialog'
 import { useAuthStore } from '@/store/authStore'
 import { useListStore } from '@/store/listStore'
@@ -15,7 +15,7 @@ const PALETTE = [
 ]
 
 /* ── Workspace Item Row ── */
-function WorkspaceRow({ ws, isActive, onClick }: { ws: Workspace; isActive: boolean; onClick: () => void }) {
+function WorkspaceRow({ ws, isActive, onClick, collapsed }: { ws: Workspace; isActive: boolean; onClick: () => void; collapsed?: boolean }) {
     const { updateWorkspace, deleteWorkspace, workspaces } = useWorkspaceStore()
     const [showMenu, setShowMenu] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
@@ -80,6 +80,21 @@ function WorkspaceRow({ ws, isActive, onClick }: { ws: Workspace; isActive: bool
         )
     }
 
+    if (collapsed) {
+        return (
+            <button
+                onClick={onClick}
+                title={ws.name}
+                className={cn(
+                    'w-full flex items-center justify-center py-2 rounded-lg transition-all outline-none',
+                    isActive ? 'bg-[var(--accent-primary)]/10' : 'hover:bg-[var(--bg-hover)]'
+                )}
+            >
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ws.color }} />
+            </button>
+        )
+    }
+
     return (
         <div ref={ref} className="relative group">
             <button
@@ -112,7 +127,7 @@ function WorkspaceRow({ ws, isActive, onClick }: { ws: Workspace; isActive: bool
                             <Edit2 size={12} /> Rename
                         </button>
                         {workspaces.length > 1 && (
-                            <button onClick={handleDelete} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/10 transition">
+                            <button onClick={handleDelete} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--error)] hover:bg-[var(--error)]/10 transition">
                                 <Trash2 size={12} /> Delete
                             </button>
                         )}
@@ -186,7 +201,19 @@ export function Sidebar() {
     const location = useLocation()
     const [showCreateWs, setShowCreateWs] = useState(false)
     const [showUserMenu, setShowUserMenu] = useState(false)
+    const [collapsed, setCollapsed] = useState(() => {
+        try { return localStorage.getItem('quoril.sidebarCollapsed') === '1' } catch { return false }
+    })
     const userMenuRef = useRef<HTMLDivElement>(null)
+
+    function toggleCollapsed() {
+        setCollapsed(v => {
+            const next = !v
+            try { localStorage.setItem('quoril.sidebarCollapsed', next ? '1' : '0') } catch { /* noop */ }
+            if (next) { setShowUserMenu(false); setShowCreateWs(false) }
+            return next
+        })
+    }
 
     useEffect(() => { fetchLists(); if (user) loadWorkspaces() }, [user])
 
@@ -207,40 +234,66 @@ export function Sidebar() {
                 if (path === '/dashboard') setActiveWorkspace('unassigned'); // Unassigned is treated as home root logic or just 'null'.
                 navigate(path)
             }}
+            title={collapsed ? label : undefined}
             className={cn(
-                'w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-all text-left outline-none',
+                'w-full flex items-center rounded-xl text-[13px] font-medium transition-all text-left outline-none',
+                collapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-3 py-2',
                 active
-                    ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-[0_6px_18px_var(--accent-glow)]'
+                    ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-semibold'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
             )}
         >
-            <span className={cn("flex items-center justify-center", active ? "text-[var(--accent-contrast)]" : "text-[var(--text-muted)]")}>{icon}</span>
-            <span className="flex-1 truncate">{label}</span>
+            <span className={cn("flex items-center justify-center", active ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]")}>{icon}</span>
+            {!collapsed && <span className="flex-1 truncate">{label}</span>}
         </button>
     )
 
     return (
-        <aside className="w-[228px] bg-[var(--bg-secondary)] border-r border-[var(--border-default)] flex flex-col h-full shrink-0 hidden lg:flex transition-colors duration-500 relative z-40">
+        <aside className={cn(
+            "bg-[var(--bg-secondary)] border-r border-[var(--border-default)] flex flex-col h-full shrink-0 hidden lg:flex transition-[width] duration-300 ease-in-out relative z-40",
+            collapsed ? "w-[64px]" : "w-[228px]"
+        )}>
 
-            {/* Brand */}
-            <div className="px-4 pt-5 pb-1 flex items-center gap-2.5">
-                <img src="/brand-mark.png" alt="Quoril" className="w-7 h-7 rounded-xl shadow-[0_4px_14px_var(--accent-glow)]" />
-                <span className="text-[15px] font-bold tracking-tight text-[var(--text-primary)]">Quoril<span className="text-[var(--accent-primary)]">.</span></span>
+            {/* Brand + collapse toggle */}
+            <div className={cn("pt-5 pb-1 flex items-center", collapsed ? "px-0 justify-center" : "px-4 gap-2.5")}>
+                <img src="/brand-mark.png" alt="Quoril" className="w-7 h-7 rounded-xl shadow-[0_4px_14px_var(--accent-glow)] shrink-0" />
+                {!collapsed && (
+                    <>
+                        <span className="text-[15px] font-bold tracking-tight text-[var(--text-primary)] flex-1">Quoril<span className="text-[var(--accent-primary)]">.</span></span>
+                        <button onClick={toggleCollapsed} title="Collapse sidebar" className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors">
+                            <PanelLeftClose size={16} />
+                        </button>
+                    </>
+                )}
             </div>
 
+            {collapsed && (
+                <button onClick={toggleCollapsed} title="Expand sidebar" className="mx-auto mt-2 p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors">
+                    <PanelLeftOpen size={16} />
+                </button>
+            )}
+
             {/* Top User Profile / Dropdown */}
-            <div ref={userMenuRef} className="relative px-2 pt-3 pb-2">
+            <div ref={userMenuRef} className={cn("relative pt-3 pb-2", collapsed ? "px-0" : "px-2")}>
                 <button
-                    onClick={() => setShowUserMenu(v => !v)}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-[var(--bg-hover)] transition-colors text-left outline-none"
+                    onClick={() => collapsed ? navigate('/settings') : setShowUserMenu(v => !v)}
+                    title={collapsed ? user?.email?.split('@')[0] : undefined}
+                    className={cn(
+                        "w-full flex items-center rounded-xl hover:bg-[var(--bg-hover)] transition-colors text-left outline-none",
+                        collapsed ? "justify-center py-1.5" : "gap-2 px-2 py-1.5"
+                    )}
                 >
                     <div className="w-5 h-5 rounded-md bg-[var(--accent-primary)] flex items-center justify-center text-[var(--accent-contrast)] text-[11px] font-semibold shrink-0">
                         {user?.email?.charAt(0).toUpperCase()}
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold text-[var(--text-primary)] truncate">{user?.email?.split('@')[0]}</p>
-                    </div>
-                    <ChevronDown size={12} className="text-[var(--text-muted)] shrink-0" />
+                    {!collapsed && (
+                        <>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[13px] font-bold text-[var(--text-primary)] truncate">{user?.email?.split('@')[0]}</p>
+                            </div>
+                            <ChevronDown size={12} className="text-[var(--text-muted)] shrink-0" />
+                        </>
+                    )}
                 </button>
 
                 <AnimatePresence>
@@ -265,19 +318,21 @@ export function Sidebar() {
                 </AnimatePresence>
             </div>
 
-            <div className="flex-1 px-2 space-y-5 py-2 overflow-y-auto">
+            <div className={cn("flex-1 space-y-5 py-2 overflow-y-auto overflow-x-hidden", collapsed ? "px-2" : "px-2")}>
 
                 {/* Main Links */}
                 <div className="space-y-0.5">
                     <button
                         onClick={() => { setActiveWorkspace(null as any); navigate('/dashboard') }}
+                        title={collapsed ? 'Home' : undefined}
                         className={cn(
-                            'w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-all text-left outline-none',
-                            isDashboard && !activeWorkspaceId ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-[0_6px_18px_var(--accent-glow)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+                            'w-full flex items-center rounded-xl text-[13px] font-medium transition-all text-left outline-none',
+                            collapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-3 py-2',
+                            isDashboard && !activeWorkspaceId ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-semibold' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                         )}
                     >
-                        <LayoutGrid size={14} className={cn(isDashboard && !activeWorkspaceId ? "text-[var(--accent-contrast)]" : "text-[var(--text-muted)]")} />
-                        <span className="flex-1">Home</span>
+                        <LayoutGrid size={14} className={cn(isDashboard && !activeWorkspaceId ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]")} />
+                        {!collapsed && <span className="flex-1">Home</span>}
                     </button>
                     <NavItem icon={<Kanban size={14} />} label="Planner" path="/planner" active={location.pathname === '/planner'} />
                     <NavItem icon={<Folders size={14} />} label="Workspaces" path="/workspaces" active={location.pathname === '/workspaces'} />
@@ -288,28 +343,35 @@ export function Sidebar() {
 
                 {/* Workspaces Section */}
                 <div className="space-y-1">
-                    <div className="flex items-center justify-between px-3 text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1 pt-2 group">
-                        <span>Workspaces</span>
-                        <button onClick={() => setShowCreateWs(v => !v)} className="opacity-0 group-hover:opacity-100 hover:text-[var(--text-primary)] transition-all">
-                            <Plus size={13} />
-                        </button>
-                    </div>
+                    {collapsed ? (
+                        <div className="mx-3 mb-1 border-t border-[var(--border-default)]" />
+                    ) : (
+                        <div className="flex items-center justify-between px-3 text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1 pt-2 group">
+                            <span>Workspaces</span>
+                            <button onClick={() => setShowCreateWs(v => !v)} className="opacity-0 group-hover:opacity-100 hover:text-[var(--text-primary)] transition-all">
+                                <Plus size={13} />
+                            </button>
+                        </div>
+                    )}
 
                     <div className="space-y-0.5">
-                        <AnimatePresence>
-                            {showCreateWs && <CreateWsInline onDone={() => setShowCreateWs(false)} />}
-                        </AnimatePresence>
+                        {!collapsed && (
+                            <AnimatePresence>
+                                {showCreateWs && <CreateWsInline onDone={() => setShowCreateWs(false)} />}
+                            </AnimatePresence>
+                        )}
 
                         {workspaces.map(ws => (
                             <WorkspaceRow
                                 key={ws.id}
                                 ws={ws}
+                                collapsed={collapsed}
                                 isActive={isDashboard && activeWorkspaceId === ws.id}
                                 onClick={() => { setActiveWorkspace(ws.id); navigate('/dashboard') }}
                             />
                         ))}
 
-                        {workspaces.length === 0 && !showCreateWs && (
+                        {workspaces.length === 0 && !showCreateWs && !collapsed && (
                             <div className="px-3 py-2 text-xs text-[var(--text-muted)] italic">No workspaces yet.</div>
                         )}
                     </div>
@@ -319,23 +381,27 @@ export function Sidebar() {
                 <div className="space-y-0.5 pt-2">
                     <button
                         onClick={() => { setActiveWorkspace('unassigned'); navigate('/dashboard') }}
+                        title={collapsed ? 'Unassigned' : undefined}
                         className={cn(
-                            'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[13px] transition-all text-left outline-none',
+                            'w-full flex items-center rounded-lg text-[13px] transition-all text-left outline-none',
+                            collapsed ? 'justify-center px-0 py-2' : 'gap-2 px-2 py-1.5',
                             isDashboard && activeWorkspaceId === 'unassigned' ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                         )}
                     >
                         <FolderKanban size={13} className="text-[var(--text-muted)]" />
-                        <span className="flex-1 truncate">Unassigned</span>
+                        {!collapsed && <span className="flex-1 truncate">Unassigned</span>}
                     </button>
                     <button
                         onClick={() => { setActiveWorkspace('archived'); navigate('/dashboard') }}
+                        title={collapsed ? 'Archived' : undefined}
                         className={cn(
-                            'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[13px] transition-all text-left outline-none',
+                            'w-full flex items-center rounded-lg text-[13px] transition-all text-left outline-none',
+                            collapsed ? 'justify-center px-0 py-2' : 'gap-2 px-2 py-1.5',
                             isDashboard && activeWorkspaceId === 'archived' ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                         )}
                     >
                         <Archive size={13} className="text-[var(--text-muted)]" />
-                        <span className="flex-1 truncate">Archived</span>
+                        {!collapsed && <span className="flex-1 truncate">Archived</span>}
                     </button>
                 </div>
 
@@ -345,15 +411,17 @@ export function Sidebar() {
             <div className="px-2 pb-3 pt-2 border-t border-[var(--border-default)]">
                 <button
                     onClick={() => navigate('/settings')}
+                    title={collapsed ? 'Settings' : undefined}
                     className={cn(
-                        'w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium transition-all text-left outline-none',
+                        'w-full flex items-center rounded-xl text-[13px] font-medium transition-all text-left outline-none',
+                        collapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-3 py-2',
                         location.pathname === '/settings'
-                            ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-[0_6px_18px_var(--accent-glow)]'
+                            ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-semibold'
                             : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                     )}
                 >
-                    <Settings size={14} className={cn(location.pathname === '/settings' ? "text-[var(--accent-contrast)]" : "text-[var(--text-muted)]")} />
-                    <span className="flex-1">Settings</span>
+                    <Settings size={14} className={cn(location.pathname === '/settings' ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]")} />
+                    {!collapsed && <span className="flex-1">Settings</span>}
                 </button>
             </div>
 

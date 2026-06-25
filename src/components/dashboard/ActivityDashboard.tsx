@@ -143,7 +143,7 @@ export function ActivityDashboard() {
                 </div>
                 <div className="flex items-center gap-2 bg-[var(--bg-card)] px-4 py-2 rounded-xl border border-[var(--border-default)]">
                     <div className="relative">
-                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[var(--accent-primary)] rounded-full animate-pulse" />
                         <Activity size={18} className="text-[var(--accent-primary)]" />
                     </div>
                     <span className="text-sm font-medium">Tracking Active</span>
@@ -154,8 +154,8 @@ export function ActivityDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
 
                 {/* Total Time */}
-                <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-default)] relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <div className="bg-[var(--bg-card)] p-6 rounded-[var(--radius-card)] border border-[var(--border-default)] shadow-sm relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-[var(--text-muted)]">
                         <Clock size={64} />
                     </div>
                     <h3 className="text-[var(--text-secondary)] font-medium mb-1">Total Screen Time</h3>
@@ -169,12 +169,12 @@ export function ActivityDashboard() {
                 </div>
 
                 {/* Productivity Score */}
-                <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-default)] relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <div className="bg-[var(--bg-card)] p-6 rounded-[var(--radius-card)] border border-[var(--border-default)] shadow-sm relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-[var(--text-muted)]">
                         <Zap size={64} />
                     </div>
                     <h3 className="text-[var(--text-secondary)] font-medium mb-1">Productivity Score</h3>
-                    <div className="text-4xl font-bold text-green-400">
+                    <div className="text-4xl font-bold text-[var(--text-primary)]">
                         {productivityScore}
                     </div>
                     <div className="mt-4 flex items-center gap-2 text-xs text-[var(--text-muted)]">
@@ -184,8 +184,8 @@ export function ActivityDashboard() {
                 </div>
 
                 {/* Most Used */}
-                <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-default)] relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <div className="bg-[var(--bg-card)] p-6 rounded-[var(--radius-card)] border border-[var(--border-default)] shadow-sm relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-[var(--text-muted)]">
                         <Monitor size={64} />
                     </div>
                     <h3 className="text-[var(--text-secondary)] font-medium mb-1">Top Application</h3>
@@ -203,7 +203,7 @@ export function ActivityDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
                 {/* Top Apps Chart */}
-                <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-default)]">
+                <div className="bg-[var(--bg-card)] p-6 rounded-[var(--radius-card)] border border-[var(--border-default)] shadow-sm">
                     <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
                         <Monitor size={18} className="text-[var(--accent-primary)]" />
                         Top Applications
@@ -229,7 +229,7 @@ export function ActivityDashboard() {
                                 />
                                 <Bar dataKey="total_seconds" radius={[0, 4, 4, 0]}>
                                     {topApps.map((_, index) => (
-                                        <Cell key={`cell-${index}`} fill={['#c4f82a', '#aadb22', '#cdf94f', '#dcfb7d', '#e9fdac'][index] || '#c4f82a'} />
+                                        <Cell key={`cell-${index}`} fill={['color-mix(in srgb, var(--text-primary) 85%, transparent)', 'color-mix(in srgb, var(--text-primary) 65%, transparent)', 'color-mix(in srgb, var(--text-primary) 50%, transparent)', 'color-mix(in srgb, var(--text-primary) 38%, transparent)', 'color-mix(in srgb, var(--text-primary) 28%, transparent)'][index] || 'color-mix(in srgb, var(--text-primary) 85%, transparent)'} />
                                     ))}
                                 </Bar>
                             </BarChart>
@@ -238,9 +238,9 @@ export function ActivityDashboard() {
                 </div>
 
                 {/* Top Domains Chart */}
-                <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-default)]">
+                <div className="bg-[var(--bg-card)] p-6 rounded-[var(--radius-card)] border border-[var(--border-default)] shadow-sm">
                     <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                        <Globe size={18} className="text-purple-400" />
+                        <Globe size={18} className="text-[var(--accent-primary)]" />
                         Top Websites
                     </h3>
                     {topDomains.length > 0 ? (
@@ -265,7 +265,7 @@ export function ActivityDashboard() {
                                     />
                                     <Bar dataKey="total_seconds" radius={[0, 4, 4, 0]}>
                                         {topDomains.map((_, index) => (
-                                            <Cell key={`cell-${index}`} fill={['#a855f7', '#c084fc', '#d8b4fe', '#e9d5ff', '#f3e8ff'][index] || '#a855f7'} />
+                                            <Cell key={`cell-${index}`} fill={['color-mix(in srgb, var(--text-primary) 85%, transparent)', 'color-mix(in srgb, var(--text-primary) 65%, transparent)', 'color-mix(in srgb, var(--text-primary) 50%, transparent)', 'color-mix(in srgb, var(--text-primary) 38%, transparent)', 'color-mix(in srgb, var(--text-primary) 28%, transparent)'][index] || 'color-mix(in srgb, var(--text-primary) 85%, transparent)'} />
                                         ))}
                                     </Bar>
                                 </BarChart>

@@ -36,7 +36,7 @@ export function Checkbox({ checked, onChange, size = 'md', className = '' }: Che
             style={{
                 borderColor: checked ? 'var(--accent-green-500)' : 'var(--text-muted)',
                 backgroundColor: checked ? 'var(--accent-green-500)' : 'transparent',
-                boxShadow: checked ? '0 0 0 3px rgba(16, 185, 129, 0.1)' : 'none'
+                boxShadow: checked ? '0 0 0 3px var(--accent-lime-100)' : 'none'
             }}
         >
             {checked && (

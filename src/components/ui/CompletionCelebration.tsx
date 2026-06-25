@@ -81,7 +81,7 @@ export function CompletionCelebration({ taskTitle, timeSpent, onClose }: Complet
             onClick={onClose}
         >
             <div
-                className="bg-[#12141c] border border-green-500/20 rounded-[32px] p-8 max-w-md w-full mx-4 shadow-[0_0_50px_rgba(34,197,94,0.1)] transform animate-in zoom-in duration-500 overflow-hidden relative"
+                className="bg-[var(--bg-card)] border border-[var(--accent-lime-100)] rounded-[32px] p-8 max-w-md w-full mx-4 shadow-[0_0_50px_var(--accent-lime-100)] transform animate-in zoom-in duration-500 overflow-hidden relative"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Background Glow */}
