@@ -383,8 +383,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             const updates: Partial<Task> = {
                 status,
                 sort_order: max + 1,
-                // Set completion timestamp when moving to done column
-                completed_at: column === 'done' ? new Date().toISOString() : undefined,
+                completed_at: column === 'done' ? new Date().toISOString() : null,
                 // Don't try to update due_date/due_time - they don't exist as separate columns
             }
 

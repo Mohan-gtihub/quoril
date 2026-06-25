@@ -229,13 +229,17 @@ export const useFocusStore = create<FocusState>()(
 
                 set({
                     isBreak: false,
-                    isPaused: true, // Return to paused state for the task
+                    isPaused: s.isActive && !!s.taskId,
                     startTime: null,
                     pomodoroRemaining: pTime,
                     pomodoroRemainingAtStart: pTime,
                     pomodoroTotal: pTime,
                     breakElapsed: 0
                 })
+
+                if (s.isActive && s.taskId) {
+                    await get().resumeSession()
+                }
             },
 
             startSession: async (taskId, duration, type = 'regular') => {

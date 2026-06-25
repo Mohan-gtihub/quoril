@@ -461,14 +461,14 @@ export function FocusTimerPanel() {
 
                                 {/* Subtasks Section */}
                                 {!isBreak && (
-                                    <div className="mb-4 bg-[var(--bg-tertiary)] rounded-xl p-3 border border-[var(--border-default)]">
-                                        <div className="flex items-center justify-between mb-2 px-1">
-                                            <span className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase tracking-widest">Sub-Missions</span>
-                                            <span className="text-[11px] text-[var(--text-muted)] font-mono">
+                                    <div className="mb-4 rounded-xl border border-[var(--border-default)] bg-[var(--bg-tertiary)] p-3">
+                                        <div className="mb-3 flex items-center justify-between px-1">
+                                            <span className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-widest">Sub-Missions</span>
+                                            <span className="rounded-full bg-[var(--bg-hover)] px-2 py-0.5 text-[11px] text-[var(--text-muted)] font-mono">
                                                 {currentSubtasks.filter(s => s.completed).length}/{currentSubtasks.length}
                                             </span>
                                         </div>
-                                        <div className="space-y-1.5 max-h-[120px] overflow-y-auto custom-scrollbar pr-1 mb-2">
+                                        <div className="space-y-1.5 max-h-[150px] overflow-y-auto custom-scrollbar pr-1 mb-3">
                                             {currentSubtasks.map(sub => (
                                                 <div
                                                     key={sub.id}
@@ -496,7 +496,7 @@ export function FocusTimerPanel() {
                                                 placeholder="Add sub-mission..."
                                                 value={newSubtaskTitle}
                                                 onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                                                className="w-full h-8 bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-lg px-3 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)] focus:bg-[var(--bg-secondary)] transition-all placeholder:text-[var(--text-muted)]"
+                                                className="w-full h-9 bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-xl px-3 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)] focus:bg-[var(--bg-secondary)] transition-all placeholder:text-[var(--text-muted)]"
                                             />
                                             <Plus className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[var(--text-muted)]" />
                                         </form>

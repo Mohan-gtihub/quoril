@@ -55,6 +55,24 @@ let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let quitting = false
 
+function closeSecondaryWindows() {
+    for (const win of BrowserWindow.getAllWindows()) {
+        if (win !== mainWindow && !win.isDestroyed()) {
+            win.close()
+        }
+    }
+}
+
+function forwardDeepLink(url: string) {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    if (!mainWindow.isVisible()) mainWindow.show()
+    mainWindow.focus()
+    mainWindow.webContents.send('deep-link', url)
+    closeSecondaryWindows()
+}
+
 /* ---------------- SINGLE INSTANCE ---------------- */
 
 const gotTheLock = app.requestSingleInstanceLock()
@@ -66,8 +84,8 @@ if (!gotTheLock) {
         // On Windows, deep link URLs arrive as a command-line argument in the second instance.
         // We must forward it to the renderer BEFORE restoring the window.
         const deepLinkUrl = argv.find(arg => arg.startsWith('quoril://'))
-        if (deepLinkUrl && mainWindow) {
-            mainWindow.webContents.send('deep-link', deepLinkUrl)
+        if (deepLinkUrl) {
+            forwardDeepLink(deepLinkUrl)
         }
 
         if (mainWindow) {
@@ -93,12 +111,16 @@ if (process.defaultApp) {
 
 app.on('open-url', (event, url) => {
     event.preventDefault()
-    // Send URL to renderer to handle auth callback
-    if (mainWindow) {
-        if (mainWindow.isMinimized()) mainWindow.restore()
-        mainWindow.focus()
-        mainWindow.webContents.send('deep-link', url)
-    }
+    forwardDeepLink(url)
+})
+
+app.on('web-contents-created', (_event, contents) => {
+    contents.on('will-navigate', (event, url) => {
+        if (url.startsWith('quoril://')) {
+            event.preventDefault()
+            forwardDeepLink(url)
+        }
+    })
 })
 
 /* ---------------- WINDOW ---------------- */
@@ -137,7 +159,6 @@ function createWindow() {
 
     if (isDev && VITE_DEV_SERVER_URL) {
         mainWindow.loadURL(VITE_DEV_SERVER_URL)
-        mainWindow.webContents.openDevTools()
     } else {
         mainWindow.loadFile(
             path.join(__dirname, '../dist/index.html')
@@ -184,6 +205,11 @@ function createWindow() {
     }
 
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+        if (url.startsWith('quoril://')) {
+            forwardDeepLink(url)
+            return { action: 'deny' }
+        }
+
         // Keep internal routes inside the app (e.g. popups)
         if ((VITE_DEV_SERVER_URL && url.startsWith(VITE_DEV_SERVER_URL)) || url.startsWith('file://')) {
             return {
@@ -763,4 +789,3 @@ process.on('unhandledRejection', e => {
     console.error('[Promise]', e)
     logCrash('unhandledRejection', e)
 })
-

@@ -22,11 +22,6 @@ function createWindow() {
     const startUrl = process.env.ELECTRON_START_URL || `file://${path.join(__dirname, '../dist/index.html')}`
     mainWindow.loadURL(startUrl)
 
-    // Open DevTools in development
-    if (process.env.NODE_ENV === 'development') {
-        mainWindow.webContents.openDevTools()
-    }
-
     mainWindow.on('closed', () => {
         mainWindow = null
     })

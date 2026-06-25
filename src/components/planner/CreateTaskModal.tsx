@@ -1,16 +1,18 @@
 ﻿import { useEffect, useState } from 'react'
 import { X, Repeat } from 'lucide-react'
-import { useCreateTask } from '@/hooks/useCreateTask'
+import { useCreateTask } from '@/hooks/useCreateTask'
+import type { Task } from '@/types/database'
 
 interface Props {
     isOpen: boolean
     onClose: () => void
     listId: string
+    onCreated?: (task: Task) => void
 }
 
 const PRESETS = [25, 45, 60, 90]
 
-export function CreateTaskModal({ isOpen, onClose, listId }: Props) {
+export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
     const { submit, loading, error } = useCreateTask(listId)
 
     const [title, setTitle] = useState('')
@@ -40,6 +42,7 @@ export function CreateTaskModal({ isOpen, onClose, listId }: Props) {
         })
 
         if (res) {
+            onCreated?.(res)
             reset()
             onClose()
         }

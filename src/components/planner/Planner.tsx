@@ -19,6 +19,7 @@ import { usePlannerStore } from '@/store/plannerStore'
 import { isSameDay, startOfToday, format } from 'date-fns'
 import toast from 'react-hot-toast'
 import { confirm } from '@/components/ui/ConfirmDialog'
+import { getPlannerTaskBuckets } from './plannerBuckets'
 
 interface ColumnDef {
     id: TaskColumn
@@ -26,8 +27,6 @@ interface ColumnDef {
     subtitle: string
     color: string
 }
-
-
 
 // -- Sub-Component for Droppable Column --
 function BoardColumn({
@@ -236,6 +235,9 @@ export function Planner() {
     }, [selectedDate])
 
     const selectedList = lists.find(l => l.id === selectedListId)
+    const createListId = selectedListId && selectedListId !== 'all'
+        ? selectedListId
+        : (lists.find(l => l.id !== 'all')?.id || '')
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -247,94 +249,8 @@ export function Planner() {
 
     // Derived state: Group tasks by column and calculate progress
     const { columns: tasksByColumn, progressMap } = useMemo(() => {
-        const cols: Record<TaskColumn, Task[]> = {
-            backlog: [],
-            this_week: [],
-            today: [],
-            done: [],
-        }
-
-        const sortedTasks = [...tasks].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-
-        sortedTasks.forEach(task => {
-            if (task.deleted_at) return
-
-            const { getColumnStatuses } = useTaskStore.getState()
-
-            if (selectedListId === 'all') {
-                const isActiveList = lists.some(l => l.id === task.list_id)
-                if (!isActiveList) return
-            } else if (selectedListId && task.list_id !== selectedListId) {
-                return
-            }
-
-            // FILTERS BY DATE
-            const taskDate = task.due_date ? new Date(task.due_date) : null
-            const completedDate = task.completed_at ? new Date(task.completed_at) : null
-
-            // RECURRING LOGIC: Show in Today column for future dates as 'active' (Todo state)
-            if (task.is_recurring && !isSameDay(selectedDate, startOfToday()) && selectedDate > startOfToday()) {
-                cols.today.push({ ...task, status: 'active' as any, completed_at: null })
-                return
-            }
-
-            if (getColumnStatuses('backlog').includes(task.status)) {
-                cols.backlog.push(task)
-            } else if (getColumnStatuses('this_week').includes(task.status)) {
-                cols.this_week.push(task)
-            } else if (getColumnStatuses('today').includes(task.status)) {
-                // TODAY LOGIC: 
-                // 1. If viewing actual today, show EVERYTHING currently active/paused.
-                // 2. If viewing a future/past day (fallback), show what's scheduled.
-                if (isSameDay(selectedDate, startOfToday())) {
-                    cols.today.push(task)
-                } else if (taskDate && isSameDay(taskDate, selectedDate)) {
-                    cols.today.push(task)
-                }
-            } else if (getColumnStatuses('done').includes(task.status)) {
-                // Done tasks: Show if completed on the selected date
-                if (completedDate) {
-                    // MIDNIGHT BUFFER: If a task was completed before 4am, 
-                    // and we are looking at the previous day, count it as 'done' for that day.
-                    const isTodaySelected = isSameDay(selectedDate, startOfToday())
-
-                    if (isTodaySelected) {
-                        // If viewing Today, show everything done recently (last 24h) 
-                        // or anything done today to ensure no disappearance.
-                        cols.done.push(task)
-                    } else if (isSameDay(completedDate, selectedDate)) {
-                        cols.done.push(task)
-                    } else {
-                        // Check if it was done in the "early morning" (buffer) of the day AFTER selectedDate
-                        const dayAfter = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000)
-                        if (isSameDay(completedDate, dayAfter) && completedDate.getHours() < 4) {
-                            cols.done.push(task)
-                        }
-                    }
-                }
-            }
-        })
-
-        const getProgress = (targetCols: Task[], doneCol: Task[]) => {
-            const targetEst = targetCols.reduce((s, t) => s + (t.estimated_minutes || 0), 0)
-            const doneEst = doneCol.reduce((s, t) => s + (t.estimated_minutes || 0), 0)
-            const total = targetEst + doneEst
-            return total > 0 ? Math.min(100, (doneEst / total) * 100) : 0
-        }
-
-        const map: Partial<Record<TaskColumn, number>> = {
-            today: getProgress(cols.today, cols.done),
-            this_week: getProgress(cols.this_week, tasks.filter(t => {
-                if (!t.completed_at) return false
-                const d = new Date(t.completed_at)
-                const now = new Date()
-                const diff = now.getTime() - d.getTime()
-                return diff < 7 * 24 * 60 * 60 * 1000 // Last 7 days
-            }))
-        }
-
-        return { columns: cols, progressMap: map }
-    }, [tasks, selectedListId, selectedDate])
+        return getPlannerTaskBuckets(tasks, selectedListId, lists, selectedDate)
+    }, [tasks, selectedListId, lists, selectedDate])
 
     const [showCreateModal, setShowCreateModal] = useState<{ column: TaskColumn, position: 'top' | 'bottom' } | null>(null)
     const [activeTask, setActiveTask] = useState<Task | null>(null)
@@ -522,7 +438,7 @@ export function Planner() {
                 <CreateTaskModal
                     isOpen={true}
                     onClose={() => setShowCreateModal(null)}
-                    listId={selectedListId}
+                    listId={createListId}
                 />
             )}
 

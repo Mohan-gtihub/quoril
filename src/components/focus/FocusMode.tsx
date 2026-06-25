@@ -464,7 +464,14 @@ export function FocusMode() {
                     <CreateTaskModal
                         isOpen={true}
                         onClose={() => setShowCreateModal(false)}
-                        listId={selectedListId && selectedListId !== 'all' ? selectedListId : (lists[0]?.id || '')}
+                        listId={selectedListId && selectedListId !== 'all' ? selectedListId : (lists.find(l => l.id !== 'all')?.id || '')}
+                        onCreated={(task) => {
+                            if (selectedListId !== 'all' && task.list_id !== selectedListId) return
+                            setTasks(prev => {
+                                if (prev.some(t => t.id === task.id)) return prev
+                                return [...prev, task].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+                            })
+                        }}
                     />
                 )}
 
