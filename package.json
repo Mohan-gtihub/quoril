@@ -132,7 +132,9 @@
     ],
     "files": [
       "dist/**/*",
-      "dist-electron/**/*"
+      "dist-electron/**/*",
+      "public/icon.png",
+      "public/icon.ico"
     ],
     "win": {
       "icon": "public/icon.ico",

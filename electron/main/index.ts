@@ -34,12 +34,14 @@ if (isDev) process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
 
 /* ---------------- ICON PATH (works in dev + production) ---------------- */
 function getIconPath() {
-    if (app.isPackaged) {
-        // In production: resources/app/public/icon.png or resources/icon.png
-        return path.join(process.resourcesPath, 'app', 'public', 'icon.png')
-    }
-    // In dev: project root / public / icon.png
-    return path.join(__dirname, '../../public/icon.png')
+    const candidates = [
+        path.join(app.getAppPath(), 'public', 'icon.png'),
+        path.join(process.resourcesPath, 'app', 'public', 'icon.png'),
+        path.join(__dirname, '../public/icon.png'),
+        path.join(__dirname, '../../public/icon.png')
+    ]
+
+    return candidates.find(candidate => fs.existsSync(candidate)) ?? candidates[0]
 }
 
 /* Set App User Model ID so Windows Search can find the app */
@@ -695,6 +697,17 @@ app.whenReady().then(async () => {
         console.error('Failed to initialize database:', e)
     }
 
+    // macOS: set the Dock icon explicitly (window `icon` option is ignored on macOS,
+    // and in dev the Dock otherwise shows the default Electron icon).
+    if (process.platform === 'darwin' && app.dock) {
+        try {
+            const dockIcon = nativeImage.createFromPath(getIconPath())
+            if (!dockIcon.isEmpty()) app.dock.setIcon(dockIcon)
+        } catch {
+            // Ignore if icon fails to load
+        }
+    }
+
     createWindow()
     createTray()
     setupIPC()
@@ -750,5 +763,4 @@ process.on('unhandledRejection', e => {
     console.error('[Promise]', e)
     logCrash('unhandledRejection', e)
 })
-
 

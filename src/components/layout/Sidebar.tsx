@@ -224,10 +224,8 @@ export function Sidebar() {
 
             {/* Brand */}
             <div className="px-4 pt-5 pb-1 flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-xl bg-[var(--accent-primary)] flex items-center justify-center shadow-[0_4px_14px_var(--accent-glow)]">
-                    <LayoutGrid size={15} className="text-[var(--accent-contrast)]" />
-                </div>
-                <span className="text-[15px] font-bold tracking-tight text-[var(--text-primary)]">Quoril</span>
+                <img src="/brand-mark.png" alt="Quoril" className="w-7 h-7 rounded-xl shadow-[0_4px_14px_var(--accent-glow)]" />
+                <span className="text-[15px] font-bold tracking-tight text-[var(--text-primary)]">Quoril<span className="text-[var(--accent-primary)]">.</span></span>
             </div>
 
             {/* Top User Profile / Dropdown */}
