@@ -34,16 +34,21 @@ function pct(v: number, max: number) {
     return max > 0 ? Math.min(100, Math.round((v / max) * 100)) : 0
 }
 
+// Vibrant category palette (magenta / amber / teal / pink / orange family)
+// matching the dashboard design — keeps card backgrounds white.
 const CATEGORY_COLORS: Record<string, string> = {
-    Development: 'color-mix(in srgb, var(--text-primary) 85%, transparent)',
-    Work: 'color-mix(in srgb, var(--text-primary) 70%, transparent)',
-    Communication: 'color-mix(in srgb, var(--text-primary) 55%, transparent)',
-    Web: 'color-mix(in srgb, var(--text-primary) 42%, transparent)',
-    Entertainment: 'color-mix(in srgb, var(--text-primary) 30%, transparent)',
-    Gaming: 'color-mix(in srgb, var(--text-primary) 22%, transparent)',
-    Other: 'color-mix(in srgb, var(--text-primary) 15%, transparent)',
+    Development: '#c850a0',   // magenta — focus work
+    Work: '#c850a0',          // magenta
+    Communication: '#5bc4c4', // teal — messaging
+    Web: '#f0b450',           // amber — meetings / browsing
+    Entertainment: '#f4a0c0', // soft pink — admin / leisure
+    Gaming: '#f08050',        // orange
+    Other: '#f08050',         // orange
     Idle: 'color-mix(in srgb, var(--text-primary) 8%, transparent)',
 }
+
+// Ordered accent palette for charts where there's no category mapping.
+const CHART_PALETTE = ['#c850a0', '#f0b450', '#5bc4c4', '#f4a0c0', '#f08050', '#9b8cf0']
 
 function getCategoryColor(cat: string) {
     return CATEGORY_COLORS[cat] || CATEGORY_COLORS.Other
@@ -55,7 +60,7 @@ function getCategoryColor(cat: string) {
 
 function Tile({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={cn('rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] p-5 shadow-sm', className)}>
+        <div className={cn('rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] p-5', className)}>
             {children}
         </div>
     )
@@ -97,7 +102,7 @@ function HourlyHeatmap({ hourly, peakHour }: { hourly: { hour: number; totalSeco
                     return (
                         <div key={h.hour} className="flex-1 flex flex-col items-center justify-end group relative">
                             {/* Tooltip */}
-                            <div className="absolute -top-14 left-1/2 -translate-x-1/2 bg-[var(--bg-card)] border border-[var(--border-hover)] rounded-xl px-2.5 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap shadow-sm">
+                            <div className="absolute -top-14 left-1/2 -translate-x-1/2 bg-[var(--bg-elevated)] rounded-[var(--radius-tile)] px-2.5 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap shadow-sm">
                                 <p className="text-[11px] font-semibold text-[var(--text-primary)] tabular-nums">{fmtHour(h.hour)} — {fmt(h.totalSeconds)}</p>
                                 <p className="text-[11px] text-[var(--text-tertiary)]">{h.uniqueApps} app{h.uniqueApps !== 1 ? 's' : ''}</p>
                             </div>
@@ -109,8 +114,8 @@ function HourlyHeatmap({ hourly, peakHour }: { hourly: { hour: number; totalSeco
                                 style={{
                                     backgroundColor: h.totalSeconds > 0
                                         ? isPeak
-                                            ? 'var(--accent-primary)'
-                                            : `rgba(46, 46, 50, ${0.3 + intensity * 0.6})`
+                                            ? '#c850a0'
+                                            : `color-mix(in srgb, #c850a0 ${Math.round((0.3 + intensity * 0.6) * 100)}%, transparent)`
                                         : 'var(--bg-hover)',
                                 }}
                             />
@@ -143,7 +148,7 @@ function WeeklyChart({ weekly, selectedDate }: { weekly: { day: string; totalSec
                     const height = Math.max(4, pct(d.totalSeconds, maxSec))
                     return (
                         <div key={d.day} className="flex-1 flex flex-col items-center justify-end group relative">
-                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[var(--bg-card)] border border-[var(--border-hover)] rounded-xl px-2.5 py-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap shadow-sm">
+                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[var(--bg-elevated)] rounded-[var(--radius-tile)] px-2.5 py-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap shadow-sm">
                                 <p className="text-[11px] font-semibold text-[var(--text-primary)] tabular-nums">{fmt(d.totalSeconds)}</p>
                             </div>
                             <motion.div
@@ -152,7 +157,7 @@ function WeeklyChart({ weekly, selectedDate }: { weekly: { day: string; totalSec
                                 animate={{ height: `${height}%` }}
                                 transition={{ duration: 0.6, delay: i * 0.05, ease: 'easeOut' }}
                                 style={{
-                                    backgroundColor: isSelected ? 'var(--accent-primary)' : d.totalSeconds > 0 ? 'rgba(46,46,50,0.42)' : 'var(--bg-hover)',
+                                    backgroundColor: isSelected ? '#c850a0' : d.totalSeconds > 0 ? 'color-mix(in srgb, #c850a0 55%, transparent)' : 'var(--bg-hover)',
                                 }}
                             />
                             <span className={cn('text-[11px] mt-2 font-medium', isSelected ? 'text-[var(--text-primary)] font-bold' : 'text-[var(--text-muted)]')}>
@@ -224,7 +229,7 @@ function CategoryDonut({ categories, totalSeconds }: { categories: CategoryEntry
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <p className="text-xl font-semibold text-[var(--text-primary)] tabular-nums leading-none">{fmt(totalSeconds)}</p>
-                    <p className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider mt-1">total</p>
+                    <p className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide mt-1">total</p>
                 </div>
             </div>
             <div className="flex-1 space-y-2 min-w-0">
@@ -264,26 +269,26 @@ function ProductivityBar({ productivity, totalSeconds }: { productivity: Product
             </div>
             <div className="h-3 bg-[var(--bg-hover)] rounded-full overflow-hidden flex">
                 {data.productive > 0 && (
-                    <motion.div className="h-full rounded-l-full" initial={{ width: 0 }} animate={{ width: `${prodPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: 'var(--accent-primary)' }} />
+                    <motion.div className="h-full rounded-l-full" initial={{ width: 0 }} animate={{ width: `${prodPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: '#5bc4c4' }} />
                 )}
                 {data.neutral > 0 && (
-                    <motion.div className="h-full" initial={{ width: 0 }} animate={{ width: `${neutralPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: 'var(--border-hover)' }} />
+                    <motion.div className="h-full" initial={{ width: 0 }} animate={{ width: `${neutralPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: '#f0b450' }} />
                 )}
                 {data.unproductive > 0 && (
-                    <motion.div className="h-full rounded-r-full" initial={{ width: 0 }} animate={{ width: `${unprodPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: 'var(--error)' }} />
+                    <motion.div className="h-full rounded-r-full" initial={{ width: 0 }} animate={{ width: `${unprodPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: '#f08050' }} />
                 )}
             </div>
             <div className="flex justify-between mt-3">
                 <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--accent-primary)' }} />
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#5bc4c4' }} />
                     <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">Productive {fmt(data.productive)}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--border-hover)' }} />
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#f0b450' }} />
                     <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">Neutral {fmt(data.neutral)}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--error)' }} />
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#f08050' }} />
                     <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">Distracting {fmt(data.unproductive)}</span>
                 </div>
             </div>
@@ -356,7 +361,7 @@ function DomainList({ domains }: { domains: { domain: string; totalSeconds: numb
                                 initial={{ width: 0 }}
                                 animate={{ width: `${pct(d.totalSeconds, maxSec)}%` }}
                                 transition={{ duration: 0.6, delay: i * 0.03, ease: 'easeOut' }}
-                                style={{ backgroundColor: 'var(--accent-primary)' }}
+                                style={{ backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}
                             />
                         </div>
                     </div>
@@ -417,7 +422,7 @@ function Timeline({ entries }: { entries: { appName: string; category: string; s
 function Kpi({ label, value, children }: { label: string; value: string | number; children?: React.ReactNode }) {
     return (
         <Tile className="flex flex-col">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-muted)]">{label}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{label}</p>
             <p className="text-2xl font-semibold tracking-tight text-[var(--text-primary)] tabular-nums leading-tight mt-2">{value}</p>
             <div className="mt-1.5">{children}</div>
         </Tile>
@@ -489,9 +494,9 @@ export function ScreenTime() {
                     {/* Date navigation */}
                     <div className="flex items-center gap-2">
                         {isViewingToday && (
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-sm">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)]">
                                 <span className="w-1.5 h-1.5 bg-[var(--accent-contrast)] rounded-full animate-pulse" />
-                                <span className="text-[11px] font-bold uppercase tracking-wider">Live</span>
+                                <span className="text-[11px] font-semibold uppercase tracking-wide">Live</span>
                             </div>
                         )}
                         <div className="flex items-center gap-1">

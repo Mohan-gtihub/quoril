@@ -95,26 +95,25 @@ export function ActivityHeatmap() {
     }, [activityMap])
 
     return (
-        <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-3xl p-6 w-full flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-500 shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between mb-8">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-card)] p-5 w-full flex flex-col animate-in fade-in duration-500 relative overflow-hidden">
+            <div className="flex items-start justify-between mb-8 gap-4">
                 <div>
-                    <h2 className="text-[15px] font-bold text-[var(--text-primary)] uppercase tracking-widest flex items-center gap-2 mb-1">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-[var(--accent-primary)]" />
-                        Focus Map
-                    </h2>
-                    <p className="text-xs text-[var(--text-muted)] font-medium">Daily deep work</p>
+                    <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">Focus map</h2>
+                    <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Daily deep work</p>
                 </div>
 
-                {/* Contextual Badges */}
-                <div className="flex flex-wrap items-center gap-2">
-                    <div className="bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-lg px-2.5 py-1 flex items-center gap-1.5">
-                        <CalendarDays size={12} className="text-[var(--accent-primary)]" />
-                        <span className="text-[11px] font-bold text-[var(--text-primary)]">{stats.monthStr} <span className="text-[var(--text-muted)] font-medium">this month</span></span>
-                    </div>
-                    <div className="bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-lg px-2.5 py-1 flex items-center gap-1.5">
-                        <Award size={12} className="text-[var(--accent-primary)]" />
-                        <span className="text-[11px] font-bold text-[var(--text-primary)]">Best: <span className="text-[var(--text-muted)] font-medium">{stats.bestStr}</span></span>
-                    </div>
+                {/* Contextual meta */}
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[12px]">
+                    <span className="flex items-center gap-1.5">
+                        <CalendarDays size={13} className="text-[var(--text-muted)]" />
+                        <span className="font-semibold tabular-nums text-[var(--text-primary)]">{stats.monthStr}</span>
+                        <span className="text-[var(--text-tertiary)]">this month</span>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                        <Award size={13} className="text-[var(--text-muted)]" />
+                        <span className="text-[var(--text-tertiary)]">Best</span>
+                        <span className="font-semibold text-[var(--text-primary)]">{stats.bestStr}</span>
+                    </span>
                 </div>
             </div>
 
@@ -163,7 +162,7 @@ export function ActivityHeatmap() {
                     </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-1.5 mt-2 text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-widest pt-2 border-t border-[var(--border-default)]">
+                <div className="flex items-center justify-end gap-1.5 mt-2 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider pt-3 border-t border-[var(--border-default)]">
                     <span className="mr-1">Less</span>
                     <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--bg-hover)]" />
                     <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--accent-primary)]/25" />

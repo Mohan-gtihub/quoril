@@ -246,14 +246,14 @@ export function FocusMode() {
                     <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-8 grid grid-cols-1 lg:grid-cols-2 gap-4">
 
                         {/* TIMER + RING */}
-                        <div className="rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-sm p-6 flex flex-col items-center justify-center">
+                        <div className="rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] p-6 flex flex-col items-center justify-center">
                             <div className="mb-4 h-7 flex items-center">
                                 {isBreak ? (
-                                    <span className="text-xs font-semibold tracking-wide text-[var(--text-secondary)] bg-[var(--bg-hover)] px-3 py-1 rounded-full">Recovery Mode</span>
+                                    <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Recovery mode</span>
                                 ) : settings.pomodorosEnabled ? (
-                                    <span className="text-xs font-semibold tracking-wide text-[var(--text-secondary)] bg-[var(--bg-hover)] px-3 py-1 rounded-full">Focus Session</span>
+                                    <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Focus session</span>
                                 ) : (
-                                    <span className="text-xs font-medium text-[var(--text-tertiary)]">Open focus</span>
+                                    <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Open focus</span>
                                 )}
                             </div>
 
@@ -336,14 +336,14 @@ export function FocusMode() {
                             <div
                                 ref={setActiveRef}
                                 className={cn(
-                                    "rounded-[var(--radius-tile)] border shadow-sm transition-all p-5 relative",
+                                    "rounded-[var(--radius-tile)] border transition-all p-5 relative",
                                     isOverActive
                                         ? "bg-[var(--bg-hover)] border-[var(--border-hover)] border-dashed"
                                         : "bg-[var(--bg-card)] border-[var(--border-default)]"
                                 )}
                             >
                                 <div className="flex items-center justify-between">
-                                    <h2 className="text-base font-semibold text-[var(--text-primary)]">Active task</h2>
+                                    <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">Active task</h2>
                                     {syncError ? (
                                         <span className="text-xs text-[var(--error)]">Sync error</span>
                                     ) : syncing ? (
@@ -362,7 +362,7 @@ export function FocusMode() {
                                             onComplete={() => handleCompleteTask(activeTask.id)}
                                         />
                                     ) : (
-                                        <div className="rounded-2xl bg-[var(--bg-hover)] py-10 flex flex-col items-center justify-center text-center gap-2">
+                                        <div className="rounded-[var(--radius-card)] bg-[var(--bg-hover)] py-10 flex flex-col items-center justify-center text-center gap-2">
                                             <Play className="w-7 h-7 text-[var(--text-muted)]" />
                                             <p className="text-sm text-[var(--text-tertiary)]">Drag a task here<br />to start a session</p>
                                         </div>
@@ -377,15 +377,15 @@ export function FocusMode() {
                             </div>
 
                             {/* QUEUE / HISTORY TILE */}
-                            <div className="flex-1 rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-sm p-5 flex flex-col min-h-[360px]">
-                                <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex-1 rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] p-5 flex flex-col min-h-[360px]">
+                                <div className="flex items-center gap-1 shrink-0 p-1 bg-[var(--bg-hover)] rounded-[var(--radius-pill)] self-start">
                                     <button
                                         onClick={() => setRightPanelTab('queue')}
                                         className={cn(
-                                            "px-4 py-1.5 rounded-full text-sm font-semibold transition-colors",
+                                            "px-4 py-1.5 rounded-[var(--radius-pill)] text-sm font-semibold transition-colors",
                                             rightPanelTab === 'queue'
-                                                ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)]"
-                                                : "bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                                ? "bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm"
+                                                : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
                                         )}
                                     >
                                         Up next
@@ -393,10 +393,10 @@ export function FocusMode() {
                                     <button
                                         onClick={() => setRightPanelTab('history')}
                                         className={cn(
-                                            "px-4 py-1.5 rounded-full text-sm font-semibold transition-colors",
+                                            "px-4 py-1.5 rounded-[var(--radius-pill)] text-sm font-semibold transition-colors",
                                             rightPanelTab === 'history'
-                                                ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)]"
-                                                : "bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                                ? "bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm"
+                                                : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
                                         )}
                                     >
                                         Completed
@@ -422,14 +422,14 @@ export function FocusMode() {
 
                                             <button
                                                 onClick={() => setShowCreateModal(true)}
-                                                className="w-full h-12 rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] transition-all flex items-center justify-center gap-2 group mt-2"
+                                                className="w-full h-11 rounded-[var(--radius-card)] border border-dashed border-[var(--border-default)] hover:bg-[var(--bg-hover)] transition-all flex items-center justify-center gap-2 group mt-2"
                                             >
                                                 <Plus className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--accent-primary)] transition-colors" />
                                                 <span className="text-sm font-semibold text-[var(--text-tertiary)] group-hover:text-[var(--text-primary)] transition-colors">Add task</span>
                                             </button>
                                         </div>
                                     ) : (
-                                        <div className="space-y-2">
+                                        <div className="-mx-2">
                                             {allStoreTasks.filter(t => t.status === 'done' && t.completed_at?.startsWith(new Date().toISOString().split('T')[0])).length === 0 && (
                                                 <div className="py-12 flex flex-col items-center justify-center text-center gap-2">
                                                     <CheckCircle2 className="w-7 h-7 text-[var(--text-muted)]" />
@@ -440,15 +440,15 @@ export function FocusMode() {
                                                 .filter(t => t.status === 'done' && t.completed_at?.startsWith(new Date().toISOString().split('T')[0]))
                                                 .sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || ''))
                                                 .map(t => (
-                                                    <div key={t.id} className="rounded-2xl bg-[var(--bg-hover)] p-3 flex items-center justify-between gap-3">
+                                                    <div key={t.id} className="rounded-[var(--radius-card)] px-2 py-2.5 flex items-center justify-between gap-3 hover:bg-[var(--bg-hover)] transition-colors">
                                                         <div className="flex items-center gap-3 min-w-0">
-                                                            <span className="w-1.5 h-8 rounded-full bg-[var(--accent-primary)] shrink-0" />
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)] shrink-0" />
                                                             <div className="min-w-0">
                                                                 <p className="text-sm font-medium text-[var(--text-secondary)] truncate">{t.title}</p>
                                                                 <p className="text-[11px] text-[var(--text-muted)] tabular-nums">{t.completed_at ? t.completed_at.split('T')[1].slice(0, 5) : 'Done'}</p>
                                                             </div>
                                                         </div>
-                                                        <span className="text-sm font-semibold text-[var(--accent-primary)] tabular-nums shrink-0">{Math.round((t.actual_seconds || 0) / 60)}m</span>
+                                                        <span className="text-sm font-semibold text-[var(--text-tertiary)] tabular-nums shrink-0">{Math.round((t.actual_seconds || 0) / 60)}m</span>
                                                     </div>
                                                 ))}
                                         </div>
@@ -484,7 +484,7 @@ export function FocusMode() {
 
                 {isBreak && (
                     <div className="fixed inset-0 bg-[var(--bg-secondary)]/95 backdrop-blur-xl z-[100] flex flex-col items-center justify-center p-8 animate-in fade-in duration-500">
-                        <span className="text-xs font-semibold tracking-wide text-[var(--text-secondary)] bg-[var(--bg-hover)] px-3 py-1 rounded-full mb-6">Recovery Mode</span>
+                        <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-6">Recovery mode</span>
                         <h2 className="text-[30px] font-semibold tracking-tight text-[var(--text-primary)] mb-2">Take a breather</h2>
                         <div className="font-semibold text-[64px] leading-none text-[var(--text-primary)] my-10 tabular-nums tracking-tight">
                             {formatTimerTime(breakRemaining)}

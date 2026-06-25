@@ -3,6 +3,7 @@ import { useTaskStore } from '@/store/taskStore'
 import { useListStore } from '@/store/listStore'
 import { useTimerDisplay } from '@/hooks/useTimerDisplay'
 import { Play, Pause, CheckCircle2, SkipForward } from 'lucide-react'
+import { cn } from '@/utils/helpers'
 
 export function FocusPopup() {
     const {
@@ -54,15 +55,14 @@ export function FocusPopup() {
 
     if (!isActive || !activeTask) {
         return (
-            <div className="h-screen w-screen flex items-center justify-center p-6 text-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
+            <div className="h-screen w-screen flex items-center justify-center p-6 text-center bg-[var(--bg-primary)]">
                 <div className="space-y-4">
-                    <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No active session</p>
+                    <p className="text-sm text-[var(--text-tertiary)]">No active session</p>
                     <button
                         onClick={() => window.close()}
-                        className="text-xs font-bold uppercase tracking-wider px-4 py-2 rounded"
-                        style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--accent-contrast)' }}
+                        className="text-sm font-semibold px-5 py-2.5 rounded-[var(--radius-pill)] transition-all hover:brightness-105 bg-[var(--accent-primary)] text-[var(--accent-contrast)]"
                     >
-                        Close Window
+                        Close window
                     </button>
                 </div>
             </div>
@@ -70,77 +70,71 @@ export function FocusPopup() {
     }
 
     return (
-        <div className="h-screen w-screen flex flex-col p-6 overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <div className="h-screen w-screen flex flex-col p-6 overflow-hidden bg-[var(--bg-primary)]">
             <div className="flex-1 flex flex-col justify-center space-y-6 max-w-sm mx-auto w-full">
                 {/* Timer Display */}
-                <div className="text-center p-6 rounded-xl border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-default)' }}>
-                    <div className={`text-6xl font-mono font-bold tracking-tighter mb-2`} style={{ color: isOvertime ? 'var(--error)' : 'var(--text-primary)' }}>
+                <div className="text-center p-6 rounded-[var(--radius-tile)] border bg-[var(--bg-card)] border-[var(--border-default)]">
+                    <div className={cn("text-6xl font-semibold tabular-nums tracking-tight mb-2", isOvertime ? "text-[var(--accent-primary)]" : "text-[var(--text-primary)]")}>
                         {isStopwatch ? formatTimer(elapsed) : formatTimer(remainingTime)}
                     </div>
-                    <div className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>
+                    <div className="text-[11px] font-semibold uppercase tracking-widest mb-4 text-[var(--text-muted)]">
                         {isStopwatch ? 'Stopwatch' : isOvertime ? 'Overtime' : 'Remaining'}
                     </div>
 
                     {/* Progress Bar */}
                     {!isStopwatch && (
-                        <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                        <div className="h-1 rounded-full overflow-hidden bg-[var(--bg-hover)]">
                             <div
-                                className="h-full transition-all duration-1000"
-                                style={{ width: `${isOvertime ? 100 : progress}%`, backgroundColor: isOvertime ? 'var(--error)' : 'var(--accent-primary)' }}
+                                className={cn("h-full transition-all duration-1000", isOvertime ? "bg-[var(--error)]" : "bg-[var(--accent-primary)]")}
+                                style={{ width: `${isOvertime ? 100 : progress}%` }}
                             />
                         </div>
                     )}
                 </div>
 
                 {/* Task Info */}
-                <div className="text-center space-y-2">
-                    <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{activeTask.title}</h2>
+                <div className="text-center space-y-1.5">
+                    <h2 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">{activeTask.title}</h2>
                     {duration > 0 && (
-                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <p className="text-xs tabular-nums text-[var(--text-muted)]">
                             {Math.floor(duration / 60)} min session
                         </p>
                     )}
                 </div>
 
                 {/* Controls */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                     <button
                         onClick={() => isPaused ? resumeSession() : pauseSession()}
-                        className="flex flex-col items-center justify-center gap-2 py-4 rounded-lg transition-all"
-                        style={{
-                            backgroundColor: isPaused ? 'var(--accent-lime-100)' : 'var(--bg-hover)',
-                            color: isPaused ? 'var(--accent-primary)' : 'var(--text-secondary)'
-                        }}
+                        className="flex flex-col items-center justify-center gap-2 py-4 rounded-[var(--radius-tile)] transition-all bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-hover)]"
                     >
-                        {isPaused ? <Play className="w-6 h-6 fill-current" /> : <Pause className="w-6 h-6 fill-current" />}
-                        <span className="text-xs font-bold uppercase">{isPaused ? 'Resume' : 'Pause'}</span>
+                        {isPaused ? <Play className="w-5 h-5 fill-current" /> : <Pause className="w-5 h-5 fill-current" />}
+                        <span className="text-[11px] font-semibold">{isPaused ? 'Resume' : 'Pause'}</span>
                     </button>
 
                     <button
                         onClick={handleDone}
-                        className="flex flex-col items-center justify-center gap-2 py-4 rounded-lg transition-all"
-                        style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--accent-contrast)' }}
+                        className="flex flex-col items-center justify-center gap-2 py-4 rounded-[var(--radius-tile)] transition-all hover:brightness-105 bg-[var(--accent-primary)] text-[var(--accent-contrast)]"
                     >
-                        <CheckCircle2 className="w-6 h-6" />
-                        <span className="text-xs font-bold uppercase">Done</span>
+                        <CheckCircle2 className="w-5 h-5" />
+                        <span className="text-[11px] font-semibold">Done</span>
                     </button>
 
                     <button
                         onClick={handleSkip}
-                        className="flex flex-col items-center justify-center gap-2 py-4 rounded-lg transition-all"
-                        style={{ backgroundColor: 'var(--bg-hover)', color: 'var(--text-secondary)', borderColor: 'var(--border-default)' }}
+                        className="flex flex-col items-center justify-center gap-2 py-4 rounded-[var(--radius-tile)] transition-all bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-hover)]"
                     >
-                        <SkipForward className="w-6 h-6" />
-                        <span className="text-xs font-bold uppercase">Skip</span>
+                        <SkipForward className="w-5 h-5" />
+                        <span className="text-[11px] font-semibold">Skip</span>
                     </button>
                 </div>
 
                 {/* Next Up */}
                 {nextTasks.length > 0 && (
-                    <div className="space-y-2">
-                        <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Next Up</h3>
+                    <div className="space-y-0.5 -mx-2">
+                        <h3 className="text-[11px] font-semibold uppercase tracking-widest px-2 mb-1 text-[var(--text-muted)]">Next up</h3>
                         {nextTasks.slice(0, 3).map(task => (
-                            <div key={task.id} className="text-sm p-2 rounded" style={{ backgroundColor: 'var(--bg-hover)', color: 'var(--text-secondary)' }}>
+                            <div key={task.id} className="text-sm px-2 py-1.5 rounded-[var(--radius-card)] truncate hover:bg-[var(--bg-hover)] transition-colors text-[var(--text-secondary)]">
                                 {task.title}
                             </div>
                         ))}

@@ -26,12 +26,12 @@ export function ReportsHeader({ navigate, dateRange, setDateRange }: ReportsHead
             <div className="flex items-center gap-4">
                 <button
                     onClick={() => navigate('/')}
-                    className="w-10 h-10 rounded-full bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] flex items-center justify-center transition-colors group border border-[var(--border-default)]"
+                    className="w-9 h-9 rounded-full hover:bg-[var(--bg-hover)] flex items-center justify-center transition-colors group"
                 >
                     <ChevronLeft size={20} className="text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]" />
                 </button>
                 <div>
-                    <p className="text-sm font-medium text-[var(--text-tertiary)] mb-1">Performance report</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)] mb-1">Performance report</p>
                     <h1 className="text-[30px] leading-none font-semibold text-[var(--text-primary)] tracking-tight">Analytics</h1>
                 </div>
             </div>
@@ -44,9 +44,9 @@ export function ReportsHeader({ navigate, dateRange, setDateRange }: ReportsHead
 
                 <button
                     onClick={handleClearHistory}
-                    className="h-10 px-4 rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] flex items-center gap-2 hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] transition-colors group"
+                    className="h-9 px-3.5 rounded-full border border-[var(--border-default)] flex items-center gap-2 hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] transition-colors group"
                 >
-                    <Trash2 size={16} className="text-[var(--text-tertiary)] group-hover:text-[var(--error)] transition-colors" />
+                    <Trash2 size={15} className="text-[var(--text-tertiary)] group-hover:text-[var(--error)] transition-colors" />
                     <span className="text-xs font-medium text-[var(--text-tertiary)] group-hover:text-[var(--error)]">Clear Data</span>
                 </button>
             </div>

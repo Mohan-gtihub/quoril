@@ -61,24 +61,23 @@ export function DailyGoalRing({
                     initial={{ strokeDashoffset: circumference }}
                     animate={{ strokeDashoffset: offset }}
                     transition={{ duration: 1, ease: 'easeOut' }}
-                    style={{ filter: isCompleted ? undefined : 'drop-shadow(0 0 6px var(--accent-glow))' }}
                 />
             </svg>
 
             {/* Center Content */}
             <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
                 <span className={cn(
-                    "text-2xl font-semibold tracking-tighter",
+                    "text-2xl font-semibold tracking-tight tabular-nums",
                     isCompleted ? "text-[var(--success)]" : "text-[var(--text-primary)]"
                 )}>
                     {timeLabel}
                 </span>
-                <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mt-0.5">
+                <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mt-0.5 tabular-nums">
                     {goalLabel}
                 </span>
                 {isCompleted && (
-                    <span className="absolute -bottom-8 px-2 py-1 bg-[var(--success)]/10 text-[var(--success)] text-[11px] font-semibold uppercase tracking-widest rounded border border-[var(--success)]/20">
-                        Goal Met!
+                    <span className="absolute -bottom-8 px-2 py-1 bg-[var(--success)]/10 text-[var(--success)] text-[11px] font-semibold uppercase tracking-widest rounded-[var(--radius-pill)]">
+                        Goal Met
                     </span>
                 )}
             </div>

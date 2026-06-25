@@ -169,7 +169,7 @@ export function Dashboard() {
             ) : (
                 <>
                     {/* ── TOP BAR ── */}
-                    <div className="px-6 py-4 border-b border-[var(--border-default)] bg-[var(--bg-secondary)]/80 backdrop-blur-xl sticky top-0 z-30 shrink-0 space-y-3.5">
+                    <div className="px-6 md:px-10 py-5 border-b border-[var(--border-default)] bg-[var(--bg-secondary)]/80 backdrop-blur-xl sticky top-0 z-30 shrink-0 space-y-4">
                         {/* Row 1: workspace title switcher + actions */}
                         <div className="flex items-center justify-between gap-3 relative">
 
@@ -184,7 +184,7 @@ export function Dashboard() {
                                     onClick={() => setShowWsMenu(!showWsMenu)}
                                     className="flex items-center gap-2 group hover:opacity-80 transition-opacity outline-none"
                                 >
-                                    <h1 className="text-[22px] leading-none font-semibold text-[var(--text-primary)] tracking-tight">
+                                    <h1 className="text-2xl leading-none font-semibold text-[var(--text-primary)] tracking-tight">
                                         {isArchived ? 'Archived' : activeWorkspaceId === 'unassigned' ? 'Unassigned' : ws?.name}
                                     </h1>
                                     <ChevronDown size={18} className="text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors" />
@@ -199,10 +199,10 @@ export function Dashboard() {
                                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                                 exit={{ opacity: 0, y: -10, scale: 0.95 }}
                                                 transition={{ duration: 0.15 }}
-                                                className="absolute left-0 top-full mt-3 w-64 glass-thick border border-[var(--border-default)] rounded-2xl z-50 shadow-2xl py-2 overflow-hidden"
+                                                className="absolute left-0 top-full mt-3 w-64 bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-[var(--radius-card)] z-50 py-2 overflow-hidden"
                                             >
                                                 <div className="px-3 pb-2 mb-2 border-b border-[var(--border-default)]">
-                                                    <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Switch Workspace</p>
+                                                    <p className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Switch Workspace</p>
                                                 </div>
 
                                                 <div className="max-h-[300px] overflow-y-auto custom-scrollbar px-1">
@@ -211,13 +211,13 @@ export function Dashboard() {
                                                         <button
                                                             key={w.id}
                                                             onClick={() => { useWorkspaceStore.getState().setActiveWorkspace(w.id); setShowWsMenu(false) }}
-                                                            className={cn("w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm transition-all", activeWorkspaceId === w.id ? "bg-[var(--accent-primary)]/10 text-[var(--text-primary)] font-bold" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]")}
+                                                            className={cn("w-full flex items-center justify-between gap-2 px-3 py-2 rounded-[var(--radius-tile)] text-sm transition-colors", activeWorkspaceId === w.id ? "bg-[var(--bg-hover)] text-[var(--text-primary)] font-semibold" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]")}
                                                         >
                                                             <div className="flex items-center gap-2 truncate">
                                                                 <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: w.color }} />
                                                                 <span className="truncate">{w.name}</span>
                                                             </div>
-                                                            {activeWorkspaceId === w.id && <Check size={14} className="text-[var(--accent-primary)] shrink-0" />}
+                                                            {activeWorkspaceId === w.id && <Check size={14} className="text-[var(--text-primary)] shrink-0" />}
                                                         </button>
                                                     ))}
 
@@ -226,23 +226,23 @@ export function Dashboard() {
                                                     {/* Unassigned / Archive */}
                                                     <button
                                                         onClick={() => { useWorkspaceStore.getState().setActiveWorkspace('unassigned'); setShowWsMenu(false) }}
-                                                        className={cn("w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm transition-all", activeWorkspaceId === 'unassigned' ? "bg-[var(--accent-primary)]/10 text-[var(--text-primary)] font-bold" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]")}
+                                                        className={cn("w-full flex items-center justify-between gap-2 px-3 py-2 rounded-[var(--radius-tile)] text-sm transition-colors", activeWorkspaceId === 'unassigned' ? "bg-[var(--bg-hover)] text-[var(--text-primary)] font-semibold" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]")}
                                                     >
                                                         <div className="flex items-center gap-2 truncate">
                                                             <div className="w-2.5 h-2.5 rounded-full border-2 border-[var(--text-muted)] shrink-0" />
                                                             <span className="truncate">Unassigned</span>
                                                         </div>
-                                                        {activeWorkspaceId === 'unassigned' && <Check size={14} className="text-[var(--accent-primary)] shrink-0" />}
+                                                        {activeWorkspaceId === 'unassigned' && <Check size={14} className="text-[var(--text-primary)] shrink-0" />}
                                                     </button>
                                                     <button
                                                         onClick={() => { useWorkspaceStore.getState().setActiveWorkspace('archived'); setShowWsMenu(false) }}
-                                                        className={cn("w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm transition-all", activeWorkspaceId === 'archived' ? "bg-[var(--accent-primary)]/10 text-[var(--text-primary)] font-bold" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]")}
+                                                        className={cn("w-full flex items-center justify-between gap-2 px-3 py-2 rounded-[var(--radius-tile)] text-sm transition-colors", activeWorkspaceId === 'archived' ? "bg-[var(--bg-hover)] text-[var(--text-primary)] font-semibold" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]")}
                                                     >
                                                         <div className="flex items-center gap-2 truncate">
                                                             <Archive size={12} className="text-[var(--text-muted)] shrink-0" />
                                                             <span className="truncate">Archived</span>
                                                         </div>
-                                                        {activeWorkspaceId === 'archived' && <Check size={14} className="text-[var(--accent-primary)] shrink-0" />}
+                                                        {activeWorkspaceId === 'archived' && <Check size={14} className="text-[var(--text-primary)] shrink-0" />}
                                                     </button>
                                                 </div>
                                             </motion.div>
@@ -303,7 +303,7 @@ export function Dashboard() {
                     </div>
 
                     {/* ── BODY ── */}
-                    <main className="flex-1 overflow-y-auto p-6">
+                    <main className="flex-1 overflow-y-auto px-6 md:px-10 py-8">
 
                         {/* ── BENTO GRID ── */}
                         {!activeWorkspaceId && workspaces.length === 0 ? (
@@ -359,10 +359,10 @@ export function Dashboard() {
                                                 initial={{ opacity: 0, scale: 0.95 }}
                                                 animate={{ opacity: 1, scale: 1 }}
                                                 onClick={() => setShowCreateList(true)}
-                                                className="group rounded-2xl border border-dashed border-[var(--border-hover)] bg-[var(--bg-hover)]/30 hover:bg-[var(--bg-hover)] hover:border-[var(--accent-primary)] flex flex-col items-center justify-center gap-2.5 transition-all duration-200 col-span-1 row-span-1 min-h-[186px]"
+                                                className="group rounded-[var(--radius-card)] border border-dashed border-[var(--border-default)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-hover)] flex flex-col items-center justify-center gap-2.5 transition-colors duration-200 col-span-1 row-span-1 min-h-[186px]"
                                             >
-                                                <div className="w-11 h-11 rounded-xl bg-[var(--bg-card)] border border-[var(--border-default)] group-hover:bg-[var(--accent-primary)] group-hover:border-[var(--accent-primary)] flex items-center justify-center transition-all">
-                                                    <Plus size={20} className="text-[var(--text-muted)] group-hover:text-[var(--accent-contrast)] transition-colors" />
+                                                <div className="w-11 h-11 rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] flex items-center justify-center transition-colors">
+                                                    <Plus size={20} className="text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors" />
                                                 </div>
                                                 <span className="text-xs text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors font-semibold">New List</span>
                                             </motion.button>
@@ -372,7 +372,7 @@ export function Dashboard() {
 
                                 <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.35' } } }) }}>
                                     {activeDragList && (
-                                        <div className="rotate-[1.5deg] scale-[1.04] shadow-2xl pointer-events-none opacity-95">
+                                        <div className="rotate-[1.5deg] scale-[1.04] shadow-sm pointer-events-none opacity-95">
                                             <BentoListCard
                                                 list={activeDragList}
                                                 tasks={(tasksByList[activeDragList.id] || []).filter(t => !t.deleted_at)}
@@ -407,11 +407,11 @@ export function Dashboard() {
                             initial={{ opacity: 0, scale: 0.95, y: 8 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-sm bg-[var(--bg-secondary)] border border-[var(--border-default)] shadow-2xl rounded-2xl overflow-hidden"
+                            className="w-full max-w-sm bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-[var(--radius-card)] overflow-hidden"
                         >
                             <div className="px-5 py-4 flex items-center justify-between border-b border-[var(--border-default)]">
                                 <div>
-                                    <h3 className="font-bold text-sm">Move List</h3>
+                                    <h3 className="font-semibold text-sm">Move List</h3>
                                     <p className="text-xs text-[var(--text-muted)] mt-0.5">"{movingList.name}"</p>
                                 </div>
                                 <button onClick={() => setMovingList(null)} className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-lg transition"><X size={14} /></button>
@@ -535,7 +535,7 @@ function BentoListCard({
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: -6, scale: 0.93 }}
                                 transition={{ duration: 0.1 }}
-                                className="absolute right-3 top-12 w-48 glass-thick border border-[var(--border-hover)] rounded-xl z-50 shadow-2xl overflow-hidden"
+                                className="absolute right-3 top-12 w-48 bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-[var(--radius-card)] z-50 overflow-hidden"
                             >
                                 <div className="p-1">
                                     {isArchived ? (
@@ -661,7 +661,7 @@ function MI({ icon, label, onClick, danger }: { icon: React.ReactNode; label: st
     return (
         <button
             onClick={e => { e.stopPropagation(); onClick() }}
-            className={cn("w-full flex items-center gap-2 px-3 py-1.5 text-[11px] rounded-lg transition-colors", danger ? "text-red-400 hover:bg-red-500/10" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]")}
+            className={cn("w-full flex items-center gap-2 px-3 py-1.5 text-[11px] rounded-[var(--radius-tile)] transition-colors", danger ? "text-[var(--error)] hover:bg-[var(--error)]/10" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]")}
         >
             {icon}{label}
         </button>
@@ -670,10 +670,10 @@ function MI({ icon, label, onClick, danger }: { icon: React.ReactNode; label: st
 
 function WsBtn({ label, color, selected, onClick }: { label: string; color?: string; selected: boolean; onClick: () => void }) {
     return (
-        <button onClick={onClick} className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left transition-colors hover:bg-[var(--bg-hover)]", selected && "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]")}>
+        <button onClick={onClick} className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-tile)] text-sm text-left transition-colors hover:bg-[var(--bg-hover)]", selected && "bg-[var(--bg-hover)] text-[var(--text-primary)] font-semibold")}>
             <div className={cn("w-3.5 h-3.5 rounded shrink-0", !color && "border border-dashed border-[var(--text-muted)] opacity-40")} style={color ? { backgroundColor: color } : {}} />
             <span className="flex-1 truncate font-medium">{label}</span>
-            {selected && <CheckCircle2 size={13} className="text-[var(--accent-primary)] shrink-0" />}
+            {selected && <CheckCircle2 size={13} className="text-[var(--text-primary)] shrink-0" />}
         </button>
     )
 }

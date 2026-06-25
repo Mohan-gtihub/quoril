@@ -8,27 +8,27 @@ interface StreaksReportProps {
 export function StreaksReport({ stats }: StreaksReportProps) {
     return (
         <div className="space-y-6">
-            <h2 className="text-[24px] font-semibold tracking-tight text-[var(--text-primary)]">
+            <h2 className="text-[15px] font-semibold tracking-tight text-[var(--text-primary)]">
                 Streaks &amp; Consistency
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Daily Focus Streak */}
-                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-8 shadow-sm">
-                    <h3 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-4">
+                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-5">
+                    <h3 className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-4">
                         Daily Focus Streak
                     </h3>
 
-                    <div className="flex items-baseline gap-3 mb-3">
+                    <div className="flex items-baseline gap-2 mb-2">
                         <div className="text-5xl font-semibold text-[var(--text-primary)] tabular-nums tracking-tight">
                             {stats.dailyFocusStreak}
                         </div>
-                        <div className="text-lg font-bold text-[var(--text-tertiary)]">
+                        <div className="text-base font-medium text-[var(--text-tertiary)]">
                             {stats.dailyFocusStreak === 1 ? 'day' : 'days'}
                         </div>
                     </div>
 
-                    <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                    <p className="text-xs text-[var(--text-muted)]">
                         Consecutive days with focus sessions
                     </p>
 
@@ -46,28 +46,28 @@ export function StreaksReport({ stats }: StreaksReportProps) {
                     </div>
 
                     {stats.dailyFocusStreak > 30 && (
-                        <p className="text-[11px] text-[var(--accent-primary)] mt-2 text-center font-bold">
+                        <p className="text-[11px] text-[var(--text-muted)] mt-2 text-center font-medium tabular-nums">
                             +{stats.dailyFocusStreak - 30} more days
                         </p>
                     )}
                 </div>
 
                 {/* Daily Task Completion Streak */}
-                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-8 shadow-sm">
-                    <h3 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-4">
+                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-5">
+                    <h3 className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-4">
                         Task Completion Streak
                     </h3>
 
-                    <div className="flex items-baseline gap-3 mb-3">
+                    <div className="flex items-baseline gap-2 mb-2">
                         <div className="text-5xl font-semibold text-[var(--text-primary)] tabular-nums tracking-tight">
                             {stats.dailyCompletionStreak}
                         </div>
-                        <div className="text-lg font-bold text-[var(--text-tertiary)]">
+                        <div className="text-base font-medium text-[var(--text-tertiary)]">
                             {stats.dailyCompletionStreak === 1 ? 'day' : 'days'}
                         </div>
                     </div>
 
-                    <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                    <p className="text-xs text-[var(--text-muted)]">
                         Consecutive days completing tasks
                     </p>
 
@@ -85,7 +85,7 @@ export function StreaksReport({ stats }: StreaksReportProps) {
                     </div>
 
                     {stats.dailyCompletionStreak > 30 && (
-                        <p className="text-[11px] text-[var(--accent-primary)] mt-2 text-center font-bold">
+                        <p className="text-[11px] text-[var(--text-muted)] mt-2 text-center font-medium tabular-nums">
                             +{stats.dailyCompletionStreak - 30} more days
                         </p>
                     )}

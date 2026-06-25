@@ -85,11 +85,11 @@ export function CreateListModal({ isOpen, onClose, listToEdit, defaultWorkspaceI
     }
 
     return (
-        <div className="fixed inset-0 bg-[var(--text-primary)]/60 flex items-center justify-center z-50 p-4">
-            <div className="glass-thick rounded-2xl p-8 w-full max-w-md shadow-2xl animate-scale-in">
+        <div className="fixed inset-0 bg-[var(--text-primary)]/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-[var(--radius-card)] p-6 w-full max-w-md animate-fade-in">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-[var(--text-primary)]">
+                    <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">
                         {listToEdit ? 'Edit List' : 'Create New List'}
                     </h2>
                     <button
@@ -104,7 +104,7 @@ export function CreateListModal({ isOpen, onClose, listToEdit, defaultWorkspaceI
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Name Input */}
                     <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+                        <label className="block text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2">
                             List Name
                         </label>
                         <input
@@ -112,14 +112,14 @@ export function CreateListModal({ isOpen, onClose, listToEdit, defaultWorkspaceI
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="e.g., Marketing Tasks"
-                            className="w-full px-4 py-3 bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-xl text-[var(--text-primary)] placeholder:[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/50"
+                            className="w-full px-3.5 py-2.5 text-sm bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-[var(--radius-tile)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
                             autoFocus
                         />
                     </div>
 
                     {/* Color Picker */}
                     <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+                        <label className="block text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2">
                             Theme Color
                         </label>
                         <div className="grid grid-cols-6 gap-2">
@@ -128,7 +128,7 @@ export function CreateListModal({ isOpen, onClose, listToEdit, defaultWorkspaceI
                                     key={color}
                                     type="button"
                                     onClick={() => setSelectedColor(color)}
-                                    className={`w-10 h-10 rounded-xl transition-all ${selectedColor === color ? 'scale-110 ring-2 ring-[var(--accent-primary)] ring-offset-2 ring-offset-[var(--bg-card)]' : 'hover:scale-105 opacity-80 hover:opacity-100'
+                                    className={`w-10 h-10 rounded-[var(--radius-tile)] transition-all ${selectedColor === color ? 'ring-2 ring-[var(--accent-primary)] ring-offset-2 ring-offset-[var(--bg-elevated)]' : 'opacity-70 hover:opacity-100'
                                         }`}
                                     style={{ backgroundColor: color }}
                                 />
@@ -137,18 +137,18 @@ export function CreateListModal({ isOpen, onClose, listToEdit, defaultWorkspaceI
                     </div>
 
                     {/* Buttons */}
-                    <div className="flex gap-4 pt-6">
+                    <div className="flex gap-3 pt-4">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 px-4 py-3 bg-[var(--bg-hover)] text-[var(--text-primary)] rounded-xl font-bold hover:bg-[var(--bg-tertiary)] transition-all"
+                            className="flex-1 px-4 py-2.5 text-sm bg-[var(--bg-hover)] text-[var(--text-primary)] rounded-[var(--radius-tile)] font-semibold hover:bg-[var(--bg-tertiary)] transition-colors"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={!name.trim() || loading}
-                            className="flex-1 btn-glass-primary py-3 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 btn-glass-primary py-2.5 text-sm rounded-[var(--radius-tile)] font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? (listToEdit ? 'Updating...' : 'Creating...') : (listToEdit ? 'Save Changes' : 'Create List')}
                         </button>

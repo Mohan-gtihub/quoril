@@ -61,19 +61,19 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
             onClick={onClose}
         >
             <div
-                className="glass-thick w-full max-w-md rounded-2xl p-8 shadow-2xl animate-scale-in"
+                className="glass-thick w-full max-w-md rounded-[var(--radius-card)] p-6 shadow-sm animate-scale-in"
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={onKeyDown}
                 tabIndex={0}
             >
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-[var(--text-primary)]">
-                        New Focus Mission
+                    <h2 className="text-lg font-semibold tracking-tight text-[var(--text-primary)]">
+                        New task
                     </h2>
 
-                    <button onClick={onClose} className="p-2 hover:bg-[var(--bg-hover)] rounded-full transition-colors">
-                        <X className="text-[var(--text-muted)] hover:text-[var(--text-primary)]" />
+                    <button onClick={onClose} className="p-2 hover:bg-[var(--bg-hover)] rounded-[var(--radius-tile)] transition-colors">
+                        <X className="w-5 h-5 text-[var(--text-muted)] hover:text-[var(--text-primary)]" />
                     </button>
                 </div>
 
@@ -82,25 +82,25 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
                     autoFocus
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Identify the target..."
-                    className="w-full mb-6 px-4 py-3 bg-[var(--bg-hover)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-xl outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/50 placeholder:text-[var(--text-muted)]"
+                    placeholder="Task name..."
+                    className="w-full mb-6 px-4 py-3 bg-[var(--bg-card)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-[var(--radius-tile)] outline-none focus:ring-1 focus:ring-[var(--accent-primary)]/50 placeholder:text-[var(--text-muted)]"
                 />
 
                 {/* Priority */}
                 <div className="mb-6">
-                    <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-3">Priority Level</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2.5">Priority</p>
 
                     <div className="flex gap-2">
                         {(['low', 'medium', 'high'] as const).map((p) => (
                             <button
                                 key={p}
                                 onClick={() => setPriority(p)}
-                                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${priority === p
-                                    ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)]'
+                                className={`flex-1 py-2 rounded-[var(--radius-tile)] text-xs font-medium transition-colors ${priority === p
+                                    ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]'
                                     : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
                                     }`}
                             >
-                                {p.toUpperCase()}
+                                {p.charAt(0).toUpperCase() + p.slice(1)}
                             </button>
                         ))}
                     </div>
@@ -108,15 +108,15 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
 
                 {/* Time Presets */}
                 <div className="mb-6">
-                    <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-3">Focus Duration</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2.5">Focus duration</p>
 
                     <div className="flex gap-2 mb-3">
                         {PRESETS.map((m) => (
                             <button
                                 key={m}
                                 onClick={() => setMinutes(m)}
-                                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${minutes === m
-                                    ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)]'
+                                className={`flex-1 py-2 rounded-[var(--radius-tile)] text-xs font-medium tabular-nums transition-colors ${minutes === m
+                                    ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]'
                                     : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
                                     }`}
                             >
@@ -132,7 +132,7 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
                         value={minutes || ''}
                         onChange={(e) => setMinutes(+e.target.value)}
                         placeholder="Unlimited focus..."
-                        className="w-full px-4 py-2 bg-[var(--bg-hover)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-xl outline-none focus:ring-1 focus:ring-[var(--accent-primary)]/50"
+                        className="w-full px-4 py-2 bg-[var(--bg-card)] text-[var(--text-primary)] tabular-nums border border-[var(--border-default)] rounded-[var(--radius-tile)] outline-none focus:ring-1 focus:ring-[var(--accent-primary)]/50"
                     />
                 </div>
 
@@ -140,37 +140,37 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
                 <div className="mb-6">
                     <button
                         onClick={() => setIsRecurring(!isRecurring)}
-                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-colors ${isRecurring
-                            ? 'bg-[var(--accent-lime-100)] border-[var(--border-default)] text-[var(--text-primary)]'
-                            : 'bg-[var(--bg-hover)] border-[var(--border-default)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-[var(--radius-tile)] transition-colors ${isRecurring
+                            ? 'bg-[var(--accent-lime-100)] text-[var(--text-primary)]'
+                            : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
                             }`}
                     >
                         <div className="flex items-center gap-3">
                             <Repeat className="w-4 h-4" />
-                            <span className="text-sm font-bold">Daily Recurrence</span>
+                            <span className="text-sm font-medium">Daily recurrence</span>
                         </div>
                         <div className={`w-10 h-5 rounded-full relative transition-colors ${isRecurring ? 'bg-[var(--accent-primary)]' : 'bg-[var(--bg-tertiary)]'}`}>
-                            <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${isRecurring ? 'translate-x-5' : ''}`} />
+                            <div className={`absolute top-1 left-1 w-3 h-3 bg-[var(--accent-contrast)] rounded-full transition-transform ${isRecurring ? 'translate-x-5' : ''}`} />
                         </div>
                     </button>
-                    <p className="text-[11px] text-[var(--text-muted)] mt-2 ml-1 font-medium italic">
+                    <p className="text-[11px] text-[var(--text-muted)] mt-2 ml-1 leading-relaxed">
                         Task will automatically reappear in your list tomorrow morning.
                     </p>
                 </div>
 
                 {/* Error */}
                 {error && (
-                    <div className="mb-4 px-4 py-2 bg-[var(--error)]/10 text-xs text-[var(--error)] rounded-lg border border-[var(--error)]/20">
+                    <div className="mb-4 px-4 py-2 bg-[var(--error)]/10 text-xs text-[var(--error)] rounded-[var(--radius-tile)]">
                         {error}
                     </div>
                 )}
 
                 {/* Buttons */}
-                <div className="flex flex-col gap-3 mt-8">
-                    <div className="flex gap-3">
+                <div className="flex flex-col gap-2.5 mt-8">
+                    <div className="flex gap-2.5">
                         <button
                             onClick={onClose}
-                            className="flex-1 bg-[var(--bg-hover)] text-[var(--text-primary)] py-3 rounded-xl font-bold hover:bg-[var(--bg-tertiary)] transition-all"
+                            className="flex-1 bg-[var(--bg-hover)] text-[var(--text-primary)] py-3 rounded-[var(--radius-tile)] font-medium hover:bg-[var(--bg-tertiary)] transition-colors"
                         >
                             Cancel
                         </button>
@@ -178,7 +178,7 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
                         <button
                             disabled={loading || !title.trim()}
                             onClick={() => handleSubmit(false)}
-                            className="flex-1 btn-glass-primary py-3 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 bg-[var(--bg-tertiary)] text-[var(--text-primary)] py-3 rounded-[var(--radius-tile)] font-medium hover:bg-[var(--bg-elevated)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Create
                         </button>
@@ -187,15 +187,15 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
                     <button
                         disabled={loading || !title.trim()}
                         onClick={() => handleSubmit(true)}
-                        className="w-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] border border-[var(--border-default)] py-3 rounded-xl font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] py-3 rounded-[var(--radius-tile)] font-medium transition-colors hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Create & Focus Now
                     </button>
                 </div>
 
                 {/* Hint */}
-                <p className="text-[11px] text-[var(--text-muted)] mt-4 text-center font-bold uppercase tracking-wider">
-                    CTRL + ENTER → CREATE & FOCUS
+                <p className="text-[11px] text-[var(--text-muted)] mt-4 text-center tracking-wide">
+                    Ctrl + Enter to create & focus
                 </p>
             </div>
         </div>

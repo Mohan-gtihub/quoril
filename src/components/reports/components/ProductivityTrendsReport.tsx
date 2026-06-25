@@ -9,15 +9,15 @@ interface ProductivityTrendsReportProps {
 export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProps) {
     return (
         <div className="space-y-6">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--text-secondary)] flex items-center gap-3">
-                <TrendingUp className="w-4 h-4" />
+            <h2 className="text-[15px] font-semibold tracking-tight text-[var(--text-primary)] flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-[var(--text-muted)]" />
                 Productivity Trends
             </h2>
 
             {/* Weekly Graph */}
-            <div className="glass-panel rounded-2xl p-6">
-                <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
+            <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-5">
+                <h3 className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-5 flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5" />
                     Weekly Progress (Last 4 Weeks)
                 </h3>
 
@@ -66,9 +66,9 @@ export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProp
             </div>
 
             {/* Monthly Graph */}
-            <div className="glass-panel rounded-2xl p-6">
-                <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4" />
+            <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-5">
+                <h3 className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-5 flex items-center gap-2">
+                    <BarChart3 className="w-3.5 h-3.5" />
                     Monthly Trends (Last 6 Months)
                 </h3>
 
@@ -123,9 +123,9 @@ export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProp
             </div>
 
             {/* Focus Distribution by Day */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="glass-panel rounded-2xl p-6">
-                    <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-[0.2em] mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-5">
+                    <h3 className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-5">
                         Focus Distribution by Day
                     </h3>
 
@@ -140,13 +140,13 @@ export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProp
                                         <span className="text-sm text-[var(--text-secondary)] font-medium w-12">
                                             {day.day}
                                         </span>
-                                        <span className="text-xs font-mono font-bold text-[var(--accent-primary)] tabular-nums">
+                                        <span className="text-xs font-semibold text-[var(--text-tertiary)] tabular-nums">
                                             {day.avgMinutes}m
                                         </span>
                                     </div>
-                                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                                    <div className="h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-gradient-to-r from-[var(--accent-primary)] to-[var(--text-secondary)] rounded-full transition-all duration-500"
+                                            className="h-full bg-[var(--accent-primary)] rounded-full transition-all duration-500"
                                             style={{ width: `${widthPercent}%` }}
                                         />
                                     </div>
@@ -157,9 +157,9 @@ export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProp
                 </div>
 
                 {/* Most Productive Time of Day */}
-                <div className="glass-panel rounded-2xl p-6">
-                    <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
+                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-5">
+                    <h3 className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-5 flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5" />
                         Most Productive Hours
                     </h3>
 
@@ -178,20 +178,20 @@ export function ProductivityTrendsReport({ stats }: ProductivityTrendsReportProp
                                     <div key={time.hour} className="group">
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-3">
-                                                <span className="text-xs font-bold text-[var(--text-muted)] tabular-nums w-6">
+                                                <span className="text-xs font-semibold text-[var(--text-muted)] tabular-nums w-6">
                                                     #{index + 1}
                                                 </span>
-                                                <span className="text-sm text-[var(--text-secondary)] font-mono">
+                                                <span className="text-sm text-[var(--text-secondary)] tabular-nums">
                                                     {time.label}
                                                 </span>
                                             </div>
-                                            <span className="text-xs font-mono font-bold text-[var(--text-secondary)] tabular-nums">
+                                            <span className="text-xs font-semibold text-[var(--text-tertiary)] tabular-nums">
                                                 {time.avgMinutes}m avg
                                             </span>
                                         </div>
-                                        <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                                        <div className="h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
                                             <div
-                                                className="h-full bg-gradient-to-r from-[var(--text-secondary)] to-[var(--text-muted)] rounded-full transition-all duration-500"
+                                                className="h-full bg-[var(--text-tertiary)] rounded-full transition-all duration-500"
                                                 style={{ width: `${widthPercent}%` }}
                                             />
                                         </div>

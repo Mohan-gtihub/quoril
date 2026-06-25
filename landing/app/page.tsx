@@ -49,6 +49,12 @@ export default function Home() {
           </p>
         </Reveal>
 
+        <Reveal delay={0.12}>
+          <p className="mt-5 font-hand text-[clamp(20px,2.6vw,26px)] text-ink-faint">
+            one quiet window for your whole day
+          </p>
+        </Reveal>
+
         <Reveal delay={0.15}>
           <div className="mx-auto mt-9 max-w-[560px]">
             <Waitlist id="waitlist" />
@@ -212,6 +218,9 @@ export default function Home() {
                   the breakdown.
                 </p>
                 <Heatmap />
+                <p className="mt-3 font-hand text-[16px] text-ink-faint">
+                  your afternoons are gold ✦
+                </p>
               </Tile>
             </Reveal>
 
@@ -356,6 +365,9 @@ export default function Home() {
             <p className="mx-auto mt-4 max-w-[520px] text-[18px] text-ink-muted">
               Join the waitlist and be first to turn your desktop into a focus
               machine.
+            </p>
+            <p className="mt-4 font-hand text-[20px] text-ink-faint">
+              made for people who'd rather be making things
             </p>
             <div className="mx-auto mt-8 max-w-[520px]">
               <Waitlist />

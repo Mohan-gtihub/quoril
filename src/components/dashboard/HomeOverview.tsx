@@ -18,6 +18,13 @@ function getGreeting() {
     return 'Good evening'
 }
 
+function getGreetingEmoji() {
+    const hour = new Date().getHours()
+    if (hour < 12) return '☕'
+    if (hour < 17) return '🌤️'
+    return '🌙'
+}
+
 function fmtMin(m: number) {
     if (m >= 60) return `${Math.floor(m / 60)}h ${m % 60}m`
     return m ? `${m}m` : '0m'
@@ -85,7 +92,7 @@ export function HomeOverview() {
         return { wsName: ws?.name || 'Unassigned', wsColor: ws?.color || 'var(--text-muted)' }
     }
     const PRIORITY_COLOR: Record<string, string> = {
-        critical: '#ef4444', high: '#f59e0b', medium: 'var(--accent-primary)', low: 'var(--text-muted)',
+        critical: 'var(--error)', high: 'var(--warning)', medium: 'var(--accent-primary)', low: 'var(--text-muted)',
     }
 
     return (
@@ -93,18 +100,16 @@ export function HomeOverview() {
             <div className="w-full max-w-[1320px] mx-auto px-6 md:px-10 py-8">
 
                 {/* ── Hero band ── */}
-                <div className="relative overflow-hidden rounded-[var(--radius-tile)] border border-[var(--border-default)] shadow-sm mb-6">
-                    <div className="absolute inset-0 bg-gradient-to-br from-[var(--accent-primary)]/[0.08] via-transparent to-transparent" />
-                    <div className="absolute -top-16 -right-10 w-64 h-64 rounded-full bg-[var(--accent-primary)]/[0.06] blur-3xl" />
-                    <div className="relative px-6 md:px-8 py-6 flex flex-wrap items-center justify-between gap-5">
-                        <div className="min-w-0">
-                            <p className="text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-2">
-                                {format(new Date(), 'EEEE, MMMM d')}
-                            </p>
-                            <h1 className="text-[26px] leading-none font-semibold tracking-tight text-[var(--text-primary)]">
-                                {getGreeting()}, {name}
-                            </h1>
-                            <div className="mt-4 flex items-center gap-4 text-[13px]">
+                <div className="mb-10 flex flex-wrap items-center justify-between gap-5">
+                    <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2.5">
+                            {format(new Date(), 'EEEE, MMMM d')}
+                        </p>
+                        <h1 className="text-[30px] leading-none font-semibold tracking-tight text-[var(--text-primary)] flex items-center gap-2.5">
+                            <span>{getGreeting()}, {name}</span>
+                            <span className="text-[26px] leading-none" aria-hidden>{getGreetingEmoji()}</span>
+                        </h1>
+                        <div className="mt-4 flex items-center gap-4 text-[13px]">
                                 <span className="flex items-baseline gap-1.5">
                                     <span className="font-semibold text-[var(--text-primary)] tabular-nums">{stats.active}</span>
                                     <span className="text-[var(--text-tertiary)]">to do</span>
@@ -117,21 +122,20 @@ export function HomeOverview() {
                                 <span className="w-px h-3.5 bg-[var(--border-default)]" />
                                 <span className="flex items-baseline gap-1.5">
                                     <span className={cn('font-semibold tabular-nums', isActive ? 'text-[var(--accent-primary)]' : 'text-[var(--text-primary)]')}>{fmtMin(stats.focusMin)}</span>
-                                    <span className="text-[var(--text-tertiary)]">focused</span>
-                                </span>
-                            </div>
+                                <span className="text-[var(--text-tertiary)]">focused</span>
+                            </span>
                         </div>
-                        <button
-                            onClick={() => setShowFocusPanel(true)}
-                            className="flex items-center gap-2 px-6 py-3 bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full font-semibold text-sm shadow-md hover:opacity-90 active:scale-95 transition-all"
-                        >
-                            <Flame size={17} /> Start focus
-                        </button>
                     </div>
+                    <button
+                        onClick={() => setShowFocusPanel(true)}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-[var(--radius-pill)] font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
+                    >
+                        <Flame size={16} /> Start focus
+                    </button>
                 </div>
 
                 {/* ── Main asymmetric grid ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
 
                     {/* LEFT: Today */}
                     <Panel className="p-0 overflow-hidden">
@@ -203,7 +207,7 @@ export function HomeOverview() {
                     </Panel>
 
                     {/* RIGHT rail */}
-                    <div className="space-y-6">
+                    <div className="space-y-4">
 
                         {/* Focus snapshot with progress ring */}
                         <Panel className="flex items-center gap-5">
@@ -259,7 +263,7 @@ export function HomeOverview() {
                 </div>
 
                 {/* ── Activity heatmap ── */}
-                <div className="mt-6">
+                <div className="mt-4">
                     <ActivityHeatmap />
                 </div>
             </div>
@@ -269,7 +273,7 @@ export function HomeOverview() {
 
 function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={`rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-sm p-5 ${className || ''}`}>
+        <div className={`rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-[0_1px_2px_rgba(60,54,42,0.05),0_10px_30px_-18px_rgba(60,54,42,0.18)] p-5 ${className || ''}`}>
             {children}
         </div>
     )

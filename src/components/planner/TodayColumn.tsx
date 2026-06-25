@@ -34,21 +34,21 @@ export function TodayColumn({ title = "Today", tasks, columnId, onTaskComplete, 
     return (
         <div
             ref={setNodeRef}
-            className="flex flex-col h-full rounded-[var(--radius-tile)] border border-[var(--border-default)] bg-[var(--bg-card)] shadow-sm overflow-hidden"
+            className="flex flex-col h-full rounded-[var(--radius-tile)] border border-[var(--border-default)] bg-[var(--bg-card)] overflow-hidden"
         >
             {/* Header */}
-            <div className="p-5 pb-4 flex-shrink-0">
+            <div className="px-5 pt-5 pb-4 flex-shrink-0">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-primary)]" />
-                        <h2 className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
+                        <span className="w-2 h-2 rounded-full bg-[var(--accent-primary)]" />
+                        <h2 className="text-[15px] font-semibold tracking-tight text-[var(--text-primary)]">
                             {title}
                         </h2>
                     </div>
 
                     <div className="flex items-center gap-2">
                         {/* Task Count Badge */}
-                        <div className="px-2.5 py-1 bg-[var(--bg-hover)] rounded-full text-[11px] font-semibold text-[var(--text-tertiary)] tabular-nums">
+                        <div className="text-[11px] font-semibold text-[var(--text-muted)] tabular-nums">
                             {tasks.length}
                         </div>
 
@@ -73,7 +73,7 @@ export function TodayColumn({ title = "Today", tasks, columnId, onTaskComplete, 
             </div>
 
             {/* Unified Kanban List */}
-            <div className="flex-1 px-3 pb-3 overflow-y-auto space-y-3 custom-scrollbar flex flex-col">
+            <div className="flex-1 px-3 pb-3 overflow-y-auto custom-scrollbar flex flex-col">
                 <SortableContext
                     id={columnId}
                     items={tasks.map(t => t.id)}

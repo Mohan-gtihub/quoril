@@ -30,16 +30,16 @@ const COLUMN_ORDER: TaskColumn[] = ['backlog', 'this_week', 'today', 'done']
 // Helper to determine active state style
 const getTaskStateStyles = (isActive: boolean, isPaused: boolean, isCompleted: boolean) => {
     if (isCompleted) {
-        return "bg-[var(--bg-tertiary)]/40 border-[var(--border-default)] opacity-60"
+        return "bg-transparent border-transparent opacity-55 hover:opacity-80 hover:bg-[var(--bg-hover)]"
     }
     if (isActive) {
         if (isPaused) {
             return "bg-[var(--warning)]/10 border-[var(--warning)]/30"
         } else {
-            return "bg-[var(--accent-primary)]/10 border-[var(--accent-primary)]/40"
+            return "bg-[var(--accent-primary)]/[0.06] border-[var(--accent-primary)]/30"
         }
     }
-    return "bg-[var(--bg-card)] border-[var(--border-default)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-hover)]"
+    return "bg-[var(--bg-secondary)] border-[var(--border-default)] hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)]"
 }
 
 export function TaskCard({ task, column, onComplete, draggable = true, disableTimer = false }: TaskCardProps) {
@@ -182,7 +182,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
             {...attributes}
             {...listeners}
             className={cn(
-                "group rounded-xl p-3.5 mb-2 transition-all duration-300 border relative",
+                "group rounded-[var(--radius-tile)] p-3.5 mb-2 transition-colors duration-200 border relative",
                 stateStyles
             )}
             style={style}
@@ -301,7 +301,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                     {/* EST */}
                     {!settings.hideEstDoneTimes && (
                         <div
-                            className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+                            className="flex items-center gap-1.5 text-[11px] font-medium tabular-nums text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
                             onClick={(e) => { e.stopPropagation(); setIsEditingEst(true); }}
                         >
                             {isEditingEst ? (
@@ -325,7 +325,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
 
                     {/* Subtasks Count (if not active) */}
                     {!isTaskActive && totalSub > 0 && (
-                        <div className="flex items-center gap-1 text-[11px] font-bold text-[var(--text-tertiary)]">
+                        <div className="flex items-center gap-1 text-[11px] font-medium tabular-nums text-[var(--text-muted)]">
                             <ListTodo className="w-3 h-3" />
                             <span>{doneSub}/{totalSub}</span>
                         </div>
@@ -372,7 +372,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                     )}
 
                     {/* Timer Display */}
-                    <div className="text-[11px] font-mono font-bold tracking-tighter">
+                    <div className="text-[11px] font-mono font-semibold tabular-nums tracking-tight">
                         {isTaskActive ? (
                             <span className={cn(
                                 "animate-pulse px-2 py-0.5 rounded-md bg-[var(--bg-hover)]",

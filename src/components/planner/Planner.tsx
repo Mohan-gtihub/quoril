@@ -63,30 +63,30 @@ function BoardColumn({
     return (
         <div
             ref={setNodeRef}
-            className={`flex flex-col h-full rounded-[var(--radius-tile)] transition-all duration-300 flex-shrink-0 border border-[var(--border-default)] bg-[var(--bg-card)] shadow-sm ${isToday ? 'w-80 lg:w-96 min-w-[280px]' : 'w-64 lg:w-72 min-w-[240px]'
+            className={`flex flex-col h-full rounded-[var(--radius-tile)] transition-colors duration-200 flex-shrink-0 border border-[var(--border-default)] bg-[var(--bg-card)] ${isToday ? 'w-80 lg:w-96 min-w-[280px]' : 'w-64 lg:w-72 min-w-[240px]'
                 }`}
         >
             {/* Column Header */}
-            <div className="p-5 pb-4">
+            <div className="px-5 pt-5 pb-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5 min-w-0">
-                        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${column.color}`}></div>
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${column.color}`}></div>
                         <div className="min-w-0">
-                            <h2 className="text-base font-semibold leading-none tracking-tight truncate text-[var(--text-primary)]">{column.title}</h2>
-                            <p className="text-[11px] font-medium truncate text-[var(--text-tertiary)] mt-1">{column.subtitle}</p>
+                            <h2 className="text-[15px] font-semibold leading-none tracking-tight truncate text-[var(--text-primary)]">{column.title}</h2>
+                            <p className="text-[11px] font-medium truncate text-[var(--text-muted)] mt-1.5">{column.subtitle}</p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2">
                         {column.id === 'done' ? (
                             !hideEstDoneTimes && (
-                                <span className="text-[11px] font-semibold tabular-nums px-2.5 py-1 rounded-full bg-[var(--bg-hover)] text-[var(--text-tertiary)]">
+                                <span className="text-[11px] font-semibold tabular-nums text-[var(--text-muted)]">
                                     {count} done
                                 </span>
                             )
                         ) : (
                             !hideEstDoneTimes && totalMinutes > 0 && (
-                                <span className="text-[11px] font-semibold tabular-nums px-2.5 py-1 rounded-full bg-[var(--bg-hover)] text-[var(--text-tertiary)]">
+                                <span className="text-[11px] font-semibold tabular-nums text-[var(--text-muted)]">
                                     {formatTime(totalMinutes)}
                                 </span>
                             )
@@ -106,12 +106,12 @@ function BoardColumn({
 
                 {/* Progress Bar for specific columns */}
                 {(column.id === 'this_week' || column.id === 'today') && (
-                    <div className="w-full h-2 rounded-full overflow-hidden mt-4 bg-[var(--bg-hover)]">
+                    <div className="w-full h-1.5 rounded-full overflow-hidden mt-4 bg-[var(--bg-hover)]">
                         <motion.div
-                            className="h-full rounded-full bg-[var(--accent-primary)]"
+                            className={`h-full rounded-full ${isToday ? 'bg-[var(--accent-primary)]' : 'bg-[var(--text-muted)]'}`}
                             initial={{ width: 0 }}
                             animate={{ width: `${displayProgress}%` }}
-                            transition={{ duration: 0.8, ease: 'easeOut' }}
+                            transition={{ duration: 0.6, ease: 'easeOut' }}
                         />
                     </div>
                 )}
@@ -133,7 +133,7 @@ function BoardColumn({
             </div>
 
             {/* Task List */}
-            <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-3 custom-scrollbar flex flex-col">
+            <div className="flex-1 overflow-y-auto px-3 pb-3 custom-scrollbar flex flex-col">
                 <SortableContext
                     id={column.id}
                     items={tasks.map(t => t.id)}
@@ -167,7 +167,7 @@ function BoardColumn({
                                                     {' '}
                                                     {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                                 </span>
-                                                <span className="bg-[var(--bg-hover)] px-2 py-0.5 rounded-full text-[var(--text-muted)] tabular-nums">
+                                                <span className="text-[var(--text-muted)] tabular-nums font-medium">
                                                     {dayTasks.length} {dayTasks.length === 1 ? 'task' : 'tasks'}
                                                 </span>
                                             </div>
@@ -204,7 +204,7 @@ function BoardColumn({
                     <div className="mt-2">
                         <button
                             onClick={() => setShowCreateModal({ column: column.id, position: 'bottom' })}
-                            className="w-full py-2.5 border border-dashed border-[var(--border-default)] rounded-xl text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-hover)] transition-all flex items-center justify-center gap-2"
+                            className="w-full py-2.5 rounded-[var(--radius-tile)] text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors flex items-center justify-center gap-2"
                         >
                             <Plus className="w-3.5 h-3.5" />
                             Add task

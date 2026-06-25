@@ -275,7 +275,9 @@ html, body {
 body {
   min-width: 320px;
   font-family: var(--font-sans);
-  background-color: var(--bg-primary);
+  /* Transparent so the rounded #root corners aren't filled in behind by a
+     square body background. The app surface lives on #root. */
+  background-color: transparent;
   color: var(--text-primary);
   transition: background-color var(--transition-speed), color var(--transition-speed);
 }
@@ -295,6 +297,10 @@ body.super-focus {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  /* Subtly rounded app window corners (VS Code-style). The Electron window
+     is frameless + transparent, so rounding #root rounds the whole app. */
+  border-radius: 10px;
+  background-color: var(--bg-primary);
 }
 
 /* ───────────────────────────────────────────────────────────────

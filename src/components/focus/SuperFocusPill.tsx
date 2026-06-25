@@ -218,9 +218,9 @@ export function SuperFocusPill() {
                             >
                                 <div className={cn(
                                     "w-4 h-4 rounded border border-[var(--border-default)] flex items-center justify-center transition-all shrink-0",
-                                    subtask.completed ? "bg-[var(--success)] border-[var(--success)] shadow-[0_0_8px_rgba(16,185,129,0.4)]" : "group-hover/sub:border-[var(--border-hover)]"
+                                    subtask.completed ? "bg-[var(--success)] border-[var(--success)]" : "group-hover/sub:border-[var(--border-hover)]"
                                 )}>
-                                    {subtask.completed && <Check size={11} className="text-white" />}
+                                    {subtask.completed && <Check size={11} className="text-[var(--accent-contrast)]" />}
                                 </div>
                                 <span className={cn(
                                     "text-xs truncate transition-all flex-1",

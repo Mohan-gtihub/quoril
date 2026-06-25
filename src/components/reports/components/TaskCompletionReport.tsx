@@ -8,48 +8,48 @@ interface TaskCompletionReportProps {
 export function TaskCompletionReport({ stats }: TaskCompletionReportProps) {
     return (
         <div className="space-y-6">
-            <h2 className="text-[24px] font-semibold tracking-tight text-[var(--text-primary)]">
+            <h2 className="text-[15px] font-semibold tracking-tight text-[var(--text-primary)]">
                 Task Completion Metrics
             </h2>
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-6 shadow-sm">
-                    <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase mb-3">Completed Today</h3>
+                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-5">
+                    <h3 className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">Completed Today</h3>
                     <div className="text-3xl font-semibold text-[var(--text-primary)] tabular-nums tracking-tight">
                         {stats.completedToday}
                     </div>
-                    <p className="text-[11px] text-[var(--text-muted)] mt-2 uppercase tracking-widest">Tasks Done</p>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-2 uppercase tracking-wider">Tasks Done</p>
                 </div>
 
-                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-6 shadow-sm">
-                    <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase mb-3">Completion Rate</h3>
+                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-5">
+                    <h3 className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">Completion Rate</h3>
                     <div className="text-3xl font-semibold text-[var(--text-primary)] tabular-nums tracking-tight">
                         {stats.completionRatePercent}%
                     </div>
-                    <p className="text-[11px] text-[var(--text-muted)] mt-2 uppercase tracking-widest">Overall</p>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-2 uppercase tracking-wider">Overall</p>
                 </div>
 
-                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-6 shadow-sm">
-                    <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase mb-3">Overdue</h3>
+                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-5">
+                    <h3 className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">Overdue</h3>
                     <div className="text-3xl font-semibold text-[var(--text-primary)] tabular-nums tracking-tight">
                         {stats.overdueTasks}
                     </div>
-                    <p className="text-[11px] text-[var(--text-muted)] mt-2 uppercase tracking-widest">Tasks Past Due</p>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-2 uppercase tracking-wider">Tasks Past Due</p>
                 </div>
 
-                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-6 shadow-sm">
-                    <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase mb-3">Active Lists</h3>
+                <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-5">
+                    <h3 className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">Active Lists</h3>
                     <div className="text-3xl font-semibold text-[var(--text-primary)] tabular-nums tracking-tight">
                         {stats.completedByList.length}
                     </div>
-                    <p className="text-[11px] text-[var(--text-muted)] mt-2 uppercase tracking-widest">With Completions</p>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-2 uppercase tracking-wider">With Completions</p>
                 </div>
             </div>
 
             {/* Completions Per List */}
-            <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-6 shadow-sm">
-                <h3 className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-[0.2em] mb-6">
+            <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] p-5">
+                <h3 className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-5">
                     Tasks Completed Per List
                 </h3>
 
@@ -75,7 +75,7 @@ export function TaskCompletionReport({ stats }: TaskCompletionReportProps) {
                                                 {list.listName}
                                             </span>
                                         </div>
-                                        <span className="text-sm font-mono font-bold text-[var(--text-secondary)] ml-4 tabular-nums">
+                                        <span className="text-sm font-semibold text-[var(--text-secondary)] ml-4 tabular-nums">
                                             {list.count} {list.count === 1 ? 'task' : 'tasks'}
                                         </span>
                                     </div>

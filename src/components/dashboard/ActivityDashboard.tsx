@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
-    Activity,
     Clock,
     Monitor,
     Globe,
@@ -20,6 +19,9 @@ import {
     Cell
 } from 'recharts'
 import { format } from 'date-fns'
+
+// Vibrant accent palette for chart bars (cards stay white).
+const CHART_PALETTE = ['#c850a0', '#f0b450', '#5bc4c4', '#f4a0c0', '#f08050']
 
 interface AppUsage {
     app_id: string
@@ -112,10 +114,10 @@ export function ActivityDashboard() {
     // ── Web: app tracking unavailable ──────────────────────────────────────────
     if (!appTracking) {
         return (
-            <div className="flex flex-col h-full overflow-y-auto bg-[var(--bg-primary)] p-8 text-[var(--text-primary)]">
+            <div className="flex flex-col h-full overflow-y-auto bg-[var(--bg-primary)] px-6 md:px-10 py-8 text-[var(--text-primary)]">
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold tracking-tight">Activity</h1>
-                    <p className="text-[var(--text-secondary)] mt-1">Your digital footprint</p>
+                    <h1 className="text-3xl font-semibold tracking-tight">Activity</h1>
+                    <p className="text-[var(--text-secondary)] mt-1 text-sm">Your digital footprint</p>
                 </div>
                 <TrackingUnavailable />
             </div>
@@ -131,68 +133,61 @@ export function ActivityDashboard() {
     }
 
     return (
-        <div className="flex flex-col h-full overflow-y-auto bg-[var(--bg-primary)] p-8 text-[var(--text-primary)]">
+        <div className="flex flex-col h-full overflow-y-auto bg-[var(--bg-primary)] px-6 md:px-10 py-8 text-[var(--text-primary)]">
 
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Activity</h1>
-                    <p className="text-[var(--text-secondary)] mt-1">
+                    <h1 className="text-3xl font-semibold tracking-tight">Activity</h1>
+                    <p className="text-[var(--text-secondary)] mt-1 text-sm">
                         Your digital footprint for today, {format(new Date(), 'MMMM do')}
                     </p>
                 </div>
-                <div className="flex items-center gap-2 bg-[var(--bg-card)] px-4 py-2 rounded-xl border border-[var(--border-default)]">
-                    <div className="relative">
-                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[var(--accent-primary)] rounded-full animate-pulse" />
-                        <Activity size={18} className="text-[var(--accent-primary)]" />
-                    </div>
-                    <span className="text-sm font-medium">Tracking Active</span>
+                <div className="flex items-center gap-2 bg-[var(--bg-card)] px-3.5 py-2 rounded-[var(--radius-pill)] border border-[var(--border-default)]">
+                    <span className="w-1.5 h-1.5 bg-[var(--accent-primary)] rounded-full animate-pulse" />
+                    <span className="text-xs font-medium text-[var(--text-secondary)]">Tracking active</span>
                 </div>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
 
                 {/* Total Time */}
-                <div className="bg-[var(--bg-card)] p-6 rounded-[var(--radius-card)] border border-[var(--border-default)] shadow-sm relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-[var(--text-muted)]">
-                        <Clock size={64} />
+                <div className="bg-[var(--bg-card)] p-5 rounded-[var(--radius-card)] border border-[var(--border-default)]">
+                    <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide font-semibold text-[var(--text-muted)] mb-3">
+                        <Clock size={12} /> Total Screen Time
                     </div>
-                    <h3 className="text-[var(--text-secondary)] font-medium mb-1">Total Screen Time</h3>
-                    <div className="text-4xl font-bold text-[var(--accent-primary)]">
+                    <div className="text-4xl font-semibold tracking-tight tabular-nums text-[var(--text-primary)]">
                         {formatDuration(totalTime)}
                     </div>
-                    <div className="mt-4 flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                        <TrendingUp size={14} />
+                    <div className="mt-3 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                        <TrendingUp size={13} />
                         <span>Recorded today</span>
                     </div>
                 </div>
 
                 {/* Productivity Score */}
-                <div className="bg-[var(--bg-card)] p-6 rounded-[var(--radius-card)] border border-[var(--border-default)] shadow-sm relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-[var(--text-muted)]">
-                        <Zap size={64} />
+                <div className="bg-[var(--bg-card)] p-5 rounded-[var(--radius-card)] border border-[var(--border-default)]">
+                    <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide font-semibold text-[var(--text-muted)] mb-3">
+                        <Zap size={12} /> Productivity Score
                     </div>
-                    <h3 className="text-[var(--text-secondary)] font-medium mb-1">Productivity Score</h3>
-                    <div className="text-4xl font-bold text-[var(--text-primary)]">
+                    <div className="text-4xl font-semibold tracking-tight tabular-nums text-[var(--text-primary)]">
                         {productivityScore}
                     </div>
-                    <div className="mt-4 flex items-center gap-2 text-xs text-[var(--text-muted)]">
-                        <Zap size={14} />
+                    <div className="mt-3 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
                         <span>Based on app categories</span>
                     </div>
                 </div>
 
                 {/* Most Used */}
-                <div className="bg-[var(--bg-card)] p-6 rounded-[var(--radius-card)] border border-[var(--border-default)] shadow-sm relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-[var(--text-muted)]">
-                        <Monitor size={64} />
+                <div className="bg-[var(--bg-card)] p-5 rounded-[var(--radius-card)] border border-[var(--border-default)]">
+                    <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide font-semibold text-[var(--text-muted)] mb-3">
+                        <Monitor size={12} /> Top Application
                     </div>
-                    <h3 className="text-[var(--text-secondary)] font-medium mb-1">Top Application</h3>
-                    <div className="text-2xl font-bold text-[var(--accent-primary)] truncate">
+                    <div className="text-2xl font-semibold tracking-tight text-[var(--text-primary)] truncate">
                         {topApps[0]?.app_id || 'None'}
                     </div>
-                    <div className="text-lg text-[var(--text-secondary)]">
+                    <div className="mt-1 text-sm text-[var(--text-secondary)] tabular-nums">
                         {topApps[0] ? formatDuration(topApps[0].total_seconds) : '-'}
                     </div>
                 </div>
@@ -200,12 +195,12 @@ export function ActivityDashboard() {
             </div>
 
             {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
                 {/* Top Apps Chart */}
-                <div className="bg-[var(--bg-card)] p-6 rounded-[var(--radius-card)] border border-[var(--border-default)] shadow-sm">
-                    <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                        <Monitor size={18} className="text-[var(--accent-primary)]" />
+                <div className="bg-[var(--bg-card)] p-5 rounded-[var(--radius-card)] border border-[var(--border-default)]">
+                    <h3 className="text-[15px] font-semibold mb-6 flex items-center gap-2 text-[var(--text-primary)]">
+                        <Monitor size={16} className="text-[var(--text-muted)]" />
                         Top Applications
                     </h3>
                     <div className="h-[300px] w-full">
@@ -229,7 +224,7 @@ export function ActivityDashboard() {
                                 />
                                 <Bar dataKey="total_seconds" radius={[0, 4, 4, 0]}>
                                     {topApps.map((_, index) => (
-                                        <Cell key={`cell-${index}`} fill={['color-mix(in srgb, var(--text-primary) 85%, transparent)', 'color-mix(in srgb, var(--text-primary) 65%, transparent)', 'color-mix(in srgb, var(--text-primary) 50%, transparent)', 'color-mix(in srgb, var(--text-primary) 38%, transparent)', 'color-mix(in srgb, var(--text-primary) 28%, transparent)'][index] || 'color-mix(in srgb, var(--text-primary) 85%, transparent)'} />
+                                        <Cell key={`cell-${index}`} fill={CHART_PALETTE[index % CHART_PALETTE.length]} />
                                     ))}
                                 </Bar>
                             </BarChart>
@@ -238,9 +233,9 @@ export function ActivityDashboard() {
                 </div>
 
                 {/* Top Domains Chart */}
-                <div className="bg-[var(--bg-card)] p-6 rounded-[var(--radius-card)] border border-[var(--border-default)] shadow-sm">
-                    <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                        <Globe size={18} className="text-[var(--accent-primary)]" />
+                <div className="bg-[var(--bg-card)] p-5 rounded-[var(--radius-card)] border border-[var(--border-default)]">
+                    <h3 className="text-[15px] font-semibold mb-6 flex items-center gap-2 text-[var(--text-primary)]">
+                        <Globe size={16} className="text-[var(--text-muted)]" />
                         Top Websites
                     </h3>
                     {topDomains.length > 0 ? (
@@ -265,7 +260,7 @@ export function ActivityDashboard() {
                                     />
                                     <Bar dataKey="total_seconds" radius={[0, 4, 4, 0]}>
                                         {topDomains.map((_, index) => (
-                                            <Cell key={`cell-${index}`} fill={['color-mix(in srgb, var(--text-primary) 85%, transparent)', 'color-mix(in srgb, var(--text-primary) 65%, transparent)', 'color-mix(in srgb, var(--text-primary) 50%, transparent)', 'color-mix(in srgb, var(--text-primary) 38%, transparent)', 'color-mix(in srgb, var(--text-primary) 28%, transparent)'][index] || 'color-mix(in srgb, var(--text-primary) 85%, transparent)'} />
+                                            <Cell key={`cell-${index}`} fill={CHART_PALETTE[index % CHART_PALETTE.length]} />
                                         ))}
                                     </Bar>
                                 </BarChart>

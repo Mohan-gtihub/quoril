@@ -72,13 +72,13 @@ function MiniCal({ month, selecting, start, end, hover, onDay, onHover }: CalPro
     return (
         <div className="flex-1 min-w-[220px]">
             {/* Month title */}
-            <p className="text-sm font-bold text-[var(--text-secondary)] text-center mb-3">
+            <p className="text-[13px] font-semibold text-[var(--text-primary)] text-center mb-3">
                 {format(month, 'MMMM yyyy')}
             </p>
             {/* Weekday headers */}
             <div className="grid grid-cols-7 mb-1">
                 {WEEK_DAYS.map(d => (
-                    <div key={d} className="text-center text-[11px] font-bold text-[var(--text-muted)] py-1">{d}</div>
+                    <div key={d} className="text-center text-[11px] font-medium text-[var(--text-muted)] py-1">{d}</div>
                 ))}
             </div>
             {/* Days grid */}
@@ -195,7 +195,7 @@ export function DateRangePicker({ value, onChange }: Props) {
             {/* Trigger */}
             <button
                 onClick={() => setOpen(o => !o)}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border-default)] hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] transition-all text-sm font-semibold text-[var(--text-secondary)]"
+                className="flex items-center gap-2 h-9 px-3.5 rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] transition-colors text-sm font-medium text-[var(--text-secondary)]"
             >
                 <Calendar className="w-3.5 h-3.5 text-[var(--text-tertiary)] flex-shrink-0" />
                 <span className="text-[13px]">{displayLabel}</span>
@@ -203,7 +203,7 @@ export function DateRangePicker({ value, onChange }: Props) {
 
             {/* Dropdown */}
             {open && (
-                <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-max rounded-[var(--radius-card)] border border-[var(--border-default)] bg-[var(--bg-card)] shadow-sm overflow-hidden">
+                <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-max rounded-[var(--radius-card)] border border-[var(--border-default)] bg-[var(--bg-card)] overflow-hidden">
                     <div className="flex">
                         {/* ── Preset sidebar ── */}
                         <div className="w-36 border-r border-[var(--border-default)] py-3 flex flex-col gap-0.5">
@@ -212,7 +212,7 @@ export function DateRangePicker({ value, onChange }: Props) {
                                     key={p.label}
                                     onClick={() => applyPreset(p)}
                                     className={`w-full text-left text-xs px-4 py-2 font-medium transition-all hover:text-[var(--text-primary)] ${activePreset === p.label
-                                        ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-bold'
+                                        ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-semibold'
                                         : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]'
                                         }`}
                                 >
@@ -222,7 +222,7 @@ export function DateRangePicker({ value, onChange }: Props) {
                             <button
                                 onClick={() => setActivePreset('Custom')}
                                 className={`w-full text-left text-xs px-4 py-2 font-medium transition-all hover:text-[var(--text-primary)] ${activePreset === 'Custom'
-                                    ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-bold border-t border-[var(--border-default)] mt-0.5'
+                                    ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-semibold border-t border-[var(--border-default)] mt-0.5'
                                     : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] border-t border-[var(--border-default)] mt-0.5'
                                     }`}
                             >
@@ -281,22 +281,22 @@ export function DateRangePicker({ value, onChange }: Props) {
                             <div className="flex items-center gap-3 px-5 py-3 border-t border-[var(--border-default)] bg-[var(--bg-secondary)]">
                                 {/* Selected range display */}
                                 <div className="flex items-center gap-2 flex-1">
-                                    <div className="px-3 py-1.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-default)] text-xs text-[var(--text-secondary)] font-mono">
+                                    <div className="px-3 py-1.5 rounded-lg bg-[var(--bg-tertiary)] text-xs text-[var(--text-secondary)] tabular-nums">
                                         {tempStart ? format(tempStart, 'MMM d, yyyy') : '—'}
                                     </div>
                                     <span className="text-[var(--text-muted)] text-sm">–</span>
-                                    <div className="px-3 py-1.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-default)] text-xs text-[var(--text-secondary)] font-mono">
+                                    <div className="px-3 py-1.5 rounded-lg bg-[var(--bg-tertiary)] text-xs text-[var(--text-secondary)] tabular-nums">
                                         {tempEnd ? format(tempEnd, 'MMM d, yyyy') : selecting ? 'pick end…' : '—'}
                                     </div>
                                 </div>
                                 <button onClick={cancel}
-                                    className="px-4 py-1.5 rounded-lg text-xs font-bold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
+                                    className="px-4 py-1.5 rounded-lg text-xs font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors">
                                     Cancel
                                 </button>
                                 <button
                                     onClick={apply}
                                     disabled={!tempStart || !tempEnd}
-                                    className="px-5 py-1.5 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-primary)] disabled:opacity-30 text-[var(--accent-contrast)] text-xs font-bold transition-all shadow-sm"
+                                    className="px-5 py-1.5 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-primary)] disabled:opacity-30 text-[var(--accent-contrast)] text-xs font-semibold transition-colors"
                                 >
                                     Apply
                                 </button>

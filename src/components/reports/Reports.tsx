@@ -54,8 +54,8 @@ function Kpi({
         red: 'text-[var(--error)]',
     }[color]
     return (
-        <div className="rounded-[var(--radius-card)] p-5 bg-[var(--bg-secondary)] border border-[var(--border-default)]">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-1.5">{label}</p>
+        <div className="rounded-[var(--radius-card)] p-5 bg-[var(--bg-secondary)]">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)] mb-2">{label}</p>
             <p className={`text-2xl font-semibold leading-tight tracking-tight tabular-nums ${text}`}>{value}</p>
             {sub && <p className="text-[11px] text-[var(--text-muted)] mt-1">{sub}</p>}
         </div>
@@ -72,13 +72,13 @@ function Section({
 }) {
     const [open, setOpen] = useState(defaultOpen)
     return (
-        <div className="rounded-[var(--radius-card)] overflow-hidden bg-[var(--bg-card)] border border-[var(--border-default)] shadow-sm">
+        <div className="rounded-[var(--radius-card)] overflow-hidden bg-[var(--bg-card)] border border-[var(--border-default)]">
             <button
                 onClick={() => setOpen(o => !o)}
-                className="w-full flex items-center gap-3 px-6 py-5"
+                className="w-full flex items-center gap-3 px-6 py-5 hover:bg-[var(--bg-hover)] transition-colors"
             >
-                <span className="text-lg font-semibold tracking-tight text-[var(--text-primary)] text-left flex-1">{title}</span>
-                <span className="w-7 h-7 rounded-full bg-[var(--bg-hover)] flex items-center justify-center text-[var(--text-secondary)]">
+                <span className="text-[15px] font-semibold tracking-tight text-[var(--text-primary)] text-left flex-1">{title}</span>
+                <span className="text-[var(--text-muted)]">
                     {open
                         ? <ChevronUp className="w-4 h-4" />
                         : <ChevronDown className="w-4 h-4" />}
@@ -210,11 +210,11 @@ export function Reports() {
             <header className="flex flex-wrap items-end justify-between gap-4 mb-3">
                 <div className="flex items-center gap-4">
                     <button onClick={() => navigate(-1)}
-                        className="w-10 h-10 rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] hover:bg-[var(--bg-hover)] flex items-center justify-center transition-colors">
+                        className="w-9 h-9 rounded-full hover:bg-[var(--bg-hover)] flex items-center justify-center transition-colors">
                         <ArrowLeft className="w-4 h-4 text-[var(--text-secondary)]" />
                     </button>
                     <div>
-                        <p className="text-sm font-medium text-[var(--text-tertiary)] mb-1">Performance report</p>
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)] mb-1">Performance report</p>
                         <h1 className="text-[30px] leading-none font-semibold tracking-tight text-[var(--text-primary)]">Analytics</h1>
                     </div>
                 </div>
@@ -241,8 +241,8 @@ export function Reports() {
                 ) : (
                     <>
                         {/* ══ 1. DAILY SNAPSHOT ═══════════════════════════════ */}
-                        <div className="rounded-[var(--radius-card)] bg-[var(--bg-card)] border border-[var(--border-default)] p-6 shadow-sm">
-                            <p className="text-lg font-semibold tracking-tight text-[var(--text-primary)] mb-5">
+                        <div className="rounded-[var(--radius-card)] bg-[var(--bg-card)] border border-[var(--border-default)] p-6">
+                            <p className="text-[15px] font-semibold tracking-tight text-[var(--text-primary)] mb-5">
                                 Daily Snapshot
                             </p>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -260,7 +260,7 @@ export function Reports() {
                             {/* Focus trend */}
                             <div>
                                 <div className="flex justify-between items-center mb-2">
-                                    <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Focus minutes / day</p>
+                                    <p className="text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wide">Focus minutes / day</p>
                                     <p className="text-[11px] text-[var(--text-muted)]">7d avg: {movingAvg[movingAvg.length - 1]}m</p>
                                 </div>
                                 <DayBars points={trendByDay.map(d => d.focusMinutes)} max={maxFocusMin} color="var(--accent-primary)" days={days} />
@@ -268,7 +268,7 @@ export function Reports() {
 
                             {/* Focus quality trend */}
                             <div>
-                                <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
+                                <p className="text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wide mb-2">
                                     Focus quality / day
                                     <span className="ml-1 text-[var(--text-muted)] normal-case">(penalty: {INTERRUPT_PENALTY_SECONDS}s/interruption)</span>
                                 </p>
@@ -292,7 +292,7 @@ export function Reports() {
                         <Section title="Work Execution">
                             {/* Completion breakdown */}
                             <div className="space-y-2.5">
-                                <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Task Breakdown</p>
+                                <p className="text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wide">Task Breakdown</p>
                                 {[
                                     { label: 'Completed', v: completed, color: 'var(--accent-primary)' },
                                     { label: 'In Progress', v: taskReport.inProgress, color: 'var(--text-muted)' },
@@ -308,29 +308,29 @@ export function Reports() {
                                     <div className="flex items-center gap-4 py-2">
                                         <Gauge score={Math.min(100, overallAccuracy)} size={72} />
                                         <div>
-                                            <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">Estimation Accuracy</p>
+                                            <p className="text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wide mb-1">Estimation Accuracy</p>
                                             <p className="text-lg font-semibold text-[var(--text-primary)]">{overallAccuracy}%</p>
                                             <p className="text-[11px] text-[var(--text-muted)]">100% = perfect estimate</p>
                                         </div>
                                     </div>
                                     {mostUnderestimated.length > 0 && (
                                         <div className="space-y-1">
-                                            <p className="text-[11px] font-bold text-[var(--text-muted)]">Most Underestimated</p>
+                                            <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Most Underestimated</p>
                                             {mostUnderestimated.slice(0, 3).map(t => (
-                                                <div key={t.id} className="flex justify-between text-[11px] py-1.5 border-b border-[var(--border-default)]">
+                                                <div key={t.id} className="flex justify-between text-[11px] py-1.5 border-b border-[var(--border-default)]/60 last:border-0">
                                                     <span className="text-[var(--text-secondary)] truncate max-w-[60%]">{t.title}</span>
-                                                    <span className="text-[var(--error)] font-bold">{t.estimatedMin}m est → {t.actualMin}m actual</span>
+                                                    <span className="text-[var(--error)] font-medium tabular-nums">{t.estimatedMin}m est → {t.actualMin}m actual</span>
                                                 </div>
                                             ))}
                                         </div>
                                     )}
                                     {mostOverestimated.length > 0 && (
                                         <div className="space-y-1">
-                                            <p className="text-[11px] font-bold text-[var(--text-muted)]">Most Overestimated</p>
+                                            <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Most Overestimated</p>
                                             {mostOverestimated.slice(0, 3).map(t => (
-                                                <div key={t.id} className="flex justify-between text-[11px] py-1.5 border-b border-[var(--border-default)]">
+                                                <div key={t.id} className="flex justify-between text-[11px] py-1.5 border-b border-[var(--border-default)]/60 last:border-0">
                                                     <span className="text-[var(--text-secondary)] truncate max-w-[60%]">{t.title}</span>
-                                                    <span className="text-[var(--warning)] font-bold">{t.estimatedMin}m est → {t.actualMin}m actual</span>
+                                                    <span className="text-[var(--warning)] font-medium tabular-nums">{t.estimatedMin}m est → {t.actualMin}m actual</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -344,7 +344,7 @@ export function Reports() {
                             {/* Workspace breakdown */}
                             {workspaceStats.length > 0 && (
                                 <div>
-                                    <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">Workspace Productivity</p>
+                                    <p className="text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wide mb-2">Workspace Productivity</p>
                                     <div className="space-y-3">
                                         {workspaceStats.map((ws: any) => (
                                             <div key={ws.workspaceId}>
@@ -377,7 +377,7 @@ export function Reports() {
 
                             {/* Top apps */}
                             <div>
-                                <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">Top Apps — Active Time</p>
+                                <p className="text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wide mb-2">Top Apps — Active Time</p>
                                 {topApps.length === 0
                                     ? <EmptyState msg="Screen time is tracked while the app is running" />
                                     : <div className="space-y-2.5">
@@ -393,7 +393,7 @@ export function Reports() {
                             {/* Category breakdown */}
                             {categoryBreakdown.length > 0 && (
                                 <div>
-                                    <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">By Category</p>
+                                    <p className="text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wide mb-2">By Category</p>
                                     <div className="space-y-2">
                                         {categoryBreakdown.map(c => (
                                             <Bar key={c.category} label={c.category} value={c.seconds}
@@ -406,7 +406,7 @@ export function Reports() {
                             {/* Context switching per day */}
                             <div>
                                 <div className="flex justify-between items-center mb-2">
-                                    <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Context Switches / Day</p>
+                                    <p className="text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wide">Context Switches / Day</p>
                                     <p className="text-[11px] text-[var(--text-muted)]">avg: {avgDailySwitches}/day</p>
                                 </div>
                                 {contextByDay.length === 0
@@ -422,7 +422,7 @@ export function Reports() {
                                                             backgroundColor: d.label === 'Deep Work' ? 'var(--accent-primary)' : d.label === 'Balanced' ? 'var(--warning)' : 'var(--error)'
                                                         }} />
                                                 </div>
-                                                <span className={`text-[11px] font-bold flex-shrink-0 ${d.label === 'Deep Work' ? 'text-[var(--text-primary)]' : d.label === 'Balanced' ? 'text-[var(--warning)]' : 'text-[var(--error)]'}`}>
+                                                <span className={`text-[11px] font-semibold tabular-nums flex-shrink-0 ${d.label === 'Deep Work' ? 'text-[var(--text-primary)]' : d.label === 'Balanced' ? 'text-[var(--warning)]' : 'text-[var(--error)]'}`}>
                                                     {d.sessionCount}
                                                 </span>
                                             </div>
@@ -440,12 +440,12 @@ export function Reports() {
                             </div>
                             {recurringData.length === 0
                                 ? <EmptyState msg="Mark tasks as recurring to track habit consistency" />
-                                : <div className="space-y-1.5">
+                                : <div className="-mx-2">
                                     {recurringData.map(r => (
-                                        <div key={r.id} className="flex items-center gap-3 py-2.5 border-b border-[var(--border-default)] last:border-0">
+                                        <div key={r.id} className="flex items-center gap-3 px-2 py-2 rounded-[var(--radius-tile)] hover:bg-[var(--bg-hover)] transition-colors">
                                             <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${r.isCompleted ? 'bg-[var(--accent-primary)]' : 'bg-[var(--bg-hover)]'}`} />
                                             <span className="text-sm text-[var(--text-secondary)] flex-1 truncate">{r.title}</span>
-                                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${r.isCompleted ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)]' : 'bg-[var(--bg-hover)] text-[var(--text-muted)]'}`}>
+                                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${r.isCompleted ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)]' : 'bg-[var(--bg-hover)] text-[var(--text-muted)]'}`}>
                                                 {r.isCompleted ? '✓ Done' : 'Pending'}
                                             </span>
                                         </div>

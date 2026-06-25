@@ -11,9 +11,9 @@ import { cn } from '@/utils/helpers'
 
 function SettingCard({ title, description, children }: any) {
     return (
-        <section className="rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-sm p-6 md:p-7">
+        <section className="rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] p-6 md:p-7">
             <div className="mb-5">
-                <h2 className="text-base font-semibold text-[var(--text-primary)] tracking-tight">{title}</h2>
+                <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">{title}</h2>
                 {description && <p className="text-xs text-[var(--text-tertiary)] leading-relaxed max-w-lg mt-1">{description}</p>}
             </div>
             <div className="space-y-4">
@@ -25,7 +25,7 @@ function SettingCard({ title, description, children }: any) {
 
 function ToggleRow({ label, description, value, onChange }: any) {
     return (
-        <label className="flex items-center justify-between group cursor-pointer px-4 py-3.5 rounded-2xl bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] transition-colors">
+        <label className="flex items-center justify-between group cursor-pointer px-4 py-3.5 rounded-[var(--radius-card)] bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] transition-colors">
             <div className="pr-6">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">{label}</p>
                 {description && <p className="text-[11px] text-[var(--text-tertiary)] mt-1">{description}</p>}
@@ -41,7 +41,7 @@ function ToggleRow({ label, description, value, onChange }: any) {
                 value ? "bg-[var(--accent-primary)]" : "bg-[var(--border-hover)]"
             )}>
                 <div className={cn(
-                    "absolute top-[2px] w-[20px] h-[20px] bg-white rounded-full transition-transform duration-300 ease-in-out shadow-sm",
+                    "absolute top-[2px] w-[20px] h-[20px] bg-[var(--bg-primary)] rounded-full transition-transform duration-300 ease-in-out shadow-sm",
                     value ? "left-[calc(100%-22px)]" : "left-[2px]"
                 )} />
             </div>
@@ -53,7 +53,7 @@ function SegmentedControl({ label, options, value, onChange }: any) {
     return (
         <div className="space-y-2.5">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">{label}</p>
-            <div className="flex flex-wrap gap-2 p-1.5 bg-[var(--bg-hover)] rounded-2xl">
+            <div className="flex flex-wrap gap-1 p-1 bg-[var(--bg-hover)] rounded-[var(--radius-card)]">
                 {options.map((opt: any) => {
                     const active = value === opt.value
                     return (
@@ -61,7 +61,7 @@ function SegmentedControl({ label, options, value, onChange }: any) {
                             key={opt.value}
                             onClick={() => onChange(opt.value)}
                             className={cn(
-                                "flex-1 min-w-[80px] px-3 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap",
+                                "flex-1 min-w-[80px] px-3 py-2 rounded-[var(--radius-tile)] text-xs font-semibold transition-all whitespace-nowrap",
                                 active
                                     ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)]"
                                     : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-hover)]"
@@ -91,7 +91,7 @@ function OptionGrid({ label, options, value, onChange, onPreview }: any) {
                                 if (onPreview) onPreview(opt.value)
                             }}
                             className={cn(
-                                "flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all group",
+                                "flex items-center justify-between px-4 py-3 rounded-[var(--radius-card)] text-xs font-semibold transition-all group",
                                 active
                                     ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)]"
                                     : "bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)]"
@@ -114,7 +114,7 @@ function OptionGrid({ label, options, value, onChange, onPreview }: any) {
 function SliderRow({ label, description, value, onChange, min, max, step = 1, format }: any) {
     const display = format ? format(value) : value
     return (
-        <div className="space-y-3 px-4 py-3.5 rounded-2xl bg-[var(--bg-hover)]">
+        <div className="space-y-3 px-4 py-3.5 rounded-[var(--radius-card)] bg-[var(--bg-hover)]">
             <div className="flex items-center justify-between">
                 <div>
                     <p className="text-sm font-semibold text-[var(--text-primary)]">{label}</p>
@@ -131,7 +131,7 @@ function SliderRow({ label, description, value, onChange, min, max, step = 1, fo
                 onChange={(e) => onChange(Number(e.target.value))}
                 className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-[var(--border-hover)] accent-[var(--accent-primary)]"
             />
-            <div className="flex justify-between text-[11px] text-[var(--text-muted)] font-bold">
+            <div className="flex justify-between text-[11px] text-[var(--text-muted)] font-medium tabular-nums">
                 <span>{format ? format(min) : min}</span>
                 <span>{format ? format(max) : max}</span>
             </div>
@@ -472,7 +472,7 @@ function AccessibilityPermissionCard() {
             description="Quoril tracks which apps you use during focus sessions to give you productivity insights. This requires macOS Accessibility permission."
         >
             {hasAccess ? (
-                <div className="flex items-center gap-3 px-4 py-3.5 bg-[var(--bg-hover)] rounded-2xl">
+                <div className="flex items-center gap-3 px-4 py-3.5 bg-[var(--bg-hover)] rounded-[var(--radius-card)]">
                     <CheckCircle2 className="w-5 h-5 text-[var(--accent-primary)] shrink-0" />
                     <div>
                         <p className="text-sm font-semibold text-[var(--text-primary)]">Permission Granted</p>
@@ -481,7 +481,7 @@ function AccessibilityPermissionCard() {
                 </div>
             ) : (
                 <div className="space-y-4">
-                    <div className="px-4 py-3.5 bg-[var(--bg-hover)] rounded-2xl">
+                    <div className="px-4 py-3.5 bg-[var(--bg-hover)] rounded-[var(--radius-card)]">
                         <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                             To track which apps you use during focus sessions, Quoril needs Accessibility access.
                             Your data never leaves this device.

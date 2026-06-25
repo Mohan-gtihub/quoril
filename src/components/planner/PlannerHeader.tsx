@@ -44,7 +44,7 @@ export function PlannerHeader() {
 
                 {/* Dropdown */}
                 {isDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-2 w-64 rounded-[var(--radius-card)] shadow-sm bg-[var(--bg-elevated)] z-50 overflow-hidden py-1.5 border border-[var(--border-default)]">
+                    <div className="absolute top-full left-0 mt-2 w-64 rounded-[var(--radius-card)] bg-[var(--bg-elevated)] z-50 overflow-hidden py-1.5 border border-[var(--border-default)]">
                         <div className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Views</div>
                         <button
                             onClick={() => {
@@ -98,7 +98,7 @@ export function PlannerHeader() {
 
             {/* Right Controls */}
             <div className="flex items-center gap-3">
-                <button className="px-4 py-2 text-xs font-semibold rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105 active:scale-95 transition-all">
+                <button className="px-4 py-2 text-xs font-semibold rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] active:scale-95 transition-colors">
                     Premium
                 </button>
                 <div className="w-9 h-9 rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] flex items-center justify-center text-[var(--text-secondary)] font-semibold text-sm">

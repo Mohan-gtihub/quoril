@@ -13,7 +13,7 @@ interface ActivityChartProps {
 
 export function ActivityChart({ data }: ActivityChartProps) {
     return (
-        <div className="glass-panel rounded-3xl p-8 min-h-[400px]">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-card)] p-5 min-h-[400px]">
             <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={data} barSize={32} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <XAxis
@@ -29,29 +29,29 @@ export function ActivityChart({ data }: ActivityChartProps) {
                                 const d = payload[0].payload
                                 const totalActivityHrs = (d.activityMinutes || 0) / 60
                                 return (
-                                    <div className="glass-thick rounded-xl p-4 shadow-xl border border-[var(--border-default)]">
-                                        <p className="text-xs font-bold text-[var(--text-primary)] mb-2">{d.label}</p>
+                                    <div className="bg-[var(--bg-elevated)] rounded-[var(--radius-tile)] p-4 border border-[var(--border-default)]">
+                                        <p className="text-xs font-semibold text-[var(--text-primary)] mb-2">{d.label}</p>
                                         <div className="space-y-2">
                                             <div className="flex items-center justify-between gap-4">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-[var(--accent-primary)]" />
                                                     <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider">Deep Focus</span>
                                                 </div>
-                                                <span className="text-xs font-mono font-bold text-[var(--text-primary)]">{d.focusHours}h</span>
+                                                <span className="text-xs font-semibold text-[var(--text-primary)] tabular-nums">{d.focusHours}h</span>
                                             </div>
                                             <div className="flex items-center justify-between gap-4">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-[var(--text-muted)]/20" />
                                                     <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider">Total Active</span>
                                                 </div>
-                                                <span className="text-xs font-mono font-bold text-[var(--text-tertiary)]">{totalActivityHrs.toFixed(1)}h</span>
+                                                <span className="text-xs font-semibold text-[var(--text-tertiary)] tabular-nums">{totalActivityHrs.toFixed(1)}h</span>
                                             </div>
                                             <div className="flex items-center justify-between gap-4 border-t border-[var(--border-default)] pt-2">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-[var(--text-muted)]/40" />
                                                     <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider">Breaks</span>
                                                 </div>
-                                                <span className="text-xs font-mono font-bold text-[var(--text-secondary)]">{d.breakHours}h</span>
+                                                <span className="text-xs font-semibold text-[var(--text-secondary)] tabular-nums">{d.breakHours}h</span>
                                             </div>
                                         </div>
                                     </div>

@@ -54,27 +54,28 @@ function WorkspaceRow({ ws, isActive, onClick, collapsed }: { ws: Workspace; isA
 
     if (isEditing) {
         return (
-            <div className="px-3 py-2 -mx-1 my-0.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-hover)] shadow-sm space-y-2 relative z-10 w-full max-w-[calc(100%+8px)]">
+            <div className="px-3 py-2 -mx-1 my-0.5 bg-[var(--bg-tertiary)] space-y-2 relative z-10 w-full max-w-[calc(100%+8px)]" style={{ borderRadius: 'var(--radius-card)' }}>
                 <input
                     ref={inputRef}
                     value={editName}
                     onChange={e => setEditName(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false) }}
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-default)] focus:border-[var(--accent-primary)] rounded-md px-2 py-1.5 text-[13px] font-medium text-[var(--text-primary)] outline-none"
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-default)] focus:border-[var(--accent-primary)] px-2 py-1.5 text-[13px] font-medium text-[var(--text-primary)] outline-none"
+                    style={{ borderRadius: 'var(--radius-card)' }}
                     maxLength={50}
                 />
                 <div className="flex flex-wrap gap-1 px-0.5">
                     {PALETTE.map(c => (
                         <button key={c} onClick={() => setEditColor(c)}
-                            className="w-3.5 h-3.5 rounded-full hover:scale-110 transition-transform relative"
-                            style={{ backgroundColor: c }}>
+                            className="w-3.5 h-3.5 hover:scale-110 transition-transform relative"
+                            style={{ backgroundColor: c, borderRadius: 'var(--radius-pill)' }}>
                             {editColor === c && <Check size={8} className="text-white absolute inset-0 m-auto" />}
                         </button>
                     ))}
                 </div>
                 <div className="flex gap-1.5 pt-1">
-                    <button onClick={handleSave} className="flex-1 py-1 px-2 text-[11px] font-bold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-md">Save</button>
-                    <button onClick={() => setIsEditing(false)} className="flex-1 py-1 px-2 text-[11px] font-bold text-[var(--text-muted)] border border-[var(--border-default)] hover:text-[var(--text-primary)] transition-colors rounded-md">Cancel</button>
+                    <button onClick={handleSave} className="flex-1 py-1 px-2 text-[11px] font-bold bg-[var(--accent-primary)] text-[var(--accent-contrast)]" style={{ borderRadius: 'var(--radius-card)' }}>Save</button>
+                    <button onClick={() => setIsEditing(false)} className="flex-1 py-1 px-2 text-[11px] font-bold text-[var(--text-muted)] border border-[var(--border-default)] hover:text-[var(--text-primary)] transition-colors" style={{ borderRadius: 'var(--radius-card)' }}>Cancel</button>
                 </div>
             </div>
         )
@@ -85,9 +86,10 @@ function WorkspaceRow({ ws, isActive, onClick, collapsed }: { ws: Workspace; isA
             <button
                 onClick={onClick}
                 title={ws.name}
+                style={{ borderRadius: 'var(--radius-card)' }}
                 className={cn(
-                    'w-full flex items-center justify-center py-2 rounded-lg transition-all outline-none',
-                    isActive ? 'bg-[var(--accent-primary)]/10' : 'hover:bg-[var(--bg-hover)]'
+                    'w-full flex items-center justify-center py-2 transition-all outline-none',
+                    isActive ? 'bg-[var(--bg-hover)]' : 'hover:bg-[var(--bg-hover)]'
                 )}
             >
                 <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ws.color }} />
@@ -99,9 +101,10 @@ function WorkspaceRow({ ws, isActive, onClick, collapsed }: { ws: Workspace; isA
         <div ref={ref} className="relative group">
             <button
                 onClick={onClick}
+                style={{ borderRadius: 'var(--radius-card)' }}
                 className={cn(
-                    'w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-[13px] transition-all text-left outline-none',
-                    isActive ? 'bg-[var(--accent-primary)]/10 text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+                    'w-full flex items-center gap-2.5 px-2 py-1.5 text-[13px] transition-all text-left outline-none',
+                    isActive ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                 )}
             >
                 <div className="w-1.5 h-1.5 rounded-sm shrink-0" style={{ backgroundColor: ws.color }} />
@@ -109,7 +112,8 @@ function WorkspaceRow({ ws, isActive, onClick, collapsed }: { ws: Workspace; isA
 
                 <div
                     onClick={e => { e.stopPropagation(); setShowMenu(v => !v) }}
-                    className={cn("p-0.5 rounded-md hover:bg-[var(--text-muted)] hover:text-white transition-colors shrink-0", showMenu ? "opacity-100 bg-[var(--text-muted)]/20" : "opacity-0 group-hover:opacity-100")}
+                    style={{ borderRadius: 'var(--radius-card)' }}
+                    className={cn("p-0.5 text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] transition-colors shrink-0", showMenu ? "opacity-100 bg-[var(--bg-tertiary)] text-[var(--text-primary)]" : "opacity-0 group-hover:opacity-100")}
                 >
                     <MoreHorizontal size={14} />
                 </div>
@@ -121,7 +125,8 @@ function WorkspaceRow({ ws, isActive, onClick, collapsed }: { ws: Workspace; isA
                         initial={{ opacity: 0, y: -4, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.98 }}
-                        className="absolute right-0 top-full mt-1 w-36 glass-thick rounded-xl z-50 shadow-xl overflow-hidden py-1"
+                        className="absolute right-0 top-full mt-1 w-36 glass-thick z-50 shadow-sm overflow-hidden py-1"
+                        style={{ borderRadius: 'var(--radius-card)' }}
                     >
                         <button onClick={() => { setIsEditing(true); setShowMenu(false) }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition">
                             <Edit2 size={12} /> Rename
@@ -162,30 +167,31 @@ function CreateWsInline({ onDone }: { onDone: () => void }) {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
         >
-            <div className="px-3 py-2 -mx-1 my-0.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-hover)] shadow-sm space-y-2 mt-1">
+            <div className="px-3 py-2 -mx-1 my-0.5 bg-[var(--bg-tertiary)] space-y-2 mt-1" style={{ borderRadius: 'var(--radius-card)' }}>
                 <input
                     ref={inputRef}
                     value={name}
                     onChange={e => setName(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handle(); if (e.key === 'Escape') onDone() }}
                     placeholder="Workspace name…"
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-default)] focus:border-[var(--accent-primary)] rounded-md px-2 py-1.5 text-[13px] font-medium text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-default)] focus:border-[var(--accent-primary)] px-2 py-1.5 text-[13px] font-medium text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
+                    style={{ borderRadius: 'var(--radius-card)' }}
                 />
                 <div className="flex flex-wrap gap-1 px-0.5">
                     {PALETTE.map(c => (
                         <button key={c} onClick={() => setColor(c)}
-                            className="w-3.5 h-3.5 rounded-full hover:scale-110 transition-transform relative"
-                            style={{ backgroundColor: c }}>
+                            className="w-3.5 h-3.5 hover:scale-110 transition-transform relative"
+                            style={{ backgroundColor: c, borderRadius: 'var(--radius-pill)' }}>
                             {color === c && <Check size={8} className="text-white absolute inset-0 m-auto" />}
                         </button>
                     ))}
                 </div>
                 <div className="flex gap-1.5 pt-1">
                     <button disabled={!name.trim() || loading} onClick={handle}
-                        className="flex-1 py-1 px-2 text-[11px] font-bold bg-[var(--accent-primary)] disabled:opacity-40 text-[var(--accent-contrast)] rounded-md">
+                        className="flex-1 py-1 px-2 text-[11px] font-bold bg-[var(--accent-primary)] disabled:opacity-40 text-[var(--accent-contrast)]" style={{ borderRadius: 'var(--radius-card)' }}>
                         {loading ? '…' : 'Create'}
                     </button>
-                    <button onClick={onDone} className="flex-1 py-1 px-2 text-[11px] font-bold text-[var(--text-muted)] border border-[var(--border-default)] hover:text-[var(--text-primary)] transition-colors rounded-md">Cancel</button>
+                    <button onClick={onDone} className="flex-1 py-1 px-2 text-[11px] font-bold text-[var(--text-muted)] border border-[var(--border-default)] hover:text-[var(--text-primary)] transition-colors" style={{ borderRadius: 'var(--radius-card)' }}>Cancel</button>
                 </div>
             </div>
         </motion.div>
@@ -235,8 +241,9 @@ export function Sidebar() {
                 navigate(path)
             }}
             title={collapsed ? label : undefined}
+            style={{ borderRadius: 'var(--radius-card)' }}
             className={cn(
-                'w-full flex items-center rounded-xl text-[13px] font-medium transition-all text-left outline-none',
+                'w-full flex items-center text-[13px] font-medium transition-all text-left outline-none',
                 collapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-3 py-2',
                 active
                     ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-semibold'
@@ -256,11 +263,11 @@ export function Sidebar() {
 
             {/* Brand + collapse toggle */}
             <div className={cn("pt-5 pb-1 flex items-center", collapsed ? "px-0 justify-center" : "px-4 gap-2.5")}>
-                <img src="/brand-mark.png" alt="Quoril" className="w-7 h-7 rounded-xl shadow-[0_4px_14px_var(--accent-glow)] shrink-0" />
+                <img src="/brand-mark.png" alt="Quoril" className="w-7 h-7 shrink-0" style={{ borderRadius: 'var(--radius-card)' }} />
                 {!collapsed && (
                     <>
                         <span className="text-[15px] font-bold tracking-tight text-[var(--text-primary)] flex-1">Quoril<span className="text-[var(--accent-primary)]">.</span></span>
-                        <button onClick={toggleCollapsed} title="Collapse sidebar" className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors">
+                        <button onClick={toggleCollapsed} title="Collapse sidebar" className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors" style={{ borderRadius: 'var(--radius-card)' }}>
                             <PanelLeftClose size={16} />
                         </button>
                     </>
@@ -268,7 +275,7 @@ export function Sidebar() {
             </div>
 
             {collapsed && (
-                <button onClick={toggleCollapsed} title="Expand sidebar" className="mx-auto mt-2 p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors">
+                <button onClick={toggleCollapsed} title="Expand sidebar" className="mx-auto mt-2 p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors" style={{ borderRadius: 'var(--radius-card)' }}>
                     <PanelLeftOpen size={16} />
                 </button>
             )}
@@ -278,18 +285,19 @@ export function Sidebar() {
                 <button
                     onClick={() => collapsed ? navigate('/settings') : setShowUserMenu(v => !v)}
                     title={collapsed ? user?.email?.split('@')[0] : undefined}
+                    style={{ borderRadius: 'var(--radius-card)' }}
                     className={cn(
-                        "w-full flex items-center rounded-xl hover:bg-[var(--bg-hover)] transition-colors text-left outline-none",
+                        "w-full flex items-center hover:bg-[var(--bg-hover)] transition-colors text-left outline-none",
                         collapsed ? "justify-center py-1.5" : "gap-2 px-2 py-1.5"
                     )}
                 >
-                    <div className="w-5 h-5 rounded-md bg-[var(--accent-primary)] flex items-center justify-center text-[var(--accent-contrast)] text-[11px] font-semibold shrink-0">
+                    <div className="w-5 h-5 bg-[var(--accent-primary)] flex items-center justify-center text-[var(--accent-contrast)] text-[11px] font-semibold shrink-0" style={{ borderRadius: 'var(--radius-card)' }}>
                         {user?.email?.charAt(0).toUpperCase()}
                     </div>
                     {!collapsed && (
                         <>
                             <div className="flex-1 min-w-0">
-                                <p className="text-[13px] font-bold text-[var(--text-primary)] truncate">{user?.email?.split('@')[0]}</p>
+                                <p className="text-[13px] font-semibold text-[var(--text-primary)] truncate">{user?.email?.split('@')[0]}</p>
                             </div>
                             <ChevronDown size={12} className="text-[var(--text-muted)] shrink-0" />
                         </>
@@ -302,7 +310,8 @@ export function Sidebar() {
                             initial={{ opacity: 0, y: -4, scale: 0.98 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -4, scale: 0.98 }}
-                            className="absolute left-3 right-3 top-full mt-1 glass-thick rounded-xl z-50 shadow-2xl overflow-hidden py-1"
+                            className="absolute left-3 right-3 top-full mt-1 glass-thick z-50 shadow-sm overflow-hidden py-1"
+                            style={{ borderRadius: 'var(--radius-card)' }}
                         >
                             <div className="px-3 py-2 border-b border-[var(--border-default)] mb-1">
                                 <p className="text-xs text-[var(--text-muted)] truncate">{user?.email}</p>
@@ -325,8 +334,9 @@ export function Sidebar() {
                     <button
                         onClick={() => { setActiveWorkspace(null as any); navigate('/dashboard') }}
                         title={collapsed ? 'Home' : undefined}
+                        style={{ borderRadius: 'var(--radius-card)' }}
                         className={cn(
-                            'w-full flex items-center rounded-xl text-[13px] font-medium transition-all text-left outline-none',
+                            'w-full flex items-center text-[13px] font-medium transition-all text-left outline-none',
                             collapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-3 py-2',
                             isDashboard && !activeWorkspaceId ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-semibold' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                         )}
@@ -346,7 +356,7 @@ export function Sidebar() {
                     {collapsed ? (
                         <div className="mx-3 mb-1 border-t border-[var(--border-default)]" />
                     ) : (
-                        <div className="flex items-center justify-between px-3 text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1 pt-2 group">
+                        <div className="flex items-center justify-between px-3 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1 pt-2 group">
                             <span>Workspaces</span>
                             <button onClick={() => setShowCreateWs(v => !v)} className="opacity-0 group-hover:opacity-100 hover:text-[var(--text-primary)] transition-all">
                                 <Plus size={13} />
@@ -382,8 +392,9 @@ export function Sidebar() {
                     <button
                         onClick={() => { setActiveWorkspace('unassigned'); navigate('/dashboard') }}
                         title={collapsed ? 'Unassigned' : undefined}
+                        style={{ borderRadius: 'var(--radius-card)' }}
                         className={cn(
-                            'w-full flex items-center rounded-lg text-[13px] transition-all text-left outline-none',
+                            'w-full flex items-center text-[13px] transition-all text-left outline-none',
                             collapsed ? 'justify-center px-0 py-2' : 'gap-2 px-2 py-1.5',
                             isDashboard && activeWorkspaceId === 'unassigned' ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                         )}
@@ -394,8 +405,9 @@ export function Sidebar() {
                     <button
                         onClick={() => { setActiveWorkspace('archived'); navigate('/dashboard') }}
                         title={collapsed ? 'Archived' : undefined}
+                        style={{ borderRadius: 'var(--radius-card)' }}
                         className={cn(
-                            'w-full flex items-center rounded-lg text-[13px] transition-all text-left outline-none',
+                            'w-full flex items-center text-[13px] transition-all text-left outline-none',
                             collapsed ? 'justify-center px-0 py-2' : 'gap-2 px-2 py-1.5',
                             isDashboard && activeWorkspaceId === 'archived' ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                         )}
@@ -412,8 +424,9 @@ export function Sidebar() {
                 <button
                     onClick={() => navigate('/settings')}
                     title={collapsed ? 'Settings' : undefined}
+                    style={{ borderRadius: 'var(--radius-card)' }}
                     className={cn(
-                        'w-full flex items-center rounded-xl text-[13px] font-medium transition-all text-left outline-none',
+                        'w-full flex items-center text-[13px] font-medium transition-all text-left outline-none',
                         collapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-3 py-2',
                         location.pathname === '/settings'
                             ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-semibold'
