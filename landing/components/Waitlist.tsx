@@ -123,9 +123,9 @@ export default function Waitlist({ id }: { id?: string }) {
                   </button>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-4 rounded-card border border-line bg-paper/60 p-4 sm:p-5">
                   <Field label="I'm a…">
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                       {ROLES.map((r) => (
                         <Pill
                           key={r}
@@ -137,8 +137,11 @@ export default function Waitlist({ id }: { id?: string }) {
                       ))}
                     </div>
                   </Field>
+
+                  <div className="h-px w-full bg-line" />
+
                   <Field label="Platform">
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                       {PLATFORMS.map((p) => (
                         <Pill key={p} active={platform === p} onClick={() => setPlatform(p)}>
                           {p}
@@ -227,7 +230,7 @@ function Field({
 }) {
   return (
     <div>
-      <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-faint">
+      <span className="mb-2.5 block text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
         {label}
       </span>
       {children}
@@ -248,10 +251,10 @@ function Pill({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-pill border px-3 py-1.5 text-xs font-medium transition ${
+      className={`rounded-pill border px-3.5 py-1.5 text-[13px] font-medium transition active:scale-95 ${
         active
-          ? "border-ink bg-ink text-paper"
-          : "border-line-strong text-ink-muted hover:border-ink/40 hover:text-ink"
+          ? "border-ink bg-ink text-paper shadow-soft"
+          : "border-line-strong bg-paper text-ink-muted hover:border-ink/40 hover:text-ink"
       }`}
     >
       {children}
