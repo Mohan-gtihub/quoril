@@ -3,6 +3,8 @@ import { Inter, Poppins, Indie_Flower } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
+import AnnouncementBar from "@/components/AnnouncementBar";
+import CookieConsent from "@/components/CookieConsent";
 
 // Type system mirrors donethat.ai: Inter for body/UI (variable 100–900),
 // Poppins for headings (400 / 600), Indie Flower for handwritten accents.
@@ -71,9 +73,11 @@ export default function RootLayout({
       className={`${inter.variable} ${poppins.variable} ${indie.variable}`}
     >
       <body className="font-sans antialiased">
+        <AnnouncementBar />
         <Nav />
         <main>{children}</main>
         <Footer />
+        <CookieConsent />
       </body>
     </html>
   );

@@ -357,7 +357,7 @@ export default function Home() {
         <Reveal>
           <div className="dotgrid relative my-14 overflow-hidden rounded-tile border border-line bg-surface px-5 py-14 text-center shadow-soft sm:my-20 sm:px-6 sm:py-20">
             <div className="mb-5 flex justify-center">
-              <Eyebrow>Q3 2026</Eyebrow>
+              {/* <Eyebrow>Q3 2026</Eyebrow> */}
             </div>
             <h2 className="text-[clamp(30px,5vw,52px)] font-semibold leading-tight tracking-[-0.03em] text-ink">
               Stop switching apps.

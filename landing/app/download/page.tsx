@@ -102,7 +102,7 @@ export default function DownloadPage() {
       <section className="pt-[130px]">
         <Container>
           <Reveal className="mx-auto flex max-w-[760px] flex-col items-center text-center">
-            <Badge>Coming Q3 2026</Badge>
+            {/* <Badge>Coming Q3 2026</Badge> */}
             <h1 className="mt-6 font-heading text-[clamp(36px,6vw,64px)] font-semibold leading-[1.02] tracking-[-0.035em] text-ink">
               Quoril for desktop.
             </h1>

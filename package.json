@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Desktop productivity and focus tracking application",
-  "author": "Mohan Kilari",
+  "author": "Erik Vake",
   "main": "dist-electron/index.cjs",
   "scripts": {
     "dev": "vite",

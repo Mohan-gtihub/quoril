@@ -50,7 +50,10 @@ export default function Nav() {
   useEffect(() => setOpen(false), [pathname]);
 
   return (
-    <nav className="fixed inset-x-0 top-0 z-50">
+    <nav
+      className="fixed inset-x-0 z-50 transition-[top] duration-200"
+      style={{ top: "var(--banner-h, 0px)" }}
+    >
       <div
         className={`mx-auto my-3 flex max-w-[1140px] items-center justify-between rounded-pill border px-3 py-2 pl-5 backdrop-blur-xl transition ${
           scrolled

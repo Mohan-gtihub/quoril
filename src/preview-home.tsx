@@ -52,7 +52,7 @@ for (let d = 0; d < 40; d++) {
   }
 }
 
-useAuthStore.setState({ user: { email: 'mohan@quoril.app' } as any })
+useAuthStore.setState({ user: { email: 'erik@quoril.app' } as any })
 useWorkspaceStore.setState({ workspaces: workspaces as any, activeWorkspaceId: null })
 useListStore.setState({ lists: lists as any })
 useTaskStore.setState({ tasks: tasks as any })

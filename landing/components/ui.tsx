@@ -22,7 +22,6 @@ export function Container({
 export function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
     <span className="inline-flex items-center gap-2 text-[12.5px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
-      <span className="h-px w-5 bg-line-strong" />
       {children}
     </span>
   );

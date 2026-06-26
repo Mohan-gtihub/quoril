@@ -105,4 +105,4 @@ A browser-based version is on the roadmap and is great for fast onboarding and t
 
 ---
 
-*Built by Mohan Kilari.*
+*Built by Erik Vake.*

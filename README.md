@@ -2,7 +2,7 @@
 
 A desktop productivity operating system for deep work. Quoril combines task management, focus tracking, app usage analytics, and digital wellbeing into a single offline-first Electron application with real-time cloud sync.
 
-Built by **Mohan Kilari**.
+Built by **Erik Vake**.
 
 ---
 
@@ -881,5 +881,5 @@ npm install
 ---
 
 **Version:** 1.0.0
-**Author:** Mohan Kilari
+**Author:** Erik Vake
 **License:** MIT

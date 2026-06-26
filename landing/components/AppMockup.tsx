@@ -137,7 +137,7 @@ export default function AppMockup() {
             <span className="grid h-5 w-5 place-items-center rounded-[6px] bg-ink text-[10px] font-semibold text-paper">
               M
             </span>
-            <span className="text-[13px] font-semibold text-ink">mohan</span>
+            <span className="text-[13px] font-semibold text-ink">Erik</span>
             <svg className="ml-auto h-3 w-3 text-ink-faint" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
           </div>
 
