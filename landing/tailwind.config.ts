@@ -36,6 +36,11 @@ const config: Config = {
           warning: "#b45309",
           error: "#dc2626",
         },
+        // Quoril accent palette
+        focus: "#2B6BF5", // active focus sessions, sync status, ring timer fill
+        break: "#F5A623", // pomodoro breaks, time warnings, streak indicators
+        wellbeing: "#10C49A", // task done, high productivity score, healthy usage
+        deepslate: "#3D3D3D", // secondary surfaces, cards, inactive states
       },
       borderRadius: {
         tile: "26px",

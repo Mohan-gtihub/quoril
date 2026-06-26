@@ -121,7 +121,7 @@ export function HomeOverview() {
                                 </span>
                                 <span className="w-px h-3.5 bg-[var(--border-default)]" />
                                 <span className="flex items-baseline gap-1.5">
-                                    <span className={cn('font-semibold tabular-nums', isActive ? 'text-[var(--accent-primary)]' : 'text-[var(--text-primary)]')}>{fmtMin(stats.focusMin)}</span>
+                                    <span className={cn('font-semibold tabular-nums', isActive ? 'text-[var(--focus)]' : 'text-[var(--text-primary)]')}>{fmtMin(stats.focusMin)}</span>
                                 <span className="text-[var(--text-tertiary)]">focused</span>
                             </span>
                         </div>
@@ -218,7 +218,7 @@ export function HomeOverview() {
                                     {stats.doneToday}<span className="text-[var(--text-muted)] text-[15px]">/{totalToday || 0}</span>
                                 </p>
                                 <div className="mt-2.5 flex items-center gap-1.5 text-[12px] text-[var(--text-tertiary)]">
-                                    <Flame size={13} className="text-[var(--accent-primary)]" />
+                                    <Flame size={13} className="text-[var(--break)]" />
                                     {stats.currentStreak}-day streak
                                 </div>
                             </div>
@@ -283,12 +283,12 @@ function ProgressRing({ pct, live }: { pct: number; live?: boolean }) {
     return (
         <div
             className="relative w-[68px] h-[68px] shrink-0 rounded-full"
-            style={{ background: `conic-gradient(var(--accent-primary) ${pct * 3.6}deg, var(--bg-tertiary) 0deg)` }}
+            style={{ background: `conic-gradient(var(--wellbeing) ${pct * 3.6}deg, var(--bg-tertiary) 0deg)` }}
         >
             <div className="absolute inset-[5px] rounded-full bg-[var(--bg-card)] flex items-center justify-center">
                 <span className="text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{pct}%</span>
             </div>
-            {live && <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[var(--accent-primary)] ring-2 ring-[var(--bg-card)] animate-pulse" />}
+            {live && <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[var(--focus)] ring-2 ring-[var(--bg-card)] animate-pulse" />}
         </div>
     )
 }

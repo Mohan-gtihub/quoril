@@ -131,7 +131,7 @@ export function SuperFocusPill() {
                         </div>
                         <span className={cn(
                             "font-mono font-bold text-sm tabular-nums tracking-tight shrink-0",
-                            isOvertime ? "text-[var(--error)]" : (isBreak ? "text-[var(--warning)]" : "text-[var(--accent-primary)]")
+                            isOvertime ? "text-[var(--break)]" : (isBreak ? "text-[var(--break)]" : "text-[var(--focus)]")
                         )}>
                             {formatShortTime(time)}
                         </span>
@@ -178,7 +178,7 @@ export function SuperFocusPill() {
                             <button onClick={() => skipToNext()} className="p-2 rounded-lg hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors" title="Skip">
                                 <SkipForward size={16} />
                             </button>
-                            <button onClick={handleDone} className="p-2 rounded-lg hover:bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] transition-colors" title="Done">
+                            <button onClick={handleDone} className="p-2 rounded-lg hover:bg-[var(--wellbeing)]/10 text-[var(--wellbeing)] transition-colors" title="Done">
                                 <CheckCircle2 size={16} />
                             </button>
                             <button

@@ -5,6 +5,11 @@ import { motion } from "framer-motion";
 const INK = "#16160f";
 const TRACK = "rgb(244, 244, 242)"; // sunken token
 
+// Quoril accent palette
+export const FOCUS = "#2B6BF5";
+export const BREAK = "#F5A623";
+export const WELLBEING = "#10C49A";
+
 /** Hourly screen-time heatmap (peaks mid-afternoon). */
 export function Heatmap() {
   const peaks = [3, 2, 1, 1, 1, 2, 5, 9, 14, 18, 16, 15, 22, 28, 40, 38, 30, 26, 20, 15, 12, 8, 5, 3];
@@ -24,8 +29,8 @@ export function Heatmap() {
               transition={{ delay: i * 0.012, type: "spring", stiffness: 120 }}
               className="flex-1 rounded-t-[3px]"
               style={{
-                background: INK,
-                opacity: isPeak ? 1 : 0.16 + (v / max) * 0.5,
+                background: isPeak ? BREAK : FOCUS,
+                opacity: isPeak ? 1 : 0.22 + (v / max) * 0.55,
               }}
             />
           );
@@ -45,12 +50,14 @@ export function Ring({
   pct,
   value,
   label,
+  color = INK,
 }: {
   size?: number;
   stroke?: number;
   pct: number; // 0..1
   value: string;
   label: string;
+  color?: string;
 }) {
   const r = (size - stroke) / 2 - 4;
   const c = 2 * Math.PI * r;
@@ -63,7 +70,7 @@ export function Ring({
           cy={size / 2}
           r={r}
           fill="none"
-          stroke={INK}
+          stroke={color}
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={c}

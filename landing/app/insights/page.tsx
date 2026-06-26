@@ -1,6 +1,6 @@
 import { Container, SectionHead, Tile, TileIcon, Button, Eyebrow } from "@/components/ui";
 import Reveal from "@/components/Reveal";
-import { Heatmap, Ring, Donut, CategoryBars } from "@/components/Charts";
+import { Heatmap, Ring, Donut, CategoryBars, FOCUS, BREAK, WELLBEING } from "@/components/Charts";
 import { IconChart, IconScreen, IconArrow } from "@/components/icons";
 
 export const metadata = {
@@ -9,11 +9,11 @@ export const metadata = {
     "See exactly where your hours go. Quoril turns native screen-time tracking into reports, productivity scores, and digital wellbeing insights.",
 };
 
-/* ── ink opacity ramp (the only "category colors") ─────────── */
-const INK = "#16160f";
-const GREY = "#6b6b66";
-const FAINT = "#a8a8a1";
-const FADE = "#e3e2dc";
+/* ── accent category palette ───────────────────────────────── */
+const INK = FOCUS;       // Dev / primary
+const GREY = WELLBEING;  // Work / healthy
+const FAINT = BREAK;     // Comms / attention
+const FADE = "#3D3D3D";  // Other / deep slate
 
 const kpis = [
   { label: "Focus Time", value: "5h 16m", sub: "▲ 18% · 7 sessions" },
@@ -145,7 +145,7 @@ export default function InsightsPage() {
                   Productivity
                 </h3>
                 <div className="flex flex-1 items-center justify-center">
-                  <Ring size={120} pct={0.86} value="86" label="score" />
+                  <Ring size={120} pct={0.86} value="86" label="score" color={WELLBEING} />
                 </div>
               </Tile>
             </Reveal>
@@ -230,15 +230,15 @@ export default function InsightsPage() {
                   </TileIcon>
                 </div>
                 <div className="flex h-3 w-full overflow-hidden rounded-pill">
-                  <div style={{ width: "62%", background: INK }} />
-                  <div style={{ width: "26%", background: FAINT }} />
-                  <div style={{ width: "12%", background: FADE }} />
+                  <div style={{ width: "62%", background: WELLBEING }} />
+                  <div style={{ width: "26%", background: "#3D3D3D" }} />
+                  <div style={{ width: "12%", background: BREAK }} />
                 </div>
                 <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[13px]">
                   {[
-                    [INK, "Productive", "62%"],
-                    [FAINT, "Neutral", "26%"],
-                    [FADE, "Distracting", "12%"],
+                    [WELLBEING, "Productive", "62%"],
+                    ["#3D3D3D", "Neutral", "26%"],
+                    [BREAK, "Distracting", "12%"],
                   ].map(([c, n, p]) => (
                     <span key={n} className="flex items-center gap-2 text-ink-muted">
                       <span

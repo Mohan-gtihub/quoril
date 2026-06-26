@@ -7,7 +7,7 @@ import {
   Eyebrow,
 } from "@/components/ui";
 import Reveal from "@/components/Reveal";
-import { Ring } from "@/components/Charts";
+import { Ring, FOCUS } from "@/components/Charts";
 import FocusPill from "@/components/FocusPill";
 import {
   IconClock,
@@ -110,7 +110,7 @@ export default function FocusPage() {
                   confetti.
                 </p>
                 <div className="mt-7 grid place-items-center rounded-card border border-line bg-sunken py-7">
-                  <Ring pct={0.65} value="17:23" label="remaining" />
+                  <Ring pct={0.65} value="17:23" label="remaining" color={FOCUS} />
                 </div>
               </Tile>
             </Reveal>
@@ -247,7 +247,7 @@ export default function FocusPage() {
                     POMODORO · 3 / 4
                   </span>
                   <div className="mt-6 grid place-items-center">
-                    <Ring pct={0.42} value="10:32" label="work block" />
+                    <Ring pct={0.42} value="10:32" label="work block" color={FOCUS} />
                   </div>
                   <div className="mt-6 flex items-center justify-center gap-3">
                     <button className="grid h-9 w-9 place-items-center rounded-full bg-ink text-paper">

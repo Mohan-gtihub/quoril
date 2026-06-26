@@ -32,10 +32,16 @@ type Task = {
   active?: boolean;
 };
 
+// Quoril accent palette
+const FOCUS = "#2B6BF5";
+const BREAK = "#F5A623";
+const WELLBEING = "#10C49A";
+const SLATE = "#3D3D3D";
+
 const COLS: { name: string; dot: string; tasks: Task[] }[] = [
   {
     name: "Backlog",
-    dot: "#cfcec7",
+    dot: SLATE,
     tasks: [
       { id: "b1", title: "Research auth providers", est: "45m" },
       { id: "b2", title: "Sketch onboarding flow", est: "30m" },
@@ -43,7 +49,7 @@ const COLS: { name: string; dot: string; tasks: Task[] }[] = [
   },
   {
     name: "This Week",
-    dot: "#a8a8a1",
+    dot: FOCUS,
     tasks: [
       { id: "w1", title: "Wire up sync engine", est: "2h" },
       { id: "w2", title: "Review PR #214", est: "20m" },
@@ -51,7 +57,7 @@ const COLS: { name: string; dot: string; tasks: Task[] }[] = [
   },
   {
     name: "Today",
-    dot: "#6b6b66",
+    dot: BREAK,
     tasks: [
       { id: "t1", title: "Write launch post", est: "25m", active: true },
       { id: "t2", title: "Fix heatmap tooltip", est: "40m", sub: [1, 3] },
@@ -59,7 +65,7 @@ const COLS: { name: string; dot: string; tasks: Task[] }[] = [
   },
   {
     name: "Done",
-    dot: "#16160f",
+    dot: WELLBEING,
     tasks: [
       { id: "d1", title: "Ship onboarding", done_time: "38m" },
       { id: "d2", title: "Update README", done_time: "12m" },
@@ -78,9 +84,9 @@ const NAV = [
 
 // real app workspace accent colors
 const WORKSPACES = [
-  { name: "Product", color: "#16160f" },
-  { name: "Personal", color: "#6b6b66" },
-  { name: "Side Project", color: "#a8a8a1" },
+  { name: "Product", color: FOCUS },
+  { name: "Personal", color: BREAK },
+  { name: "Side Project", color: WELLBEING },
 ];
 
 export default function AppMockup() {
@@ -200,7 +206,7 @@ export default function AppMockup() {
                         isDone
                           ? "border-line bg-sunken/50 opacity-60"
                           : isActive
-                          ? "border-ink/30 bg-surface shadow-soft"
+                          ? "border-[#2B6BF5]/40 bg-surface shadow-soft"
                           : "border-line bg-surface shadow-soft hover:border-line-strong"
                       }`}
                     >
@@ -212,8 +218,8 @@ export default function AppMockup() {
                           }
                           className={`mt-px grid h-[15px] w-[15px] flex-shrink-0 place-items-center rounded-[5px] border transition ${
                             isDone
-                              ? "border-ink bg-ink text-paper"
-                              : "border-line-strong hover:border-ink"
+                              ? "border-[#10C49A] bg-[#10C49A] text-white"
+                              : "border-line-strong hover:border-[#2B6BF5]"
                           }`}
                           aria-label="Toggle complete"
                         >
@@ -260,7 +266,7 @@ export default function AppMockup() {
                         {!isDone && (
                           <div className="flex items-center gap-1.5">
                             {isActive ? (
-                              <span className="mono rounded-md bg-sunken px-1.5 py-0.5 text-[10.5px] font-bold tracking-tight text-ink">
+                              <span className="mono rounded-md bg-[#2B6BF5]/12 px-1.5 py-0.5 text-[10.5px] font-bold tracking-tight text-[#2B6BF5]">
                                 {timer}
                               </span>
                             ) : (

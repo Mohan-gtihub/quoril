@@ -83,9 +83,24 @@ export function Tile({
   );
 }
 
-export function TileIcon({ children }: { children: React.ReactNode }) {
+export function TileIcon({
+  children,
+  tint,
+}: {
+  children: React.ReactNode;
+  tint?: string;
+}) {
   return (
-    <div className="mb-5 grid h-[44px] w-[44px] place-items-center rounded-[13px] border border-line bg-sunken text-ink">
+    <div
+      className={`mb-5 grid h-[44px] w-[44px] place-items-center rounded-[13px] border ${
+        tint ? "" : "border-line bg-sunken text-ink"
+      }`}
+      style={
+        tint
+          ? { background: `${tint}1A`, borderColor: `${tint}33`, color: tint }
+          : undefined
+      }
+    >
       {children}
     </div>
   );

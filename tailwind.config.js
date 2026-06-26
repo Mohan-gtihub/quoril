@@ -21,6 +21,11 @@ export default {
                 high: '#f97316',
                 medium: '#3b82f6',
                 low: '#6b7280',
+                // Quoril accent palette
+                focus: '#2B6BF5',     // active focus sessions, sync status, ring timer fill
+                break: '#F5A623',     // pomodoro breaks, time warnings, streak indicators
+                wellbeing: '#10C49A', // task done, high productivity score, healthy usage
+                deepslate: '#3D3D3D', // secondary surfaces, cards, inactive states
             },
             animation: {
                 'fade-in': 'fadeIn 0.2s ease-in-out',

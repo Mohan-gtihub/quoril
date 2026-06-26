@@ -187,8 +187,8 @@ export function FocusMode() {
     const ringPct = Math.min(100, isBreak
         ? (breakRemaining / (settings.defaultBreakLength * 60)) * 100
         : (settings.pomodorosEnabled ? (pomodoroRemaining / pomodoroTotal) * 100 : progress))
-    const ringStroke = 'var(--accent-primary)'
     const isOver = isOvertime && !isBreak && !settings.pomodorosEnabled
+    const ringStroke = isBreak ? 'var(--break)' : (isOver ? 'var(--break)' : 'var(--focus)')
 
     return (
         <DndContext
@@ -201,7 +201,7 @@ export function FocusMode() {
                     <div className="flex items-center gap-3">
                         <span className={cn(
                             "w-2 h-2 rounded-full",
-                            isActive && !isPaused ? "bg-[var(--accent-primary)] animate-pulse" : "bg-[var(--text-muted)]"
+                            isActive && !isPaused ? cn("animate-pulse", isBreak ? "bg-[var(--break)]" : "bg-[var(--focus)]") : "bg-[var(--text-muted)]"
                         )} />
                         <h1 className="text-[24px] font-semibold tracking-tight">
                             {isBreak ? 'Break' : 'Focus'}
@@ -211,7 +211,7 @@ export function FocusMode() {
                     {/* POMODORO BADGE: Centered Top */}
                     {!isBreak && settings.pomodorosEnabled && (
                         <div className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-                            <div className="px-3 py-1 rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] text-xs font-semibold tracking-wide tabular-nums">
+                            <div className="px-3 py-1 rounded-full bg-[var(--focus)] text-[var(--accent-contrast)] text-xs font-semibold tracking-wide tabular-nums">
                                 POMO {formatTimerTime(pomodoroRemaining)}
                             </div>
                         </div>

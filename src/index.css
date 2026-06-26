@@ -62,6 +62,18 @@
   --warning: #f59e0b;
   --error: #ef4444;
 
+  /* Quoril accent palette */
+  --focus: #2b6bf5;        /* active focus sessions, sync status, ring timer fill */
+  --focus-glow: rgba(43, 107, 245, 0.45);
+  --focus-100: rgba(43, 107, 245, 0.12);
+  --break: #f5a623;        /* pomodoro breaks, time warnings, streak indicators */
+  --break-glow: rgba(245, 166, 35, 0.45);
+  --break-100: rgba(245, 166, 35, 0.12);
+  --wellbeing: #10c49a;    /* task done, high productivity score, healthy usage */
+  --wellbeing-glow: rgba(16, 196, 154, 0.45);
+  --wellbeing-100: rgba(16, 196, 154, 0.12);
+  --deepslate: #3d3d3d;    /* secondary surfaces, cards, inactive states */
+
   /* Accent color tokens used in column headers and badges */
   --accent-green-400: #4ade80;
   --accent-green-100: rgba(74, 222, 128, 0.1);

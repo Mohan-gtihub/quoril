@@ -3,7 +3,9 @@ import Reveal from "@/components/Reveal";
 import Waitlist from "@/components/Waitlist";
 import AppMockup from "@/components/AppMockup";
 import FocusPill from "@/components/FocusPill";
-import { Heatmap, Ring, Donut, CategoryBars } from "@/components/Charts";
+import { Heatmap, Ring, Donut, CategoryBars, FOCUS, BREAK, WELLBEING } from "@/components/Charts";
+
+const SLATE = "#3D3D3D"; // deep slate accent
 import {
   Container,
   SectionHead,
@@ -31,9 +33,9 @@ export default function Home() {
       {/* ───────── HERO ───────── */}
       <header className="dotgrid relative overflow-hidden px-6 pb-16 pt-[150px] text-center">
         <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] bg-gradient-to-b from-paper to-transparent" />
-        <Reveal>
+        {/* <Reveal>
           <Badge>Offline-first · Local + cloud sync · Coming Q3 2026</Badge>
-        </Reveal>
+        </Reveal> */}
 
         <Reveal delay={0.05}>
           <h1 className="mx-auto mt-7 max-w-[15ch] font-heading text-[clamp(40px,6.6vw,80px)] font-semibold leading-[1.02] tracking-[-0.04em] text-ink">
@@ -56,7 +58,7 @@ export default function Home() {
         </Reveal>
 
         <Reveal delay={0.15}>
-          <div className="mx-auto mt-9 max-w-[560px]">
+          <div className="mx-auto mt-9 max-w-[760px]">
             <Waitlist id="waitlist" />
           </div>
         </Reveal>
@@ -102,7 +104,7 @@ export default function Home() {
           <div className="grid grid-cols-1 gap-[18px] md:grid-cols-6">
             <Reveal className="md:col-span-3">
               <Tile className="h-full">
-                <TileIcon><IconBoard className="h-[22px] w-[22px]" /></TileIcon>
+                <TileIcon tint={FOCUS}><IconBoard className="h-[22px] w-[22px]" /></TileIcon>
                 <h3 className="text-[19px] font-semibold tracking-[-0.01em] text-ink">
                   Kanban that thinks in time
                 </h3>
@@ -118,7 +120,7 @@ export default function Home() {
 
             <Reveal className="md:col-span-3" delay={0.05}>
               <Tile className="h-full" id="focus">
-                <TileIcon><IconClock className="h-[22px] w-[22px]" /></TileIcon>
+                <TileIcon tint={BREAK}><IconClock className="h-[22px] w-[22px]" /></TileIcon>
                 <h3 className="text-[19px] font-semibold tracking-[-0.01em] text-ink">
                   A focus pill that follows you
                 </h3>
@@ -132,7 +134,7 @@ export default function Home() {
 
             <Reveal className="md:col-span-2" delay={0.1}>
               <Tile className="h-full">
-                <TileIcon><IconBolt className="h-[20px] w-[20px]" /></TileIcon>
+                <TileIcon tint={WELLBEING}><IconBolt className="h-[20px] w-[20px]" /></TileIcon>
                 <h3 className="text-[19px] font-semibold tracking-[-0.01em] text-ink">
                   Deep Focus Mode
                 </h3>
@@ -141,14 +143,14 @@ export default function Home() {
                   completion.
                 </p>
                 <div className="flex justify-center">
-                  <Ring pct={0.65} value="17:23" label="remaining" />
+                  <Ring pct={0.65} value="17:23" label="remaining" color={FOCUS} />
                 </div>
               </Tile>
             </Reveal>
 
             <Reveal className="md:col-span-4" delay={0.15}>
               <Tile className="h-full">
-                <TileIcon><IconScreen className="h-[22px] w-[22px]" /></TileIcon>
+                <TileIcon tint={SLATE}><IconScreen className="h-[22px] w-[22px]" /></TileIcon>
                 <h3 className="text-[19px] font-semibold tracking-[-0.01em] text-ink">
                   Automatic app &amp; website tracking
                 </h3>
@@ -159,10 +161,10 @@ export default function Home() {
                 </p>
                 <CategoryBars
                   rows={[
-                    { name: "Development", color: "#16160f", pct: 72, value: "3h 12m" },
-                    { name: "Work", color: "#6b6b66", pct: 48, value: "2h 04m" },
-                    { name: "Communication", color: "#a8a8a1", pct: 26, value: "1h 06m" },
-                    { name: "Entertainment", color: "#cfcec7", pct: 14, value: "34m" },
+                    { name: "Development", color: FOCUS, pct: 72, value: "3h 12m" },
+                    { name: "Work", color: WELLBEING, pct: 48, value: "2h 04m" },
+                    { name: "Communication", color: BREAK, pct: 26, value: "1h 06m" },
+                    { name: "Entertainment", color: SLATE, pct: 14, value: "34m" },
                   ]}
                 />
               </Tile>
@@ -230,20 +232,20 @@ export default function Home() {
                 <div className="flex flex-wrap items-center gap-6">
                   <Donut
                     segments={[
-                      ["#16160f", 0.46],
-                      ["#6b6b66", 0.28],
-                      ["#a8a8a1", 0.16],
-                      ["#e3e2dc", 0.1],
+                      [FOCUS, 0.46],
+                      [WELLBEING, 0.28],
+                      [BREAK, 0.16],
+                      [SLATE, 0.1],
                     ]}
                     center="6h 56m"
                     sub="total"
                   />
                   <div className="flex flex-col gap-2.5 text-[12.5px] text-ink-muted">
                     {[
-                      ["#16160f", "Dev · 46%"],
-                      ["#6b6b66", "Work · 28%"],
-                      ["#a8a8a1", "Comms · 16%"],
-                      ["#e3e2dc", "Other · 10%"],
+                      [FOCUS, "Dev · 46%"],
+                      [WELLBEING, "Work · 28%"],
+                      [BREAK, "Comms · 16%"],
+                      [SLATE, "Other · 10%"],
                     ].map(([c, l]) => (
                       <div key={l} className="flex items-center gap-2.5">
                         <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: c }} />
@@ -259,7 +261,7 @@ export default function Home() {
               <Tile className="h-full" hover={false}>
                 <h3 className="mb-4 text-[19px] font-semibold text-ink">Productivity</h3>
                 <div className="flex justify-center">
-                  <Ring size={120} pct={0.86} value="86" label="score" />
+                  <Ring size={120} pct={0.86} value="86" label="score" color={WELLBEING} />
                 </div>
               </Tile>
             </Reveal>
@@ -269,11 +271,11 @@ export default function Home() {
                 <h3 className="mb-2.5 text-[19px] font-semibold text-ink">Activity timeline</h3>
                 <div className="flex flex-col">
                   {[
-                    ["14:02", "#16160f", "VS Code — quoril/landing", "42m"],
-                    ["13:48", "#6b6b66", "Chrome — github.com", "14m"],
-                    ["13:20", "#a8a8a1", "Figma — Onboarding", "28m"],
-                    ["13:05", "#6b6b66", "Slack — #engineering", "15m"],
-                    ["12:30", "#16160f", "Terminal — npm run dev", "35m"],
+                    ["14:02", FOCUS, "VS Code — quoril/landing", "42m"],
+                    ["13:48", SLATE, "Chrome — github.com", "14m"],
+                    ["13:20", WELLBEING, "Figma — Onboarding", "28m"],
+                    ["13:05", BREAK, "Slack — #engineering", "15m"],
+                    ["12:30", FOCUS, "Terminal — npm run dev", "35m"],
                   ].map(([ts, c, app, dur], i, arr) => (
                     <div
                       key={ts}
@@ -313,7 +315,7 @@ export default function Home() {
           <div className="grid grid-cols-1 gap-[18px] md:grid-cols-3">
             <Reveal>
               <Tile className="h-full">
-                <TileIcon><IconCanvas className="h-[22px] w-[22px]" /></TileIcon>
+                <TileIcon tint={FOCUS}><IconCanvas className="h-[22px] w-[22px]" /></TileIcon>
                 <h3 className="text-[19px] font-semibold text-ink">Visual Canvas</h3>
                 <p className="mt-2 text-[14.5px] leading-relaxed text-ink-muted">
                   An infinite board for ideas, checklists, links and media — wire
@@ -324,7 +326,7 @@ export default function Home() {
             </Reveal>
             <Reveal delay={0.05}>
               <Tile className="h-full">
-                <TileIcon><IconLayers className="h-[22px] w-[22px]" /></TileIcon>
+                <TileIcon tint={WELLBEING}><IconLayers className="h-[22px] w-[22px]" /></TileIcon>
                 <h3 className="text-[19px] font-semibold text-ink">Workspaces &amp; lists</h3>
                 <p className="mt-2 text-[14.5px] leading-relaxed text-ink-muted">
                   Group lists into color-coded workspaces. Archive, reorder and
@@ -336,7 +338,7 @@ export default function Home() {
             </Reveal>
             <Reveal delay={0.1}>
               <Tile className="h-full">
-                <TileIcon><IconGlobe className="h-[22px] w-[22px]" /></TileIcon>
+                <TileIcon tint={BREAK}><IconGlobe className="h-[22px] w-[22px]" /></TileIcon>
                 <h3 className="text-[19px] font-semibold text-ink">Offline-first sync</h3>
                 <p className="mt-2 text-[14.5px] leading-relaxed text-ink-muted">
                   Every write hits local SQLite first, then syncs to the cloud in
@@ -369,7 +371,7 @@ export default function Home() {
             <p className="mt-4 font-hand text-[20px] text-ink-faint">
               made for people who'd rather be making things
             </p>
-            <div className="mx-auto mt-8 max-w-[520px]">
+            <div className="mx-auto mt-8 max-w-[760px]">
               <Waitlist />
             </div>
           </div>

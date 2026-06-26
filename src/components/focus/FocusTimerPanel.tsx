@@ -402,7 +402,8 @@ export function FocusTimerPanel() {
                                     <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
                                         <span className={cn(
                                             "w-1.5 h-1.5 rounded-full",
-                                            !isBreak && !isPaused && activeTask?.status !== 'done' ? "bg-[var(--accent-primary)]" : "bg-[var(--text-muted)]"
+                                            isBreak ? "bg-[var(--break)]"
+                                                : (!isPaused && activeTask?.status !== 'done' ? "bg-[var(--focus)]" : "bg-[var(--text-muted)]")
                                         )} />
                                         {isBreak ? 'Break' : (activeTask?.status === 'done' ? 'Done' : isPaused ? 'Paused' : isOvertime ? 'Overtime' : 'Doing')}
                                     </span>
@@ -449,7 +450,8 @@ export function FocusTimerPanel() {
                                         <div
                                             className={cn(
                                                 "h-full transition-all duration-1000",
-                                                isOvertime && !isBreak ? "bg-[var(--text-muted)]" : "bg-[var(--accent-primary)]"
+                                                isBreak ? "bg-[var(--break)]"
+                                                    : (isOvertime ? "bg-[var(--break)]" : "bg-[var(--focus)]")
                                             )}
                                             style={{
                                                 width: `${Math.min(100, isBreak && breakRemainingAtStart > 0
@@ -478,7 +480,7 @@ export function FocusTimerPanel() {
                                                 >
                                                     <div className={cn(
                                                         "w-3.5 h-3.5 rounded border border-[var(--border-default)] flex items-center justify-center transition-colors shrink-0",
-                                                        sub.completed ? "bg-[var(--accent-primary)] border-[var(--accent-primary)]" : "group-hover/sub:border-[var(--border-hover)]"
+                                                        sub.completed ? "bg-[var(--wellbeing)] border-[var(--wellbeing)]" : "group-hover/sub:border-[var(--border-hover)]"
                                                     )}>
                                                         {sub.completed && <Check size={10} className="text-[var(--accent-contrast)]" />}
                                                     </div>
@@ -519,7 +521,7 @@ export function FocusTimerPanel() {
                                     </button>
                                     <button
                                         onClick={handleDone}
-                                        className="flex-1 h-10 rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm font-semibold"
+                                        className="flex-1 h-10 rounded-full bg-[var(--wellbeing)] text-[var(--accent-contrast)] hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm font-semibold"
                                     >
                                         <CheckCircle2 className="w-4 h-4" />
                                     </button>
@@ -550,7 +552,7 @@ export function FocusTimerPanel() {
 
                                 <div className="mb-6">
                                     <p className="text-sm font-medium text-[var(--text-muted)] line-through mb-1">{focus.celebratedTask.title}</p>
-                                    <p className="text-[var(--accent-primary)] font-semibold text-sm">You finished the task!</p>
+                                    <p className="text-[var(--wellbeing)] font-semibold text-sm">You finished the task!</p>
                                 </div>
 
                                 <div className="space-y-3">
@@ -573,7 +575,7 @@ export function FocusTimerPanel() {
                                             dismissCelebration()
                                             focus.startBreak()
                                         }}
-                                        className="w-full py-2.5 rounded-full bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)] transition-all text-sm font-semibold flex items-center justify-center gap-2 active:scale-95"
+                                        className="w-full py-2.5 rounded-full bg-[var(--break-100)] text-[var(--break)] hover:brightness-105 transition-all text-sm font-semibold flex items-center justify-center gap-2 active:scale-95"
                                     >
                                         <Coffee className="w-4 h-4" />
                                         Take a Break
@@ -691,7 +693,7 @@ export function FocusTimerPanel() {
                     className={cn(
                         "flex items-center gap-2 px-5 py-2 rounded-full transition-all duration-200 text-sm font-semibold active:scale-95",
                         focus.isBreak
-                            ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105"
+                            ? "bg-[var(--break)] text-[var(--accent-contrast)] hover:brightness-105"
                             : "bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)]"
                     )}
                 >

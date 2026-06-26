@@ -66,7 +66,7 @@ export default function Waitlist({ id }: { id?: string }) {
 
   return (
     <div id={id} className="relative">
-      <div className="sheen rounded-tile border border-line bg-surface p-6 shadow-lift sm:p-8">
+      <div className="px-1 py-2 sm:px-2">
         <AnimatePresence mode="wait">
           {!done ? (
             <motion.div
@@ -77,10 +77,10 @@ export default function Waitlist({ id }: { id?: string }) {
               transition={{ duration: 0.25 }}
             >
               <div className="mb-2 flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-ink animate-pulse2" />
+                {/* <span className="h-2 w-2 rounded-full bg-ink animate-pulse2" />
                 <span className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-faint">
                   Early access · Q3 2026
-                </span>
+                </span> */}
               </div>
               <h3 className="text-2xl font-semibold tracking-[-0.02em] text-ink">
                 Join the waitlist
@@ -190,11 +190,13 @@ export default function Waitlist({ id }: { id?: string }) {
       {!done && (
         <div className="mt-4 flex items-center justify-center gap-3 text-sm text-ink-muted">
           <div className="flex -space-x-2">
-            {["#16160f", "#6b6b66", "#a8a8a1", "#cfcec7"].map((c, i) => (
-              <span
+            {[12, 32, 45, 65].map((n, i) => (
+              <img
                 key={i}
-                className="h-6 w-6 rounded-full border-2 border-paper"
-                style={{ background: c }}
+                src={`https://i.pravatar.cc/48?img=${n}`}
+                alt=""
+                loading="lazy"
+                className="h-6 w-6 rounded-full border-2 border-paper object-cover"
               />
             ))}
           </div>
