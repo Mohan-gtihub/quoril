@@ -17,17 +17,20 @@ export function Logo({ className = "" }: { className?: string }) {
   return (
     <Link
       href="/"
+      aria-label="Quoril home"
       className={`flex items-center gap-2.5 text-[18px] font-semibold tracking-[-0.02em] text-ink ${className}`}
     >
       <Image
         src="/icon.png"
-        alt="Quoril logo"
+        alt=""
         width={30}
         height={30}
         priority
         className="h-[30px] w-[30px] rounded-[9px] object-contain"
       />
-      Quoril
+      <span>
+        Quoril<span className="text-[var(--brand-accent,#a3e635)]">.</span>
+      </span>
     </Link>
   );
 }
