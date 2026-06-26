@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -18,9 +19,14 @@ export function Logo({ className = "" }: { className?: string }) {
       href="/"
       className={`flex items-center gap-2.5 text-[18px] font-semibold tracking-[-0.02em] text-ink ${className}`}
     >
-      <span className="grid h-[30px] w-[30px] place-items-center rounded-[9px] bg-ink text-[16px] font-bold text-paper">
-        Q
-      </span>
+      <Image
+        src="/icon.png"
+        alt="Quoril logo"
+        width={30}
+        height={30}
+        priority
+        className="h-[30px] w-[30px] rounded-[9px] object-contain"
+      />
       Quoril
     </Link>
   );

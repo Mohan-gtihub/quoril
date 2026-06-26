@@ -31,6 +31,11 @@ export const metadata: Metadata = {
   title: "Quoril — The productivity OS for deep work",
   description:
     "Quoril unifies tasks, focus tracking, app analytics, and digital wellbeing into one offline-first desktop command center. Join the waitlist.",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.ico",
+    apple: "/icon.png",
+  },
   keywords: [
     "productivity",
     "focus timer",

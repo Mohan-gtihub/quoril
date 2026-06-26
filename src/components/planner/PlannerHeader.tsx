@@ -1,11 +1,15 @@
-import { ChevronDown, Trash2 } from 'lucide-react'
+import { ChevronDown, Trash2, Sparkles } from 'lucide-react'
 import { useListStore } from '@/store/listStore'
+import { useAuthStore } from '@/store/authStore'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { DateNavigator } from './DateNavigator'
 import { confirm } from '@/components/ui/ConfirmDialog'
 
 export function PlannerHeader() {
     const { lists, selectedListId, setSelectedList, deleteList } = useListStore()
+    const { user } = useAuthStore()
+    const navigate = useNavigate()
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
     const [hoveredListId, setHoveredListId] = useState<string | null>(null)
 
@@ -98,12 +102,21 @@ export function PlannerHeader() {
 
             {/* Right Controls */}
             <div className="flex items-center gap-3">
-                <button className="px-4 py-2 text-xs font-semibold rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] active:scale-95 transition-colors">
+                <button
+                    onClick={() => navigate('/settings')}
+                    title="Upgrade to Premium"
+                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] active:scale-95 transition-colors"
+                >
+                    <Sparkles size={13} className="text-[var(--accent-primary)]" />
                     Premium
                 </button>
-                <div className="w-9 h-9 rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] flex items-center justify-center text-[var(--text-secondary)] font-semibold text-sm">
-                    {selectedListId === 'all' ? 'A' : (selectedList?.name.charAt(0) || 'U')}
-                </div>
+                <button
+                    onClick={() => navigate('/settings')}
+                    title={user?.email || 'Account'}
+                    className="w-9 h-9 rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] active:scale-95 transition-colors font-semibold text-sm"
+                >
+                    {(user?.email?.charAt(0) || 'U').toUpperCase()}
+                </button>
             </div>
         </div>
     )
