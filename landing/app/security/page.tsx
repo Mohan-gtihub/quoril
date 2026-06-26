@@ -18,18 +18,21 @@ export const metadata = {
 const PILLARS = [
   {
     icon: <IconGlobe className="h-[22px] w-[22px]" />,
+    tint: "#10C49A", // wellbeing — you own your data
     title: "Offline-first by design",
     body: "Every task, list and focus session lives in a local SQLite database on your machine. Quoril works fully offline — and you own your data, always.",
     points: ["Local quoril_v2.sqlite store", "Works with no connection", "You own your data"],
   },
   {
     icon: <IconCheck className="h-[22px] w-[22px]" />,
+    tint: "#2B6BF5", // focus — sync & security
     title: "Encrypted, authenticated access",
     body: "Sync runs over authenticated Supabase sessions with Row-Level Security, so a row is only ever readable by the account that owns it.",
     points: ["Supabase auth + OAuth", "Row-Level Security policies", "Per-account isolation"],
   },
   {
     icon: <IconScreen className="h-[22px] w-[22px]" />,
+    tint: "#F5A623", // break — recovery & resilience
     title: "Resilient & recoverable",
     body: "Timer state is persisted every second, crashes are recovered on next launch, and deletes are soft so nothing vanishes by accident.",
     points: ["Per-second backup", "Crash recovery", "Soft delete (deleted_at)"],
@@ -142,7 +145,7 @@ export default function SecurityPage() {
             {PILLARS.map((p, i) => (
               <Reveal key={p.title} delay={i * 0.08}>
                 <Tile className="h-full">
-                  <TileIcon>{p.icon}</TileIcon>
+                  <TileIcon tint={p.tint}>{p.icon}</TileIcon>
                   <h3 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">
                     {p.title}
                   </h3>
@@ -155,7 +158,10 @@ export default function SecurityPage() {
                         key={pt}
                         className="flex items-center gap-2.5 text-[14px] font-medium text-ink"
                       >
-                        <span className="grid h-5 w-5 place-items-center rounded-full bg-ink text-paper">
+                        <span
+                          className="grid h-5 w-5 place-items-center rounded-full text-paper"
+                          style={{ background: p.tint }}
+                        >
                           <IconCheck className="h-3 w-3" />
                         </span>
                         {pt}
@@ -243,8 +249,10 @@ export default function SecurityPage() {
                 <Eyebrow>Data ownership</Eyebrow>
                 <p className="mt-6 font-heading text-[clamp(22px,3.2vw,34px)] font-medium leading-[1.25] tracking-[-0.02em] text-ink">
                   Your productivity data is yours. It stays local-first on your
-                  device, syncs only to your own account, and is never sold,
-                  rented, or mined.{" "}
+                  device, syncs only to your own account, and is{" "}
+                  <span className="text-wellbeing">
+                    never sold, rented, or mined.
+                  </span>{" "}
                   <span className="text-ink-muted">
                     No tracking pipelines, no data brokers — just your work,
                     where you left it.

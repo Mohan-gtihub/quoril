@@ -83,6 +83,13 @@ export function Tile({
   );
 }
 
+/**
+ * Quoril accent ramp for tinting TileIcons across pages.
+ * Cycle by index — `ACCENTS[i % ACCENTS.length]` — for visual consistency.
+ * focus → break → wellbeing → deepslate.
+ */
+export const ACCENTS = ["#2B6BF5", "#F5A623", "#10C49A", "#3D3D3D"] as const;
+
 export function TileIcon({
   children,
   tint,

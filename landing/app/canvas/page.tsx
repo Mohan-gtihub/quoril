@@ -3,6 +3,7 @@ import {
   SectionHead,
   Tile,
   TileIcon,
+  ACCENTS,
   Button,
   Eyebrow,
 } from "@/components/ui";
@@ -256,7 +257,7 @@ export default function CanvasPage() {
             {blocks.map((b, i) => (
               <Reveal key={b.label} delay={i * 0.06}>
                 <Tile className="h-full">
-                  <TileIcon>
+                  <TileIcon tint={ACCENTS[i % ACCENTS.length]}>
                     <IconCanvas className="h-5 w-5" />
                   </TileIcon>
                   <h3 className="font-heading text-[18px] font-semibold tracking-[-0.01em] text-ink">
@@ -284,7 +285,7 @@ export default function CanvasPage() {
             {pipelines.map((p, i) => (
               <Reveal key={p.title} delay={i * 0.08}>
                 <Tile className="h-full">
-                  <TileIcon>{p.icon}</TileIcon>
+                  <TileIcon tint={ACCENTS[i % ACCENTS.length]}>{p.icon}</TileIcon>
                   <h3 className="font-heading text-[18px] font-semibold tracking-[-0.01em] text-ink">
                     {p.title}
                   </h3>

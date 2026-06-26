@@ -2,6 +2,7 @@ import {
   Container,
   Tile,
   TileIcon,
+  ACCENTS,
   Button,
   Stat,
   Eyebrow,
@@ -116,7 +117,7 @@ export default function AboutPage() {
             {PRINCIPLES.map((p, i) => (
               <Reveal key={p.title} style={{ transitionDelay: `${i * 80}ms` }}>
                 <Tile className="h-full">
-                  <TileIcon>{p.icon}</TileIcon>
+                  <TileIcon tint={ACCENTS[i % ACCENTS.length]}>{p.icon}</TileIcon>
                   <h3 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">
                     {p.title}
                   </h3>

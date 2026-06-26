@@ -3,6 +3,7 @@ import {
   SectionHead,
   Tile,
   TileIcon,
+  ACCENTS,
   Button,
   Eyebrow,
 } from "@/components/ui";
@@ -93,7 +94,7 @@ export default function FocusPage() {
             {/* a) Deep Focus Mode */}
             <Reveal>
               <Tile className="flex h-full flex-col">
-                <TileIcon>
+                <TileIcon tint={ACCENTS[0]}>
                   <IconBolt className="h-[22px] w-[22px]" />
                 </TileIcon>
                 <h3 className="text-[19px] font-semibold tracking-[-0.01em] text-ink">
@@ -118,7 +119,7 @@ export default function FocusPage() {
             {/* b) Super Focus Pill */}
             <Reveal delay={0.06}>
               <Tile className="flex h-full flex-col">
-                <TileIcon>
+                <TileIcon tint={ACCENTS[1]}>
                   <IconClock className="h-[22px] w-[22px]" />
                 </TileIcon>
                 <h3 className="text-[19px] font-semibold tracking-[-0.01em] text-ink">
@@ -142,7 +143,7 @@ export default function FocusPage() {
             {/* c) Focus Popup */}
             <Reveal delay={0.12}>
               <Tile className="flex h-full flex-col">
-                <TileIcon>
+                <TileIcon tint={ACCENTS[2]}>
                   <IconPlay className="h-[22px] w-[22px]" />
                 </TileIcon>
                 <h3 className="text-[19px] font-semibold tracking-[-0.01em] text-ink">

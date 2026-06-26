@@ -3,6 +3,7 @@ import {
   SectionHead,
   Tile,
   TileIcon,
+  ACCENTS,
   Button,
   Eyebrow,
 } from "@/components/ui";
@@ -290,7 +291,7 @@ export default function PlannerPage() {
             {features.map((f, i) => (
               <Reveal key={f.title} delay={i * 0.06}>
                 <Tile className="h-full">
-                  <TileIcon>{f.icon}</TileIcon>
+                  <TileIcon tint={ACCENTS[i % ACCENTS.length]}>{f.icon}</TileIcon>
                   <h3 className="font-heading text-[18px] font-semibold tracking-[-0.01em] text-ink">
                     {f.title}
                   </h3>

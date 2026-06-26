@@ -4,6 +4,7 @@ import {
   SectionHead,
   Tile,
   TileIcon,
+  ACCENTS,
   Badge,
 } from "@/components/ui";
 import Reveal from "@/components/Reveal";
@@ -158,7 +159,7 @@ export default function DownloadPage() {
             {REASONS.map((r, i) => (
               <Reveal key={r.title} delay={i * 0.05}>
                 <Tile className="h-full">
-                  <TileIcon>
+                  <TileIcon tint={ACCENTS[i % ACCENTS.length]}>
                     <IconCheck className="h-5 w-5" />
                   </TileIcon>
                   <h3 className="font-heading text-[17px] font-semibold text-ink">
