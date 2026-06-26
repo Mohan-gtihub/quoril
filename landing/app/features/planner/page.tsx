@@ -279,7 +279,7 @@ export default function PlannerPage() {
       </section>
 
       {/* 2 — feature detail grid */}
-      <section className="py-24">
+      <section className="py-16 sm:py-24">
         <Container>
           <SectionHead
             eyebrow="Built for execution"
@@ -305,7 +305,7 @@ export default function PlannerPage() {
       </section>
 
       {/* 3 — task properties reference */}
-      <section className="pb-24">
+      <section className="pb-16 sm:pb-24">
         <Container className="max-w-[860px]">
           <SectionHead
             eyebrow="Reference"

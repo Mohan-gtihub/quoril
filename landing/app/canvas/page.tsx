@@ -245,7 +245,7 @@ export default function CanvasPage() {
       </section>
 
       {/* 3 — block types */}
-      <section className="py-24">
+      <section className="py-16 sm:py-24">
         <Container>
           <SectionHead
             eyebrow="Blocks"
@@ -273,7 +273,7 @@ export default function CanvasPage() {
       </section>
 
       {/* 4 — pipelines */}
-      <section className="pb-24">
+      <section className="pb-16 sm:pb-24">
         <Container>
           <SectionHead
             eyebrow="Pipelines"
@@ -299,7 +299,7 @@ export default function CanvasPage() {
       </section>
 
       {/* 5 — power features */}
-      <section className="pb-24">
+      <section className="pb-16 sm:pb-24">
         <Container>
           <SectionHead
             eyebrow="Power features"

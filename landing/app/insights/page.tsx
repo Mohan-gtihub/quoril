@@ -377,7 +377,7 @@ export default function InsightsPage() {
       <section className="py-32">
         <Container>
           <Reveal>
-            <div className="relative overflow-hidden rounded-tile border border-line bg-sunken px-6 py-20 text-center shadow-soft">
+            <div className="relative overflow-hidden rounded-tile border border-line bg-sunken px-5 py-14 text-center shadow-soft sm:px-6 sm:py-20">
               <h2 className="font-heading text-[clamp(28px,4.4vw,48px)] font-semibold leading-[1.05] tracking-[-0.03em] text-ink">
                 Turn your hours into evidence.
               </h2>

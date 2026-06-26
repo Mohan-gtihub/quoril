@@ -147,7 +147,7 @@ export default function DownloadPage() {
       </section>
 
       {/* ── Why desktop ────────────────────────────────────── */}
-      <section className="border-t border-line py-24 mt-24">
+      <section className="border-t border-line py-16 mt-16 sm:py-24 sm:mt-24">
         <Container>
           <SectionHead
             eyebrow="Why desktop"
@@ -208,7 +208,7 @@ export default function DownloadPage() {
       </section>
 
       {/* ── Waitlist ───────────────────────────────────────── */}
-      <section className="py-24">
+      <section className="py-16 sm:py-24">
         <Container>
           <SectionHead
             eyebrow="Almost there"

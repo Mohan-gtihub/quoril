@@ -31,7 +31,7 @@ export default function Home() {
   return (
     <>
       {/* ───────── HERO ───────── */}
-      <header className="dotgrid relative overflow-hidden px-6 pb-16 pt-[150px] text-center">
+      <header className="dotgrid relative overflow-hidden px-5 pb-14 pt-[120px] text-center sm:px-6 sm:pb-16 sm:pt-[150px]">
         <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] bg-gradient-to-b from-paper to-transparent" />
         {/* <Reveal>
           <Badge>Offline-first · Local + cloud sync · Coming Q3 2026</Badge>
@@ -64,7 +64,7 @@ export default function Home() {
         </Reveal>
 
         <Reveal delay={0.2}>
-          <div className="mt-16">
+          <div className="mt-10 sm:mt-16">
             <AppMockup />
           </div>
         </Reveal>
@@ -73,7 +73,7 @@ export default function Home() {
       {/* ───────── STATS ───────── */}
       <Container>
         <Reveal>
-          <div className="my-20 grid grid-cols-2 gap-6 border-y border-line py-11 text-center md:grid-cols-4">
+          <div className="my-14 grid grid-cols-2 gap-6 border-y border-line py-9 text-center sm:my-20 sm:py-11 md:grid-cols-4">
             {[
               ["5", "Surfaces in one app"],
               ["20+", "Auto-classified categories"],
@@ -87,7 +87,7 @@ export default function Home() {
       </Container>
 
       {/* ───────── FEATURES ───────── */}
-      <section id="features" className="py-20">
+      <section id="features" className="py-14 sm:py-20">
         <Container>
           <SectionHead
             eyebrow="Everything in one place"
@@ -174,7 +174,7 @@ export default function Home() {
       </section>
 
       {/* ───────── ANALYTICS ───────── */}
-      <section id="analytics" className="border-y border-line bg-surface py-24">
+      <section id="analytics" className="border-y border-line bg-surface py-16 sm:py-24">
         <Container>
           <SectionHead
             eyebrow="Reports & Screen Time"
@@ -305,7 +305,7 @@ export default function Home() {
       </section>
 
       {/* ───────── CANVAS + WORKSPACES + SYNC ───────── */}
-      <section className="py-24">
+      <section className="py-16 sm:py-24">
         <Container>
           <SectionHead
             eyebrow="More than a to-do list"
@@ -355,7 +355,7 @@ export default function Home() {
       {/* ───────── FINAL CTA ───────── */}
       <Container>
         <Reveal>
-          <div className="dotgrid relative my-20 overflow-hidden rounded-tile border border-line bg-surface px-6 py-20 text-center shadow-soft">
+          <div className="dotgrid relative my-14 overflow-hidden rounded-tile border border-line bg-surface px-5 py-14 text-center shadow-soft sm:my-20 sm:px-6 sm:py-20">
             <div className="mb-5 flex justify-center">
               <Eyebrow>Q3 2026</Eyebrow>
             </div>

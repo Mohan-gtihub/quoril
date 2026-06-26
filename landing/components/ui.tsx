@@ -11,7 +11,7 @@ export function Container({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`mx-auto w-full max-w-[1180px] px-6 ${className}`}>
+    <div className={`mx-auto w-full max-w-[1180px] px-5 sm:px-6 ${className}`}>
       {children}
     </div>
   );
@@ -42,7 +42,7 @@ export function SectionHead({
   const a =
     align === "center" ? "mx-auto text-center items-center" : "items-start";
   return (
-    <Reveal className={`mb-14 flex max-w-[680px] flex-col ${a}`}>
+    <Reveal className={`mb-10 flex max-w-[680px] flex-col sm:mb-14 ${a}`}>
       {eyebrow && (
         <div className="mb-4">
           <Eyebrow>{eyebrow}</Eyebrow>
@@ -74,7 +74,7 @@ export function Tile({
   return (
     <div
       id={id}
-      className={`group relative overflow-hidden rounded-tile border border-line bg-surface p-6 shadow-soft transition duration-300 ${
+      className={`group relative overflow-hidden rounded-tile border border-line bg-surface p-5 shadow-soft transition duration-300 sm:p-6 ${
         hover ? "hover:-translate-y-1 hover:shadow-lift" : ""
       } ${className}`}
     >

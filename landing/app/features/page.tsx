@@ -130,7 +130,7 @@ export default function FeaturesPage() {
   return (
     <main className="bg-paper">
       {/* ── Hero ─────────────────────────────────────────── */}
-      <section className="pt-[130px] pb-20">
+      <section className="pt-[110px] pb-14 sm:pt-[130px] sm:pb-20">
         <Container>
           <Reveal className="mx-auto flex max-w-[760px] flex-col items-center text-center">
             <div className="mb-5">
@@ -158,7 +158,7 @@ export default function FeaturesPage() {
       </section>
 
       {/* ── Feature grid ─────────────────────────────────── */}
-      <section className="pb-24">
+      <section className="pb-16 sm:pb-24">
         <Container>
           <SectionHead
             eyebrow="The full picture"

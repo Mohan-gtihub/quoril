@@ -49,7 +49,7 @@ export default function AboutPage() {
   return (
     <main className="bg-paper text-ink">
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="pt-[130px] pb-20">
+      <section className="pt-[110px] pb-14 sm:pt-[130px] sm:pb-20">
         <Container>
           <Reveal className="flex max-w-[760px] flex-col items-start">
             <div className="mb-5">
@@ -149,7 +149,7 @@ export default function AboutPage() {
       </section>
 
       {/* ── CTA band ─────────────────────────────────────────── */}
-      <section className="py-24">
+      <section className="py-16 sm:py-24">
         <Container>
           <Reveal className="mx-auto flex max-w-[620px] flex-col items-center text-center">
             <h2 className="font-heading text-[clamp(30px,5vw,52px)] font-semibold leading-[1.05] tracking-[-0.03em] text-ink">

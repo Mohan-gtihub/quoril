@@ -56,7 +56,7 @@ export default function FocusPage() {
   return (
     <main className="bg-paper">
       {/* ── Hero ─────────────────────────────────────────── */}
-      <section className="pt-[130px] pb-20">
+      <section className="pt-[110px] pb-14 sm:pt-[130px] sm:pb-20">
         <Container>
           <Reveal className="mx-auto flex max-w-[800px] flex-col items-center text-center">
             <div className="mb-5">
@@ -82,7 +82,7 @@ export default function FocusPage() {
       </section>
 
       {/* ── Three surfaces ───────────────────────────────── */}
-      <section className="pb-24">
+      <section className="pb-16 sm:pb-24">
         <Container>
           <SectionHead
             eyebrow="One engine, three surfaces"
@@ -190,7 +190,7 @@ export default function FocusPage() {
       </section>
 
       {/* ── Pomodoro ─────────────────────────────────────── */}
-      <section className="pb-24">
+      <section className="pb-16 sm:pb-24">
         <Container>
           <SectionHead
             eyebrow="Rhythm"
@@ -265,7 +265,7 @@ export default function FocusPage() {
       </section>
 
       {/* ── Session types ────────────────────────────────── */}
-      <section className="pb-24">
+      <section className="pb-16 sm:pb-24">
         <Container>
           <SectionHead
             eyebrow="Session types"
@@ -291,7 +291,7 @@ export default function FocusPage() {
       </section>
 
       {/* ── Alerts ───────────────────────────────────────── */}
-      <section className="pb-24">
+      <section className="pb-16 sm:pb-24">
         <Container>
           <SectionHead
             eyebrow="Alerts"
