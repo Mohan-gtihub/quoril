@@ -1,4 +1,4 @@
-import { Container, SectionHead, Tile, TileIcon, Button, Eyebrow } from "@/components/ui";
+import { Container, SectionHead, Tile, TileIcon, ACCENTS, Button, Eyebrow } from "@/components/ui";
 import Reveal from "@/components/Reveal";
 import { Heatmap, Ring, Donut, CategoryBars, FOCUS, BREAK, WELLBEING } from "@/components/Charts";
 import { IconChart, IconScreen, IconArrow } from "@/components/icons";
@@ -129,7 +129,7 @@ export default function InsightsPage() {
                   <h3 className="text-[15px] font-semibold text-ink">
                     Hourly usage heatmap
                   </h3>
-                  <TileIcon>
+                  <TileIcon tint={ACCENTS[0]}>
                     <IconChart className="h-5 w-5" />
                   </TileIcon>
                 </div>
@@ -225,7 +225,7 @@ export default function InsightsPage() {
                   <h3 className="text-[15px] font-semibold text-ink">
                     Productivity split
                   </h3>
-                  <TileIcon>
+                  <TileIcon tint={ACCENTS[2]}>
                     <IconScreen className="h-5 w-5" />
                   </TileIcon>
                 </div>

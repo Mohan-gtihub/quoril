@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Container, Tile, Badge, Eyebrow } from "@/components/ui";
+import { Container, Tile, Badge, Eyebrow, ACCENTS } from "@/components/ui";
 import Reveal from "@/components/Reveal";
 import Waitlist from "@/components/Waitlist";
 import {
@@ -70,7 +70,7 @@ export default function WaitlistPage() {
       <section className="pt-[130px] pb-12">
         <Container>
           <Reveal className="mx-auto flex max-w-[640px] flex-col items-center text-center">
-            <Badge>Early access · Q3 2026</Badge>
+            {/* <Badge>Early access · Q3 2026</Badge> */}
             <h1 className="mt-6 font-heading text-[clamp(34px,6vw,62px)] font-semibold leading-[1.03] tracking-[-0.035em] text-ink">
               Join the Quoril waitlist.
             </h1>
@@ -122,7 +122,14 @@ export default function WaitlistPage() {
             {JOINING.map((j, i) => (
               <Reveal key={j.title} style={{ transitionDelay: `${i * 60}ms` }}>
                 <Tile className="h-full">
-                  <div className="mb-4 grid h-[40px] w-[40px] place-items-center rounded-[12px] border border-line bg-sunken text-ink">
+                  <div
+                    className="mb-4 grid h-[40px] w-[40px] place-items-center rounded-[12px] border"
+                    style={{
+                      background: `${ACCENTS[i % ACCENTS.length]}1A`,
+                      borderColor: `${ACCENTS[i % ACCENTS.length]}33`,
+                      color: ACCENTS[i % ACCENTS.length],
+                    }}
+                  >
                     {j.icon}
                   </div>
                   <h3 className="text-[17px] font-semibold tracking-[-0.01em] text-ink">

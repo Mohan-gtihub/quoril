@@ -4,6 +4,7 @@ import {
   SectionHead,
   Tile,
   TileIcon,
+  ACCENTS,
   Button,
   Eyebrow,
 } from "@/components/ui";
@@ -169,7 +170,7 @@ export default function FeaturesPage() {
             {features.map((f, i) => (
               <Reveal key={f.title} delay={(i % 3) * 0.06}>
                 <Tile className="flex h-full flex-col">
-                  <TileIcon>{f.icon}</TileIcon>
+                  <TileIcon tint={ACCENTS[i % ACCENTS.length]}>{f.icon}</TileIcon>
                   <h3 className="text-[19px] font-semibold tracking-[-0.01em] text-ink">
                     {f.title}
                   </h3>

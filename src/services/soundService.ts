@@ -47,6 +47,10 @@ class SoundService {
 
         if (!path) return null
 
+        // yo, added these cause for mac, base url need to be set right.
+        const base = import.meta.env.BASE_URL || '/'
+        path = base + path.replace(/^\//, '')
+
         // Cache Key = Path (to share instances if multiple keys map to same file)
         const cacheKey = path
 

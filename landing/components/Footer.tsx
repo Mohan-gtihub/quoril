@@ -25,8 +25,16 @@ const COLS: [string, [string, string][]][] = [
     "Company",
     [
       ["About", "/about"],
-      ["Privacy", "/security"],
       ["Contact", "mailto:hello@quoril.app"],
+    ],
+  ],
+  [
+    "Legal",
+    [
+      ["Privacy Policy", "/privacy"],
+      ["Terms of Service", "/terms"],
+      ["Security", "/security"],
+      ["Delete account", "/account/delete"],
     ],
   ],
 ];
@@ -34,7 +42,7 @@ const COLS: [string, [string, string][]][] = [
 export default function Footer() {
   return (
     <footer className="border-t border-line bg-surface">
-      <div className="mx-auto grid max-w-[1180px] grid-cols-2 gap-x-6 gap-y-10 px-5 py-12 sm:px-6 sm:py-16 md:grid-cols-[300px_repeat(3,1fr)] md:gap-10">
+      <div className="mx-auto grid max-w-[1180px] grid-cols-2 gap-x-6 gap-y-10 px-5 py-12 sm:px-6 sm:py-16 md:grid-cols-[260px_repeat(4,1fr)] md:gap-10">
         <div className="col-span-2 max-w-[300px] md:col-span-1">
           <Logo />
           <p className="mt-4 text-[14px] leading-relaxed text-ink-muted">
