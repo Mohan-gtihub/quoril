@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { addSignup, countSignups, EMAIL_RE } from "@/lib/waitlist";
 
-// File I/O — must run on Node, not the edge runtime.
+// Runs server-side so the Supabase insert never touches the client.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

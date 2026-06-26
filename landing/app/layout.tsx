@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Inter, Poppins, Indie_Flower } from "next/font/google";
 import "./globals.css";
-import Nav from "@/components/Nav";
-import Footer from "@/components/Footer";
+import SiteChrome from "@/components/SiteChrome";
 
 // Type system mirrors donethat.ai: Inter for body/UI (variable 100–900),
 // Poppins for headings (400 / 600), Indie Flower for handwritten accents.
@@ -65,15 +65,18 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Admin panel is served at a secret slug rewritten to /admin; the
+  // middleware marks it with the `qadmin` cookie so we can strip the
+  // public chrome here on the server (no hydration flash).
+  const isAdmin = cookies().get("qadmin")?.value === "1";
+
   return (
     <html
       lang="en"
       className={`${inter.variable} ${poppins.variable} ${indie.variable}`}
     >
       <body className="font-sans antialiased">
-        <Nav />
-        <main>{children}</main>
-        <Footer />
+        <SiteChrome isAdmin={isAdmin}>{children}</SiteChrome>
       </body>
     </html>
   );
