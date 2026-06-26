@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Inter, Poppins, Indie_Flower } from "next/font/google";
 import "./globals.css";
-import Nav from "@/components/Nav";
-import Footer from "@/components/Footer";
+import SiteChrome from "@/components/SiteChrome";
 import AnnouncementBar from "@/components/AnnouncementBar";
 import CookieConsent from "@/components/CookieConsent";
 
@@ -67,6 +67,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Admin panel is served at a secret slug rewritten to /admin; the
+  // middleware marks it with the `qadmin` cookie so we can strip the
+  // public chrome here on the server (no hydration flash).
+  const isAdmin = cookies().get("qadmin")?.value === "1";
+
   return (
     <html
       lang="en"
@@ -74,9 +79,7 @@ export default function RootLayout({
     >
       <body className="font-sans antialiased">
         <AnnouncementBar />
-        <Nav />
-        <main>{children}</main>
-        <Footer />
+        <SiteChrome isAdmin={isAdmin}>{children}</SiteChrome>
         <CookieConsent />
       </body>
     </html>
