@@ -125,7 +125,7 @@ export default function Waitlist({ id }: { id?: string }) {
 
                 <div className="space-y-4 rounded-card border border-line bg-paper/60 p-4 sm:p-5">
                   <Field label="I'm a…">
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap justify-center gap-2">
                       {ROLES.map((r) => (
                         <Pill
                           key={r}
@@ -141,7 +141,7 @@ export default function Waitlist({ id }: { id?: string }) {
                   <div className="h-px w-full bg-line" />
 
                   <Field label="Platform">
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap justify-center gap-2">
                       {PLATFORMS.map((p) => (
                         <Pill key={p} active={platform === p} onClick={() => setPlatform(p)}>
                           {p}
@@ -230,7 +230,7 @@ function Field({
 }) {
   return (
     <div>
-      <span className="mb-2.5 block text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
+      <span className="mb-2.5 block text-center text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
         {label}
       </span>
       {children}
