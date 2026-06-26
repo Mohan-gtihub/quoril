@@ -93,10 +93,10 @@ export default function LegalLayout({
             <p className="text-[13px] leading-relaxed text-ink-faint">
               Questions about this document? Email{" "}
               <a
-                href="mailto:hello@quoril.app"
+                href="mailto:hello@quoril.in"
                 className="font-medium text-ink underline-offset-2 hover:underline"
               >
-                hello@quoril.app
+                hello@quoril.in
               </a>
               . See also our{" "}
               <Link
@@ -155,10 +155,10 @@ export function H3({ children }: { children: React.ReactNode }) {
 export function Mail() {
   return (
     <a
-      href="mailto:hello@quoril.app"
+      href="mailto:hello@quoril.in"
       className="font-medium text-ink underline-offset-2 hover:underline"
     >
-      hello@quoril.app
+      hello@quoril.in
     </a>
   );
 }

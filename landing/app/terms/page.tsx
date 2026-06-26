@@ -54,7 +54,7 @@ const sections: LegalSection[] = [
             "Provide accurate information and keep it up to date.",
             "Keep your login credentials confidential and secure.",
             "Be responsible for all activity that occurs under your account.",
-            "Notify us promptly at hello@quoril.app of any unauthorised use.",
+            "Notify us promptly at hello@quoril.in of any unauthorised use.",
           ]}
         />
       </>

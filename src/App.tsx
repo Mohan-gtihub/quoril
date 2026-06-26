@@ -176,7 +176,7 @@ function App() {
 
                 // AUTH LOGIC
                 // Re-parse as a proper URL so URL() can parse query params correctly
-                const parsableUrl = url.replace(/^quoril:\/\//, 'https://quoril.app/')
+                const parsableUrl = url.replace(/^quoril:\/\//, 'https://quoril.in/')
                 const parsed = new URL(parsableUrl)
 
                 // --- PKCE flow: ?code=xxxx (Supabase default) ---

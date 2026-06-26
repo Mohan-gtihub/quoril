@@ -866,7 +866,7 @@ npm install
 
 ### `active-win` permission error (macOS)
 - Go to System Settings > Privacy & Security > Accessibility
-- Enable Quoril.app
+- Enable quoril.in
 - Or use the in-app permission card in Settings
 
 ### Build fails with EBUSY

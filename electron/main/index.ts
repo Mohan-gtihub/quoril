@@ -46,7 +46,7 @@ function getIconPath() {
 
 /* Set App User Model ID so Windows Search can find the app */
 if (process.platform === 'win32') {
-    app.setAppUserModelId('com.quoril.app')
+    app.setAppUserModelId('com.quoril.in')
 }
 
 /* ---------------- STATE ---------------- */

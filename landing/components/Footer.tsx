@@ -25,7 +25,7 @@ const COLS: [string, [string, string][]][] = [
     "Company",
     [
       ["About", "/about"],
-      ["Contact", "mailto:hello@quoril.app"],
+      ["Contact", "mailto:hello@quoril.in"],
     ],
   ],
   [

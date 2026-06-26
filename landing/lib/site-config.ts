@@ -7,6 +7,12 @@
  *   point set this to `true` and the consent banner appears as legally needed.
  */
 
+/** Canonical production origin — single source of truth for all SEO URLs. */
+export const SITE_URL = "https://quoril.in";
+
+/** Public contact address surfaced in metadata / structured data. */
+export const CONTACT_EMAIL = "hello@quoril.in";
+
 export const siteConfig = {
   /** Top announcement / early-access bar. Set `enabled: false` to hide it. */
   announcement: {

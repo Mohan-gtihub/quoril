@@ -178,7 +178,7 @@ function Login() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="mb-4 w-full rounded-pill border border-line-strong bg-paper px-4 py-3 text-[15px] text-ink outline-none transition focus:border-focus/50 focus:ring-4 focus:ring-focus/10"
-          placeholder="you@quoril.app"
+          placeholder="you@quoril.in"
         />
 
         <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-faint">
