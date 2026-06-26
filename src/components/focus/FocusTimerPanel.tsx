@@ -614,7 +614,6 @@ export function FocusTimerPanel() {
                                             task={t}
                                             column="today"
                                             draggable
-                                            disableTimer
                                             onComplete={() => useTaskStore.getState().toggleComplete(t.id)}
                                         />
                                     </div>
