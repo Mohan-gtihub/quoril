@@ -79,6 +79,7 @@
     "react-router-dom": "^6.21.0",
     "react-tooltip": "^5.30.0",
     "recharts": "^2.10.3",
+    "resend": "^6.16.0",
     "tailwind-merge": "^2.2.0",
     "tiptap-extension-font-size": "^1.2.0",
     "uuid": "^10.0.0",

@@ -85,7 +85,7 @@ export default function Nav() {
         </div>
 
         <div className="flex items-center gap-2">
-          <ThemeToggle />
+          <ThemeToggle className="hidden md:grid" />
           <Link
             href="/waitlist"
             className="rounded-pill bg-ink px-[17px] py-2.5 text-[14px] font-semibold text-paper transition hover:bg-ink/90"
@@ -127,6 +127,11 @@ export default function Nav() {
               {l.label}
             </Link>
           ))}
+
+          <div className="mt-1 flex items-center justify-between rounded-[12px] border border-line px-4 py-2.5">
+            <span className="text-[15px] font-medium text-ink-muted">Theme</span>
+            <ThemeToggle />
+          </div>
         </div>
       )}
     </nav>
