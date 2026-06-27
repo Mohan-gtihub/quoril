@@ -384,6 +384,10 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
     ipcMain.on('resize-window', (event, { width, height, x, y }) => {
         const win = BrowserWindow.fromWebContents(event.sender)
         if (win) {
+            // Capture the display the window is currently on BEFORE unmaximizing,
+            // so the compact focus widget stays on the same monitor (multi-monitor fix).
+            const display = screen.getDisplayMatching(win.getBounds())
+
             win.setResizable(true)
             win.unmaximize()
             win.setFullScreen(false)
@@ -391,7 +395,17 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
             win.setMinimumSize(0, 0)
 
             if (typeof x === 'number' && typeof y === 'number') {
-                win.setBounds({ width, height, x, y })
+                // x/y arrive as offsets from the screen's top-left (e.g. 20,20).
+                // Anchor them to the CURRENT display's work area instead of the
+                // global origin (which is always the primary monitor), so the
+                // window doesn't jump to screen 1 when resized on screen 2.
+                const area = display.workArea
+                win.setBounds({
+                    width,
+                    height,
+                    x: area.x + x,
+                    y: area.y + y,
+                })
             } else {
                 win.setSize(width, height)
             }
@@ -405,12 +419,18 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
         mainWindow.setResizable(true)
         mainWindow.setMinimumSize(820, 560)
 
-const display = screen.getDisplayMatching(mainWindow.getBounds())
+        const display = screen.getDisplayMatching(mainWindow.getBounds())
         const { width: sw, height: sh } = display.workAreaSize
         const w = Math.min(1400, Math.max(900, Math.floor(sw * 0.9)))
         const h = Math.min(900, Math.max(600, Math.floor(sh * 0.9)))
-        mainWindow.setSize(w, h)
-        mainWindow.center()
+
+        // Center within the CURRENT display, not the primary one. mainWindow.center()
+        // always centers on the primary monitor, which yanks the window back to
+        // screen 1 when restoring from focus mode on a secondary monitor.
+        const area = display.workArea
+        const x = Math.round(area.x + (area.width - w) / 2)
+        const y = Math.round(area.y + (area.height - h) / 2)
+        mainWindow.setBounds({ x, y, width: w, height: h })
     })
 
     /* App Info */

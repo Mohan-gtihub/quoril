@@ -17,6 +17,9 @@ export const getTaskTotalActual = (task: Task | null | undefined, includeLive: b
         liveDelta = Math.floor((Date.now() - new Date(task.started_at).getTime()) / 1000)
     }
 
+    // Backup only exists while a session is in flight (or after a crash) — it is
+    // cleared on every confirmed DB write (see taskStore.updateTask). So Math.max
+    // here is crash-recovery, not a competing source of truth.
     const backupValue = backupService.get(task.id) ?? 0
     // Return integer to prevent floating-point values in DB
     return Math.floor(Math.max(baseSeconds + liveDelta, backupValue))

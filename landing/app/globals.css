@@ -2,21 +2,122 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ───────────────────────────────────────────────────────────
+   THEME TOKENS
+   :root = original "Daylight" light system (DEFAULT)
+   .dark = "Midnight" variant (toggled via sun/moon switch)
+   Values are `R G B` channel triples so Tailwind's /opacity works.
+─────────────────────────────────────────────────────────── */
+:root {
+  /* surfaces */
+  --c-paper: 251 251 250; /* #FBFBFA warm white */
+  --c-surface: 255 255 255; /* #FFFFFF */
+  --c-sunken: 244 244 242; /* #F4F4F2 */
+  --c-line: 235 234 230; /* #EBEAE6 */
+  --c-line-strong: 222 221 215; /* #DEDDD7 */
+  /* text */
+  --c-ink: 22 22 15; /* #16160F warm near-black */
+  --c-ink-muted: 107 106 99; /* #6B6A63 */
+  --c-ink-faint: 156 155 146; /* #9C9B92 */
+  /* priority ramp */
+  --c-prio-critical: 22 22 15;
+  --c-prio-high: 107 107 102;
+  --c-prio-medium: 168 168 161;
+  --c-prio-low: 207 206 199;
+  /* state */
+  --c-success: 21 128 61;
+  --c-warning: 180 83 9;
+  --c-error: 220 38 38;
+  /* accents */
+  --c-focus: 43 107 245; /* #2B6BF5 */
+  --c-break: 245 166 35; /* #F5A623 */
+  --c-wellbeing: 16 196 154; /* #10C49A */
+  --c-deepslate: 61 61 61; /* #3D3D3D */
+  --c-brand: 22 22 15; /* light theme: brand == ink (monochrome) */
+
+  /* elevations */
+  --shadow-soft: 0 1px 2px rgba(22, 22, 15, 0.04),
+    0 10px 28px -16px rgba(22, 22, 15, 0.14);
+  --shadow-lift: 0 2px 6px rgba(22, 22, 15, 0.05),
+    0 24px 56px -28px rgba(22, 22, 15, 0.22);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  /* texture helpers */
+  --dot-color: rgba(22, 22, 15, 0.05);
+  --aurora: transparent;
+  --sheen-color: rgba(22, 22, 15, 0.18);
+  --scrollbar-track: #fbfbfa;
+  --scrollbar-thumb: #dcdbd5;
+  --scrollbar-thumb-hover: #c7c6bf;
+  --selection-bg: #16160f;
+  --selection-fg: #fbfbfa;
+}
+
+.dark {
+  /* surfaces (near-black, faint cool tint) */
+  --c-paper: 8 9 12; /* #08090C */
+  --c-surface: 14 16 20; /* #0E1014 */
+  --c-sunken: 21 24 30; /* #15181E */
+  --c-line: 38 41 48; /* ~rgba white 0.08 flattened */
+  --c-line-strong: 56 60 68;
+  /* text */
+  --c-ink: 244 245 247; /* #F4F5F7 */
+  --c-ink-muted: 155 161 173; /* #9BA1AD */
+  --c-ink-faint: 100 107 120; /* #646B78 */
+  /* priority ramp (brighter = higher) */
+  --c-prio-critical: 244 245 247;
+  --c-prio-high: 155 161 173;
+  --c-prio-medium: 100 107 120;
+  --c-prio-low: 58 63 73;
+  /* state */
+  --c-success: 62 207 142;
+  --c-warning: 245 166 35;
+  --c-error: 239 68 68;
+  /* accents (dark-tuned) */
+  --c-focus: 91 141 239; /* #5B8DEF */
+  --c-break: 245 166 35;
+  --c-wellbeing: 45 212 167; /* #2DD4A7 */
+  --c-deepslate: 27 31 39;
+  --c-brand: 91 141 239; /* dark theme: cool blue brand accent */
+
+  /* elevations */
+  --shadow-soft: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 16px 40px -24px rgba(0, 0, 0, 0.8);
+  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 32px 64px -28px rgba(0, 0, 0, 0.9);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  /* texture helpers */
+  --dot-color: rgba(255, 255, 255, 0.045);
+  --aurora: radial-gradient(
+    60% 50% at 50% 0%,
+    rgba(91, 141, 239, 0.16) 0%,
+    transparent 70%
+  );
+  --sheen-color: rgba(91, 141, 239, 0.55);
+  --scrollbar-track: #08090c;
+  --scrollbar-thumb: #2a2f38;
+  --scrollbar-thumb-hover: #3a4049;
+  --selection-bg: #5b8def;
+  --selection-fg: #ffffff;
+}
+
 html {
   scroll-behavior: smooth;
 }
 
 body {
-  background: #fbfbfa;
-  color: #16160f;
+  background: rgb(var(--c-paper));
+  color: rgb(var(--c-ink));
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 ::selection {
-  background: #16160f;
-  color: #fbfbfa;
+  background: var(--selection-bg);
+  color: var(--selection-fg);
 }
 
 /* tabular numerals for any timer / metric */
@@ -27,13 +128,18 @@ body {
 
 /* subtle dotted backdrop — quiet texture, not noise */
 .dotgrid {
-  background-image: radial-gradient(rgba(22, 22, 15, 0.05) 1px, transparent 1px);
+  background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);
   background-size: 22px 22px;
+}
+
+/* faint top-down glow behind hero / CTA blocks (dark theme only) */
+.aurora {
+  background: var(--aurora);
 }
 
 /* hairline helper (sub-pixel crisp on hi-dpi) */
 .hairline {
-  box-shadow: 0 0 0 1px #ebeae6;
+  box-shadow: 0 0 0 1px rgb(var(--c-line));
 }
 
 /* thin custom scrollbar */
@@ -41,18 +147,18 @@ body {
   width: 11px;
 }
 ::-webkit-scrollbar-track {
-  background: #fbfbfa;
+  background: var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
-  background: #dcdbd5;
+  background: var(--scrollbar-thumb);
   border-radius: 999px;
-  border: 3px solid #fbfbfa;
+  border: 3px solid var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #c7c6bf;
+  background: var(--scrollbar-thumb-hover);
 }
 
-/* very slow sheen on the waitlist card edge — monochrome, restrained */
+/* very slow sheen on the waitlist card edge — restrained */
 .sheen {
   position: relative;
 }
@@ -65,7 +171,7 @@ body {
   background: linear-gradient(
     120deg,
     transparent 35%,
-    rgba(22, 22, 15, 0.18) 50%,
+    var(--sheen-color) 50%,
     transparent 65%
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);

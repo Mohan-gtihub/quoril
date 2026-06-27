@@ -66,6 +66,9 @@ export interface FocusState {
     pomodoroRemainingAtStart: number // seconds (base for delta)
     pomodoroTotal: number // seconds (progress denominator)
     lastAlertElapsed: number // seconds (at which last alert played)
+    lastTickTime: number | null // ms (wall-clock of last syncTimer tick; sleep detection)
+    completedPomodoros: number // count of focus pomodoros completed in the current cycle (long-break cadence)
+    isLongBreak: boolean // whether the active break is a long break
 
     /* Actions */
     startSession: (
@@ -76,7 +79,7 @@ export interface FocusState {
 
     startFocus: (taskId: string) => Promise<void>
 
-    startBreak: (durationMinutes?: number) => Promise<void>
+    startBreak: (durationMinutes?: number, opts?: { auto?: boolean }) => Promise<void>
     stopBreak: () => Promise<void>
 
     pauseSession: (updateStatus?: boolean) => Promise<void>
@@ -94,7 +97,7 @@ export interface FocusState {
 
     skipToNext: (nextTaskId?: string) => Promise<void>
 
-    syncTimer: () => void
+    syncTimer: () => Promise<void>
 
     fetchSessions: () => Promise<void>
 
@@ -143,6 +146,9 @@ export const useFocusStore = create<FocusState>()(
             pomodoroRemainingAtStart: 0,
             pomodoroTotal: 1500,
             lastAlertElapsed: 0,
+            lastTickTime: null,
+            completedPomodoros: 0,
+            isLongBreak: false,
 
             /* ---------------- START ---------------- */
 
@@ -150,33 +156,44 @@ export const useFocusStore = create<FocusState>()(
                 await get().startSession(taskId)
             },
 
-            startBreak: async (durationMinutes) => {
+            startBreak: async (durationMinutes, opts) => {
                 const state = get() // Fresh state
 
                 // CRITICAL FIX: If a session is active, we MUST pause it to close the DB record
                 // before starting the break state. Otherwise we leave open sessions.
                 if (state.isActive && !state.isPaused) {
-                    // updateStatus=false because we're just pausing for a break, maybe don't want to visually 'Pause' the task card?
-                    // Actually, if we are in break, the task IS paused. So true is correct.
-                    // But maybe we want the task card to show "Break"? 
-                    // For now, let's just pause properly to save data.
                     await get().pauseSession(true)
                 }
 
-                // Re-get state after await
-                // Re-get state after await
-
                 const settings = useSettingsStore.getState()
-                const mins = durationMinutes ?? settings.defaultBreakLength
+
+                // Long-break cadence: when a focus pomodoro auto-completes, count it
+                // and switch to a long break every Nth completion (C3). Manual breaks
+                // (explicit duration, not auto) don't advance the cycle.
+                let completed = get().completedPomodoros
+                let isLong = false
+                if (opts?.auto) {
+                    completed += 1
+                    const cadence = Math.max(1, settings.pomodorosUntilLongBreak || 4)
+                    isLong = completed % cadence === 0
+                }
+
+                const defaultMins = isLong
+                    ? (settings.longBreakLength || 20)
+                    : settings.defaultBreakLength
+                const mins = durationMinutes ?? defaultMins
                 const seconds = mins * 60
                 const now = Date.now()
 
                 set({
                     isBreak: true,
+                    isLongBreak: isLong,
+                    completedPomodoros: completed,
                     breakRemaining: seconds,
                     breakRemainingAtStart: seconds,
                     breakElapsed: 0,
                     startTime: now,
+                    lastTickTime: now,
                     lastAlertElapsed: 0,
                     isPaused: false, // Break is "running"
 
@@ -211,7 +228,7 @@ export const useFocusStore = create<FocusState>()(
                                 start_time: accurateStartTime,
                                 end_time: new Date().toISOString(),
                                 planned_seconds: s.breakRemainingAtStart,
-                                session_type: 'break',
+                                session_type: s.isLongBreak ? 'long_break' : 'break',
                                 seconds: totalBreak,
                             })
                             await localService.focus.create(sessionData)
@@ -229,8 +246,10 @@ export const useFocusStore = create<FocusState>()(
 
                 set({
                     isBreak: false,
+                    isLongBreak: false,
                     isPaused: s.isActive && !!s.taskId,
                     startTime: null,
+                    lastTickTime: null,
                     pomodoroRemaining: pTime,
                     pomodoroRemainingAtStart: pTime,
                     pomodoroTotal: pTime,
@@ -290,6 +309,7 @@ export const useFocusStore = create<FocusState>()(
                         breakRemaining: 0,
                         breakRemainingAtStart: 0,
                         lastAlertElapsed: previous,
+                        lastTickTime: now,
                         showCelebration: false,
                         celebratedTask: null,
                         celebratedDuration: 0
@@ -335,7 +355,7 @@ export const useFocusStore = create<FocusState>()(
 
                 if (s.isBreak) {
                     const totalBreak = s.breakElapsed + delta
-                    set({ breakElapsed: totalBreak, startTime: null, isPaused: true })
+                    set({ breakElapsed: totalBreak, startTime: null, isPaused: true, lastTickTime: null })
                 } else {
                     const total = s.elapsed + delta
                     const pRem = s.pomodoroRemainingAtStart - delta
@@ -369,6 +389,10 @@ export const useFocusStore = create<FocusState>()(
                             }))
                         } catch (e) {
                             console.error("Failed to close session on pause", e)
+                            // Surface the failure: the segment's time may not have
+                            // been persisted, so the user gets a signal instead of
+                            // silently losing tracked time (L5).
+                            toast.error("Couldn't save this focus segment. Your time may be incomplete.")
                         }
                     }
 
@@ -388,7 +412,8 @@ export const useFocusStore = create<FocusState>()(
                         isPaused: true,
                         pomodoroRemaining: Math.max(0, pRem),
                         pomodoroRemainingAtStart: Math.max(0, pRem),
-                        currentSessionId: null
+                        currentSessionId: null,
+                        lastTickTime: null
                     })
 
                     // No fetchSessions() here (Race condition fix)
@@ -398,13 +423,8 @@ export const useFocusStore = create<FocusState>()(
             /* ---------------- RESUME ---------------- */
 
             resumeSession: async () => {
-                const s = get()
+                const before = get()
                 const now = Date.now()
-
-                // CRITICAL FIX: Handle Race Condition
-                // 1. Fetch User first (async)
-                // 2. Then set state (sync)
-                // 3. Then create DB record
 
                 let userId: string | null = null
                 try {
@@ -412,8 +432,17 @@ export const useFocusStore = create<FocusState>()(
                     if (userData.data?.user) userId = userData.data.user.id
                 } catch (e) { console.error('Auth check failed on resume', e) }
 
+                // M5: The user may have paused/switched tasks during the await above.
+                // Re-read fresh state and abort if the resume context no longer holds
+                // (different task, or already running) so we never create a session
+                // record against a stale task snapshot.
+                const s = get()
+                if (s.taskId !== before.taskId || (s.isActive && !s.isPaused)) {
+                    return
+                }
+
                 // State update: immediate
-                set({ startTime: now, isPaused: false })
+                set({ startTime: now, isPaused: false, lastTickTime: now })
 
                 // Logic
                 if (!s.isBreak && s.taskId) {
@@ -529,7 +558,8 @@ export const useFocusStore = create<FocusState>()(
                         showFocusPanel: shouldClosePanel ? false : s.showFocusPanel,
                         isBreak: false,
                         pomodoroRemaining: 0,
-                        breakRemaining: 0
+                        breakRemaining: 0,
+                        lastTickTime: null
                     })
 
                     platform.tracker.setContext(null)
@@ -556,7 +586,7 @@ export const useFocusStore = create<FocusState>()(
 
             /* ---------------- TIMER ---------------- */
 
-            syncTimer: () => {
+            syncTimer: async () => {
                 const s = get()
                 if (!s.isActive || !s.startTime || s.isPaused) return
 
@@ -569,12 +599,27 @@ export const useFocusStore = create<FocusState>()(
                 const now = Date.now()
                 const delta = Math.floor((now - s.startTime) / 1000)
 
-                const MAX_DELTA = 3600 // 1 hour — anything larger means system was asleep
-                if (delta > MAX_DELTA) {
+                // Sleep detection: a *gap* between consecutive ticks (not total
+                // elapsed) larger than this means the machine was suspended or the
+                // tab was frozen for a long time. A legitimately long but continuous
+                // session keeps ticking ~1s apart and is never force-paused (H1).
+                const SLEEP_GAP = 300 // 5 min between ticks ⇒ machine slept
+                const gap = s.lastTickTime ? Math.floor((now - s.lastTickTime) / 1000) : 0
+
+                if (gap > SLEEP_GAP) {
+                    // Credit only the time we can actually account for (up to the
+                    // last observed tick), then pause. Pausing recomputes the delta
+                    // from startTime, so first pin startTime to lastTickTime to
+                    // exclude the slept interval — avoids crediting a multi-hour
+                    // sleep as focus while still keeping the real work (H1).
                     toast("Session paused — long inactivity detected. Resume when ready.")
-                    get().pauseSession(false)
+                    set({ startTime: s.lastTickTime ?? s.startTime })
+                    await get().pauseSession(false)
+                    set({ lastTickTime: null })
                     return
                 }
+
+                set({ lastTickTime: now })
 
                 // BREAK MODE
                 if (s.isBreak) {
@@ -601,9 +646,9 @@ export const useFocusStore = create<FocusState>()(
                     if (rem === 0 && s.pomodoroRemainingAtStart > 0 && s.pomodoroRemaining > 0) {
                         set({ pomodoroRemaining: 0 }) // Sync update
 
-                        // Trigger Break
+                        // Trigger Break (auto ⇒ advances long-break cadence)
                         toast("Focus session complete! Take a break.")
-                        get().startBreak()
+                        get().startBreak(undefined, { auto: true })
                         return // EXIT to avoid double-process
                     }
 
@@ -654,6 +699,7 @@ export const useFocusStore = create<FocusState>()(
                     isBreak: false,
                     pomodoroRemaining: 0,
                     breakRemaining: 0,
+                    lastTickTime: null,
                     showCelebration: false,
                     celebratedTask: null,
                     celebratedDuration: 0
@@ -697,7 +743,10 @@ export const useFocusStore = create<FocusState>()(
                 taskId: s.taskId,
                 isActive: s.isActive,
                 isPaused: s.isPaused,
-                // do not persist startTime
+                // Persist startTime so a reload/crash can reconstruct in-flight
+                // time instead of silently dropping it (H2). Rehydration folds
+                // the wall-clock delta into `elapsed` and clears startTime.
+                startTime: s.startTime,
                 elapsed: s.elapsed,
                 duration: s.duration,
                 sessionType: s.sessionType,
@@ -708,13 +757,56 @@ export const useFocusStore = create<FocusState>()(
                 breakRemainingAtStart: s.breakRemainingAtStart,
                 pomodoroRemaining: s.pomodoroRemaining,
                 pomodoroRemainingAtStart: s.pomodoroRemainingAtStart,
-                pomodoroTotal: s.pomodoroTotal
+                pomodoroTotal: s.pomodoroTotal,
+                lastTickTime: s.lastTickTime,
+                completedPomodoros: s.completedPomodoros,
+                isLongBreak: s.isLongBreak
             }),
             onRehydrateStorage: () => (state) => {
-                // Rehydration Fix: If active but no startTime, we must pause.
-                if (state && state.isActive && !state.startTime && !state.isPaused) {
+                if (!state) return
+
+                // H2: If we persisted a live startTime, the app was closed/crashed
+                // mid-session. Reconstruct the in-flight time from wall-clock and
+                // fold it into the accumulated total, then land in a paused state
+                // so the user explicitly resumes. Cap the credited delta at
+                // MAX_DELTA (1h) to avoid crediting time across a multi-day close.
+                if (state.isActive && state.startTime && !state.isPaused) {
+                    const MAX_DELTA = 3600
+                    const rawDelta = Math.floor((Date.now() - state.startTime) / 1000)
+                    const delta = Math.max(0, Math.min(rawDelta, MAX_DELTA))
+
+                    if (state.isBreak) {
+                        state.breakElapsed = (state.breakElapsed || 0) + delta
+                    } else {
+                        state.elapsed = (state.elapsed || 0) + delta
+                        const pRem = (state.pomodoroRemainingAtStart || 0) - delta
+                        state.pomodoroRemaining = Math.max(0, pRem)
+                        state.pomodoroRemainingAtStart = Math.max(0, pRem)
+                    }
+
+                    // Close the orphaned (never-ended) DB session so the recovered
+                    // time is reflected in the session-based reports, not just in
+                    // the task's cached spent_s. Deferred because rehydrate is sync.
+                    const recoveredId = state.currentSessionId
+                    const recoveredStart = state.startTime
+                    if (recoveredId && delta > 0) {
+                        Promise.resolve().then(() =>
+                            localService.focus.update(recoveredId, sanitizeSessionData({
+                                end_time: new Date().toISOString(),
+                                seconds: delta,
+                                start_time: new Date(recoveredStart!).toISOString(),
+                            })).catch((e) => console.error('[Focus] crash-recovery session close failed', e))
+                        )
+                    }
+                    state.currentSessionId = null
+                }
+
+                // Either way, a rehydrated session must not keep a live startTime:
+                // it would otherwise double-count from the original start on the
+                // next tick. Pause and clear so resume creates a fresh segment.
+                if (state.isActive) {
                     state.isPaused = true
-                    // state.isActive = true (keep active so user knows they were in a task)
+                    state.startTime = null
                 }
             }
         }

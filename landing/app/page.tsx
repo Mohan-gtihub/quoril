@@ -5,7 +5,7 @@ import AppMockup from "@/components/AppMockup";
 import FocusPill from "@/components/FocusPill";
 import { Heatmap, Ring, Donut, CategoryBars, FOCUS, BREAK, WELLBEING } from "@/components/Charts";
 
-const SLATE = "#3D3D3D"; // deep slate accent
+const SLATE = "#8A8A82"; // neutral mid-grey accent — reads on light + dark
 import {
   Container,
   SectionHead,
@@ -14,7 +14,6 @@ import {
   Badge,
   Button,
   Stat,
-  Eyebrow,
 } from "@/components/ui";
 import {
   IconBoard,
@@ -32,13 +31,16 @@ export default function Home() {
     <>
       {/* ───────── HERO ───────── */}
       <header className="dotgrid relative overflow-hidden px-5 pb-14 pt-[120px] text-center sm:px-6 sm:pb-16 sm:pt-[150px]">
-        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] bg-gradient-to-b from-paper to-transparent" />
-        {/* <Reveal>
-          <Badge>Offline-first · Local + cloud sync · Coming Q3 2026</Badge>
-        </Reveal> */}
+        {/* light theme: soft paper fade; dark theme: cool aurora glow */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] bg-gradient-to-b from-paper to-transparent dark:hidden" />
+        <div className="aurora pointer-events-none absolute inset-x-0 top-0 -z-10 hidden h-[620px] dark:block" />
+
+        <Reveal>
+          <Badge>Offline-first · Local + cloud sync · Coming soon</Badge>
+        </Reveal>
 
         <Reveal delay={0.05}>
-          <h1 className="mx-auto mt-7 max-w-[15ch] font-heading text-[clamp(40px,6.6vw,80px)] font-semibold leading-[1.02] tracking-[-0.04em] text-ink">
+          <h1 className="mx-auto mt-7 max-w-[15ch] font-heading text-[clamp(40px,6.6vw,82px)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
             The productivity OS for deep work.
           </h1>
         </Reveal>
@@ -48,12 +50,6 @@ export default function Home() {
             Quoril unifies tasks, focus tracking, app analytics and digital
             wellbeing into one native desktop command center. Built for people
             who ship.
-          </p>
-        </Reveal>
-
-        <Reveal delay={0.12}>
-          <p className="mt-5 font-hand text-[clamp(20px,2.6vw,26px)] text-ink-faint">
-            one quiet window for your whole day
           </p>
         </Reveal>
 
@@ -220,9 +216,6 @@ export default function Home() {
                   the breakdown.
                 </p>
                 <Heatmap />
-                <p className="mt-3 font-hand text-[16px] text-ink-faint">
-                  your afternoons are gold ✦
-                </p>
               </Tile>
             </Reveal>
 
@@ -355,24 +348,21 @@ export default function Home() {
       {/* ───────── FINAL CTA ───────── */}
       <Container>
         <Reveal>
-          <div className="dotgrid relative my-14 overflow-hidden rounded-tile border border-line bg-surface px-5 py-14 text-center shadow-soft sm:my-20 sm:px-6 sm:py-20">
-            <div className="mb-5 flex justify-center">
-              {/* <Eyebrow>Q3 2026</Eyebrow> */}
-            </div>
-            <h2 className="text-[clamp(30px,5vw,52px)] font-semibold leading-tight tracking-[-0.03em] text-ink">
-              Stop switching apps.
-              <br />
-              Start shipping.
-            </h2>
-            <p className="mx-auto mt-4 max-w-[520px] text-[18px] text-ink-muted">
-              Join the waitlist and be first to turn your desktop into a focus
-              machine.
-            </p>
-            <p className="mt-4 font-hand text-[20px] text-ink-faint">
-              made for people who'd rather be making things
-            </p>
-            <div className="mx-auto mt-8 max-w-[760px]">
-              <Waitlist />
+          <div className="dotgrid relative my-14 overflow-hidden rounded-tile border border-line bg-surface px-5 py-14 text-center shadow-lift sm:my-20 sm:px-6 sm:py-20">
+            <div className="aurora pointer-events-none absolute inset-x-0 top-0 h-full opacity-70" />
+            <div className="relative">
+              <h2 className="font-heading text-[clamp(30px,5vw,52px)] font-semibold leading-tight tracking-[-0.035em] text-ink">
+                Stop switching apps.
+                <br />
+                Start shipping.
+              </h2>
+              <p className="mx-auto mt-4 max-w-[520px] text-[18px] text-ink-muted">
+                Join the waitlist and be first to turn your desktop into a focus
+                machine.
+              </p>
+              <div className="mx-auto mt-8 max-w-[760px]">
+                <Waitlist />
+              </div>
             </div>
           </div>
         </Reveal>

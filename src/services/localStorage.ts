@@ -217,20 +217,33 @@ export const localService = {
             return { error: null }
         },
 
-        start: (id: string) => {
-            if (!db()) return // Fallback handled by store usually? No, store calls this. 
-            // If No DB, we technically can't "START" locally with high precision if the logic is in C++.
-            // But looking at previous code: `db()?.startTask(id)` implies it returns something?
-            // Actually `startTask` in local DB likely updates `started_at` column.
-
-            // Fallback:
-            // supabase.from('tasks').update({ started_at: new Date().toISOString() }).eq('id', id)
-            // But this is async and `start` here calculates duration?
-            // The `db().startTask(id)` likely returns the updated task row?
-            return db()?.startTask(id)
+        start: async (id: string) => {
+            // Web (Supabase-only) path: stamp started_at so live-time calculations
+            // and crash recovery work the same as on the desktop DB path (L4).
+            if (!db()) {
+                const { data, error } = await (supabase.from('tasks') as any)
+                    .update({ started_at: new Date().toISOString(), status: 'active' })
+                    .eq('id', id)
+                    .select()
+                    .single()
+                if (error) return { data: null, error: error.message }
+                return { data: mapTask(data), error: null }
+            }
+            return db().startTask(id)
         },
 
-        pause: (id: string) => db()?.pauseTask(id),
+        pause: async (id: string) => {
+            if (!db()) {
+                const { data, error } = await (supabase.from('tasks') as any)
+                    .update({ started_at: null, status: 'paused' })
+                    .eq('id', id)
+                    .select()
+                    .single()
+                if (error) return { data: null, error: error.message }
+                return { data: mapTask(data), error: null }
+            }
+            return db().pauseTask(id)
+        },
 
         reorder: async (items: { id: string; sort_order: number }[]) => {
             if (!db()) {
@@ -517,7 +530,8 @@ export const localService = {
                 user_id: user.id,
                 task_id: session.task_id,
                 type: session.session_type || 'focus',
-                seconds: session.actual_seconds || 0,
+                // Callers pass `seconds` directly; keep `actual_seconds` as a legacy alias.
+                seconds: session.seconds ?? session.actual_seconds ?? 0,
                 start_time: session.start_time,
                 end_time: session.end_time,
                 metadata: JSON.stringify({

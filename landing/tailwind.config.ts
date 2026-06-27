@@ -1,69 +1,82 @@
 import type { Config } from "tailwindcss";
 
 /**
- * Quoril marketing — "Daylight" light system.
- * Near-monochrome: warm paper surfaces, near-black ink, soft greys.
- * No chromatic brand accent — emphasis comes from ink weight, type
- * scale and whitespace (Linear / Vercel / donethat school).
+ * Quoril marketing — dual-theme system.
+ *
+ * The original "Daylight" light system is the DEFAULT (warm paper, near-black
+ * ink, no chromatic brand accent — Linear / Vercel / donethat school). A dark
+ * "Midnight" variant is available via the `.dark` class on <html>, toggled by
+ * the sun/moon switch in the nav.
+ *
+ * Every semantic token resolves to a CSS variable defined in globals.css, so
+ * the same `bg-surface` / `text-ink` classes work in both themes — only the
+ * variable values flip. `<alpha-value>` keeps Tailwind opacity modifiers
+ * (e.g. text-ink/70) working with the rgb channel triples.
  */
+const v = (name: string) => `rgb(var(${name}) / <alpha-value>)`;
+
 const config: Config = {
+  darkMode: "class",
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
         // surfaces
-        paper: "#FBFBFA", // page background (warm white)
-        surface: "#FFFFFF", // cards / elevated
-        sunken: "#F4F4F2", // inputs, tracks, chips
-        line: "#EBEAE6", // hairline borders
-        "line-strong": "#DEDDD7",
+        paper: v("--c-paper"),
+        surface: v("--c-surface"),
+        sunken: v("--c-sunken"),
+        line: v("--c-line"),
+        "line-strong": v("--c-line-strong"),
         // text
         ink: {
-          DEFAULT: "#16160F", // primary (warm near-black)
-          muted: "#6B6A63", // secondary
-          faint: "#9C9B92", // tertiary / captions
+          DEFAULT: v("--c-ink"),
+          muted: v("--c-ink-muted"),
+          faint: v("--c-ink-faint"),
         },
-        // priority dots — monochrome ink ramp (darker = higher priority),
-        // keeps the board calm and on-palette with the rest of the site
+        // priority dots — ink ramp
         prio: {
-          critical: "#16160f",
-          high: "#6b6b66",
-          medium: "#a8a8a1",
-          low: "#cfcec7",
+          critical: v("--c-prio-critical"),
+          high: v("--c-prio-high"),
+          medium: v("--c-prio-medium"),
+          low: v("--c-prio-low"),
         },
         state: {
-          success: "#15803d",
-          warning: "#b45309",
-          error: "#dc2626",
+          success: v("--c-success"),
+          warning: v("--c-warning"),
+          error: v("--c-error"),
         },
         // Quoril accent palette
-        focus: "#2B6BF5", // active focus sessions, sync status, ring timer fill
-        break: "#F5A623", // pomodoro breaks, time warnings, streak indicators
-        wellbeing: "#10C49A", // task done, high productivity score, healthy usage
-        deepslate: "#3D3D3D", // secondary surfaces, cards, inactive states
+        focus: v("--c-focus"),
+        break: v("--c-break"),
+        wellbeing: v("--c-wellbeing"),
+        deepslate: v("--c-deepslate"),
+        // single brand accent for CTAs / highlights
+        brand: {
+          DEFAULT: v("--c-brand"),
+          soft: "rgb(var(--c-brand) / 0.14)",
+        },
       },
       borderRadius: {
-        tile: "26px",
-        card: "18px",
+        tile: "24px",
+        card: "16px",
         pill: "999px",
       },
       boxShadow: {
-        // layered, low-contrast elevations — the whole "premium" feel
-        soft: "0 1px 2px rgba(22,22,15,0.04), 0 10px 28px -16px rgba(22,22,15,0.14)",
-        lift: "0 2px 6px rgba(22,22,15,0.05), 0 24px 56px -28px rgba(22,22,15,0.22)",
-        inset: "inset 0 1px 0 rgba(255,255,255,0.7)",
-        ring: "0 0 0 1px #EBEAE6",
+        soft: "var(--shadow-soft)",
+        lift: "var(--shadow-lift)",
+        inset: "var(--shadow-inset)",
+        ring: "0 0 0 1px rgb(var(--c-line))",
+        glow: "0 0 0 1px rgb(var(--c-brand) / 0.4), 0 8px 40px -8px rgb(var(--c-brand) / 0.45)",
       },
       fontFamily: {
-        // donethat.ai type system: Inter (body/UI), Poppins (headings),
-        // Indie Flower (handwritten accents).
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
         heading: ["var(--font-poppins)", "var(--font-inter)", "sans-serif"],
+        // handwriting accent kept for the light theme's character
         hand: ["var(--font-handwriting)", "cursive"],
       },
       keyframes: {
         "fade-up": {
-          "0%": { opacity: "0", transform: "translateY(20px)" },
+          "0%": { opacity: "0", transform: "translateY(16px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         pulse2: { "0%,100%": { opacity: "1" }, "50%": { opacity: ".4" } },

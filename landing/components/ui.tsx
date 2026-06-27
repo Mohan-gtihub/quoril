@@ -87,7 +87,7 @@ export function Tile({
  * Cycle by index — `ACCENTS[i % ACCENTS.length]` — for visual consistency.
  * focus → break → wellbeing → deepslate.
  */
-export const ACCENTS = ["#2B6BF5", "#F5A623", "#10C49A", "#3D3D3D"] as const;
+export const ACCENTS = ["#5B8DEF", "#F5A623", "#2DD4A7", "#9BA1AD"] as const;
 
 export function TileIcon({
   children,
@@ -122,7 +122,7 @@ export function Badge({
   return (
     <span className="inline-flex items-center gap-2 rounded-pill border border-line bg-surface px-3.5 py-1.5 text-[13px] font-medium text-ink-muted shadow-soft">
       {dot && (
-        <span className="h-1.5 w-1.5 rounded-full bg-ink animate-pulse2" />
+        <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse2" />
       )}
       {children}
     </span>
@@ -148,8 +148,8 @@ export function Button({
     "inline-flex items-center justify-center gap-2 rounded-pill px-5 py-3 text-[14.5px] font-semibold transition active:scale-[0.98]";
   const styles =
     variant === "primary"
-      ? "bg-ink text-paper hover:bg-ink/90 shadow-soft"
-      : "border border-line-strong bg-surface text-ink hover:border-ink/30 hover:bg-sunken";
+      ? "bg-brand text-white hover:bg-brand/90 hover:shadow-glow shadow-soft"
+      : "border border-line-strong bg-surface text-ink hover:border-white/25 hover:bg-sunken";
   const internal = href.startsWith("/") && !href.startsWith("//");
   const cls = `${base} ${styles} ${className}`;
   return internal ? (

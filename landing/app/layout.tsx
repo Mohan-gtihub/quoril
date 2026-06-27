@@ -99,13 +99,23 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${inter.variable} ${poppins.variable} ${indie.variable}`}
     >
+      <head>
+        {/* No-flash theme init: apply the saved theme before first paint.
+            Light is the default; dark only when the user explicitly chose it. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('quoril-theme');if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="font-sans antialiased">
         {!isAdmin && <JsonLd />}
-        <AnnouncementBar />
+        {!isAdmin && <AnnouncementBar />}
         <SiteChrome isAdmin={isAdmin}>{children}</SiteChrome>
-        <CookieConsent />
+        {!isAdmin && <CookieConsent />}
       </body>
     </html>
   );

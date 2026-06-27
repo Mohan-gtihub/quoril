@@ -21,7 +21,7 @@ const sections: LegalSection[] = [
       <>
         <P>
           These Terms of Service (&ldquo;Terms&rdquo;) are a binding agreement
-          between you and Quoril, operated by Erik Vake
+          between you and Quoril, operated by Erik Vale
           (&ldquo;Quoril&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;), governing
           your access to and use of the Quoril desktop app, web app, this website
           and related services (the &ldquo;Service&rdquo;).

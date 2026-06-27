@@ -24,7 +24,7 @@ const sections: LegalSection[] = [
           Quoril (&ldquo;Quoril&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;,
           &ldquo;our&rdquo;) is a desktop and web productivity application for
           tasks, focus tracking, planning and digital wellbeing, operated by
-          Erik Vake. This Privacy Policy explains what data we collect, why,
+          Erik Vale. This Privacy Policy explains what data we collect, why,
           how we protect it, and the choices and rights you have.
         </P>
         <P>

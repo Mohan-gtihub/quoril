@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import ThemeToggle from "@/components/ThemeToggle";
 
 type Row = {
   id: string;
@@ -326,12 +327,15 @@ function Dashboard({
           <h1 className="font-heading text-[20px] font-semibold tracking-[-0.02em]">
             {active.label}
           </h1>
-          <button
-            onClick={() => supabaseBrowser.auth.signOut()}
-            className="ml-auto rounded-pill border border-line-strong bg-surface px-4 py-2 text-[13px] font-semibold text-ink-muted transition hover:bg-sunken lg:hidden"
-          >
-            Sign out
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              onClick={() => supabaseBrowser.auth.signOut()}
+              className="rounded-pill border border-line-strong bg-surface px-4 py-2 text-[13px] font-semibold text-ink-muted transition hover:bg-sunken lg:hidden"
+            >
+              Sign out
+            </button>
+          </div>
         </header>
 
         <main className="flex-1 px-5 py-6 sm:px-8">
@@ -429,22 +433,25 @@ function BarList({ bars }: { bars: Bar[] }) {
     return <p className="text-[13px] text-ink-faint">No data yet.</p>;
   return (
     <ul className="space-y-3">
-      {bars.map((b) => (
-        <li key={b.name} className="text-[13px]">
-          <div className="mb-1.5 flex justify-between gap-2">
-            <span className="truncate text-ink-muted">{b.name}</span>
-            <span className="font-semibold tabular-nums text-ink">
-              {fmtNum(b.count)}
-            </span>
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-pill bg-sunken">
-            <div
-              className="h-full rounded-pill bg-ink/70"
-              style={{ width: `${(b.count / max) * 100}%` }}
-            />
-          </div>
-        </li>
-      ))}
+      {bars.map((b) => {
+        const name = b.name && b.name !== "—" ? b.name : "Not specified";
+        return (
+          <li key={b.name} className="text-[13px]">
+            <div className="mb-1.5 flex justify-between gap-2">
+              <span className="truncate text-ink-muted">{name}</span>
+              <span className="font-semibold tabular-nums text-ink">
+                {fmtNum(b.count)}
+              </span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-pill bg-sunken">
+              <div
+                className="h-full rounded-pill bg-focus/70"
+                style={{ width: `${Math.max(4, (b.count / max) * 100)}%` }}
+              />
+            </div>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -509,8 +516,8 @@ function RankedBarList({ bars, format }: { bars: Bar[]; format?: string }) {
             </div>
             <div className="ml-6 h-1.5 overflow-hidden rounded-pill bg-sunken">
               <div
-                className="h-full rounded-pill bg-ink/70 transition-all group-hover:bg-ink"
-                style={{ width: `${(b.count / max) * 100}%` }}
+                className="h-full rounded-pill bg-focus/60 transition-all group-hover:bg-focus"
+                style={{ width: `${Math.max(4, (b.count / max) * 100)}%` }}
               />
             </div>
           </li>
@@ -542,17 +549,30 @@ function Trend({ series, label }: { series: Record<string, number>; label: strin
       }
     >
       <div className="flex h-28 items-end gap-[3px]">
-        {days.map((d) => (
-          <div key={d.day} className="group relative flex-1">
-            <div
-              className="rounded-t bg-focus/70 transition-colors group-hover:bg-focus"
-              style={{ height: `${Math.max(3, (d.count / max) * 100)}%` }}
-            />
-            <span className="pointer-events-none absolute -top-7 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-ink px-1.5 py-1 text-[11px] font-medium text-paper opacity-0 transition group-hover:opacity-100">
-              {d.count} · {d.day.slice(5)}
-            </span>
-          </div>
-        ))}
+        {days.map((d) => {
+          const has = d.count > 0;
+          return (
+            <div key={d.day} className="group relative flex-1">
+              {/* Empty days render as a faint baseline track so the chart never
+                  looks broken; days with data fill with the accent. */}
+              <div
+                className={`rounded-t transition-colors ${
+                  has
+                    ? "bg-focus/70 group-hover:bg-focus"
+                    : "bg-line group-hover:bg-line-strong"
+                }`}
+                style={{
+                  height: has
+                    ? `${Math.max(8, (d.count / max) * 100)}%`
+                    : "4px",
+                }}
+              />
+              <span className="pointer-events-none absolute -top-7 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded bg-sunken px-1.5 py-1 text-[11px] font-medium text-ink opacity-0 shadow-soft transition group-hover:opacity-100">
+                {d.count} · {d.day.slice(5)}
+              </span>
+            </div>
+          );
+        })}
       </div>
       <div className="mt-2 flex justify-between text-[11px] text-ink-faint">
         <span>{days[0].day.slice(5)}</span>

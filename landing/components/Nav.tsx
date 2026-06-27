@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import ThemeToggle from "./ThemeToggle";
 
 const LINKS = [
   { href: "/features", label: "Features" },
@@ -84,6 +85,7 @@ export default function Nav() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Link
             href="/waitlist"
             className="rounded-pill bg-ink px-[17px] py-2.5 text-[14px] font-semibold text-paper transition hover:bg-ink/90"

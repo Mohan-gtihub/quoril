@@ -232,6 +232,12 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
             if (error || !data) throw error
 
+            // The authoritative DB write succeeded. Clear the crash-recovery
+            // backup so a stale-high value can never inflate future totals (L2).
+            if (typeof final.actual_seconds === 'number') {
+                backupService.remove(id)
+            }
+
             set((s) => ({
                 tasks: s.tasks.map((t) =>
                     t.id === id ? data : t
@@ -315,11 +321,25 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                 return
             }
 
-            await get().moveTaskToColumn(id, 'done')
+            // M3: If a focus session is actively tracking this task, complete it
+            // through endSession(markCompleted) so the focus session is closed and
+            // completion is stamped exactly once — rather than leaving the timer
+            // running until syncTimer notices and double-stamps completed_at.
+            // Lazy import avoids a static circular dependency with focusStore.
+            const { useFocusStore } = await import('./focusStore')
+            const focus = useFocusStore.getState()
+            const delegatedToFocus = focus.isActive && focus.taskId === id
 
-            const { successSoundEnabled, successSound } = useSettingsStore.getState()
-            if (successSoundEnabled) {
-                soundService.playSuccess(successSound)
+            if (delegatedToFocus) {
+                // endSession plays the success sound itself; don't double-play below.
+                await focus.endSession(undefined, undefined, undefined, true, true)
+            } else {
+                await get().moveTaskToColumn(id, 'done')
+
+                const { successSoundEnabled, successSound } = useSettingsStore.getState()
+                if (successSoundEnabled) {
+                    soundService.playSuccess(successSound)
+                }
             }
         } catch (e) {
             console.error('Failed to toggle complete:', e)

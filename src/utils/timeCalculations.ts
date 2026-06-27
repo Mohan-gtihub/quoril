@@ -31,6 +31,62 @@ export function isFocusType(type: string | null | undefined): boolean {
 }
 
 /**
+ * Splits a session's seconds across the calendar day(s) it actually spans (H3).
+ *
+ * A session that starts at 23:50 and ends at 00:20 should contribute 10 min to
+ * its start day and 20 min to the next day — not 30 min entirely to the start
+ * day. We distribute `seconds` proportionally across the wall-clock days between
+ * start_time and end_time. Falls back to attributing everything to the start day
+ * when end_time is missing or the timestamps are degenerate.
+ *
+ * @returns Map of 'yyyy-MM-dd' -> seconds attributed to that day
+ */
+export function splitSessionByDay(session: FocusSession): Map<string, number> {
+    const result = new Map<string, number>()
+    const total = session.seconds || 0
+    if (!session.start_time || total <= 0) return result
+
+    const start = parseISO(session.start_time)
+    const end = session.end_time ? parseISO(session.end_time) : null
+
+    const startDay = format(start, 'yyyy-MM-dd')
+
+    // No usable end, or end not after start: attribute everything to the start day.
+    if (!end || end.getTime() <= start.getTime()) {
+        result.set(startDay, total)
+        return result
+    }
+
+    const endDay = format(end, 'yyyy-MM-dd')
+    if (startDay === endDay) {
+        result.set(startDay, total)
+        return result
+    }
+
+    // Multi-day: distribute `total` proportionally to the wall-clock span that
+    // falls in each calendar day. Using wall-clock (not the stored seconds) keeps
+    // pauses from skewing the split, while still summing back to `total`.
+    const spanMs = end.getTime() - start.getTime()
+    let assigned = 0
+    let cursor = new Date(start)
+
+    while (format(cursor, 'yyyy-MM-dd') !== endDay) {
+        const nextMidnight = new Date(cursor)
+        nextMidnight.setHours(24, 0, 0, 0)
+        const sliceMs = nextMidnight.getTime() - cursor.getTime()
+        const sliceSeconds = Math.round((sliceMs / spanMs) * total)
+        const day = format(cursor, 'yyyy-MM-dd')
+        result.set(day, (result.get(day) ?? 0) + sliceSeconds)
+        assigned += sliceSeconds
+        cursor = nextMidnight
+    }
+
+    // Remainder (incl. rounding drift) lands on the end day so the split is exact.
+    result.set(endDay, (result.get(endDay) ?? 0) + Math.max(0, total - assigned))
+    return result
+}
+
+/**
  * Calculate focus time for a specific day from sessions
  * @param sessions - All sessions
  * @param targetDate - The day to calculate for
@@ -42,15 +98,11 @@ export function calculateDayFocus(
 ): number {
     const dayStr = format(targetDate, 'yyyy-MM-dd')
 
-    // Sum all focus session seconds for this day
-    const focusSec = sessions
-        .filter(s => {
-            const dateMatch = s.start_time && format(parseISO(s.start_time), 'yyyy-MM-dd') === dayStr
-            return isFocusType(s.type) && dateMatch
-        })
-        .reduce((sum, s) => sum + (s.seconds || 0), 0)
-
-    return focusSec
+    // Sum focus seconds attributed to this day, splitting sessions that cross
+    // midnight so each day only gets the portion that actually occurred in it (H3).
+    return sessions
+        .filter(s => isFocusType(s.type))
+        .reduce((sum, s) => sum + (splitSessionByDay(s).get(dayStr) ?? 0), 0)
 }
 
 /**
@@ -87,12 +139,8 @@ export function calculateDayBreak(sessions: FocusSession[], targetDate: Date): n
     const dayStr = format(targetDate, 'yyyy-MM-dd')
 
     return sessions
-        .filter(s => {
-            const dateMatch = s.start_time && format(parseISO(s.start_time), 'yyyy-MM-dd') === dayStr
-            const type = s.type as string
-            return ['break', 'long_break'].includes(type) && dateMatch
-        })
-        .reduce((sum, s) => sum + (s.seconds || 0), 0)
+        .filter(s => ['break', 'long_break'].includes(s.type as string))
+        .reduce((sum, s) => sum + (splitSessionByDay(s).get(dayStr) ?? 0), 0)
 }
 
 /**
@@ -130,11 +178,13 @@ export function calculateMultiDayStats(
 
     sessions.forEach(s => {
         if (!s.start_time) return
-        const day = format(parseISO(s.start_time), 'yyyy-MM-dd')
-        if (isFocusType(s.type)) {
-            focusByDay.set(day, (focusByDay.get(day) ?? 0) + (s.seconds || 0))
-        } else if (['break', 'long_break'].includes(s.type as string)) {
-            breakByDay.set(day, (breakByDay.get(day) ?? 0) + (s.seconds || 0))
+        // Split across days so midnight-crossing sessions are attributed correctly (H3).
+        const isFocus = isFocusType(s.type)
+        const isBreak = ['break', 'long_break'].includes(s.type as string)
+        if (!isFocus && !isBreak) return
+        const target = isFocus ? focusByDay : breakByDay
+        for (const [day, secs] of splitSessionByDay(s)) {
+            target.set(day, (target.get(day) ?? 0) + secs)
         }
     })
 
@@ -177,11 +227,16 @@ export function calculateTodayFocus(sessions: FocusSession[]): number {
 export function formatTime(seconds: number): string {
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = Math.floor(seconds % 60)
 
     if (hours > 0) {
         return `${hours}h ${minutes}m`
     }
-    return `${minutes}m`
+    if (minutes > 0) {
+        return `${minutes}m`
+    }
+    // Sub-minute: show seconds so short sprints don't render as a misleading "0m" (L1).
+    return `${secs}s`
 }
 
 /**

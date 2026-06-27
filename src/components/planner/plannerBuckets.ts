@@ -1,4 +1,4 @@
-import { isSameDay, startOfToday } from 'date-fns'
+import { isSameDay, startOfToday, startOfWeek, endOfWeek } from 'date-fns'
 import type { Task } from '@/types/database'
 import type { TaskColumn } from '@/types/list'
 import { COLUMN_STATUS } from '@/utils/columnMap'
@@ -58,15 +58,15 @@ export function getPlannerTaskBuckets(
             if (completedDate) {
                 const isTodaySelected = isSameDay(selectedDate, startOfToday())
 
+                // Bucket a completed task strictly by the calendar day of its
+                // completion timestamp. This matches how focus *time* is bucketed
+                // (always by the event's own timestamp), so the done-count and the
+                // focus-time for a given day never disagree (M1). The previous
+                // "before 4 AM counts as the prior day" heuristic is removed.
                 if (isTodaySelected) {
                     cols.done.push(task)
                 } else if (isSameDay(completedDate, selectedDate)) {
                     cols.done.push(task)
-                } else {
-                    const dayAfter = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000)
-                    if (isSameDay(completedDate, dayAfter) && completedDate.getHours() < 4) {
-                        cols.done.push(task)
-                    }
                 }
             }
         }
@@ -81,12 +81,17 @@ export function getPlannerTaskBuckets(
 
     const progressMap: Partial<Record<TaskColumn, number>> = {
         today: getProgress(cols.today, cols.done),
+        // M2: Anchor "this week" progress to the current calendar week
+        // (Mon–Sun) rather than a rolling trailing-7-days window, so the
+        // denominator matches what the column actually represents and resets
+        // cleanly at the week boundary.
         this_week: getProgress(cols.this_week, tasks.filter(t => {
             if (!t.completed_at) return false
             const d = new Date(t.completed_at)
             const now = new Date()
-            const diff = now.getTime() - d.getTime()
-            return diff < 7 * 24 * 60 * 60 * 1000
+            const weekStart = startOfWeek(now, { weekStartsOn: 1 })
+            const weekEnd = endOfWeek(now, { weekStartsOn: 1 })
+            return d >= weekStart && d <= weekEnd
         }))
     }
 
