@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { addSignup, countSignups, EMAIL_RE } from "@/lib/waitlist";
+import { isEmailConfigured, sendWaitlistConfirmation } from "@/lib/email";
 
 // Runs server-side so the Supabase insert never touches the client.
 export const runtime = "nodejs";
@@ -36,6 +37,16 @@ export async function POST(req: Request) {
       referrer: req.headers.get("referer") ?? undefined,
       createdAt: new Date().toISOString(),
     });
+
+    // Send the confirmation only to brand-new signups, and never let an
+    // email failure break the signup that's already been recorded.
+    if (!result.duplicate && isEmailConfigured()) {
+      try {
+        await sendWaitlistConfirmation(email.trim().toLowerCase());
+      } catch (err) {
+        console.error("waitlist confirmation email failed", err);
+      }
+    }
 
     return NextResponse.json({
       ok: true,
