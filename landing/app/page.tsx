@@ -11,7 +11,6 @@ import {
   SectionHead,
   Tile,
   TileIcon,
-  Badge,
   Button,
   Stat,
 } from "@/components/ui";
@@ -34,10 +33,6 @@ export default function Home() {
         {/* light theme: soft paper fade; dark theme: cool aurora glow */}
         <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] bg-gradient-to-b from-paper to-transparent dark:hidden" />
         <div className="aurora pointer-events-none absolute inset-x-0 top-0 -z-10 hidden h-[620px] dark:block" />
-
-        <Reveal>
-          <Badge>Offline-first · Local + cloud sync · Coming soon</Badge>
-        </Reveal>
 
         <Reveal delay={0.05}>
           <h1 className="mx-auto mt-7 max-w-[15ch] font-heading text-[clamp(40px,6.6vw,82px)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
