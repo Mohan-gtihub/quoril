@@ -13,7 +13,7 @@ import { IconGlobe, IconLayers, IconChart, IconCheck } from "@/components/icons"
 export const metadata = {
   title: "About — Quoril",
   description:
-    "Quoril is a native command center for deep work — built by Erik Vake for people who ship. Local-first, private, and focused.",
+    "Quoril is a native command center for deep work — built by Erik Vale for people who ship. Local-first, private, and focused.",
 };
 
 const PRINCIPLES = [
