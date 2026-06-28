@@ -154,7 +154,7 @@
       "shortcutName": "Quoril"
     },
     "mac": {
-      "icon": "public/icon.png",
+      "icon": "build/icon.icns",
       "target": [
         "dmg"
       ],

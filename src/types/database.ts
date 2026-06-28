@@ -294,6 +294,9 @@ export type Task = DbTaskRow & {
     prev_status?: TaskStatus
     is_recurring: boolean
     last_reset_date?: string | null
+
+    /** Email of the workspace member this task is assigned to (null = unassigned) */
+    assigned_to?: string | null
 }
 
 export type Subtask = Database['public']['Tables']['subtasks']['Row'] & {

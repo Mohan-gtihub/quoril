@@ -94,7 +94,12 @@ export function SuperFocusPill() {
     }
 
     return (
-        <div className="w-full h-full flex flex-col gap-2 pointer-events-none pt-4 pb-1 bg-transparent border-none outline-none">
+        <div className={cn(
+            "w-full h-full flex flex-col gap-2 pointer-events-none pt-4 pb-1 bg-transparent border-none outline-none",
+            // No native transparent overlay (web): center the pill on the solid
+            // app surface so the window isn't blank and the controls stay reachable.
+            !platform.capabilities.nativeOverlay && "items-center justify-center"
+        )}>
             {/* Main Pill Row */}
             <div
                 className={cn(

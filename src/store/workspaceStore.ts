@@ -35,6 +35,8 @@ export interface WorkspaceMember {
 interface WorkspaceState {
     workspaces: Workspace[]
     membersByWorkspace: Record<string, WorkspaceMember[]>
+    /** workspaceId -> { lowercased email -> nickname } */
+    nicknamesByWorkspace: Record<string, Record<string, string>>
     activeWorkspaceId: string | null
     loading: boolean
     error: string | null
@@ -46,6 +48,8 @@ interface WorkspaceState {
     deleteWorkspace: (id: string) => Promise<void>
     inviteToWorkspace: (workspaceId: string, email: string) => Promise<boolean>
     loadWorkspaceMembers: (workspaceId: string) => Promise<void>
+    loadWorkspaceNicknames: (workspaceId: string) => Promise<void>
+    setWorkspaceNickname: (workspaceId: string, email: string, nickname: string) => Promise<void>
     setActiveWorkspace: (id: string | null) => void
     subscribeRealtime: () => () => void
     reset: () => void
@@ -113,6 +117,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             /* ---- State ---- */
             workspaces: [],
             membersByWorkspace: {},
+            nicknamesByWorkspace: {},
             activeWorkspaceId: null,
             loading: false,
             error: null,
@@ -248,6 +253,65 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                         [workspaceId]: data || []
                     }
                 }))
+            },
+
+            loadWorkspaceNicknames: async (workspaceId) => {
+                if (!workspaceId) return
+
+                const { data, error } = await (supabase.from('workspace_nicknames') as any)
+                    .select('email, nickname')
+                    .eq('workspace_id', workspaceId)
+
+                if (error) {
+                    console.error('[WorkspaceStore] loadWorkspaceNicknames failed:', error.message)
+                    return
+                }
+
+                const map: Record<string, string> = {}
+                for (const row of (data || [])) {
+                    if (row.nickname) map[String(row.email).toLowerCase()] = row.nickname
+                }
+
+                set(state => ({
+                    nicknamesByWorkspace: { ...state.nicknamesByWorkspace, [workspaceId]: map }
+                }))
+            },
+
+            setWorkspaceNickname: async (workspaceId, email, nickname) => {
+                const key = email.trim().toLowerCase()
+                const trimmed = nickname.trim()
+                if (!workspaceId || !key) return
+
+                const prev = get().nicknamesByWorkspace[workspaceId] || {}
+                const next = { ...prev }
+                if (trimmed) next[key] = trimmed
+                else delete next[key]
+
+                // Optimistic
+                set(state => ({
+                    nicknamesByWorkspace: { ...state.nicknamesByWorkspace, [workspaceId]: next }
+                }))
+
+                if (trimmed) {
+                    const { error } = await (supabase.from('workspace_nicknames') as any)
+                        .upsert(
+                            { workspace_id: workspaceId, email: key, nickname: trimmed, updated_at: new Date().toISOString() },
+                            { onConflict: 'workspace_id,email' }
+                        )
+                    if (error) {
+                        set(state => ({ nicknamesByWorkspace: { ...state.nicknamesByWorkspace, [workspaceId]: prev } }))
+                        toast.error('Failed to save nickname')
+                    }
+                } else {
+                    const { error } = await (supabase.from('workspace_nicknames') as any)
+                        .delete()
+                        .eq('workspace_id', workspaceId)
+                        .eq('email', key)
+                    if (error) {
+                        set(state => ({ nicknamesByWorkspace: { ...state.nicknamesByWorkspace, [workspaceId]: prev } }))
+                        toast.error('Failed to clear nickname')
+                    }
+                }
             },
 
             inviteToWorkspace: async (workspaceId, email) => {
@@ -451,7 +515,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
             setActiveWorkspace: (id) => set({ activeWorkspaceId: id }),
 
-            reset: () => set({ workspaces: [], membersByWorkspace: {}, activeWorkspaceId: null }),
+            reset: () => set({ workspaces: [], membersByWorkspace: {}, nicknamesByWorkspace: {}, activeWorkspaceId: null }),
 
         }),
 

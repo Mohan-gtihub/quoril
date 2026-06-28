@@ -343,3 +343,48 @@ body {
   color: rgb(var(--c-ink));
   font-weight: 600;
 }
+
+/* ── React Flow (canvas mockup) — Quoril surface ───────────── */
+.canvas-board .react-flow__node {
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+/* let our Card draw all selection chrome — kill RF's default outline */
+.canvas-board .react-flow__node.selected,
+.canvas-board .react-flow__node:focus,
+.canvas-board .react-flow__node:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+/* connection points stay invisible until you approach a block */
+.canvas-board .rf-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgb(var(--c-surface));
+  border: 1.5px solid rgb(var(--c-ink-faint));
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.canvas-board .react-flow__node:hover .rf-dot,
+.canvas-board .react-flow__node.selected .rf-dot {
+  opacity: 1;
+}
+.canvas-board .rf-dot:hover {
+  border-color: rgb(var(--c-ink));
+}
+.canvas-board .react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 2;
+}
+.canvas-board .react-flow__attribution {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .canvas-board .react-flow__edge.animated path {
+    animation: none;
+  }
+}
+
+@keyframes rf-ripple {
+  from { transform: translate(-50%, -50%) scale(0.4); opacity: 0.9; }
+  to   { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+}
