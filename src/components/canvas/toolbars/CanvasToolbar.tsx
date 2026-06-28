@@ -22,7 +22,7 @@ export function CanvasToolbar({ canvasId, onExport }: { canvasId: string; onExpo
     const Btn = ({ active, title, onClick, children }: any) => (
         <button
             onClick={onClick}
-            className={`p-1.5 rounded-md transition-colors ${active ? 'bg-[var(--accent-primary)] text-white' : 'hover:bg-[var(--bg-hover)] text-[var(--text-primary)]'}`}
+            className={`p-1.5 rounded-md transition-colors ${active ? 'bg-[var(--accent-primary)] text-[var(--accent-contrast)]' : 'hover:bg-[var(--bg-hover)] text-[var(--text-primary)]'}`}
             title={title}
             type="button"
         >

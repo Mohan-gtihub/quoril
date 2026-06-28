@@ -48,7 +48,23 @@ type AuditRow = {
   created_at: string;
 };
 
-type Tab = "overview" | "waitlist" | "visitors" | "audit";
+type Tab = "overview" | "waitlist" | "visitors" | "blog" | "audit";
+
+type Post = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  content_html: string;
+  cover_image: string | null;
+  author: string | null;
+  tags: string[];
+  status: string;
+  read_minutes: number;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 export default function AdminPage() {
   const [ready, setReady] = useState(false);
@@ -120,6 +136,15 @@ function IconShield({ className = ic }: IconProps) {
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <path d="M12 3l7 2.5v5c0 4.3-2.9 7.6-7 9-4.1-1.4-7-4.7-7-9v-5L12 3z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
       <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function IconDoc({ className = ic }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M6 3h7l5 5v13H6V3z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M13 3v5h5" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M9 13h6M9 16.5h6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }
@@ -253,6 +278,7 @@ const NAV: { id: Tab; label: string; icon: (p: IconProps) => JSX.Element }[] = [
   { id: "overview", label: "Overview", icon: IconOverview },
   { id: "waitlist", label: "Waitlist", icon: IconList },
   { id: "visitors", label: "Visitors", icon: IconUsers },
+  { id: "blog", label: "Blog", icon: IconDoc },
   { id: "audit", label: "Audit log", icon: IconShield },
 ];
 
@@ -342,6 +368,7 @@ function Dashboard({
           {tab === "overview" && <OverviewTab token={token} />}
           {tab === "waitlist" && <WaitlistTab token={token} />}
           {tab === "visitors" && <VisitorsTab token={token} />}
+          {tab === "blog" && <BlogTab token={token} />}
           {tab === "audit" && <AuditTab token={token} />}
         </main>
       </div>
@@ -1010,6 +1037,387 @@ function WaitlistTab({ token }: { token: string }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/* ─────────────────────── Blog ─────────────────────── */
+
+const EMPTY_POST = {
+  id: "",
+  title: "",
+  slug: "",
+  excerpt: "",
+  author: "",
+  tags: "",
+  cover_image: "",
+  status: "draft",
+  content_html: "",
+};
+
+type Draft = typeof EMPTY_POST;
+
+function BlogTab({ token }: { token: string }) {
+  const [rows, setRows] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const [editing, setEditing] = useState<Draft | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setErr("");
+    try {
+      const res = await authFetch(token, "/api/admin/blog");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to load");
+      setRows(data.rows);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  function openNew() {
+    setEditing({ ...EMPTY_POST });
+  }
+  function openEdit(p: Post) {
+    setEditing({
+      id: p.id,
+      title: p.title,
+      slug: p.slug,
+      excerpt: p.excerpt ?? "",
+      author: p.author ?? "",
+      tags: (p.tags ?? []).join(", "),
+      cover_image: p.cover_image ?? "",
+      status: p.status,
+      content_html: p.content_html,
+    });
+  }
+
+  async function remove(p: Post) {
+    if (!confirm(`Delete “${p.title}”? This cannot be undone.`)) return;
+    const res = await authFetch(token, "/api/admin/blog", {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: p.id }),
+    });
+    if (res.ok) load();
+    else alert("Delete failed.");
+  }
+
+  if (editing) {
+    return (
+      <BlogEditor
+        token={token}
+        draft={editing}
+        onClose={() => setEditing(null)}
+        onSaved={() => {
+          setEditing(null);
+          load();
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-[14px] text-ink-muted">
+          {rows.length} post{rows.length === 1 ? "" : "s"}
+        </p>
+        <button
+          onClick={openNew}
+          className="rounded-pill bg-ink px-4 py-2.5 text-[13px] font-semibold text-paper transition hover:bg-ink/90"
+        >
+          New post
+        </button>
+      </div>
+
+      {err && <ErrorNote msg={err} />}
+
+      {loading ? (
+        <Loading />
+      ) : rows.length === 0 ? (
+        <EmptyState>No posts yet — create your first one.</EmptyState>
+      ) : (
+        <div className="overflow-x-auto rounded-card border border-line bg-surface shadow-soft">
+          <table className="w-full min-w-[640px] text-left text-[14px]">
+            <thead className="border-b border-line text-[11.5px] uppercase tracking-[0.05em] text-ink-faint">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Title</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Updated</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((p) => (
+                <tr
+                  key={p.id}
+                  className="border-b border-line transition last:border-0 hover:bg-sunken/50"
+                >
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => openEdit(p)}
+                      className="text-left font-medium text-ink transition hover:text-focus"
+                    >
+                      {p.title}
+                    </button>
+                    <p className="text-[12px] text-ink-faint">/blog/{p.slug}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`rounded-pill px-2.5 py-1 text-[12px] font-semibold ${
+                        p.status === "published"
+                          ? "bg-wellbeing/12 text-wellbeing"
+                          : "bg-sunken text-ink-muted"
+                      }`}
+                    >
+                      {p.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 tabular-nums text-ink-muted">
+                    {fmtDate(p.updated_at)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex justify-end gap-3">
+                      {p.status === "published" && (
+                        <a
+                          href={`/blog/${p.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[13px] font-semibold text-ink-faint transition hover:text-ink"
+                        >
+                          View
+                        </a>
+                      )}
+                      <button
+                        onClick={() => openEdit(p)}
+                        className="text-[13px] font-semibold text-ink-faint transition hover:text-focus"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => remove(p)}
+                        className="text-[13px] font-semibold text-ink-faint transition hover:text-state-error"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BlogEditor({
+  token,
+  draft,
+  onClose,
+  onSaved,
+}: {
+  token: string;
+  draft: Draft;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState<Draft>(draft);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const [preview, setPreview] = useState(false);
+
+  function set<K extends keyof Draft>(key: K, value: Draft[K]) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  async function save() {
+    if (!form.title.trim()) {
+      setErr("Title is required.");
+      return;
+    }
+    setSaving(true);
+    setErr("");
+    try {
+      const res = await authFetch(token, "/api/admin/blog", {
+        method: form.id ? "PUT" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Save failed");
+      onSaved();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const label =
+    "mb-1.5 block text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-faint";
+  const input =
+    "w-full rounded-card border border-line-strong bg-paper px-3.5 py-2.5 text-[14px] text-ink outline-none transition focus:border-focus/50 focus:ring-4 focus:ring-focus/10";
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          onClick={onClose}
+          className="text-[13.5px] font-medium text-ink-faint transition hover:text-ink"
+        >
+          ← Back
+        </button>
+        <h2 className="font-heading text-[18px] font-semibold tracking-[-0.02em] text-ink">
+          {form.id ? "Edit post" : "New post"}
+        </h2>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setPreview((p) => !p)}
+            className="rounded-pill border border-line-strong bg-surface px-4 py-2.5 text-[13px] font-semibold text-ink transition hover:bg-sunken"
+          >
+            {preview ? "Edit HTML" : "Preview"}
+          </button>
+          <button
+            onClick={save}
+            disabled={saving}
+            className="flex items-center gap-2 rounded-pill bg-ink px-5 py-2.5 text-[13px] font-semibold text-paper transition hover:bg-ink/90 disabled:opacity-60"
+          >
+            {saving && <Spinner className="h-4 w-4" />}
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </div>
+
+      {err && <ErrorNote msg={err} />}
+
+      <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
+        {/* main column */}
+        <div className="space-y-4">
+          <div>
+            <label className={label}>Title</label>
+            <input
+              value={form.title}
+              onChange={(e) => set("title", e.target.value)}
+              placeholder="A focused workday, by design"
+              className={input}
+            />
+          </div>
+          <div>
+            <label className={label}>Excerpt</label>
+            <textarea
+              value={form.excerpt}
+              onChange={(e) => set("excerpt", e.target.value)}
+              rows={2}
+              placeholder="One or two sentences shown on cards and previews."
+              className={`${input} resize-y`}
+            />
+          </div>
+
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-faint">
+                Content (HTML)
+              </label>
+              <span className="text-[11.5px] text-ink-faint">
+                Raw HTML — design freely. Rendered in a styled container.
+              </span>
+            </div>
+            {preview ? (
+              <div className="rounded-card border border-line bg-paper p-5">
+                <div
+                  className="blog-content"
+                  dangerouslySetInnerHTML={{ __html: form.content_html }}
+                />
+              </div>
+            ) : (
+              <textarea
+                value={form.content_html}
+                onChange={(e) => set("content_html", e.target.value)}
+                rows={22}
+                spellCheck={false}
+                placeholder={"<h2>Section heading</h2>\n<p>Write your story…</p>\n<blockquote>A pull quote.</blockquote>"}
+                className={`${input} font-mono text-[13px] leading-relaxed`}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* sidebar */}
+        <div className="space-y-4">
+          <div className="rounded-card border border-line bg-surface p-4 shadow-soft">
+            <label className={label}>Status</label>
+            <select
+              value={form.status}
+              onChange={(e) => set("status", e.target.value)}
+              className={input}
+            >
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+            <p className="mt-2 text-[12px] text-ink-faint">
+              Drafts are hidden from the public site.
+            </p>
+          </div>
+
+          <div>
+            <label className={label}>Slug</label>
+            <input
+              value={form.slug}
+              onChange={(e) => set("slug", e.target.value)}
+              placeholder="auto from title"
+              className={input}
+            />
+          </div>
+          <div>
+            <label className={label}>Author</label>
+            <input
+              value={form.author}
+              onChange={(e) => set("author", e.target.value)}
+              placeholder="Quoril Team"
+              className={input}
+            />
+          </div>
+          <div>
+            <label className={label}>Tags</label>
+            <input
+              value={form.tags}
+              onChange={(e) => set("tags", e.target.value)}
+              placeholder="Focus, Product"
+              className={input}
+            />
+            <p className="mt-1.5 text-[12px] text-ink-faint">
+              Comma-separated. First tag shows on the card.
+            </p>
+          </div>
+          <div>
+            <label className={label}>Cover image URL</label>
+            <input
+              value={form.cover_image}
+              onChange={(e) => set("cover_image", e.target.value)}
+              placeholder="https://…"
+              className={input}
+            />
+            {form.cover_image && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={form.cover_image}
+                alt=""
+                className="mt-2 aspect-[16/9] w-full rounded-card border border-line object-cover"
+              />
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

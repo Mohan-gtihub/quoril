@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { IconArrow, IconCheck } from "./icons";
+import { IconArrow, IconCheck, IconDiscord } from "./icons";
 
 const ROLES = ["Engineer", "Designer", "Founder", "PM", "Student", "Other"];
 const PLATFORMS = ["macOS", "Windows", "Linux"];
+const DISCORD_INVITE = "https://discord.gg/Dmpsb6Ah3";
 
 type Status = "idle" | "loading" | "success" | "duplicate" | "error";
 
@@ -185,6 +186,28 @@ export default function Waitlist({ id }: { id?: string }) {
                   people waiting.
                 </p>
               )}
+
+              <div className="mx-auto mt-7 max-w-sm rounded-card border border-line bg-paper/60 p-5 text-left">
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
+                  One more thing
+                </p>
+                <p className="mt-1.5 text-[15px] font-medium text-ink">
+                  Join the community on Discord
+                </p>
+                <p className="mt-1 text-sm text-ink-muted">
+                  Get product updates, shape the roadmap, and meet the early crew.
+                </p>
+                <a
+                  href={DISCORD_INVITE}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group mt-4 inline-flex w-full items-center justify-center gap-2 rounded-pill bg-ink px-6 py-3 font-semibold text-paper transition hover:bg-ink/90"
+                >
+                  <IconDiscord className="h-5 w-5" />
+                  Join the Discord
+                  <IconArrow className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                </a>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

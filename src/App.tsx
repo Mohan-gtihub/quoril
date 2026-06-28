@@ -174,9 +174,9 @@ function App() {
         }
     }, [])
 
-    // DEEP LINK HANDLING (Email Verification + Password Reset)
+    // DEEP LINK HANDLING (Email Verification + Password Reset + OAuth callback)
     useEffect(() => {
-        const result = platform.auth.onDeepLink(async (url) => {
+        const handleDeepLink = async (url: string) => {
             console.log('[DeepLink] Received:', url)
 
             try {
@@ -234,7 +234,16 @@ function App() {
             } catch (e) {
                 console.error('[DeepLink] Error parsing URL:', e)
             }
-        })
+        }
+
+        // 1. Subscribe to live deep links forwarded by the main process.
+        const result = platform.auth.onDeepLink(handleDeepLink)
+
+        // 2. Drain any deep link that arrived before this listener was ready
+        //    (cold-start OAuth callback on Windows, or a send that raced load).
+        platform.auth.getPendingDeepLink()
+            .then((url) => { if (url) handleDeepLink(url) })
+            .catch(() => { })
 
         if (typeof result === 'function') {
             return () => result()

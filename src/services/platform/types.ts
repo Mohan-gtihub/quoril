@@ -43,6 +43,7 @@ export interface AuthPort {
   signInWithPassword(email: string, password: string): Promise<any>
   signOut(): Promise<void>
   onDeepLink(cb: (url: string) => void): (() => void) | Unavailable
+  getPendingDeepLink(): Promise<string | null>
   setUser(userId: string | null, accessToken?: string | null): void | Unavailable
 }
 

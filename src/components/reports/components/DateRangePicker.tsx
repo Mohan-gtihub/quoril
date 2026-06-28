@@ -42,7 +42,7 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
                 onClick={() => setIsOpen(!isOpen)}
                 className="flex items-center gap-3 px-4 py-2 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-xl transition-all group shadow-sm hover:shadow-md active:scale-95"
             >
-                <div className="p-1.5 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] group-hover:bg-[var(--accent-primary)] group-hover:text-white transition-colors">
+                <div className="p-1.5 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] group-hover:bg-[var(--accent-primary)] group-hover:text-[var(--accent-contrast)] transition-colors">
                     <CalendarIcon size={14} />
                 </div>
                 <div className="flex flex-col items-start">

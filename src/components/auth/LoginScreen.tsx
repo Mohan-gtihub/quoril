@@ -1,4 +1,4 @@
-﻿import { useState, FormEvent, useEffect } from 'react'
+﻿import { useState, FormEvent, useEffect, useRef } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { useNavigate } from 'react-router-dom'
 import { validateEmail, validatePassword } from '@/utils/securityUtils'
@@ -21,9 +21,24 @@ export function LoginScreen() {
     const [emailError, setEmailError] = useState('')
     const [passwordError, setPasswordError] = useState('')
 
-    const { signIn, signUp, signInWithGoogle } = useAuthStore()
+    const { signIn, signUp, signInWithGoogle, session } = useAuthStore()
     const navigate = useNavigate()
     const { setActiveWorkspace } = useWorkspaceStore()
+    const oauthTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    // When a session appears (e.g. the Google OAuth callback completes), clear
+    // the pending timeout and route to the dashboard — same as email login.
+    useEffect(() => {
+        if (session) {
+            if (oauthTimeout.current) clearTimeout(oauthTimeout.current)
+            navigate('/dashboard')
+        }
+    }, [session, navigate])
+
+    // Clean up the timeout if the screen unmounts mid-flow.
+    useEffect(() => () => {
+        if (oauthTimeout.current) clearTimeout(oauthTimeout.current)
+    }, [])
 
     useEffect(() => {
         if (email && email.length > 0) {
@@ -109,14 +124,14 @@ export function LoginScreen() {
     if (success === 'verification') {
         return (
             <div className="h-full flex items-center justify-center bg-[var(--bg-primary)] select-none">
-                <div className="text-center max-w-sm px-8 py-10 rounded-2xl border border-white/8 bg-white/[0.02]">
-                    <h2 className="text-2xl font-semibold text-white mb-3">Check your inbox</h2>
-                    <p className="text-sm text-white/40 mb-1">Verification link sent to</p>
+                <div className="text-center max-w-sm px-8 py-10 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-hover)]">
+                    <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-3">Check your inbox</h2>
+                    <p className="text-sm text-[var(--text-tertiary)] mb-1">Verification link sent to</p>
                     <p className="text-sm text-[var(--accent-primary)] font-medium mb-6">{email}</p>
-                    <p className="text-xs text-white/30 mb-6">Click the link in the email to activate your account. Check spam if you don't see it.</p>
+                    <p className="text-xs text-[var(--text-muted)] mb-6">Click the link in the email to activate your account. Check spam if you don't see it.</p>
                     <button
                         onClick={() => { setSuccess(''); setIsSignUp(false); setEmail(''); setPassword('') }}
-                        className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-sm font-medium transition-all border border-white/8"
+                        className="w-full py-3 rounded-xl bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm font-medium transition-all border border-[var(--border-default)]"
                     >
                         Back to Login
                     </button>
@@ -134,16 +149,16 @@ export function LoginScreen() {
                 <div className="flex flex-col h-full p-12">
                     {/* Logo */}
                     <div className="mb-auto">
-                        <span className="text-xl font-semibold text-white tracking-tight">Quoril<span className="text-[var(--accent-primary)]">.</span></span>
+                        <span className="text-xl font-semibold text-[var(--text-primary)] tracking-tight">Quoril<span className="text-[var(--accent-primary)]">.</span></span>
                     </div>
 
                     {/* Hero text */}
                     <div className="mb-auto">
-                        <h1 className="text-5xl font-semibold text-white leading-[1.05] tracking-tight mb-5">
+                        <h1 className="text-5xl font-semibold text-[var(--text-primary)] leading-[1.05] tracking-tight mb-5">
                             Focus deeper.<br />
                             <span className="text-[var(--accent-primary)]">Ship faster.</span>
                         </h1>
-                        <p className="text-[15px] text-white/45 leading-relaxed max-w-sm">
+                        <p className="text-[15px] text-[var(--text-tertiary)] leading-relaxed max-w-sm">
                             The productivity workspace built for deep work — task management, focus timer, and screen time analytics in one place.
                         </p>
                     </div>
@@ -158,15 +173,15 @@ export function LoginScreen() {
                             <li key={label} className="flex items-baseline gap-3">
                                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] shrink-0 translate-y-[5px]" />
                                 <div>
-                                    <p className="text-sm font-medium text-white/85">{label}</p>
-                                    <p className="text-xs text-white/35 mt-0.5">{sub}</p>
+                                    <p className="text-sm font-medium text-[var(--text-primary)]">{label}</p>
+                                    <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{sub}</p>
                                 </div>
                             </li>
                         ))}
                     </ul>
 
                     {/* Footer */}
-                    <p className="text-[11px] text-white/25 tracking-wide">
+                    <p className="text-[11px] text-[var(--text-muted)] tracking-wide">
                         End-to-end encrypted · Your data, your control
                     </p>
                 </div>
@@ -178,15 +193,15 @@ export function LoginScreen() {
 
                     {/* Mobile logo */}
                     <div className="flex lg:hidden items-center mb-8">
-                        <span className="text-lg font-semibold text-white">Quoril<span className="text-[var(--accent-primary)]">.</span></span>
+                        <span className="text-lg font-semibold text-[var(--text-primary)]">Quoril<span className="text-[var(--accent-primary)]">.</span></span>
                     </div>
 
                     {/* Header */}
                     <div className="mb-7">
-                        <h2 className="text-2xl font-semibold text-white mb-1">
+                        <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-1">
                             {isSignUp ? 'Create account' : 'Welcome back'}
                         </h2>
-                        <p className="text-sm text-white/35">
+                        <p className="text-sm text-[var(--text-tertiary)]">
                             {isSignUp ? 'Get started for free — no credit card needed.' : 'Sign in to your workspace.'}
                         </p>
                     </div>
@@ -200,6 +215,14 @@ export function LoginScreen() {
                             const result = await signInWithGoogle()
                             if (result.success) {
                                 setActiveWorkspace(null)
+                                // The OAuth callback may never come back (user closes the
+                                // Google tab / cancels). Don't leave the UI stuck on the
+                                // spinner forever — recover after a timeout.
+                                if (oauthTimeout.current) clearTimeout(oauthTimeout.current)
+                                oauthTimeout.current = setTimeout(() => {
+                                    setLoading(false)
+                                    setError('Sign-in timed out. Please try again.')
+                                }, 90_000)
                             } else {
                                 setLoading(false)
                                 if (result.error) setError(result.error)
@@ -219,9 +242,9 @@ export function LoginScreen() {
 
                     {/* Divider */}
                     <div className="relative flex items-center gap-3 mb-5">
-                        <div className="flex-1 h-px bg-white/8" />
-                        <span className="text-[11px] font-semibold uppercase tracking-widest text-white/20">or</span>
-                        <div className="flex-1 h-px bg-white/8" />
+                        <div className="flex-1 h-px bg-[var(--border-default)]" />
+                        <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">or</span>
+                        <div className="flex-1 h-px bg-[var(--border-default)]" />
                     </div>
 
                     {/* Form */}
@@ -229,7 +252,7 @@ export function LoginScreen() {
 
                         {/* Email */}
                         <div>
-                            <label htmlFor="email" className="block text-[11px] font-semibold text-white/40 uppercase tracking-widest mb-2">
+                            <label htmlFor="email" className="block text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-widest mb-2">
                                 Email
                             </label>
                             <div className="relative">
@@ -240,12 +263,12 @@ export function LoginScreen() {
                                     autoComplete="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className={`w-full px-4 py-3 bg-white/[0.04] border ${emailError
+                                    className={`w-full px-4 py-3 bg-[var(--bg-hover)] border ${emailError
                                         ? 'border-red-500/40 focus:border-red-500/70'
                                         : email && !emailError
                                             ? 'border-[var(--success)]/40 focus:border-[var(--success)]/70'
-                                            : 'border-white/8 focus:border-[var(--accent-primary)]/50'
-                                        } rounded-xl text-white text-sm placeholder-white/20 focus:outline-none transition-colors duration-200`}
+                                            : 'border-[var(--border-default)] focus:border-[var(--accent-primary)]/50'
+                                        } rounded-xl text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] focus:outline-none transition-colors duration-200`}
                                     placeholder="you@example.com"
                                 />
                                 {email && (
@@ -266,7 +289,7 @@ export function LoginScreen() {
 
                         {/* Password */}
                         <div>
-                            <label htmlFor="password" className="block text-[11px] font-semibold text-white/40 uppercase tracking-widest mb-2">
+                            <label htmlFor="password" className="block text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-widest mb-2">
                                 Password
                             </label>
                             <div className="relative">
@@ -277,18 +300,18 @@ export function LoginScreen() {
                                     autoComplete={isSignUp ? 'new-password' : 'current-password'}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className={`w-full px-4 py-3 pr-11 bg-white/[0.04] border ${passwordError
+                                    className={`w-full px-4 py-3 pr-11 bg-[var(--bg-hover)] border ${passwordError
                                         ? 'border-red-500/40 focus:border-red-500/70'
                                         : isSignUp && password && !passwordError
                                             ? 'border-[var(--success)]/40 focus:border-[var(--success)]/70'
-                                            : 'border-white/8 focus:border-[var(--accent-primary)]/50'
-                                        } rounded-xl text-white text-sm placeholder-white/20 focus:outline-none transition-colors duration-200 font-mono`}
+                                            : 'border-[var(--border-default)] focus:border-[var(--accent-primary)]/50'
+                                        } rounded-xl text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] focus:outline-none transition-colors duration-200 font-mono`}
                                     placeholder="••••••••"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors"
+                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
                                 >
                                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -297,7 +320,7 @@ export function LoginScreen() {
                             {/* Strength bar (signup only, when typing) */}
                             {isSignUp && password && passwordStrength && (
                                 <div className="mt-2">
-                                    <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                    <div className="h-1 bg-[var(--bg-hover)] rounded-full overflow-hidden">
                                         <div
                                             className="h-full rounded-full transition-all duration-500"
                                             style={{
@@ -306,7 +329,7 @@ export function LoginScreen() {
                                             }}
                                         />
                                     </div>
-                                    <p className="mt-1 text-[11px] text-white/30">
+                                    <p className="mt-1 text-[11px] text-[var(--text-muted)]">
                                         Strength: <span style={{ color: strengthColor(passwordStrength.strength) }}>{strengthLabel(passwordStrength.strength)}</span>
                                         {isSignUp && !password && ' · 8+ chars, upper, lower, number'}
                                     </p>
@@ -315,7 +338,7 @@ export function LoginScreen() {
 
                             {/* Requirements hint when field is empty on signup */}
                             {isSignUp && !password && (
-                                <p className="mt-1.5 text-[11px] text-white/25">8+ chars · uppercase · lowercase · number</p>
+                                <p className="mt-1.5 text-[11px] text-[var(--text-muted)]">8+ chars · uppercase · lowercase · number</p>
                             )}
 
                             {passwordError && isSignUp && (
@@ -355,7 +378,7 @@ export function LoginScreen() {
                     </form>
 
                     {/* Toggle */}
-                    <p className="text-center text-xs text-white/30 mt-5">
+                    <p className="text-center text-xs text-[var(--text-muted)] mt-5">
                         {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
                         <button
                             type="button"

@@ -42,6 +42,7 @@ export const electronPlatform: Platform = {
     async signInWithPassword() { throw new Error('electron auth uses deep-link flow') },
     async signOut() {},
     onDeepLink(cb) { return api().auth?.onDeepLink?.(cb) ?? { available: false as const } },
+    async getPendingDeepLink() { return api().auth?.getPendingDeepLink?.() ?? null },
     setUser(userId, accessToken) { const r = api().auth?.setUser?.(userId, accessToken); if (r && typeof r.catch === 'function') r.catch(console.error); return r },
   },
   windowControls: {
@@ -53,7 +54,13 @@ export const electronPlatform: Platform = {
     setContext(taskId) { api().tracker?.setContext?.(taskId) },
   },
   links: {
-    openExternal(url) { api().file?.openExternal?.(url) },
+    openExternal(url) {
+      const fn = api()?.file?.openExternal
+      if (typeof fn !== 'function') return { available: false as const }
+      const r = fn(url)
+      if (r && typeof r.catch === 'function') r.catch(console.error)
+      return undefined
+    },
   },
   canvas: {
     list: (userId) => api().canvas.list(userId),

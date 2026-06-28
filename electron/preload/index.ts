@@ -108,6 +108,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Auth
     auth: {
         setUser: (userId: string | null, accessToken?: string | null) => ipcRenderer.invoke('auth:setUser', userId, accessToken),
+        getPendingDeepLink: (): Promise<string | null> => ipcRenderer.invoke('auth:getPendingDeepLink'),
         onDeepLink: (callback: (url: string) => void) => {
             const subscription = (_: any, url: string) => callback(url)
             ipcRenderer.on('deep-link', subscription)
@@ -255,6 +256,7 @@ export interface ElectronAPI {
     }
     auth: {
         setUser: (userId: string | null, accessToken?: string | null) => Promise<void>
+        getPendingDeepLink: () => Promise<string | null>
         onDeepLink: (callback: (url: string) => void) => () => void
     }
     reports: {

@@ -55,6 +55,15 @@ let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let quitting = false
 
+// Buffer for a deep link that arrives before the renderer has registered its
+// listener (cold-start via OAuth callback, or a send that races ready-to-show).
+// The renderer pulls this on mount via the 'auth:getPendingDeepLink' IPC.
+let pendingDeepLink: string | null = null
+
+function isAuthDeepLink(url: string) {
+    return url.includes('auth') || url.includes('code=') || url.includes('access_token')
+}
+
 function closeSecondaryWindows() {
     for (const win of BrowserWindow.getAllWindows()) {
         if (win !== mainWindow && !win.isDestroyed()) {
@@ -64,13 +73,36 @@ function closeSecondaryWindows() {
 }
 
 function forwardDeepLink(url: string) {
-    if (!mainWindow || mainWindow.isDestroyed()) return
+    // Always buffer the latest link so the renderer can recover it even if the
+    // window/webContents is not ready to receive the IPC yet.
+    pendingDeepLink = url
+
+    if (!mainWindow || mainWindow.isDestroyed()) {
+        // No window yet (cold start). It will be drained once the renderer mounts.
+        return
+    }
 
     if (mainWindow.isMinimized()) mainWindow.restore()
     if (!mainWindow.isVisible()) mainWindow.show()
     mainWindow.focus()
-    mainWindow.webContents.send('deep-link', url)
-    closeSecondaryWindows()
+
+    const deliver = () => {
+        if (!mainWindow || mainWindow.isDestroyed()) return
+        mainWindow.webContents.send('deep-link', url)
+    }
+
+    // If the page is still loading, wait until it finishes so the listener exists.
+    if (mainWindow.webContents.isLoading()) {
+        mainWindow.webContents.once('did-finish-load', deliver)
+    } else {
+        deliver()
+    }
+
+    // Only auth callbacks should tear down secondary windows; resume/focus deep
+    // links must NOT close the focus pill they are meant to act on.
+    if (isAuthDeepLink(url)) {
+        closeSecondaryWindows()
+    }
 }
 
 /* ---------------- SINGLE INSTANCE ---------------- */
@@ -113,6 +145,16 @@ app.on('open-url', (event, url) => {
     event.preventDefault()
     forwardDeepLink(url)
 })
+
+// Windows/Linux cold start: the OAuth callback URL arrives as a command-line
+// argument when the OS launches the app fresh. macOS uses 'open-url' instead.
+if (process.platform !== 'darwin') {
+    const startupDeepLink = process.argv.find(arg => arg.startsWith('quoril://'))
+    if (startupDeepLink) {
+        // Buffer it; it will be delivered once the renderer mounts and drains it.
+        pendingDeepLink = startupDeepLink
+    }
+}
 
 app.on('web-contents-created', (_event, contents) => {
     contents.on('will-navigate', (event, url) => {
@@ -670,6 +712,14 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
 
     ipcMain.handle('auth:setUser', (_, userId: string | null, accessToken?: string | null) => {
         trackingEngine.setUserId(userId, accessToken)
+    })
+
+    // Renderer drains any deep link that arrived before its listener was ready
+    // (cold-start OAuth callback, or a send that raced page load).
+    ipcMain.handle('auth:getPendingDeepLink', () => {
+        const url = pendingDeepLink
+        pendingDeepLink = null
+        return url
     })
 
     /* macOS Accessibility Permission (needed for active-win app tracking) */
