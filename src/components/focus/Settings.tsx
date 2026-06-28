@@ -204,7 +204,7 @@ export function Settings() {
                         />
                         <div className="pt-2">
                             <ToggleRow
-                                label="Minimal Interface"
+                                label="Hide Task Times"
                                 description="Hide estimated and completed times in task cards to reduce visual noise."
                                 value={settings.hideEstDoneTimes}
                                 onChange={(v: boolean) => settings.updateSettings({ hideEstDoneTimes: v })}
@@ -404,19 +404,6 @@ export function Settings() {
                                 />
                             </div>
                         )}
-                    </SettingCard>
-
-                    {/* ══ Visibility ══ */}
-                    <SettingCard
-                        title="Data Visibility"
-                        description="Control what information is surfaced during active sessions and in your reports."
-                    >
-                        <ToggleRow
-                            label="Minimal Interface"
-                            description="Hide estimated and completed times in task cards during focus sessions."
-                            value={settings.hideEstDoneTimes}
-                            onChange={(v: boolean) => settings.updateSettings({ hideEstDoneTimes: v })}
-                        />
                     </SettingCard>
 
                     {/* ══ macOS Permissions (only shown on macOS) ══ */}

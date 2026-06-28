@@ -1,10 +1,11 @@
-import { ChevronDown, Trash2, Sparkles } from 'lucide-react'
+import { ChevronDown, Trash2, Tag } from 'lucide-react'
 import { useListStore } from '@/store/listStore'
 import { useAuthStore } from '@/store/authStore'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DateNavigator } from './DateNavigator'
 import { confirm } from '@/components/ui/ConfirmDialog'
+import { NicknameManagerModal } from './NicknameManagerModal'
 
 export function PlannerHeader() {
     const { lists, selectedListId, setSelectedList, deleteList } = useListStore()
@@ -12,8 +13,18 @@ export function PlannerHeader() {
     const navigate = useNavigate()
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
     const [hoveredListId, setHoveredListId] = useState<string | null>(null)
+    const [showNicknames, setShowNicknames] = useState(false)
 
     const selectedList = lists.find(l => l.id === selectedListId)
+
+    // Workspace context: the selected list's workspace, else the first workspace
+    // any list belongs to. Null when there are no shared workspaces.
+    const nicknameWorkspaceId = useMemo(() => {
+        const fromSelected = (selectedList as any)?.workspace_id
+        if (fromSelected) return fromSelected as string
+        const first = lists.find(l => (l as any).workspace_id)
+        return (first as any)?.workspace_id ?? null
+    }, [selectedList, lists])
 
     const handleDeleteList = async (listId: string, listName: string, e: React.MouseEvent) => {
         e.stopPropagation()
@@ -102,14 +113,16 @@ export function PlannerHeader() {
 
             {/* Right Controls */}
             <div className="flex items-center gap-3">
-                <button
-                    onClick={() => navigate('/settings')}
-                    title="Upgrade to Premium"
-                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] active:scale-95 transition-colors"
-                >
-                    <Sparkles size={13} className="text-[var(--accent-primary)]" />
-                    Premium
-                </button>
+                {nicknameWorkspaceId && (
+                    <button
+                        onClick={() => setShowNicknames(true)}
+                        title="Assign nicknames to workspace members"
+                        className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full bg-[var(--bg-card)] border border-[var(--border-default)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] active:scale-95 transition-colors"
+                    >
+                        <Tag size={13} className="text-[var(--accent-primary)]" />
+                        Assign a nickname
+                    </button>
+                )}
                 <button
                     onClick={() => navigate('/settings')}
                     title={user?.email || 'Account'}
@@ -118,6 +131,13 @@ export function PlannerHeader() {
                     {(user?.email?.charAt(0) || 'U').toUpperCase()}
                 </button>
             </div>
+
+            {showNicknames && nicknameWorkspaceId && (
+                <NicknameManagerModal
+                    workspaceId={nicknameWorkspaceId}
+                    onClose={() => setShowNicknames(false)}
+                />
+            )}
         </div>
     )
 }

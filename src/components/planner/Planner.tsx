@@ -20,6 +20,8 @@ import { isSameDay, startOfToday, format } from 'date-fns'
 import toast from 'react-hot-toast'
 import { confirm } from '@/components/ui/ConfirmDialog'
 import { getPlannerTaskBuckets } from './plannerBuckets'
+import { useWorkspaceStore } from '@/store/workspaceStore'
+import { NicknameNudge } from './NicknameNudge'
 
 interface ColumnDef {
     id: TaskColumn
@@ -219,6 +221,7 @@ function BoardColumn({
 export function Planner() {
     const navigate = useNavigate()
     const { selectedListId, lists } = useListStore()
+    const { loadWorkspaceMembers, loadWorkspaceNicknames } = useWorkspaceStore()
     const { tasks, fetchTasks, moveTaskToColumn, reorderTasks, selectedTaskId, toggleComplete } = useTaskStore()
     const { startSession, isActive, taskId: activeFocusId, setShowFocusPanel, endSession } = useFocusStore()
     const { selectedDate } = usePlannerStore()
@@ -265,6 +268,28 @@ export function Planner() {
         }
         fetchTasks(selectedListId === 'all' ? undefined : selectedListId)
     }, [selectedListId, navigate, fetchTasks])
+
+    // Load members + nicknames for every workspace the visible lists belong to,
+    // so assignee badges (and the nickname nudge) can render across cards.
+    const workspaceIdsKey = useMemo(
+        () => [...new Set(lists.map(l => (l as any).workspace_id).filter(Boolean))].sort().join(','),
+        [lists]
+    )
+    useEffect(() => {
+        if (!workspaceIdsKey) return
+        for (const id of workspaceIdsKey.split(',')) {
+            loadWorkspaceMembers(id)
+            loadWorkspaceNicknames(id)
+        }
+    }, [workspaceIdsKey, loadWorkspaceMembers, loadWorkspaceNicknames])
+
+    // Workspace context for the nickname nudge: the selected list's workspace,
+    // else the first workspace any visible list belongs to.
+    const plannerWorkspaceId = useMemo(() => {
+        const fromSelected = (selectedList as any)?.workspace_id
+        if (fromSelected) return fromSelected as string
+        return workspaceIdsKey ? workspaceIdsKey.split(',')[0] : null
+    }, [selectedList, workspaceIdsKey])
 
     // No need for loadTasks anymore!
 
@@ -443,6 +468,8 @@ export function Planner() {
             )}
 
             {selectedTaskId && <TaskDetailsPanel />}
+
+            {plannerWorkspaceId && <NicknameNudge workspaceId={plannerWorkspaceId} />}
         </div>
     )
 }

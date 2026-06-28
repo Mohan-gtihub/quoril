@@ -91,13 +91,29 @@ function App() {
         }
     }, [])
 
-    // Inject super-focus-mode class into HTML root for transparency overrides
+    // Inject super-focus-mode class into HTML root for transparency overrides.
+    // Transparency only makes sense on a native transparent overlay window
+    // (Electron). On the web there is no transparent OS window, so applying it
+    // would blank the page — guard against that. (L: minimal-interface blank bug)
     useEffect(() => {
-        if (settings.superFocusMode) {
+        const wantsTransparency = settings.superFocusMode && platform.capabilities.nativeOverlay
+        if (wantsTransparency) {
             document.documentElement.classList.add('super-focus-mode')
         } else {
             document.documentElement.classList.remove('super-focus-mode')
         }
+        return () => document.documentElement.classList.remove('super-focus-mode')
+    }, [settings.superFocusMode])
+
+    // Safety net: Escape always exits Super Focus Mode so the user can never get
+    // stuck on a minimal/blank surface.
+    useEffect(() => {
+        if (!settings.superFocusMode) return
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') settings.updateSettings({ superFocusMode: false })
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
     }, [settings.superFocusMode])
 
     // Mirror the active theme class onto <body> so the page backdrop matches
@@ -247,7 +263,7 @@ function App() {
                         settings.theme === 'blue' && "theme-blue",
                         settings.theme === 'red' && "theme-red",
                         settings.theme === 'nebula' && "theme-nebula",
-                        !settings.superFocusMode ? "bg-[var(--bg-primary)]" : "bg-transparent super-focus",
+                        (settings.superFocusMode && platform.capabilities.nativeOverlay) ? "bg-transparent super-focus" : "bg-[var(--bg-primary)]",
                         "text-[var(--text-primary)]"
                     )}>
                         {!settings.superFocusMode && platform.capabilities.nativeOverlay && <TitleBar />}

@@ -259,6 +259,54 @@ CREATE POLICY "Users can update accessible workspace subtasks"
         )
     );
 
+-- ------------------------------------------------------------
+-- Task assignment within shared workspaces
+-- A task can be assigned to a single workspace member, identified
+-- by email (matches workspace_members.email; survives invitees who
+-- haven't logged in yet). Any member can assign — the existing
+-- "Users can update accessible workspace tasks" policy already
+-- grants the required UPDATE permission, so no new policy is needed.
+-- ------------------------------------------------------------
+
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS assigned_to TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to
+    ON public.tasks (lower(assigned_to))
+    WHERE assigned_to IS NOT NULL;
+
+-- ------------------------------------------------------------
+-- Per-workspace nicknames
+-- A friendly display name for each participant (owner + members),
+-- keyed by email and scoped to a single workspace. Shared: anyone
+-- with access to the workspace can read and set them.
+-- ------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS public.workspace_nicknames (
+    workspace_id TEXT NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    email        TEXT NOT NULL,
+    nickname     TEXT NOT NULL,
+    updated_at   TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (workspace_id, email)
+);
+
+ALTER TABLE public.workspace_nicknames ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Members can view workspace nicknames" ON public.workspace_nicknames;
+CREATE POLICY "Members can view workspace nicknames"
+    ON public.workspace_nicknames
+    FOR SELECT
+    USING (public.workspace_is_accessible(workspace_id));
+
+DROP POLICY IF EXISTS "Members can manage workspace nicknames" ON public.workspace_nicknames;
+CREATE POLICY "Members can manage workspace nicknames"
+    ON public.workspace_nicknames
+    FOR ALL
+    USING (public.workspace_is_accessible(workspace_id))
+    WITH CHECK (public.workspace_is_accessible(workspace_id));
+
+GRANT ALL ON public.workspace_nicknames TO authenticated;
+GRANT ALL ON public.workspace_nicknames TO service_role;
+
 GRANT ALL ON public.workspace_members TO authenticated;
 GRANT ALL ON public.workspace_members TO service_role;
 

@@ -216,6 +216,19 @@ export const localService = {
                 return { data: mapTask(data), error: null }
             }
 
+            // Desktop: tasks the current user owns live in local SQLite; tasks
+            // shared via a workspace live only in the cloud (see mergeSharedFromCloud).
+            // If the row isn't ours locally, write straight to Supabase so a member's
+            // edit/assignment to a teammate's task actually persists (RLS authorizes it)
+            // instead of silently no-op'ing against an absent local row.
+            const ownsLocally = await db().taskExists(id).catch(() => false)
+            if (!ownsLocally) {
+                const { data, error } = await (supabase.from('tasks') as any)
+                    .update(row).eq('id', id).select().single()
+                if (error) return { data: null, error: error.message }
+                return { data: mapTask(data), error: null }
+            }
+
             const fresh = await db().updateTask(id, row)
             dataSyncService.trigger()
             return { data: mapTask(Array.isArray(fresh) ? fresh[0] : fresh), error: null }

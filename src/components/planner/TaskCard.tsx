@@ -7,11 +7,15 @@ import type { Task } from '@/types/database'
 import type { TaskColumn } from '@/types/list'
 import { useFocusStore } from '@/store/focusStore'
 import { useTaskStore } from '@/store/taskStore'
+import { useListStore } from '@/store/listStore'
+import { useWorkspaceStore } from '@/store/workspaceStore'
+import { useAuthStore } from '@/store/authStore'
 import { calculateRemainingSeconds } from '@/utils/sessionUtils'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { formatTimeInput, parseTimeInput } from '@/utils/timeParser'
 import { useTimerDisplay } from '@/hooks/useTimerDisplay'
 import { cn } from '@/utils/helpers'
+import { resolveAssigneeLabel, assigneeInitial, canEditTaskTime } from '@/utils/assignee'
 import { useSettingsStore } from '@/store/settingsStore'
 import { confirm } from '@/components/ui/ConfirmDialog'
 import { usePlannerStore } from '@/store/plannerStore'
@@ -55,6 +59,30 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
     const { updateTask, archiveTask, permanentDeleteTask, moveTaskToColumn, fetchSubtasks, subtasks, toggleSubtask, deleteSubtask, createSubtask, toggleTaskRecurring } = useTaskStore()
     const settings = useSettingsStore()
 
+    // Assignment — only for tasks in a shared workspace list.
+    const lists = useListStore(s => s.lists)
+    const membersByWorkspace = useWorkspaceStore(s => s.membersByWorkspace)
+    const loadWorkspaceMembers = useWorkspaceStore(s => s.loadWorkspaceMembers)
+    const currentEmail = useAuthStore(s => s.user?.email ?? null)
+    const workspaceId = useMemo(
+        () => (lists.find(l => l.id === task.list_id) as any)?.workspace_id ?? null,
+        [lists, task.list_id]
+    )
+    const nicknamesByWorkspace = useWorkspaceStore(s => s.nicknamesByWorkspace)
+    const nicknames = workspaceId ? (nicknamesByWorkspace[workspaceId] || {}) : {}
+    const assigneeLabel = resolveAssigneeLabel(task.assigned_to, nicknames)
+    const canEditTime = canEditTaskTime(task.assigned_to, currentEmail)
+    const assignees = useMemo(() => {
+        if (!workspaceId) return [] as string[]
+        const set = new Set(
+            (membersByWorkspace[workspaceId] || [])
+                .filter(m => !m.deleted_at)
+                .map(m => m.email.toLowerCase())
+        )
+        if (currentEmail) set.add(currentEmail.toLowerCase())
+        return [...set].sort()
+    }, [workspaceId, membersByWorkspace, currentEmail])
+
     const { selectedDate } = usePlannerStore()
     // Focus Store – subscribe to what we need for active-timer display
     const timer = useTimerDisplay()
@@ -81,6 +109,11 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
     useEffect(() => {
         fetchSubtasks(task.id)
     }, [task.id, fetchSubtasks])
+
+    // Load workspace members lazily, only when the card is expanded to assign.
+    useEffect(() => {
+        if (isExpanded && workspaceId) loadWorkspaceMembers(workspaceId)
+    }, [isExpanded, workspaceId, loadWorkspaceMembers])
 
     const allSubtasks = subtasks[task.id] || []
 
@@ -301,8 +334,12 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                     {/* EST */}
                     {!settings.hideEstDoneTimes && (
                         <div
-                            className="flex items-center gap-1.5 text-[11px] font-medium tabular-nums text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
-                            onClick={(e) => { e.stopPropagation(); setIsEditingEst(true); }}
+                            className={cn(
+                                "flex items-center gap-1.5 text-[11px] font-medium tabular-nums text-[var(--text-muted)] transition-colors",
+                                canEditTime ? "hover:text-[var(--text-secondary)] cursor-pointer" : "cursor-default opacity-70"
+                            )}
+                            title={canEditTime ? undefined : `Only the assignee (${assigneeLabel}) can change the time`}
+                            onClick={(e) => { e.stopPropagation(); if (canEditTime) setIsEditingEst(true); }}
                         >
                             {isEditingEst ? (
                                 <input
@@ -330,11 +367,24 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                             <span>{doneSub}/{totalSub}</span>
                         </div>
                     )}
+
+                    {/* Assignee */}
+                    {task.assigned_to && (
+                        <div
+                            className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--text-secondary)]"
+                            title={`Assigned to ${assigneeLabel}`}
+                        >
+                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] text-[10px] font-semibold uppercase">
+                                {assigneeInitial(assigneeLabel)}
+                            </span>
+                            <span className="truncate max-w-[90px]">{assigneeLabel}</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Right Side: Timer Controls */}
                 <div className="flex items-center gap-1.5">
-                    {!isCompleted && !disableTimer && (
+                    {!isCompleted && !disableTimer && canEditTime && (
                         <>
                             {isTaskActive ? (
                                 <>
@@ -382,8 +432,12 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                             </span>
                         ) : (
                             <span
-                                onClick={e => { e.stopPropagation(); setIsEditingActual(true); }}
-                                className="text-[var(--text-muted)] hover:text-[var(--text-tertiary)] cursor-pointer"
+                                onClick={e => { e.stopPropagation(); if (canEditTime) setIsEditingActual(true); }}
+                                className={cn(
+                                    "text-[var(--text-muted)]",
+                                    canEditTime ? "hover:text-[var(--text-tertiary)] cursor-pointer" : "cursor-default"
+                                )}
+                                title={canEditTime ? undefined : `Only the assignee (${assigneeLabel}) can change the time`}
                             >
                                 {isEditingActual ? (
                                     <input
@@ -425,6 +479,30 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                             className="w-full bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-xl p-3 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]/30 resize-none min-h-[80px] placeholder:text-[var(--text-muted)] transition-all"
                         />
                     </div>
+
+                    {/* Assignee — only for tasks in a shared workspace */}
+                    {workspaceId && (
+                        <div className="space-y-2">
+                            <div className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.2em] ml-1">
+                                Assigned to
+                            </div>
+                            <select
+                                value={task.assigned_to ?? ''}
+                                onChange={(e) => updateTask(task.id, { assigned_to: e.target.value || null })}
+                                className="w-full bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-xl px-3 py-2.5 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]/30 transition-all"
+                            >
+                                <option value="">Unassigned</option>
+                                {task.assigned_to && !assignees.includes(task.assigned_to.toLowerCase()) && (
+                                    <option value={task.assigned_to}>{task.assigned_to} (former member)</option>
+                                )}
+                                {assignees.map(email => (
+                                    <option key={email} value={email}>
+                                        {resolveAssigneeLabel(email, nicknames)}{currentEmail && email === currentEmail.toLowerCase() ? ' (you)' : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     {/* Subtasks */}
                     <div className="space-y-2">

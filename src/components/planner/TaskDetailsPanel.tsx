@@ -1,5 +1,8 @@
-﻿import { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { useTaskStore } from '@/store/taskStore'
+import { useListStore } from '@/store/listStore'
+import { useWorkspaceStore } from '@/store/workspaceStore'
+import { useAuthStore } from '@/store/authStore'
 import { X, CheckCircle2, Circle, Trash2, Plus, Repeat } from 'lucide-react'
 import { confirm } from '@/components/ui/ConfirmDialog'
 
@@ -17,16 +20,42 @@ export function TaskDetailsPanel() {
         deleteSubtask
     } = useTaskStore()
 
+    const lists = useListStore(s => s.lists)
+    const membersByWorkspace = useWorkspaceStore(s => s.membersByWorkspace)
+    const loadWorkspaceMembers = useWorkspaceStore(s => s.loadWorkspaceMembers)
+    const currentEmail = useAuthStore(s => s.user?.email ?? null)
+
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
     const [taskUsage, setTaskUsage] = useState<any[]>([])
     const task = tasks.find(t => t.id === selectedTaskId)
 
+    // A task is assignable only when it lives in a shared workspace list.
+    const workspaceId = useMemo(() => {
+        const list = lists.find(l => l.id === task?.list_id)
+        return (list as any)?.workspace_id ?? null
+    }, [lists, task?.list_id])
+
     useEffect(() => {
         if (selectedTaskId) {
             fetchSubtasks(selectedTaskId)
-            window.electronAPI.db.getAppUsageByTask(selectedTaskId).then(setTaskUsage)
+            window.electronAPI?.db?.getAppUsageByTask?.(selectedTaskId).then(setTaskUsage)
         }
     }, [selectedTaskId, fetchSubtasks])
+
+    useEffect(() => {
+        if (workspaceId) loadWorkspaceMembers(workspaceId)
+    }, [workspaceId, loadWorkspaceMembers])
+
+    // Candidates = everyone invited to the workspace, plus yourself. Deduped by email.
+    const assignees = useMemo(() => {
+        if (!workspaceId) return [] as string[]
+        const members = (membersByWorkspace[workspaceId] || [])
+            .filter(m => !m.deleted_at)
+            .map(m => m.email.toLowerCase())
+        const set = new Set(members)
+        if (currentEmail) set.add(currentEmail.toLowerCase())
+        return [...set].sort()
+    }, [workspaceId, membersByWorkspace, currentEmail])
 
     if (!task || !selectedTaskId) return null
 
@@ -95,6 +124,32 @@ export function TaskDetailsPanel() {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+
+                {/* Assignee — only for tasks in a shared workspace */}
+                {workspaceId && (
+                    <div>
+                        <label className="block text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2">
+                            Assigned to
+                        </label>
+                        <select
+                            value={task.assigned_to ?? ''}
+                            onChange={(e) => updateTask(task.id, { assigned_to: e.target.value || null })}
+                            className="w-full bg-[var(--bg-card)] text-[var(--text-secondary)] text-sm rounded-[var(--radius-card)] p-3 border border-[var(--border-default)] focus:ring-1 focus:ring-[var(--accent-primary)]/50 focus:outline-none"
+                        >
+                            <option value="">Unassigned</option>
+                            {task.assigned_to && !assignees.includes(task.assigned_to.toLowerCase()) && (
+                                <option value={task.assigned_to}>
+                                    {task.assigned_to} (former member)
+                                </option>
+                            )}
+                            {assignees.map(email => (
+                                <option key={email} value={email}>
+                                    {email}{currentEmail && email === currentEmail.toLowerCase() ? ' (you)' : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
 
                 {/* Description */}
                 <div>

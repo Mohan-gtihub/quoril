@@ -259,7 +259,7 @@ export const dbOps = {
     /* ---- Named update ops (replace raw db:exec) ---- */
 
     updateTask(id: string, updates: Record<string, any>) {
-        const TASK_COLUMNS = new Set(['title','description','status','priority','estimate_m','spent_s','started_at','due_at','completed_at','parent_id','sort_order','updated_at','deleted_at','synced','is_recurring','last_reset_date','list_id'])
+        const TASK_COLUMNS = new Set(['title','description','status','priority','estimate_m','spent_s','started_at','due_at','completed_at','parent_id','sort_order','updated_at','deleted_at','synced','is_recurring','last_reset_date','list_id','assigned_to'])
         const keys = Object.keys(updates).filter(k => TASK_COLUMNS.has(k))
         if (!keys.length) return
         exec(`UPDATE tasks SET ${keys.map(k => `${k}=?`).join(',')} WHERE id=?`, [...keys.map(k => updates[k]), id])
@@ -674,6 +674,7 @@ function autoMigrate() {
     if (!listCols.some((c: any) => c.name === 'workspace_id')) db.exec("ALTER TABLE lists ADD COLUMN workspace_id TEXT")
     const taskCols = db.prepare("PRAGMA table_info(tasks)").all()
     if (!taskCols.some((c: any) => c.name === 'deleted_at')) db.exec("ALTER TABLE tasks ADD COLUMN deleted_at TEXT")
+    if (!taskCols.some((c: any) => c.name === 'assigned_to')) db.exec("ALTER TABLE tasks ADD COLUMN assigned_to TEXT")
     const subtaskCols = db.prepare("PRAGMA table_info(subtasks)").all()
     if (!subtaskCols.some((c: any) => c.name === 'deleted_at')) db.exec("ALTER TABLE subtasks ADD COLUMN deleted_at TEXT")
 
