@@ -48,6 +48,31 @@ const mapTask = (row: any): Task => {
     }
 }
 
+const mergeSharedFromCloud = async (
+    table: 'lists' | 'tasks' | 'subtasks',
+    localRows: any[],
+    userId: string,
+    applyQuery?: (q: any) => any,
+): Promise<any[]> => {
+    if (!navigator.onLine) return localRows
+    try {
+        let query = (supabase.from(table) as any).select('*').is('deleted_at', null)
+        if (applyQuery) query = applyQuery(query)
+
+        const { data, error } = await query
+        if (error || !data?.length) return localRows
+        const shared = data.filter((r: any) => r.user_id !== userId)
+        if (!shared.length) return localRows
+
+        const byId = new Map<string, any>()
+        for (const r of localRows) byId.set(r.id, r)
+        for (const r of shared) if (!byId.has(r.id)) byId.set(r.id, r)
+        return [...byId.values()]
+    } catch {
+        return localRows
+    }
+}
+
 /* ================= PRESTIGE SERVICE ================= */
 
 export const localService = {
@@ -79,7 +104,9 @@ export const localService = {
             }
 
             const rows = await db().getTasks(user.id, listId)
-            return { data: rows.map(mapTask), error: null }
+            const merged = await mergeSharedFromCloud('tasks', rows, user.id,
+                (q) => (listId && listId !== 'all') ? q.eq('list_id', listId) : q)
+            return { data: merged.map(mapTask), error: null }
         },
 
         create: async (task: Partial<Task>) => {
@@ -310,7 +337,9 @@ export const localService = {
             }
 
             const rows = await db().getLists(user.id, archived)
-            return { data: rows, error: null }
+            const merged = await mergeSharedFromCloud('lists', rows, user.id)
+            const filtered = merged.filter((l: any) => archived ? !!l.archived_at : !l.archived_at)
+            return { data: filtered, error: null }
         },
 
         create: async (list: any) => {
@@ -419,7 +448,9 @@ export const localService = {
             }
 
             const rows = await db().getSubtasks(taskId)
-            return { data: rows.map((r: any) => ({ ...r, completed: !!r.done })), error: null }
+            const merged = await mergeSharedFromCloud('subtasks', rows, user.id,
+                (q) => q.eq('task_id', taskId))
+            return { data: merged.map((r: any) => ({ ...r, completed: !!r.done })), error: null }
         },
 
         create: async (sub: Partial<Subtask>) => {
