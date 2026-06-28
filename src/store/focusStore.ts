@@ -627,9 +627,33 @@ export const useFocusStore = create<FocusState>()(
                     set({ breakRemaining: rem })
 
                     if (rem === 0 && s.breakRemainingAtStart > 0) {
+                        // Persist the completed break NOW. Otherwise a subsequent
+                        // startSession() (which routes through endSession, not
+                        // stopBreak) clears isBreak and the whole break is lost from
+                        // reports. Zero breakElapsed afterwards so a later stopBreak
+                        // doesn't double-log the same break.
+                        try {
+                            const user = (await localService.auth.getUser()).data?.user
+                            if (user) {
+                                const totalBreak = s.breakRemainingAtStart
+                                const accurateStartTime = new Date(Date.now() - (totalBreak * 1000)).toISOString()
+                                const sessionData = sanitizeSessionData({
+                                    user_id: user.id,
+                                    task_id: s.taskId,
+                                    start_time: accurateStartTime,
+                                    end_time: new Date().toISOString(),
+                                    planned_seconds: s.breakRemainingAtStart,
+                                    session_type: s.isLongBreak ? 'long_break' : 'break',
+                                    seconds: totalBreak,
+                                })
+                                await localService.focus.create(sessionData)
+                            }
+                        } catch (e) {
+                            console.error('[Focus] auto-complete break log failed', e)
+                        }
                         set({
                             breakRemaining: 0,
-                            breakElapsed: s.breakRemainingAtStart,
+                            breakElapsed: 0,
                             isPaused: true,
                             startTime: null
                         })

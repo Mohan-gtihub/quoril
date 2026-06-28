@@ -31,13 +31,15 @@ export function getPlannerTaskBuckets(
         }
 
         const taskDate = task.due_date ? new Date(task.due_date) : null
+        // Bucket completed tasks by completion time only. Fall back to the
+        // stable created_at for legacy rows missing completed_at — never
+        // updated_at, which drifts every time a done task is edited and would
+        // silently migrate it to a different day in the Done column.
         const completedDate = task.completed_at
             ? new Date(task.completed_at)
-            : task.updated_at
-                ? new Date(task.updated_at)
-                : task.created_at
-                    ? new Date(task.created_at)
-                    : null
+            : task.created_at
+                ? new Date(task.created_at)
+                : null
 
         if (task.is_recurring && !isSameDay(selectedDate, startOfToday()) && selectedDate > startOfToday()) {
             cols.today.push({ ...task, status: 'active' as any, completed_at: null })

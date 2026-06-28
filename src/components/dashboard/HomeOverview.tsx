@@ -41,7 +41,9 @@ export function HomeOverview() {
     const stats = useMemo(() => {
         const validTasks = tasks.filter((t: any) => !t.deleted_at && (!t.list_id || lists.some((l: any) => l.id === t.list_id)))
         const active = validTasks.filter((t: any) => t.status !== 'done')
-        const doneToday = validTasks.filter((t: any) => t.status === 'done' && t.completed_at?.startsWith(new Date().toISOString().split('T')[0]))
+        // Compare on the LOCAL calendar day (matches focus-minute bucketing).
+        const todayKey = format(new Date(), 'yyyy-MM-dd')
+        const doneToday = validTasks.filter((t: any) => t.status === 'done' && t.completed_at && format(new Date(t.completed_at), 'yyyy-MM-dd') === todayKey)
         const focusMin = Math.round(calculateRealTimeFocus(sessions, isActive, startTime, sessionType) / 60)
 
         return {
@@ -273,7 +275,7 @@ export function HomeOverview() {
 
 function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={`rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-[0_1px_2px_rgba(60,54,42,0.05),0_10px_30px_-18px_rgba(60,54,42,0.18)] p-5 ${className || ''}`}>
+        <div className={`rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-[var(--shadow-soft)] p-5 ${className || ''}`}>
             {children}
         </div>
     )

@@ -20,7 +20,7 @@ export function SuperFocusPill() {
         skipToNext
     } = useFocusStore()
     const { updateSettings } = useSettingsStore()
-    const { tasks, subtasks, fetchSubtasks, toggleSubtask, moveTaskToColumn } = useTaskStore()
+    const { tasks, subtasks, fetchSubtasks, toggleSubtask } = useTaskStore()
     const { isOvertime, displayTime, pomodoroRemaining } = useTimerDisplay()
     const settings = useSettingsStore()
 
@@ -80,8 +80,9 @@ export function SuperFocusPill() {
     const time = displayTime
 
     const handleDone = async () => {
-        if (taskId) await moveTaskToColumn(taskId, 'done')
-        await endSession()
+        // Complete through endSession(markCompleted) so completion + completed_at +
+        // celebration are handled in one place, consistent with FocusPopup/Panel.
+        await endSession(undefined, undefined, undefined, true, true)
     }
 
     const handleAddSubtask = async (e: React.FormEvent) => {

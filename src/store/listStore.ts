@@ -375,7 +375,10 @@ export const useListStore = create<ListState>()(
 
                     set(state => ({
                         archived: state.archived.filter(l => l.id !== id),
-                        lists: state.lists.filter(l => l.id !== id)
+                        lists: state.lists.filter(l => l.id !== id),
+                        // Don't leave the UI pointed at a list that no longer exists
+                        // (selectedListId is persisted, so this would survive reloads).
+                        selectedListId: state.selectedListId === id ? null : state.selectedListId
                     }))
 
                     // 4. Synchronously clear ghost tasks from memory

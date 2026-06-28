@@ -131,7 +131,7 @@ export function LoginScreen() {
                     <p className="text-xs text-[var(--text-muted)] mb-6">Click the link in the email to activate your account. Check spam if you don't see it.</p>
                     <button
                         onClick={() => { setSuccess(''); setIsSignUp(false); setEmail(''); setPassword('') }}
-                        className="w-full py-3 rounded-xl bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm font-medium transition-all border border-[var(--border-default)]"
+                        className="w-full py-3 rounded-xl bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm font-medium transition-all border border-[var(--border-default)]"
                     >
                         Back to Login
                     </button>
@@ -231,7 +231,7 @@ export function LoginScreen() {
                         disabled={loading}
                         className="w-full mb-5 py-3 px-4 bg-white hover:bg-gray-50 text-gray-800 rounded-xl font-semibold text-sm transition-all duration-150 flex items-center justify-center gap-3 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200/20 active:scale-[0.99]"
                     >
-                        <svg width="17" height="17" viewBox="0 0 48 48" fill="none">
+                        <svg width="17" height="17" viewBox="0 0 48 48" fill="none" aria-hidden="true">
                             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
                             <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
                             <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
@@ -310,10 +310,11 @@ export function LoginScreen() {
                                 />
                                 <button
                                     type="button"
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                                     onClick={() => setShowPassword(!showPassword)}
                                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
                                 >
-                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
                                 </button>
                             </div>
 
@@ -331,7 +332,6 @@ export function LoginScreen() {
                                     </div>
                                     <p className="mt-1 text-[11px] text-[var(--text-muted)]">
                                         Strength: <span style={{ color: strengthColor(passwordStrength.strength) }}>{strengthLabel(passwordStrength.strength)}</span>
-                                        {isSignUp && !password && ' · 8+ chars, upper, lower, number'}
                                     </p>
                                 </div>
                             )}
@@ -350,7 +350,7 @@ export function LoginScreen() {
 
                         {/* Error */}
                         {error && (
-                            <div className="rounded-xl bg-red-500/8 border border-red-500/25 px-4 py-3 flex items-start gap-2.5">
+                            <div role="alert" aria-live="assertive" className="rounded-xl bg-red-500/8 border border-red-500/25 px-4 py-3 flex items-start gap-2.5">
                                 <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
                                 <p className="text-xs text-red-300 leading-relaxed">{error}</p>
                             </div>

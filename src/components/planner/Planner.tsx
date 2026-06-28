@@ -95,7 +95,7 @@ function BoardColumn({
                         {column.id !== 'done' && (
                             <button
                                 onClick={() => setShowCreateModal({ column: column.id, position: 'top' })}
-                                className="w-7 h-7 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                                className="w-7 h-7 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                                 title="Add task to top"
                             >
                                 <Plus className="w-3.5 h-3.5" />
@@ -144,8 +144,9 @@ function BoardColumn({
                         (() => {
                             const groupedByDay = tasks
                                 .reduce<Record<string, Task[]>>((acc, task) => {
-                                    // Fallback to updated_at or now if completed_at is missing (legacy data fix)
-                                    const rawDate = task.completed_at || task.updated_at || new Date().toISOString()
+                                    // Fall back to the stable created_at (never updated_at, which
+                                    // drifts on every edit) if completed_at is missing.
+                                    const rawDate = task.completed_at || task.created_at || new Date().toISOString()
                                     const dateObj = new Date(rawDate)
                                     const dayKey = dateObj.toDateString()
                                     if (!acc[dayKey]) acc[dayKey] = []
@@ -254,6 +255,7 @@ export function Planner() {
 
     const [showCreateModal, setShowCreateModal] = useState<{ column: TaskColumn, position: 'top' | 'bottom' } | null>(null)
     const [activeTask, setActiveTask] = useState<Task | null>(null)
+    const [activeColumn, setActiveColumn] = useState<TaskColumn>('today')
 
     // Initial fetch on mount or list change
     useEffect(() => {
@@ -271,10 +273,18 @@ export function Planner() {
     const handleDragStart = (event: DragStartEvent) => {
         const { active } = event
         // tasksByColumn is derived, so we can search it
-        const task = Object.values(tasksByColumn)
-            .flat()
-            .find(t => t.id === active.id)
-        setActiveTask(task || null)
+        let found: Task | null = null
+        let foundColumn: TaskColumn = 'today'
+        for (const [col, list] of Object.entries(tasksByColumn)) {
+            const match = list.find(t => t.id === active.id)
+            if (match) {
+                found = match
+                foundColumn = col as TaskColumn
+                break
+            }
+        }
+        setActiveTask(found)
+        setActiveColumn(foundColumn)
     }
 
     const handleDragEnd = async (event: DragEndEvent) => {
@@ -309,28 +319,36 @@ export function Planner() {
             }
         }
 
-        if (!sourceColumn || sourceColumn === targetColumn) {
+        if (!sourceColumn) return
+
+        if (sourceColumn === targetColumn) {
             // Reordering within the same column
-            if (!sourceColumn) return
-            if (sourceColumn === targetColumn) {
-                const columnTasks = [...(tasksByColumn[sourceColumn] || [])]
-                const oldIndex = columnTasks.findIndex(t => t.id === taskId)
-                const newIndex = columnTasks.findIndex(t => t.id === over.id)
+            const columnTasks = [...(tasksByColumn[sourceColumn] || [])]
+            const oldIndex = columnTasks.findIndex(t => t.id === taskId)
+            // If dropped over the column container (not a card), append to end.
+            const overIndex = columnTasks.findIndex(t => t.id === over.id)
+            const newIndex = overIndex === -1 ? columnTasks.length - 1 : overIndex
 
-                if (oldIndex === newIndex) return
+            if (oldIndex === -1 || oldIndex === newIndex) return
 
-                const reorderedList = [...columnTasks]
-                const [movedItem] = reorderedList.splice(oldIndex, 1)
-                reorderedList.splice(newIndex, 0, movedItem)
+            const reorderedList = [...columnTasks]
+            const [movedItem] = reorderedList.splice(oldIndex, 1)
+            reorderedList.splice(newIndex, 0, movedItem)
 
-                const updates = reorderedList.map((t, i) => ({ id: t.id, sort_order: i }))
-                await reorderTasks(updates)
-                return
-            }
+            const updates = reorderedList.map((t, i) => ({ id: t.id, sort_order: i }))
+            await reorderTasks(updates)
+            return
         }
 
         try {
-            await moveTaskToColumn(taskId, targetColumn)
+            // Determine the insertion index in the target column based on the
+            // card we dropped over (so a cross-column drop lands at the drop
+            // point, not always at the bottom).
+            const targetTasks = tasksByColumn[targetColumn] || []
+            const overIndex = targetTasks.findIndex(t => t.id === over.id)
+            const insertIndex = overIndex === -1 ? targetTasks.length : overIndex
+
+            await moveTaskToColumn(taskId, targetColumn, insertIndex)
             if (targetColumn === 'done' && taskId === activeFocusId) {
                 // Trigger celebration logic without closing panel
                 // (notes, score, energy, shouldClosePanel, markCompleted)
@@ -423,10 +441,10 @@ export function Planner() {
 
                 <DragOverlay>
                     {activeTask ? (
-                        <div className="w-72 opacity-90 cursor-grabbing">
+                        <div className={`${activeColumn === 'today' ? 'w-80 lg:w-96' : 'w-72'} opacity-90 cursor-grabbing`}>
                             <TaskCard
                                 task={activeTask}
-                                column={activeTask.status === 'done' ? 'done' : 'today'} // fallback
+                                column={activeColumn}
                                 onComplete={() => { }}
                             />
                         </div>
@@ -439,6 +457,8 @@ export function Planner() {
                     isOpen={true}
                     onClose={() => setShowCreateModal(null)}
                     listId={createListId}
+                    column={showCreateModal.column}
+                    position={showCreateModal.position}
                 />
             )}
 

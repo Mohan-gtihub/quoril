@@ -140,7 +140,7 @@ export const useReportsController = () => {
                 totalMinutesToday: Math.round(todayFocusSeconds / 60),
                 totalMinutesWeek: Math.round(rangeFocusSeconds / 60), // Approximation for window
                 focusPerTask,
-                deepWorkSessionsCount: sessionsInWindow.filter(s => s.seconds > 25 * 60).length
+                deepWorkSessionsCount: sessionsInWindow.filter(s => isFocusType(s.type) && s.seconds > 25 * 60).length
             },
             taskCompletion: {
                 completedToday: tasks.filter(t => t.completed_at && isSameDay(new Date(t.completed_at), new Date())).length,

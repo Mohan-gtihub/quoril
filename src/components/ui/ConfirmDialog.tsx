@@ -108,7 +108,7 @@ export function ConfirmDialog() {
                         {/* Close button */}
                         <button
                             onClick={() => close(false)}
-                            className="absolute top-3 right-3 w-7 h-7 rounded-lg bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] flex items-center justify-center transition-colors"
+                            className="absolute top-3 right-3 w-7 h-7 rounded-lg bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] flex items-center justify-center transition-colors"
                         >
                             <X className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                         </button>
@@ -130,7 +130,7 @@ export function ConfirmDialog() {
                         <div className="flex gap-2.5 px-6 pb-5">
                             <button
                                 onClick={() => close(false)}
-                                className="flex-1 py-2.5 px-4 rounded-xl bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] text-[13px] font-bold text-[var(--text-secondary)] transition-colors"
+                                className="flex-1 py-2.5 px-4 rounded-xl bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] text-[13px] font-bold text-[var(--text-secondary)] transition-colors"
                             >
                                 {cancelLabel}
                             </button>

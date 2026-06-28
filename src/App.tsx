@@ -147,8 +147,11 @@ function App() {
     useEffect(() => {
         const onVisible = () => {
             useFocusStore.getState().syncTimer()
-            // Also sync recurring tasks if day has changed
-            useTaskStore.getState().syncRecurringTasks().catch(() => { })
+            // On day change: roll unfinished Today tasks back to Backlog, then
+            // reset recurring tasks. Rollover first so recurring resets aren't swept.
+            useTaskStore.getState().rolloverStaleTasks()
+                .catch(() => { })
+                .finally(() => { useTaskStore.getState().syncRecurringTasks().catch(() => { }) })
         }
         document.addEventListener('visibilitychange', onVisible)
         window.addEventListener('focus', onVisible)

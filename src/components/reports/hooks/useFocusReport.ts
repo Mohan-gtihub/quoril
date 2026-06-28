@@ -80,7 +80,13 @@ export function useFocusReport(
     }, [trendByDay])
 
     const bestDay = useMemo(() => qualityByDay.reduce((a, b) => b.qualityScore > a.qualityScore ? b : a, qualityByDay[0] ?? { day: '-', qualityScore: 0, focusSeconds: 0, interruptions: 0 }), [qualityByDay])
-    const worstDay = useMemo(() => qualityByDay.filter(d => d.focusSeconds > 0).reduce((a, b) => b.qualityScore < a.qualityScore ? b : a, qualityByDay[0] ?? { day: '-', qualityScore: 100, focusSeconds: 0, interruptions: 0 }), [qualityByDay])
+    const worstDay = useMemo(() => {
+        // Seed from the FILTERED list — seeding with qualityByDay[0] (which may be
+        // an excluded 0-focus day with qualityScore 0) made that day always "win".
+        const withFocus = qualityByDay.filter(d => d.focusSeconds > 0)
+        if (withFocus.length === 0) return { day: '-', qualityScore: 100, focusSeconds: 0, interruptions: 0 }
+        return withFocus.reduce((a, b) => b.qualityScore < a.qualityScore ? b : a, withFocus[0])
+    }, [qualityByDay])
 
     return {
         trendByDay,

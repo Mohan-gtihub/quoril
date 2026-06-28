@@ -1,0 +1,1 @@
+- [Planner task lifecycle](planner-task-lifecycle.md) — column=status model; unfinished Today tasks roll back to Backlog at day change

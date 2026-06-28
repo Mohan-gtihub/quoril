@@ -99,25 +99,33 @@ function WorkspaceRow({ ws, isActive, onClick, collapsed }: { ws: Workspace; isA
 
     return (
         <div ref={ref} className="relative group">
-            <button
-                onClick={onClick}
+            <div
                 style={{ borderRadius: 'var(--radius-card)' }}
                 className={cn(
-                    'w-full flex items-center gap-2.5 px-2 py-1.5 text-[13px] transition-all text-left outline-none',
+                    'w-full flex items-center gap-2.5 px-2 py-1.5 text-[13px] transition-all',
                     isActive ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                 )}
             >
-                <div className="w-1.5 h-1.5 rounded-sm shrink-0" style={{ backgroundColor: ws.color }} />
-                <span className="flex-1 truncate">{ws.name}</span>
+                <button
+                    onClick={onClick}
+                    className="flex-1 flex items-center gap-2.5 min-w-0 text-left outline-none"
+                >
+                    <div className="w-1.5 h-1.5 rounded-sm shrink-0" style={{ backgroundColor: ws.color }} />
+                    <span className="flex-1 truncate">{ws.name}</span>
+                </button>
 
-                <div
+                <button
+                    type="button"
+                    aria-label={`Options for ${ws.name}`}
+                    aria-haspopup="menu"
+                    aria-expanded={showMenu}
                     onClick={e => { e.stopPropagation(); setShowMenu(v => !v) }}
                     style={{ borderRadius: 'var(--radius-card)' }}
-                    className={cn("p-0.5 text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] transition-colors shrink-0", showMenu ? "opacity-100 bg-[var(--bg-tertiary)] text-[var(--text-primary)]" : "opacity-0 group-hover:opacity-100")}
+                    className={cn("p-0.5 text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] transition-colors shrink-0 outline-none", showMenu ? "opacity-100 bg-[var(--bg-tertiary)] text-[var(--text-primary)]" : "opacity-0 group-hover:opacity-100")}
                 >
                     <MoreHorizontal size={14} />
-                </div>
-            </button>
+                </button>
+            </div>
 
             <AnimatePresence>
                 {showMenu && (
@@ -180,6 +188,7 @@ function CreateWsInline({ onDone }: { onDone: () => void }) {
                 <div className="flex flex-wrap gap-1 px-0.5">
                     {PALETTE.map(c => (
                         <button key={c} onClick={() => setColor(c)}
+                            aria-label={`Color ${c}`} aria-pressed={color === c} title={c}
                             className="w-3.5 h-3.5 hover:scale-110 transition-transform relative"
                             style={{ backgroundColor: c, borderRadius: 'var(--radius-pill)' }}>
                             {color === c && <Check size={8} className="text-white absolute inset-0 m-auto" />}

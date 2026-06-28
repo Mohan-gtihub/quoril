@@ -34,7 +34,7 @@ export function TodayColumn({ title = "Today", tasks, columnId, onTaskComplete, 
     return (
         <div
             ref={setNodeRef}
-            className="flex flex-col h-full rounded-[var(--radius-tile)] border border-[var(--border-default)] bg-[var(--bg-card)] overflow-hidden"
+            className="flex flex-col h-full rounded-[var(--radius-tile)] border border-[var(--border-default)] bg-[var(--bg-secondary)] shadow-[var(--shadow-soft)] overflow-hidden"
         >
             {/* Header */}
             <div className="px-5 pt-5 pb-4 flex-shrink-0">
@@ -55,7 +55,7 @@ export function TodayColumn({ title = "Today", tasks, columnId, onTaskComplete, 
                         {onAddTask && (
                             <button
                                 onClick={onAddTask}
-                                className="w-7 h-7 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                                className="w-7 h-7 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                                 title="Add task"
                             >
                                 <Plus className="w-3.5 h-3.5" />

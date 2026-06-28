@@ -54,7 +54,7 @@ export function ActivityHeatmap() {
     }, [])
 
     const getColorClass = (minutes: number) => {
-        if (minutes === 0) return 'bg-[var(--bg-hover)]'
+        if (minutes === 0) return 'bg-[var(--track)]'
         if (minutes < 30) return 'bg-[var(--accent-primary)]/25'
         if (minutes < 60) return 'bg-[var(--accent-primary)]/50'
         if (minutes < 120) return 'bg-[var(--accent-primary)]/75'
@@ -95,7 +95,7 @@ export function ActivityHeatmap() {
     }, [activityMap])
 
     return (
-        <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-card)] p-5 w-full flex flex-col animate-in fade-in duration-500 relative overflow-hidden">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] shadow-[var(--shadow-soft)] p-5 w-full flex flex-col animate-in fade-in duration-500 relative overflow-hidden">
             <div className="flex items-start justify-between mb-8 gap-4">
                 <div>
                     <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">Focus map</h2>
@@ -164,7 +164,7 @@ export function ActivityHeatmap() {
 
                 <div className="flex items-center justify-end gap-1.5 mt-2 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider pt-3 border-t border-[var(--border-default)]">
                     <span className="mr-1">Less</span>
-                    <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--bg-hover)]" />
+                    <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--track)]" />
                     <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--accent-primary)]/25" />
                     <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--accent-primary)]/50" />
                     <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--accent-primary)]/75" />

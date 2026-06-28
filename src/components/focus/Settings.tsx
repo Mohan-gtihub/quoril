@@ -1,6 +1,9 @@
 ﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Play, CheckCircle2 } from 'lucide-react'
+import {
+    ArrowLeft, Play, Check, Palette, Timer, Target,
+    Maximize2, Bell, Send, Eye, ShieldCheck, CheckCircle2
+} from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useFocusStore } from '@/store/focusStore'
@@ -9,14 +12,21 @@ import { cn } from '@/utils/helpers'
 
 // ── Shared UI Components ─────────────────────────────────────
 
-function SettingCard({ title, description, children }: any) {
+function SettingCard({ title, description, icon: Icon, children }: any) {
     return (
-        <section className="rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] p-6 md:p-7">
-            <div className="mb-5">
-                <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">{title}</h2>
-                {description && <p className="text-xs text-[var(--text-tertiary)] leading-relaxed max-w-lg mt-1">{description}</p>}
+        <section className="rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-[var(--shadow-soft)] p-6 md:p-7">
+            <div className="flex items-start gap-3.5 mb-6">
+                {Icon && (
+                    <div className="w-9 h-9 rounded-[var(--radius-card)] bg-[var(--bg-tertiary)] flex items-center justify-center shrink-0 text-[var(--text-secondary)]">
+                        <Icon className="w-[18px] h-[18px]" />
+                    </div>
+                )}
+                <div className="min-w-0">
+                    <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">{title}</h2>
+                    {description && <p className="text-xs text-[var(--text-tertiary)] leading-relaxed max-w-lg mt-1">{description}</p>}
+                </div>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
                 {children}
             </div>
         </section>
@@ -25,10 +35,10 @@ function SettingCard({ title, description, children }: any) {
 
 function ToggleRow({ label, description, value, onChange }: any) {
     return (
-        <label className="flex items-center justify-between group cursor-pointer px-4 py-3.5 rounded-[var(--radius-card)] bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] transition-colors">
+        <label className="flex items-center justify-between group cursor-pointer px-4 py-3.5 rounded-[var(--radius-card)] border border-[var(--border-default)] bg-[var(--bg-secondary)] hover:border-[var(--border-hover)] transition-colors">
             <div className="pr-6">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">{label}</p>
-                {description && <p className="text-[11px] text-[var(--text-tertiary)] mt-1">{description}</p>}
+                {description && <p className="text-[11px] text-[var(--text-tertiary)] mt-1 leading-relaxed">{description}</p>}
             </div>
             <input
                 type="checkbox"
@@ -37,12 +47,12 @@ function ToggleRow({ label, description, value, onChange }: any) {
                 className="sr-only"
             />
             <div className={cn(
-                "relative w-12 h-6 rounded-full transition-colors duration-300 ease-in-out shrink-0",
-                value ? "bg-[var(--accent-primary)]" : "bg-[var(--border-hover)]"
+                "relative w-[44px] h-6 rounded-full transition-colors duration-300 ease-in-out shrink-0",
+                value ? "bg-[var(--accent-primary)]" : "bg-[var(--bg-tertiary)] group-hover:bg-[var(--bg-hover-strong)]"
             )}>
                 <div className={cn(
-                    "absolute top-[2px] w-[20px] h-[20px] bg-[var(--bg-primary)] rounded-full transition-transform duration-300 ease-in-out shadow-sm",
-                    value ? "left-[calc(100%-22px)]" : "left-[2px]"
+                    "absolute top-[3px] w-[18px] h-[18px] bg-white rounded-full transition-transform duration-300 ease-in-out shadow-sm",
+                    value ? "left-[23px]" : "left-[3px]"
                 )} />
             </div>
         </label>
@@ -53,7 +63,7 @@ function SegmentedControl({ label, options, value, onChange }: any) {
     return (
         <div className="space-y-2.5">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">{label}</p>
-            <div className="flex flex-wrap gap-1 p-1 bg-[var(--bg-hover)] rounded-[var(--radius-card)]">
+            <div className="flex flex-wrap gap-1.5 p-1.5 bg-[var(--bg-tertiary)] rounded-[var(--radius-card)]">
                 {options.map((opt: any) => {
                     const active = value === opt.value
                     return (
@@ -61,10 +71,10 @@ function SegmentedControl({ label, options, value, onChange }: any) {
                             key={opt.value}
                             onClick={() => onChange(opt.value)}
                             className={cn(
-                                "flex-1 min-w-[80px] px-3 py-2 rounded-[var(--radius-tile)] text-xs font-semibold transition-all whitespace-nowrap",
+                                "flex-1 min-w-[72px] px-3 py-2 rounded-[calc(var(--radius-card)-4px)] text-xs font-semibold transition-all whitespace-nowrap",
                                 active
-                                    ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)]"
-                                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-hover)]"
+                                    ? "bg-[var(--bg-card)] text-[var(--text-primary)] shadow-[var(--shadow-soft)]"
+                                    : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
                             )}
                         >
                             {opt.label}
@@ -91,15 +101,15 @@ function OptionGrid({ label, options, value, onChange, onPreview }: any) {
                                 if (onPreview) onPreview(opt.value)
                             }}
                             className={cn(
-                                "flex items-center justify-between px-4 py-3 rounded-[var(--radius-card)] text-xs font-semibold transition-all group",
+                                "flex items-center justify-between px-4 py-3 rounded-[var(--radius-card)] text-xs font-semibold transition-all group border",
                                 active
-                                    ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)]"
-                                    : "bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)]"
+                                    ? "bg-[var(--accent-primary)] border-[var(--accent-primary)] text-[var(--accent-contrast)]"
+                                    : "bg-[var(--bg-secondary)] border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]"
                             )}
                         >
                             <span className="truncate">{opt.label}</span>
                             {active ? (
-                                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                                <Check className="w-4 h-4 shrink-0" />
                             ) : (
                                 onPreview && <Play className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                             )}
@@ -114,13 +124,13 @@ function OptionGrid({ label, options, value, onChange, onPreview }: any) {
 function SliderRow({ label, description, value, onChange, min, max, step = 1, format }: any) {
     const display = format ? format(value) : value
     return (
-        <div className="space-y-3 px-4 py-3.5 rounded-[var(--radius-card)] bg-[var(--bg-hover)]">
-            <div className="flex items-center justify-between">
+        <div className="space-y-3 px-4 py-3.5 rounded-[var(--radius-card)] border border-[var(--border-default)] bg-[var(--bg-secondary)]">
+            <div className="flex items-center justify-between gap-4">
                 <div>
                     <p className="text-sm font-semibold text-[var(--text-primary)]">{label}</p>
-                    {description && <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">{description}</p>}
+                    {description && <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5 leading-relaxed">{description}</p>}
                 </div>
-                <span className="text-sm font-semibold text-[var(--accent-primary)] tabular-nums">{display}</span>
+                <span className="text-sm font-semibold text-[var(--text-primary)] tabular-nums px-2.5 py-1 rounded-md bg-[var(--bg-tertiary)] shrink-0">{display}</span>
             </div>
             <input
                 type="range"
@@ -129,7 +139,7 @@ function SliderRow({ label, description, value, onChange, min, max, step = 1, fo
                 step={step}
                 value={value}
                 onChange={(e) => onChange(Number(e.target.value))}
-                className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-[var(--border-hover)] accent-[var(--accent-primary)]"
+                className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-[var(--bg-tertiary)] accent-[var(--accent-primary)]"
             />
             <div className="flex justify-between text-[11px] text-[var(--text-muted)] font-medium tabular-nums">
                 <span>{format ? format(min) : min}</span>
@@ -187,11 +197,12 @@ export function Settings() {
 
                     {/* ══ Aesthetics & Interface ══ */}
                     <SettingCard
-                        title="Aesthetics & Interface"
-                        description="Tailor the visual envelope of your terminal. Themes dynamically adjust the entire OS environment."
+                        icon={Palette}
+                        title="Appearance"
+                        description="Choose your theme and fine-tune how much detail shows in the interface."
                     >
                         <SegmentedControl
-                            label="Color Environment"
+                            label="Theme"
                             value={settings.theme}
                             onChange={(v: string) => settings.updateSettings({ theme: v as any })}
                             options={[
@@ -220,12 +231,13 @@ export function Settings() {
 
                     {/* ══ Focus Intelligence ══ */}
                     <SettingCard
-                        title="Focus Intelligence"
-                        description="Configure how the terminal manages your deep work sessions and recovery phases."
+                        icon={Timer}
+                        title="Focus & Breaks"
+                        description="Set how long your focus sprints and breaks last."
                     >
                         <ToggleRow
-                            label="Pomodoro Protocol"
-                            description="Automatically suggest recovery breaks after intense focus blocks."
+                            label="Pomodoro timer"
+                            description="Suggest a break automatically after each focus sprint."
                             value={settings.pomodorosEnabled}
                             onChange={(v: boolean) => settings.updateSettings({ pomodorosEnabled: v })}
                         />
@@ -233,7 +245,7 @@ export function Settings() {
                         {settings.pomodorosEnabled && (
                             <div className="grid md:grid-cols-2 gap-6 pt-2 animate-in fade-in slide-in-from-top-2">
                                 <SegmentedControl
-                                    label="Sprint Duration"
+                                    label="Focus length"
                                     value={(settings.pomodoroLength || 25).toString()}
                                     onChange={handlePomodoroLengthChange}
                                     options={[
@@ -244,7 +256,7 @@ export function Settings() {
                                     ]}
                                 />
                                 <SegmentedControl
-                                    label="Recovery Length"
+                                    label="Break length"
                                     value={settings.defaultBreakLength.toString()}
                                     onChange={(v: string) => settings.updateSettings({ defaultBreakLength: parseInt(v) })}
                                     options={[
@@ -260,12 +272,13 @@ export function Settings() {
 
                     {/* ══ Mission Goals ══ */}
                     <SettingCard
-                        title="Mission Goals"
-                        description="Set your daily focus target and control how victory is celebrated when you hit it."
+                        icon={Target}
+                        title="Daily goal"
+                        description="Set your daily focus target and how it's celebrated when you hit it."
                     >
                         <SliderRow
-                            label="Daily Focus Goal"
-                            description="Minimum focused time to consider the day a success."
+                            label="Daily focus goal"
+                            description="Minimum focused time to count the day as a success."
                             value={settings.dailyFocusGoalMinutes}
                             onChange={(v: number) => settings.updateSettings({ dailyFocusGoalMinutes: v })}
                             min={30}
@@ -278,16 +291,16 @@ export function Settings() {
                             }}
                         />
                         <ToggleRow
-                            label="Victory Screen"
-                            description="Display the completion celebration when a focus session ends."
+                            label="Celebration screen"
+                            description="Show a celebration when a focus session ends."
                             value={settings.showSuccessScreen}
                             onChange={(v: boolean) => settings.updateSettings({ showSuccessScreen: v })}
                         />
                         {settings.showSuccessScreen && (
                             <div className="animate-in fade-in slide-in-from-top-2">
                                 <ToggleRow
-                                    label="Animated GIF Reward"
-                                    description="Show a celebration GIF on the victory screen."
+                                    label="Celebration GIF"
+                                    description="Show a fun GIF on the celebration screen."
                                     value={settings.funGifEnabled}
                                     onChange={(v: boolean) => settings.updateSettings({ funGifEnabled: v })}
                                 />
@@ -297,12 +310,13 @@ export function Settings() {
 
                     {/* ══ Super Focus Mode ══ */}
                     <SettingCard
-                        title="Super Focus Mode"
-                        description="Locks the interface to a minimal pill overlay. Maximises screen space for deep work."
+                        icon={Maximize2}
+                        title="Super Focus"
+                        description="Collapse the app to a minimal floating pill for distraction-free work."
                     >
                         <ToggleRow
-                            label="Super Focus Mode"
-                            description="Collapses the UI to a floating pill. Press Escape or click the pill to exit."
+                            label="Super Focus mode"
+                            description="Collapses the UI to a floating pill. Press Escape or click it to exit."
                             value={settings.superFocusMode}
                             onChange={(v: boolean) => settings.updateSettings({ superFocusMode: v })}
                         />
@@ -310,12 +324,13 @@ export function Settings() {
 
                     {/* ══ Alert Systems ══ */}
                     <SettingCard
-                        title="Alert Systems"
-                        description="Periodic tactical pulses and visual cues keep your attention anchored during deep work."
+                        icon={Bell}
+                        title="Focus reminders"
+                        description="Gentle audio and visual cues to keep your attention from drifting."
                     >
                         <ToggleRow
-                            label="Timed Pulses"
-                            description="Play a subtle audio cue at set intervals to prevent mind-wandering."
+                            label="Timed reminders"
+                            description="Play a subtle cue at a set interval during focus sessions."
                             value={settings.timedAlertsEnabled}
                             onChange={(v: boolean) => settings.updateSettings({ timedAlertsEnabled: v })}
                         />
@@ -324,7 +339,7 @@ export function Settings() {
                             <div className="space-y-6 pt-2 pb-2 animate-in fade-in slide-in-from-top-2">
                                 <div className="grid md:grid-cols-2 gap-6">
                                     <SegmentedControl
-                                        label="Pulse Frequency"
+                                        label="Reminder interval"
                                         value={settings.alertInterval.toString()}
                                         onChange={(v: string) => settings.updateSettings({ alertInterval: parseInt(v) })}
                                         options={[
@@ -337,8 +352,8 @@ export function Settings() {
                                     <div className="space-y-3">
                                         <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)] hidden md:block">&nbsp;</p>
                                         <ToggleRow
-                                            label="Animated Screen Flash"
-                                            description="Edge-screen flash effect when pulse triggers."
+                                            label="Screen flash"
+                                            description="Flash the screen edges when a reminder triggers."
                                             value={settings.animatedFlash}
                                             onChange={(v: boolean) => settings.updateSettings({ animatedFlash: v })}
                                         />
@@ -346,7 +361,7 @@ export function Settings() {
                                 </div>
 
                                 <OptionGrid
-                                    label="Tactical Pulse Sound"
+                                    label="Reminder sound"
                                     value={settings.alertSound}
                                     onChange={(v: string) => settings.updateSettings({ alertSound: v })}
                                     onPreview={(v: string) => soundService.playAlert(v)}
@@ -365,12 +380,13 @@ export function Settings() {
 
                     {/* ══ External Comms ══ */}
                     <SettingCard
-                        title="External Comms"
-                        description="System-level notifications and auditory rewards for mission completion."
+                        icon={Send}
+                        title="Notifications & sounds"
+                        description="System notifications and sounds when timers finish or tasks complete."
                     >
                         <ToggleRow
-                            label="Push Notifications"
-                            description="Send OS-level alerts when timers finish."
+                            label="Push notifications"
+                            description="Send a system notification when a timer finishes."
                             value={settings.notificationAlertsEnabled}
                             onChange={(v: boolean) => {
                                 if (v && Notification.permission !== 'granted') {
@@ -381,8 +397,8 @@ export function Settings() {
                         />
                         <div className="border-t border-[var(--border-default)] my-2" />
                         <ToggleRow
-                            label="Success Checksum Reward"
-                            description="Play a celebratory chime when marking tasks complete."
+                            label="Completion sound"
+                            description="Play a chime when you mark a task complete."
                             value={settings.successSoundEnabled}
                             onChange={(v: boolean) => settings.updateSettings({ successSoundEnabled: v })}
                         />
@@ -390,7 +406,7 @@ export function Settings() {
                         {settings.successSoundEnabled && (
                             <div className="pt-2 animate-in fade-in slide-in-from-top-2">
                                 <OptionGrid
-                                    label="Success Signature"
+                                    label="Completion sound"
                                     value={settings.successSound}
                                     onChange={(v: string) => settings.updateSettings({ successSound: v })}
                                     onPreview={(v: string) => soundService.playSuccess(v)}
@@ -408,12 +424,13 @@ export function Settings() {
 
                     {/* ══ Visibility ══ */}
                     <SettingCard
-                        title="Data Visibility"
-                        description="Control what information is surfaced during active sessions and in your reports."
+                        icon={Eye}
+                        title="Display"
+                        description="Control what extra detail shows on your task cards."
                     >
                         <ToggleRow
-                            label="Minimal Interface"
-                            description="Hide estimated and completed times in task cards during focus sessions."
+                            label="Minimal task cards"
+                            description="Hide estimated and completed times on task cards during focus sessions."
                             value={settings.hideEstDoneTimes}
                             onChange={(v: boolean) => settings.updateSettings({ hideEstDoneTimes: v })}
                         />
@@ -468,8 +485,9 @@ function AccessibilityPermissionCard() {
 
     return (
         <SettingCard
-            title="App Tracking Permission"
-            description="Quoril tracks which apps you use during focus sessions to give you productivity insights. This requires macOS Accessibility permission."
+            icon={ShieldCheck}
+            title="App tracking permission"
+            description="Quoril tracks which apps you use during focus sessions for productivity insights. This requires macOS Accessibility permission."
         >
             {hasAccess ? (
                 <div className="flex items-center gap-3 px-4 py-3.5 bg-[var(--bg-hover)] rounded-[var(--radius-card)]">

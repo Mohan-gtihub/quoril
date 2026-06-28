@@ -24,31 +24,31 @@ function fmt(sec: number) {
 }
 
 function fmtHour(h: number) {
-    if (h === 0) return '12a'
-    if (h < 12) return `${h}a`
-    if (h === 12) return '12p'
-    return `${h - 12}p`
+    if (h === 0) return '12 AM'
+    if (h < 12) return `${h} AM`
+    if (h === 12) return '12 PM'
+    return `${h - 12} PM`
 }
 
 function pct(v: number, max: number) {
     return max > 0 ? Math.min(100, Math.round((v / max) * 100)) : 0
 }
 
-// Vibrant category palette (magenta / amber / teal / pink / orange family)
-// matching the dashboard design — keeps card backgrounds white.
+// Category palette aligned to the app's functional accents (focus / break /
+// wellbeing) plus a few restrained companions — calm, not loud.
 const CATEGORY_COLORS: Record<string, string> = {
-    Development: '#c850a0',   // magenta — focus work
-    Work: '#c850a0',          // magenta
-    Communication: '#5bc4c4', // teal — messaging
-    Web: '#f0b450',           // amber — meetings / browsing
-    Entertainment: '#f4a0c0', // soft pink — admin / leisure
-    Gaming: '#f08050',        // orange
-    Other: '#f08050',         // orange
+    Development: 'var(--focus)',     // blue — focus work
+    Work: 'var(--focus)',
+    Communication: 'var(--wellbeing)', // teal — messaging
+    Web: 'var(--break)',             // amber — browsing
+    Entertainment: '#8b5cf6',        // violet — leisure
+    Gaming: '#f08050',               // orange
+    Other: '#94a3b8',                // neutral slate
     Idle: 'color-mix(in srgb, var(--text-primary) 8%, transparent)',
 }
 
 // Ordered accent palette for charts where there's no category mapping.
-const CHART_PALETTE = ['#c850a0', '#f0b450', '#5bc4c4', '#f4a0c0', '#f08050', '#9b8cf0']
+const CHART_PALETTE = ['var(--focus)', 'var(--break)', 'var(--wellbeing)', '#8b5cf6', '#f08050', '#94a3b8']
 
 function getCategoryColor(cat: string) {
     return CATEGORY_COLORS[cat] || CATEGORY_COLORS.Other
@@ -60,7 +60,7 @@ function getCategoryColor(cat: string) {
 
 function Tile({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={cn('rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] p-5', className)}>
+        <div className={cn('rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-[var(--shadow-soft)] p-5', className)}>
             {children}
         </div>
     )
@@ -97,36 +97,38 @@ function HourlyHeatmap({ hourly, peakHour }: { hourly: { hour: number; totalSeco
             <div className="flex gap-[3px] items-end h-28 mt-5">
                 {hourly.map((h, i) => {
                     const intensity = h.totalSeconds / maxSec
-                    const height = Math.max(3, intensity * 100)
+                    const height = Math.max(2, intensity * 100)
                     const isPeak = h.hour === peakHour && h.totalSeconds > 0
                     return (
-                        <div key={h.hour} className="flex-1 flex flex-col items-center justify-end group relative">
+                        <div key={h.hour} className="flex-1 flex flex-col items-stretch justify-end group relative h-full">
                             {/* Tooltip */}
-                            <div className="absolute -top-14 left-1/2 -translate-x-1/2 bg-[var(--bg-elevated)] rounded-[var(--radius-tile)] px-2.5 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap shadow-sm">
+                            <div className="absolute -top-14 left-1/2 -translate-x-1/2 bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-[var(--radius-card)] px-2.5 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap shadow-[var(--shadow-soft)]">
                                 <p className="text-[11px] font-semibold text-[var(--text-primary)] tabular-nums">{fmtHour(h.hour)} — {fmt(h.totalSeconds)}</p>
                                 <p className="text-[11px] text-[var(--text-tertiary)]">{h.uniqueApps} app{h.uniqueApps !== 1 ? 's' : ''}</p>
                             </div>
+                            {/* Baseline track — keeps the grid readable even with no usage */}
+                            <div className="absolute inset-0 rounded-md bg-[var(--track)] opacity-40 group-hover:opacity-70 transition-opacity" />
                             <motion.div
-                                className="w-full rounded-full"
+                                className="relative w-full rounded-md"
                                 initial={{ height: 0 }}
                                 animate={{ height: `${height}%` }}
                                 transition={{ duration: 0.5, delay: i * 0.012, ease: 'easeOut' }}
                                 style={{
                                     backgroundColor: h.totalSeconds > 0
                                         ? isPeak
-                                            ? '#c850a0'
-                                            : `color-mix(in srgb, #c850a0 ${Math.round((0.3 + intensity * 0.6) * 100)}%, transparent)`
-                                        : 'var(--bg-hover)',
+                                            ? 'var(--focus)'
+                                            : `color-mix(in srgb, var(--focus) ${Math.round((0.35 + intensity * 0.55) * 100)}%, transparent)`
+                                        : 'transparent',
                                 }}
                             />
                         </div>
                     )
                 })}
             </div>
-            <div className="flex gap-[3px] mt-2">
+            <div className="flex gap-[3px] mt-2.5">
                 {hourly.map(h => (
-                    <div key={h.hour} className="flex-1 text-center text-[11px] text-[var(--text-muted)] tabular-nums">
-                        {h.hour % 3 === 0 ? fmtHour(h.hour) : ''}
+                    <div key={h.hour} className="flex-1 text-center text-[10px] font-medium text-[var(--text-muted)] tabular-nums">
+                        {h.hour % 6 === 0 ? fmtHour(h.hour) : ''}
                     </div>
                 ))}
             </div>
@@ -157,7 +159,7 @@ function WeeklyChart({ weekly, selectedDate }: { weekly: { day: string; totalSec
                                 animate={{ height: `${height}%` }}
                                 transition={{ duration: 0.6, delay: i * 0.05, ease: 'easeOut' }}
                                 style={{
-                                    backgroundColor: isSelected ? '#c850a0' : d.totalSeconds > 0 ? 'color-mix(in srgb, #c850a0 55%, transparent)' : 'var(--bg-hover)',
+                                    backgroundColor: isSelected ? 'var(--focus)' : d.totalSeconds > 0 ? 'color-mix(in srgb, var(--focus) 50%, transparent)' : 'var(--track)',
                                 }}
                             />
                             <span className={cn('text-[11px] mt-2 font-medium', isSelected ? 'text-[var(--text-primary)] font-bold' : 'text-[var(--text-muted)]')}>
@@ -214,7 +216,7 @@ function CategoryDonut({ categories, totalSeconds }: { categories: CategoryEntry
         <div className="flex items-center gap-6">
             <div className="relative flex-shrink-0">
                 <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-                    <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--bg-hover)" strokeWidth={strokeWidth} />
+                    <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--track)" strokeWidth={strokeWidth} />
                     {segments.map((s, i) => (
                         <path
                             key={i}
@@ -267,28 +269,28 @@ function ProductivityBar({ productivity, totalSeconds }: { productivity: Product
                 <h2 className="text-base font-semibold text-[var(--text-primary)]">Productivity Split</h2>
                 <span className="text-xs text-[var(--text-tertiary)] tabular-nums">{prodPct}% productive</span>
             </div>
-            <div className="h-3 bg-[var(--bg-hover)] rounded-full overflow-hidden flex">
+            <div className="h-3 bg-[var(--track)] rounded-full overflow-hidden flex gap-0.5">
                 {data.productive > 0 && (
-                    <motion.div className="h-full rounded-l-full" initial={{ width: 0 }} animate={{ width: `${prodPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: '#5bc4c4' }} />
+                    <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${prodPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: 'var(--wellbeing)' }} />
                 )}
                 {data.neutral > 0 && (
-                    <motion.div className="h-full" initial={{ width: 0 }} animate={{ width: `${neutralPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: '#f0b450' }} />
+                    <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${neutralPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: 'var(--break)' }} />
                 )}
                 {data.unproductive > 0 && (
-                    <motion.div className="h-full rounded-r-full" initial={{ width: 0 }} animate={{ width: `${unprodPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: '#f08050' }} />
+                    <motion.div className="h-full rounded-full" initial={{ width: 0 }} animate={{ width: `${unprodPct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: 'var(--error)' }} />
                 )}
             </div>
             <div className="flex justify-between mt-3">
                 <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#5bc4c4' }} />
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--wellbeing)' }} />
                     <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">Productive {fmt(data.productive)}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#f0b450' }} />
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--break)' }} />
                     <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">Neutral {fmt(data.neutral)}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#f08050' }} />
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--error)' }} />
                     <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">Distracting {fmt(data.unproductive)}</span>
                 </div>
             </div>
@@ -318,7 +320,7 @@ function AppList({ apps }: { apps: { appName: string; category: string; totalSec
                         <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">{fmt(app.totalSeconds)}</span>
                     </div>
                     <div className="ml-[30px]">
-                        <div className="h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-[var(--track)] rounded-full overflow-hidden">
                             <motion.div
                                 className="h-full rounded-full"
                                 initial={{ width: 0 }}
@@ -355,7 +357,7 @@ function DomainList({ domains }: { domains: { domain: string; totalSeconds: numb
                         <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">{fmt(d.totalSeconds)}</span>
                     </div>
                     <div className="ml-[30px]">
-                        <div className="h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-[var(--track)] rounded-full overflow-hidden">
                             <motion.div
                                 className="h-full rounded-full"
                                 initial={{ width: 0 }}
@@ -460,7 +462,7 @@ export function ScreenTime() {
                 <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-10">
                     <header className="mb-8 flex items-end gap-4">
                         <button onClick={() => navigate(-1)}
-                            className="w-9 h-9 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+                            className="w-9 h-9 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
                             <ArrowLeft className="w-4 h-4" />
                         </button>
                         <div>
@@ -482,7 +484,7 @@ export function ScreenTime() {
                 <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <button onClick={() => navigate(-1)}
-                            className="w-9 h-9 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+                            className="w-9 h-9 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
                             <ArrowLeft className="w-4 h-4" />
                         </button>
                         <div>
@@ -500,17 +502,17 @@ export function ScreenTime() {
                             </div>
                         )}
                         <div className="flex items-center gap-1">
-                            <button onClick={goBack} className="w-8 h-8 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] flex items-center justify-center text-[var(--text-secondary)] transition-colors">
+                            <button onClick={goBack} className="w-8 h-8 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] flex items-center justify-center text-[var(--text-secondary)] transition-colors">
                                 <ChevronLeft className="w-4 h-4" />
                             </button>
                             <button
                                 onClick={() => setDate(format(new Date(), 'yyyy-MM-dd'))}
-                                className="px-4 py-1.5 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] text-xs font-semibold text-[var(--text-secondary)] transition-colors min-w-[96px] text-center"
+                                className="px-4 py-1.5 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] text-xs font-semibold text-[var(--text-secondary)] transition-colors min-w-[96px] text-center"
                             >
                                 {displayDate}
                             </button>
                             <button onClick={goForward} disabled={!canGoForward}
-                                className="w-8 h-8 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] flex items-center justify-center text-[var(--text-secondary)] transition-colors disabled:opacity-20 disabled:cursor-not-allowed">
+                                className="w-8 h-8 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] flex items-center justify-center text-[var(--text-secondary)] transition-colors disabled:opacity-20 disabled:cursor-not-allowed">
                                 <ChevronRight className="w-4 h-4" />
                             </button>
                         </div>
@@ -544,8 +546,8 @@ export function ScreenTime() {
                             <Kpi label="Apps Used" value={totals.totalApps}>
                                 <p className="text-[11px] text-[var(--text-tertiary)] tabular-nums">{totals.totalSessions} sessions</p>
                             </Kpi>
-                            <Kpi label="Peak Hour" value={fmtHour(peakHour)}>
-                                <p className="text-[11px] text-[var(--text-tertiary)] tabular-nums">{fmt(hourly[peakHour]?.totalSeconds ?? 0)} usage</p>
+                            <Kpi label="Peak Hour" value={totals.totalScreenTime === 0 ? '—' : fmtHour(peakHour)}>
+                                <p className="text-[11px] text-[var(--text-tertiary)] tabular-nums">{totals.totalScreenTime === 0 ? 'No usage' : `${fmt(hourly[peakHour]?.totalSeconds ?? 0)} usage`}</p>
                             </Kpi>
                             <Kpi label="Longest Session" value={fmt(totals.longestSession)}>
                                 <p className="text-[11px] text-[var(--text-tertiary)]">Single stretch</p>

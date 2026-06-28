@@ -49,7 +49,10 @@ export function FocusPopup() {
     }
 
     const handleDone = async () => {
-        await endSession()
+        // "Done" should actually complete the task (stamp completed_at + move to
+        // Done), matching the Done button in FocusTimerPanel — not just end the
+        // session.
+        await endSession(undefined, undefined, undefined, true, true)
         window.close()
     }
 
@@ -106,7 +109,7 @@ export function FocusPopup() {
                 <div className="grid grid-cols-3 gap-2">
                     <button
                         onClick={() => isPaused ? resumeSession() : pauseSession()}
-                        className="flex flex-col items-center justify-center gap-2 py-4 rounded-[var(--radius-tile)] transition-all bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-hover)]"
+                        className="flex flex-col items-center justify-center gap-2 py-4 rounded-[var(--radius-tile)] transition-all bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover-strong)]"
                     >
                         {isPaused ? <Play className="w-5 h-5 fill-current" /> : <Pause className="w-5 h-5 fill-current" />}
                         <span className="text-[11px] font-semibold">{isPaused ? 'Resume' : 'Pause'}</span>
@@ -122,7 +125,7 @@ export function FocusPopup() {
 
                     <button
                         onClick={handleSkip}
-                        className="flex flex-col items-center justify-center gap-2 py-4 rounded-[var(--radius-tile)] transition-all bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-hover)]"
+                        className="flex flex-col items-center justify-center gap-2 py-4 rounded-[var(--radius-tile)] transition-all bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover-strong)]"
                     >
                         <SkipForward className="w-5 h-5" />
                         <span className="text-[11px] font-semibold">Skip</span>
