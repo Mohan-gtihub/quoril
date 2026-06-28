@@ -8,9 +8,9 @@ import {
   Eyebrow,
 } from "@/components/ui";
 import Reveal from "@/components/Reveal";
+import CanvasFlow from "@/components/CanvasFlow";
 import {
   IconCanvas,
-  IconCheck,
   IconArrow,
   IconBolt,
   IconBoard,
@@ -132,114 +132,11 @@ export default function CanvasPage() {
                 </span>
               </div>
 
-              {/* infinite board */}
-              <div className="dotgrid relative min-h-[420px] bg-paper p-4 sm:min-h-[480px]">
-                {/* connector lines */}
-                <svg
-                  className="pointer-events-none absolute inset-0 h-full w-full"
-                  viewBox="0 0 100 100"
-                  preserveAspectRatio="none"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M 27 33 C 40 38, 46 52, 60 56"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="0.4"
-                    className="text-ink-faint"
-                  />
-                  <path
-                    d="M 30 70 C 42 66, 50 62, 60 60"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="0.4"
-                    strokeDasharray="1.2 1.2"
-                    className="text-ink-faint"
-                  />
-                  <circle cx="27" cy="33" r="0.9" className="fill-ink" />
-                  <circle cx="30" cy="70" r="0.9" className="fill-ink" />
-                  <circle cx="60" cy="58" r="0.9" className="fill-ink" />
-                </svg>
-
-                {/* Idea block */}
-                <div className="absolute left-[4%] top-[10%] w-[210px] max-w-[60%] rounded-card border border-line bg-surface p-3 shadow-soft">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
-                    Idea
-                  </span>
-                  <p className="mt-1.5 text-[13px] leading-snug text-ink">
-                    Launch the canvas as the centerpiece of the v1 story.
-                  </p>
-                </div>
-
-                {/* Checklist block */}
-                <div className="absolute left-[3%] top-[52%] hidden w-[230px] max-w-[60%] rounded-card border border-line bg-surface p-3 shadow-soft sm:block">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
-                    Checklist
-                  </span>
-                  <ul className="mt-2 flex flex-col gap-2">
-                    {[
-                      { t: "Draft block types", done: true },
-                      { t: "Wire first pipeline", done: true },
-                      { t: "Record demo clip", done: false },
-                    ].map((it) => (
-                      <li key={it.t} className="flex items-center gap-2.5">
-                        {it.done ? (
-                          <span className="grid h-4 w-4 flex-none place-items-center rounded-[5px] bg-ink text-paper">
-                            <IconCheck className="h-3 w-3" />
-                          </span>
-                        ) : (
-                          <span className="h-4 w-4 flex-none rounded-[5px] border border-line-strong" />
-                        )}
-                        <span
-                          className={`text-[12.5px] ${
-                            it.done
-                              ? "text-ink-faint line-through"
-                              : "text-ink"
-                          }`}
-                        >
-                          {it.t}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Link block */}
-                <div className="absolute right-[4%] top-[12%] hidden w-[240px] max-w-[60%] rounded-card border border-line bg-surface p-3 shadow-soft sm:block">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
-                    Link
-                  </span>
-                  <div className="mt-2 flex items-center gap-2.5">
-                    <span className="grid h-7 w-7 flex-none place-items-center rounded-[7px] border border-line bg-sunken text-[11px] font-semibold text-ink-muted">
-                      gh
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-[13px] font-medium text-ink">
-                        github.com/quoril
-                      </p>
-                      <p className="truncate text-[11px] text-ink-faint">
-                        https://github.com/quoril
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Task Reference block */}
-                <div className="absolute bottom-[10%] right-[5%] w-[250px] max-w-[70%] rounded-card border border-line bg-surface p-3 shadow-soft">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
-                    Task reference
-                  </span>
-                  <div className="mt-2 flex items-center gap-2.5">
-                    <IconBoard className="h-4 w-4 flex-none text-ink-muted" />
-                    <p className="flex-1 truncate text-[13px] font-medium text-ink">
-                      [25m] Write launch post
-                    </p>
-                    <span className="mono flex-none rounded-pill bg-ink px-2 py-0.5 text-[10px] text-paper">
-                      active
-                    </span>
-                  </div>
-                </div>
-              </div>
+              {/* infinite board — interactive (React Flow) */}
+              <CanvasFlow />
+              <p className="border-t border-line bg-sunken/40 px-4 py-2 text-center text-[11px] text-ink-faint">
+                Live preview — drag a block to move it, drag the board to pan, hover to wire.
+              </p>
             </div>
           </Reveal>
         </Container>
