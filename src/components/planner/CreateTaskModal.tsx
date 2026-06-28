@@ -2,17 +2,20 @@
 import { X, Repeat } from 'lucide-react'
 import { useCreateTask } from '@/hooks/useCreateTask'
 import type { Task } from '@/types/database'
+import type { TaskColumn } from '@/types/list'
 
 interface Props {
     isOpen: boolean
     onClose: () => void
     listId: string
+    column?: TaskColumn
+    position?: 'top' | 'bottom'
     onCreated?: (task: Task) => void
 }
 
 const PRESETS = [25, 45, 60, 90]
 
-export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
+export function CreateTaskModal({ isOpen, onClose, listId, column = 'today', position = 'bottom', onCreated }: Props) {
     const { submit, loading, error } = useCreateTask(listId)
 
     const [title, setTitle] = useState('')
@@ -39,6 +42,8 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
             priority,
             focusAfter,
             isRecurring,
+            column,
+            position,
         })
 
         if (res) {
@@ -61,7 +66,7 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
             onClick={onClose}
         >
             <div
-                className="glass-thick w-full max-w-md rounded-[var(--radius-card)] p-6 shadow-sm animate-scale-in"
+                className="w-full max-w-md rounded-[var(--radius-tile)] p-6 bg-[var(--bg-card)] border border-[var(--border-default)] shadow-[var(--shadow-lift)] animate-scale-in"
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={onKeyDown}
                 tabIndex={0}
@@ -83,7 +88,7 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Task name..."
-                    className="w-full mb-6 px-4 py-3 bg-[var(--bg-card)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-[var(--radius-tile)] outline-none focus:ring-1 focus:ring-[var(--accent-primary)]/50 placeholder:text-[var(--text-muted)]"
+                    className="w-full mb-6 px-4 py-3 bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-[var(--radius-tile)] outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)]/15 placeholder:text-[var(--text-muted)] transition-colors"
                 />
 
                 {/* Priority */}
@@ -95,9 +100,9 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
                             <button
                                 key={p}
                                 onClick={() => setPriority(p)}
-                                className={`flex-1 py-2 rounded-[var(--radius-tile)] text-xs font-medium transition-colors ${priority === p
-                                    ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]'
-                                    : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                                className={`flex-1 py-2 rounded-[var(--radius-tile)] text-xs font-medium transition-colors border ${priority === p
+                                    ? 'bg-[var(--accent-primary)] border-[var(--accent-primary)] text-[var(--accent-contrast)]'
+                                    : 'bg-[var(--bg-tertiary)] border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)]'
                                     }`}
                             >
                                 {p.charAt(0).toUpperCase() + p.slice(1)}
@@ -115,9 +120,9 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
                             <button
                                 key={m}
                                 onClick={() => setMinutes(m)}
-                                className={`flex-1 py-2 rounded-[var(--radius-tile)] text-xs font-medium tabular-nums transition-colors ${minutes === m
-                                    ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]'
-                                    : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                                className={`flex-1 py-2 rounded-[var(--radius-tile)] text-xs font-medium tabular-nums transition-colors border ${minutes === m
+                                    ? 'bg-[var(--accent-primary)] border-[var(--accent-primary)] text-[var(--accent-contrast)]'
+                                    : 'bg-[var(--bg-tertiary)] border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)]'
                                     }`}
                             >
                                 {m}m
@@ -132,7 +137,7 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
                         value={minutes || ''}
                         onChange={(e) => setMinutes(+e.target.value)}
                         placeholder="Unlimited focus..."
-                        className="w-full px-4 py-2 bg-[var(--bg-card)] text-[var(--text-primary)] tabular-nums border border-[var(--border-default)] rounded-[var(--radius-tile)] outline-none focus:ring-1 focus:ring-[var(--accent-primary)]/50"
+                        className="w-full px-4 py-2.5 bg-[var(--bg-secondary)] text-[var(--text-primary)] tabular-nums border border-[var(--border-default)] rounded-[var(--radius-tile)] outline-none focus:border-[var(--accent-primary)] focus:ring-2 focus:ring-[var(--accent-primary)]/15 placeholder:text-[var(--text-muted)] transition-colors"
                     />
                 </div>
 
@@ -140,9 +145,9 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
                 <div className="mb-6">
                     <button
                         onClick={() => setIsRecurring(!isRecurring)}
-                        className={`w-full flex items-center justify-between px-4 py-3 rounded-[var(--radius-tile)] transition-colors ${isRecurring
-                            ? 'bg-[var(--accent-lime-100)] text-[var(--text-primary)]'
-                            : 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-[var(--radius-tile)] border transition-colors ${isRecurring
+                            ? 'bg-[var(--accent-lime-100)] border-[var(--accent-primary)]/40 text-[var(--text-primary)]'
+                            : 'bg-[var(--bg-secondary)] border-[var(--border-default)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)]'
                             }`}
                     >
                         <div className="flex items-center gap-3">
@@ -170,7 +175,7 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
                     <div className="flex gap-2.5">
                         <button
                             onClick={onClose}
-                            className="flex-1 bg-[var(--bg-hover)] text-[var(--text-primary)] py-3 rounded-[var(--radius-tile)] font-medium hover:bg-[var(--bg-tertiary)] transition-colors"
+                            className="flex-1 bg-[var(--bg-secondary)] border border-[var(--border-default)] text-[var(--text-secondary)] py-3 rounded-[var(--radius-tile)] font-medium hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] transition-colors"
                         >
                             Cancel
                         </button>
@@ -178,7 +183,7 @@ export function CreateTaskModal({ isOpen, onClose, listId, onCreated }: Props) {
                         <button
                             disabled={loading || !title.trim()}
                             onClick={() => handleSubmit(false)}
-                            className="flex-1 bg-[var(--bg-tertiary)] text-[var(--text-primary)] py-3 rounded-[var(--radius-tile)] font-medium hover:bg-[var(--bg-elevated)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 bg-[var(--bg-card)] border border-[var(--border-default)] text-[var(--text-primary)] py-3 rounded-[var(--radius-tile)] font-medium hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Create
                         </button>

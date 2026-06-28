@@ -72,7 +72,9 @@ export function ActivityDashboard() {
         window.electronAPI?.db?.getAppUsage(today + 'T00:00:00', today + 'T23:59:59')
             .then((rows: any[]) => {
                 const map: Record<string, string> = {}
-                rows?.forEach((r: any) => { if (r.appName && r.category) map[r.appName] = r.category })
+                // Key by a normalized app name so it joins reliably with appUsage's
+                // app_id (the two identify the same app but vary in case/spacing).
+                rows?.forEach((r: any) => { if (r.appName && r.category) map[String(r.appName).trim().toLowerCase()] = r.category })
                 setCategoryMap(map)
             })
             .catch(() => {})
@@ -87,7 +89,7 @@ export function ActivityDashboard() {
         // Real productivity score based on app categories
         let productiveSeconds = 0
         sortedApps.forEach(app => {
-            const cat = categoryMap[app.app_id] || 'Other'
+            const cat = categoryMap[String(app.app_id).trim().toLowerCase()] || 'Other'
             if (['Development', 'Work'].includes(cat)) {
                 productiveSeconds += app.total_seconds
             }

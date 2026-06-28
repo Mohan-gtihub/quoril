@@ -140,7 +140,9 @@ export function Dashboard() {
         const validListIds = new Set(visibleLists.map(l => l.id))
         const all = tasks.filter(t => !t.deleted_at && t.list_id && validListIds.has(t.list_id))
         const active = all.filter(t => t.status !== 'done')
-        const doneToday = all.filter(t => t.status === 'done' && t.completed_at?.startsWith(new Date().toISOString().split('T')[0]))
+        // Compare on the LOCAL calendar day (matches focus-minute bucketing).
+        const todayKey = format(new Date(), 'yyyy-MM-dd')
+        const doneToday = all.filter(t => t.status === 'done' && t.completed_at && format(new Date(t.completed_at), 'yyyy-MM-dd') === todayKey)
 
         const focusMin = Math.round(calculateRealTimeFocus(sessions, isActive, startTime, sessionType) / 60)
 
@@ -709,5 +711,5 @@ function EmptyState({ kind, onCreate, search }: { kind: string; onCreate: () => 
 
 
 export function IconButton({ icon, onClick, className = "" }: { icon: React.ReactNode; onClick?: () => void; className?: string }) {
-    return <button onClick={onClick} className={`p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--border-hover)] ${className}`}>{icon}</button>
+    return <button onClick={onClick} className={`p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover-strong)] ${className}`}>{icon}</button>
 }

@@ -64,7 +64,7 @@ function Render({ block, selected }: BlockRenderProps) {
                 )}
                 {selected && showPalette && (
                     <div
-                        className="absolute top-8 right-1 bg-white rounded-md shadow-lg p-1 grid grid-cols-4 gap-1 z-10"
+                        className="absolute top-8 right-1 bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-md shadow-lg p-1 grid grid-cols-4 gap-1 z-10"
                         onMouseDown={(e) => e.stopPropagation()}
                     >
                         {IDEA_COLORS.map((c) => (

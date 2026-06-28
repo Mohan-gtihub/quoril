@@ -346,7 +346,7 @@ export function FocusTimerPanel() {
                             setShowFocusPanel(false)
                             setTimeout(() => window.location.hash = '#/settings', 100)
                         }}
-                        className="w-8 h-8 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] transition-colors flex items-center justify-center group"
+                        className="w-8 h-8 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] transition-colors flex items-center justify-center group"
                     >
                         <Settings className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors" />
                     </button>
@@ -355,7 +355,7 @@ export function FocusTimerPanel() {
                             setShowFocusPanel(false)
                             setTimeout(() => window.location.hash = '#/dashboard', 100)
                         }}
-                        className="w-8 h-8 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] transition-colors flex items-center justify-center group"
+                        className="w-8 h-8 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] transition-colors flex items-center justify-center group"
                     >
                         <Home className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors" />
                     </button>
@@ -364,7 +364,7 @@ export function FocusTimerPanel() {
                             useSettingsStore.getState().updateSettings({ superFocusMode: true })
                             setShowFocusPanel(false)
                         }}
-                        className="w-8 h-8 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] transition-colors flex items-center justify-center group"
+                        className="w-8 h-8 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] transition-colors flex items-center justify-center group"
                     >
                         <ExternalLink className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors" />
                     </button>
@@ -514,20 +514,20 @@ export function FocusTimerPanel() {
                                             "flex-1 h-10 rounded-full flex items-center justify-center gap-2 transition-all active:scale-95 text-sm font-semibold",
                                             isPaused
                                                 ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105"
-                                                : "bg-[var(--bg-hover)] text-[var(--text-primary)] hover:bg-[var(--border-hover)]"
+                                                : "bg-[var(--bg-hover)] text-[var(--text-primary)] hover:bg-[var(--bg-hover-strong)]"
                                         )}
                                     >
                                         {isPaused ? <Play className="w-4 h-4 fill-current" /> : <Pause className="w-4 h-4 fill-current" />}
                                     </button>
                                     <button
                                         onClick={handleDone}
-                                        className="flex-1 h-10 rounded-full bg-[var(--wellbeing)] text-[var(--accent-contrast)] hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm font-semibold"
+                                        className="flex-1 h-10 rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm font-semibold"
                                     >
                                         <CheckCircle2 className="w-4 h-4" />
                                     </button>
                                     <button
                                         onClick={handleSkip}
-                                        className="h-10 w-10 rounded-full bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)] transition-all active:scale-95 flex items-center justify-center"
+                                        className="h-10 w-10 rounded-full bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover-strong)] hover:text-[var(--text-primary)] transition-all active:scale-95 flex items-center justify-center"
                                     >
                                         <SkipForward className="w-4 h-4" />
                                     </button>
@@ -694,7 +694,7 @@ export function FocusTimerPanel() {
                         "flex items-center gap-2 px-5 py-2 rounded-full transition-all duration-200 text-sm font-semibold active:scale-95",
                         focus.isBreak
                             ? "bg-[var(--break)] text-[var(--accent-contrast)] hover:brightness-105"
-                            : "bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)]"
+                            : "bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover-strong)] hover:text-[var(--text-primary)]"
                     )}
                 >
                     <Coffee className="w-4 h-4" />
@@ -703,7 +703,7 @@ export function FocusTimerPanel() {
 
                 <button
                     onClick={() => setShowFocusPanel(false)}
-                    className="px-5 py-2 rounded-full bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)] transition-all duration-200 text-sm font-semibold active:scale-95"
+                    className="px-5 py-2 rounded-full bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover-strong)] hover:text-[var(--text-primary)] transition-all duration-200 text-sm font-semibold active:scale-95"
                 >
                     Close Session
                 </button>

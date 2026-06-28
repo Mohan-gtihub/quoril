@@ -143,10 +143,12 @@ export function useScreenTimeData(): ScreenTimeData {
     }, [hourly])
 
     const avgDailySeconds = useMemo(() => {
-        const days = weekly.filter(d => d.totalSeconds > 0)
+        // Exclude the selected day itself so "vs average" compares against the
+        // OTHER days, not an average that already includes the value being compared.
+        const days = weekly.filter(d => d.day !== date && d.totalSeconds > 0)
         if (days.length === 0) return 0
         return Math.round(days.reduce((s, d) => s + d.totalSeconds, 0) / days.length)
-    }, [weekly])
+    }, [weekly, date])
 
     const todayVsAvg = useMemo(() => {
         if (avgDailySeconds === 0) return 0

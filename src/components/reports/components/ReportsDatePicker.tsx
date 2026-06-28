@@ -203,7 +203,7 @@ export function DateRangePicker({ value, onChange }: Props) {
 
             {/* Dropdown */}
             {open && (
-                <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-max rounded-[var(--radius-card)] border border-[var(--border-default)] bg-[var(--bg-card)] overflow-hidden">
+                <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-max rounded-[var(--radius-card)] border border-[var(--border-default)] bg-[var(--bg-card)] shadow-[var(--shadow-lift)] overflow-hidden">
                     <div className="flex">
                         {/* ── Preset sidebar ── */}
                         <div className="w-36 border-r border-[var(--border-default)] py-3 flex flex-col gap-0.5">

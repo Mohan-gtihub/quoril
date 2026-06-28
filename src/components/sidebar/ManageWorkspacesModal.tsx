@@ -143,7 +143,7 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-1.5 rounded-full hover:bg-[var(--border-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                            className="p-1.5 rounded-full hover:bg-[var(--bg-hover-strong)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                         >
                             <X size={16} />
                         </button>
@@ -233,7 +233,7 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
                                                 </button>
                                                 <button
                                                     onClick={handleCancelEdit}
-                                                    className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-hover)] rounded-lg transition-colors"
+                                                    className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover-strong)] rounded-lg transition-colors"
                                                 >
                                                     <X size={15} />
                                                 </button>
@@ -251,7 +251,7 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
                                                 )}
                                                 <button
                                                     onClick={() => handleStartEdit(ws)}
-                                                    className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--border-hover)] rounded-lg transition-colors"
+                                                    className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover-strong)] rounded-lg transition-colors"
                                                     title="Rename"
                                                 >
                                                     <Edit2 size={14} />
@@ -325,7 +325,7 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
                                         </button>
                                         <button
                                             onClick={() => setShowCreate(false)}
-                                            className="px-3 py-2 text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-hover)] rounded-lg transition-colors"
+                                            className="px-3 py-2 text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover-strong)] rounded-lg transition-colors"
                                         >
                                             Cancel
                                         </button>

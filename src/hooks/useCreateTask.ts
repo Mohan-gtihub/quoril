@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTaskStore } from '@/store/taskStore'
 import { useFocusStore } from '@/store/focusStore'
 import { usePlannerStore } from '@/store/plannerStore'
+import type { TaskColumn } from '@/types/list'
 
 const DAILY_LIMIT = 8 * 60 // 8 hours
 
@@ -19,7 +20,10 @@ export function useCreateTask(listId: string) {
         priority: 'low' | 'medium' | 'high'
         focusAfter: boolean
         isRecurring?: boolean
+        column?: TaskColumn
+        position?: 'top' | 'bottom'
     }) {
+        const column = data.column ?? 'today'
         setError(null)
 
         if (!data.title.trim()) {
@@ -48,11 +52,14 @@ export function useCreateTask(listId: string) {
                     title: data.title.trim(),
                     priority: data.priority,
                     estimated_minutes: data.minutes,
-                    due_date: selectedDate.toISOString(),
+                    // Only Today tasks are date-anchored; Backlog/This Week are not
+                    // date-scoped, so don't stamp them with the selected day.
+                    due_date: column === 'today' ? selectedDate.toISOString() : null,
                     is_recurring: data.isRecurring,
                     last_reset_date: data.isRecurring ? new Date().toISOString().split('T')[0] : null
                 },
-                'today' // DEFAULT COLUMN
+                column,
+                data.position ?? 'bottom'
             )
 
             if (data.focusAfter) {

@@ -43,7 +43,7 @@ const getTaskStateStyles = (isActive: boolean, isPaused: boolean, isCompleted: b
             return "bg-[var(--accent-primary)]/[0.06] border-[var(--accent-primary)]/30"
         }
     }
-    return "bg-[var(--bg-secondary)] border-[var(--border-default)] hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)]"
+    return "bg-[var(--bg-card)] border-[var(--border-default)] shadow-[var(--shadow-soft)] hover:border-[var(--border-hover)] hover:shadow-[var(--shadow-lift)]"
 }
 
 export function TaskCard({ task, column, onComplete, draggable = true, disableTimer = false }: TaskCardProps) {
@@ -56,7 +56,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
         isDragging,
     } = useSortable({ id: task.id, disabled: !draggable })
 
-    const { updateTask, archiveTask, permanentDeleteTask, moveTaskToColumn, fetchSubtasks, subtasks, toggleSubtask, deleteSubtask, createSubtask, toggleTaskRecurring } = useTaskStore()
+    const { updateTask, archiveTask, permanentDeleteTask, moveTaskToColumn, fetchSubtasks, subtasks, toggleSubtask, deleteSubtask, createSubtask, toggleTaskRecurring, toggleComplete } = useTaskStore()
     const settings = useSettingsStore()
 
     // Assignment — only for tasks in a shared workspace list.
@@ -124,7 +124,14 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
         const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1
         if (newIndex >= 0 && newIndex < COLUMN_ORDER.length) {
             const targetCol = COLUMN_ORDER[newIndex]
-            await moveTaskToColumn(task.id, targetCol)
+            // Crossing the done boundary must go through toggleComplete so the
+            // focus session is closed and the success sound fires — matching the
+            // checkbox path instead of a silent status flip.
+            if (targetCol === 'done' || column === 'done') {
+                await toggleComplete(task.id)
+            } else {
+                await moveTaskToColumn(task.id, targetCol)
+            }
         }
     }
 
@@ -179,8 +186,14 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
 
     const handleTitleBlur = async () => {
         setIsEditingTitle(false)
-        if (titleInput !== task.title) {
-            await updateTask(task.id, { title: titleInput })
+        const trimmed = titleInput.trim()
+        if (!trimmed) {
+            // Don't allow blanking a task title; revert to the saved value.
+            setTitleInput(task.title)
+            return
+        }
+        if (trimmed !== task.title) {
+            await updateTask(task.id, { title: trimmed })
         }
     }
 
@@ -223,7 +236,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
             {/* Top Row: Title & Actions */}
             <div className="flex items-start gap-3 min-h-[28px]">
                 {/* Checkbox */}
-                <div className="pt-0.5">
+                <div className="pt-0.5" onPointerDown={e => e.stopPropagation()}>
                     <Checkbox
                         checked={isCompleted}
                         onChange={() => onComplete ? onComplete() : undefined}
@@ -264,21 +277,24 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                     {isTaskActive && allSubtasks.length > 0 && (
                         <div className="mt-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
                             <div className="space-y-1.5">
-                                {allSubtasks.slice(0, 5).map(sub => (
-                                    <div key={sub.id} className="flex items-center gap-2 px-1 py-0.5 group/sub">
+                                {allSubtasks.slice(0, 5).map(sub => {
+                                    const subDone = !!(sub.done || sub.completed)
+                                    return (
+                                    <div key={sub.id} className="flex items-center gap-2 px-1 py-0.5 group/sub" onPointerDown={e => e.stopPropagation()}>
                                         <Checkbox
-                                            checked={!!sub.completed}
+                                            checked={subDone}
                                             onChange={() => toggleSubtask(sub.id)}
                                             size="xs"
                                         />
                                         <span className={cn(
                                             "text-[11px] truncate flex-1",
-                                            sub.completed ? "line-through text-[var(--text-muted)]" : "text-[var(--text-secondary)]"
+                                            subDone ? "line-through text-[var(--text-muted)]" : "text-[var(--text-secondary)]"
                                         )}>
                                             {sub.title}
                                         </span>
                                     </div>
-                                ))}
+                                    )
+                                })}
                                 {allSubtasks.length > 5 && (
                                     <span className="text-[11px] text-[var(--text-muted)] pl-6 font-medium">+{allSubtasks.length - 5} more</span>
                                 )}
@@ -302,7 +318,9 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                 </div>
 
                 {/* Hover Actions */}
-                <div className={cn(
+                <div
+                    onPointerDown={e => e.stopPropagation()}
+                    className={cn(
                     "flex items-center gap-1 transition-all duration-200",
                     isTaskActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                 )}>
@@ -354,7 +372,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                                 />
                             ) : (
                                 <span className="lowercase tracking-tight">
-                                    {(task.estimated_minutes ?? 0) > 0 ? `${formatTimeInput(task.estimated_minutes!)}` : 'unlimited'}
+                                    {(task.estimated_minutes ?? 0) > 0 ? `${formatTimeInput(task.estimated_minutes!)}` : 'no est'}
                                 </span>
                             )}
                         </div>
@@ -383,8 +401,8 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                 </div>
 
                 {/* Right Side: Timer Controls */}
-                <div className="flex items-center gap-1.5">
-                    {!isCompleted && !disableTimer && canEditTime && (
+                <div className="flex items-center gap-1.5" onPointerDown={e => e.stopPropagation()}>
+                    {!isCompleted && !disableTimer && (
                         <>
                             {isTaskActive ? (
                                 <>
