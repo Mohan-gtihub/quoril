@@ -6,7 +6,7 @@ import { useFocusStore } from '@/store/focusStore'
 import { useAuthStore } from '@/store/authStore'
 import { useListStore } from '@/store/listStore'
 import { isToday, format } from 'date-fns'
-import { ArrowUpRight, Flame, CheckCircle2, Circle } from 'lucide-react'
+import { ArrowUpRight, Flame, CheckCircle2, Circle, Play } from 'lucide-react'
 import { ActivityHeatmap } from './ActivityHeatmap'
 import { cn } from '@/utils/helpers'
 import { calculateRealTimeFocus, calculateStreak } from '@/utils/timeCalculations'
@@ -35,7 +35,7 @@ export function HomeOverview() {
     const { tasks, setSelectedTask, toggleComplete } = useTaskStore()
     const { lists, setSelectedList } = useListStore()
     const { workspaces, setActiveWorkspace } = useWorkspaceStore()
-    const { startTime, isActive, sessionType, sessions, setShowFocusPanel } = useFocusStore()
+    const { startTime, isActive, sessionType, sessions, setShowFocusPanel, startFocus } = useFocusStore()
     const navigate = useNavigate()
 
     const stats = useMemo(() => {
@@ -88,6 +88,15 @@ export function HomeOverview() {
     const totalToday = stats.active + stats.doneToday
     const progressPct = totalToday > 0 ? Math.round((stats.doneToday / totalToday) * 100) : 0
 
+    // The top suggestion becomes the featured "Next task"; the rest fill the list.
+    const featured = suggestedTasks[0]
+    const restTasks = suggestedTasks.slice(1)
+
+    const startTask = (t: any) => {
+        setSelectedTask(t.id)
+        startFocus(t.id)
+    }
+
     const taskMeta = (t: any) => {
         const list = t.list_id ? lists.find((l: any) => l.id === t.list_id) : null
         const ws = list ? workspaces.find((w: any) => w.id === list.workspace_id) : null
@@ -136,6 +145,41 @@ export function HomeOverview() {
                     </button>
                 </div>
 
+                {/* ── Next task ── */}
+                {featured && (() => {
+                    const { wsName, wsColor } = taskMeta(featured)
+                    const est = featured.estimated_minutes ? fmtMin(featured.estimated_minutes) : null
+                    const pColor = PRIORITY_COLOR[featured.priority] || 'var(--text-muted)'
+                    return (
+                        <Panel className="mb-4 flex flex-wrap items-center justify-between gap-5">
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Next task</p>
+                                <button onClick={() => openTask(featured)} className="block text-left max-w-full">
+                                    <span className="block text-[19px] font-semibold tracking-tight text-[var(--text-primary)] truncate leading-tight">{featured.title}</span>
+                                </button>
+                                <div className="mt-2 flex items-center gap-2.5 text-[12.5px] text-[var(--text-tertiary)]">
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: wsColor }} />
+                                        {wsName}
+                                    </span>
+                                    {est && (<><span className="w-px h-3 bg-[var(--border-default)]" /><span>{est}</span></>)}
+                                    {(featured.priority === 'critical' || featured.priority === 'high') && (
+                                        <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md" style={{ background: `color-mix(in srgb, ${pColor} 14%, transparent)`, color: pColor }}>
+                                            {featured.priority === 'critical' ? 'Urgent' : 'High'}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => startTask(featured)}
+                                className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-[var(--radius-pill)] font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
+                            >
+                                <Play size={15} /> Start task
+                            </button>
+                        </Panel>
+                    )
+                })()}
+
                 {/* ── Main asymmetric grid ── */}
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
 
@@ -156,16 +200,16 @@ export function HomeOverview() {
                             </button>
                         </div>
 
-                        {suggestedTasks.length === 0 ? (
+                        {restTasks.length === 0 ? (
                             <div className="flex flex-col items-center justify-center text-center gap-3 py-20 px-6">
                                 <div className="w-12 h-12 rounded-2xl bg-[var(--bg-tertiary)] flex items-center justify-center">
                                     <CheckCircle2 size={24} className="text-[var(--text-tertiary)]" />
                                 </div>
-                                <p className="text-sm text-[var(--text-tertiary)]">You're all clear. Good time for deep work.</p>
+                                <p className="text-sm text-[var(--text-tertiary)]">{featured ? "That's your last one — nice." : "You're all clear. Good time for deep work."}</p>
                             </div>
                         ) : (
                             <ul className="divide-y divide-[var(--border-default)]">
-                                {suggestedTasks.map(t => {
+                                {restTasks.map(t => {
                                     const urgent = t.priority === 'critical' || t.priority === 'high'
                                     const dueToday = t.due_date && isToday(new Date(t.due_date))
                                     const { wsName, wsColor } = taskMeta(t)
@@ -212,17 +256,21 @@ export function HomeOverview() {
                     <div className="space-y-4">
 
                         {/* Focus snapshot with progress ring */}
-                        <Panel className="flex items-center gap-5">
+                        <Panel className="flex items-center gap-4">
                             <ProgressRing pct={progressPct} live={isActive} />
-                            <div className="min-w-0">
+                            <div className="flex-1 min-w-0">
                                 <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Today's progress</p>
                                 <p className="mt-1.5 text-[20px] font-semibold tracking-tight tabular-nums text-[var(--text-primary)] leading-none">
                                     {stats.doneToday}<span className="text-[var(--text-muted)] text-[15px]">/{totalToday || 0}</span>
+                                    <span className="ml-1.5 text-[12px] font-medium text-[var(--text-tertiary)]">done</span>
                                 </p>
-                                <div className="mt-2.5 flex items-center gap-1.5 text-[12px] text-[var(--text-tertiary)]">
-                                    <Flame size={13} className="text-[var(--break)]" />
-                                    {stats.currentStreak}-day streak
-                                </div>
+                            </div>
+                            <div className="shrink-0 flex flex-col items-end gap-1 pl-3 border-l border-[var(--border-default)] self-stretch justify-center">
+                                <span className="flex items-center gap-1.5 text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">
+                                    <Flame size={14} className="text-[var(--break)]" />
+                                    {stats.currentStreak}
+                                </span>
+                                <span className="text-[11px] text-[var(--text-tertiary)]">day streak</span>
                             </div>
                         </Panel>
 

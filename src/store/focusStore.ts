@@ -17,6 +17,24 @@ import { platform } from '@/services/platform'
    CONSTANTS
 --------------------------------------------- */
 
+/**
+ * Focus notification — shows inline inside the Super Focus pill (so it never
+ * overlaps the floating pill window) and falls back to a normal toast when the
+ * full app UI is visible.
+ */
+function focusNotify(message: string) {
+    const inSuperFocus = useSettingsStore.getState().superFocusMode
+    if (inSuperFocus) {
+        useFocusStore.setState({ focusFlash: message })
+        setTimeout(() => {
+            if (useFocusStore.getState().focusFlash === message) {
+                useFocusStore.setState({ focusFlash: null })
+            }
+        }, 2600)
+    } else {
+        toast(message)
+    }
+}
 
 /* ---------------------------------------------
    TYPES
@@ -66,6 +84,7 @@ export interface FocusState {
     pomodoroRemainingAtStart: number // seconds (base for delta)
     pomodoroTotal: number // seconds (progress denominator)
     lastAlertElapsed: number // seconds (at which last alert played)
+    focusFlash: string | null // transient reminder text shown inline in the Super Focus pill
     lastTickTime: number | null // ms (wall-clock of last syncTimer tick; sleep detection)
     completedPomodoros: number // count of focus pomodoros completed in the current cycle (long-break cadence)
     isLongBreak: boolean // whether the active break is a long break
@@ -146,6 +165,7 @@ export const useFocusStore = create<FocusState>()(
             pomodoroRemainingAtStart: 0,
             pomodoroTotal: 1500,
             lastAlertElapsed: 0,
+            focusFlash: null,
             lastTickTime: null,
             completedPomodoros: 0,
             isLongBreak: false,
@@ -398,7 +418,11 @@ export const useFocusStore = create<FocusState>()(
 
                     // Update Task
                     if (s.taskId) {
-                        const updates: any = { actual_seconds: total }
+                        // Clear started_at so the task stops accruing live wall-clock
+                        // time while paused. Without this, getTaskTotalActual(..., true)
+                        // keeps counting from started_at and the "pause" never actually
+                        // stops the clock (matches endSession / tasks.pause semantics).
+                        const updates: any = { actual_seconds: total, started_at: null }
                         if (updateStatus) updates.status = 'paused'
 
                         await useTaskStore.getState().updateTask(s.taskId, updates)
@@ -612,7 +636,7 @@ export const useFocusStore = create<FocusState>()(
                     // from startTime, so first pin startTime to lastTickTime to
                     // exclude the slept interval — avoids crediting a multi-hour
                     // sleep as focus while still keeping the real work (H1).
-                    toast("Session paused — long inactivity detected. Resume when ready.")
+                    focusNotify('Paused — inactivity detected')
                     set({ startTime: s.lastTickTime ?? s.startTime })
                     await get().pauseSession(false)
                     set({ lastTickTime: null })
@@ -657,7 +681,7 @@ export const useFocusStore = create<FocusState>()(
                             isPaused: true,
                             startTime: null
                         })
-                        toast("Break complete!")
+                        focusNotify('Break complete')
                     }
                     return // EXIT early
                 }
@@ -671,7 +695,7 @@ export const useFocusStore = create<FocusState>()(
                         set({ pomodoroRemaining: 0 }) // Sync update
 
                         // Trigger Break (auto ⇒ advances long-break cadence)
-                        toast("Focus session complete! Take a break.")
+                        focusNotify('Session complete — take a break')
                         get().startBreak(undefined, { auto: true })
                         return // EXIT to avoid double-process
                     }
@@ -690,7 +714,7 @@ export const useFocusStore = create<FocusState>()(
 
                     if (currentElapsed >= s.lastAlertElapsed + intervalSeconds) {
                         soundService.playAlert(settings.alertSound)
-                        toast("Stay Focused!")
+                        focusNotify('Stay focused')
                         set({ lastAlertElapsed: currentElapsed })
                     }
                 }
