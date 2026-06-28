@@ -124,9 +124,6 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
         const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1
         if (newIndex >= 0 && newIndex < COLUMN_ORDER.length) {
             const targetCol = COLUMN_ORDER[newIndex]
-            // Crossing the done boundary must go through toggleComplete so the
-            // focus session is closed and the success sound fires — matching the
-            // checkbox path instead of a silent status flip.
             if (targetCol === 'done' || column === 'done') {
                 await toggleComplete(task.id)
             } else {
