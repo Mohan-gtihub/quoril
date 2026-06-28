@@ -30,6 +30,7 @@ const GIFS = [
 export function CompletionCelebration({ taskTitle, timeSpent, onClose }: CompletionCelebrationProps) {
     const settings = useSettingsStore()
     const [gifUrl] = useState(() => GIFS[Math.floor(Math.random() * GIFS.length)])
+    const [gifFailed, setGifFailed] = useState(false)
 
     useEffect(() => {
         // Play success sound
@@ -88,14 +89,17 @@ export function CompletionCelebration({ taskTitle, timeSpent, onClose }: Complet
                 <div className="absolute -top-24 -left-24 w-48 h-48 bg-green-500/10 rounded-full blur-[60px]" />
                 <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-blue-500/10 rounded-full blur-[60px]" />
 
-                {/* Gif Reveal */}
-                {settings.funGifEnabled && (
+                {/* Gif Reveal — falls back to the trophy if the GIF can't load */}
+                {settings.funGifEnabled && !gifFailed ? (
                     <div className="w-full h-40 mb-6 rounded-2xl overflow-hidden border border-[var(--border-default)] bg-black/20">
-                        <img src={gifUrl} alt="Celebration" className="w-full h-full object-cover opacity-80" />
+                        <img
+                            src={gifUrl}
+                            alt="Celebration"
+                            className="w-full h-full object-cover opacity-80"
+                            onError={() => setGifFailed(true)}
+                        />
                     </div>
-                )}
-
-                {!settings.funGifEnabled && (
+                ) : (
                     <div className="flex justify-center mb-6">
                         <div className="bg-green-500/10 p-5 rounded-full ring-1 ring-green-500/20">
                             <Trophy className="w-12 h-12 text-green-500" />

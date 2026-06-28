@@ -178,6 +178,13 @@ export function FocusTimerPanel() {
         return gifs[Math.floor(Math.random() * gifs.length)]
     }, [focus.showCelebration])
 
+    // Remote GIFs can 404 (dead Giphy id) or fail offline → never show a broken
+    // image; fall back to a built-in celebration instead.
+    const [gifFailed, setGifFailed] = useState(false)
+    useEffect(() => {
+        if (focus.showCelebration) setGifFailed(false)
+    }, [focus.showCelebration])
+
     const {
         isPaused,
         taskId,
@@ -547,7 +554,18 @@ export function FocusTimerPanel() {
                                 </h3>
 
                                 <div className="rounded-[var(--radius-card)] overflow-hidden mb-4 border border-[var(--border-default)] aspect-video">
-                                    <img src={celebrationGif} alt="Celebration" className="w-full h-full object-cover" />
+                                    {gifFailed ? (
+                                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--accent-lime-100)] to-[var(--bg-hover)]">
+                                            <span className="text-5xl" role="img" aria-label="celebration">🎉</span>
+                                        </div>
+                                    ) : (
+                                        <img
+                                            src={celebrationGif}
+                                            alt="Celebration"
+                                            className="w-full h-full object-cover"
+                                            onError={() => setGifFailed(true)}
+                                        />
+                                    )}
                                 </div>
 
                                 <div className="mb-6">
