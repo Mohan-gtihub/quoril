@@ -383,3 +383,8 @@ body {
     animation: none;
   }
 }
+
+@keyframes rf-ripple {
+  from { transform: translate(-50%, -50%) scale(0.4); opacity: 0.9; }
+  to   { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+}

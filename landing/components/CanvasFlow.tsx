@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -256,6 +256,16 @@ const initialNodes: Node[] = [
     position: { x: 740, y: 360 },
     data: { label: "[25m] Write launch post", status: "active" },
   },
+  {
+    id: "cursor",
+    type: "cursor",
+    position: { x: 440, y: 240 },
+    data: { grab: false, clickKey: 0 },
+    draggable: false,
+    selectable: false,
+    zIndex: 1000,
+    style: { pointerEvents: "none" },
+  },
 ];
 
 const inkMarker = {
@@ -377,27 +387,76 @@ function ZoomPill({ zoom }: { zoom: number }) {
   );
 }
 
-/* A single remote collaborator cursor — the small detail that says "live board". */
-function Collaborator() {
+/* Remote collaborator cursor — lives in canvas space so it pans/zooms with the
+   board. Its position is driven by the choreography loop below. */
+function CursorNode({ data }: NodeProps) {
+  const grab = !!data.grab;
+  const clickKey = data.clickKey as number;
   return (
-    <div className="pointer-events-none absolute left-[46%] top-[58%] z-10 animate-float" aria-hidden="true">
-      <svg viewBox="0 0 24 24" className="h-5 w-5 drop-shadow" style={{ color: ACCENT }} fill="currentColor">
+    <div className="pointer-events-none relative select-none" aria-hidden="true">
+      {clickKey ? (
+        <span
+          key={clickKey}
+          className="absolute left-0 top-0 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{ border: `1.5px solid ${ACCENT}`, animation: "rf-ripple 0.6s ease-out" }}
+        />
+      ) : null}
+      <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5 drop-shadow transition-transform"
+        style={{ color: ACCENT, transform: grab ? "scale(0.82)" : "scale(1)" }}
+        fill="currentColor"
+      >
         <path d="M5 3l14 7-6 1.6L9.8 18 5 3z" />
       </svg>
       <span
-        className="ml-3 inline-block rounded-[6px] px-1.5 py-0.5 text-[10px] font-semibold text-white"
+        className="absolute left-3.5 top-3.5 whitespace-nowrap rounded-[6px] px-1.5 py-0.5 text-[10px] font-semibold text-white shadow"
         style={{ background: ACCENT }}
       >
-        Maya
+        Maya{grab ? " · moving" : ""}
       </span>
     </div>
   );
 }
 
+/* ── choreography ────────────────────────────────────────── */
+/* Keyframes in flow coordinates. The cursor eases between them on a loop;
+   between t=2–4s it "holds" the Link block (grab), and it clicks at GRAB-free
+   stops over the checklist and the video. */
+const LOOP = 11; // seconds
+type KF = { t: number; x: number; y: number };
+const PATH: KF[] = [
+  { t: 0, x: 440, y: 240 },
+  { t: 1.5, x: 792, y: 46 }, // arrive at Link grab handle
+  { t: 2.0, x: 792, y: 46 },
+  { t: 3.0, x: 792, y: 132 }, // drag Link down
+  { t: 3.7, x: 792, y: 46 }, // drag back
+  { t: 4.0, x: 792, y: 46 }, // release
+  { t: 5.3, x: 150, y: 338 }, // to checklist
+  { t: 5.9, x: 150, y: 338 },
+  { t: 7.0, x: 548, y: 220 }, // to video
+  { t: 7.6, x: 548, y: 220 },
+  { t: 8.8, x: 440, y: 240 }, // glide back
+  { t: LOOP, x: 440, y: 240 },
+];
+const CLICKS = [5.6, 7.3]; // checklist, video
+const easeInOut = (p: number) =>
+  p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+
+function sampleCursor(e: number) {
+  let i = 0;
+  while (i < PATH.length - 1 && e >= PATH[i + 1].t) i++;
+  const a = PATH[i];
+  const b = PATH[Math.min(i + 1, PATH.length - 1)];
+  const span = b.t - a.t || 1;
+  const p = easeInOut(Math.min(1, Math.max(0, (e - a.t) / span)));
+  return { x: a.x + (b.x - a.x) * p, y: a.y + (b.y - a.y) * p };
+}
+
 /* ── component ───────────────────────────────────────────── */
 
 export default function CanvasFlow() {
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [zoom, setZoom] = useState(1);
 
@@ -408,9 +467,47 @@ export default function CanvasFlow() {
       link: LinkNode,
       video: VideoNode,
       taskref: TaskRefNode,
+      cursor: CursorNode,
     }),
     [],
   );
+
+  // Drive the collaborator cursor: move along the path, drag the Link block
+  // while "holding" it, and fire a click ripple at each stop.
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return;
+    }
+    const start = performance.now();
+    let raf = 0;
+    const tick = () => {
+      const ms = performance.now() - start;
+      const loopN = Math.floor(ms / (LOOP * 1000));
+      const e = (ms / 1000) % LOOP;
+      const { x, y } = sampleCursor(e);
+      const grab = e >= 2.0 && e < 4.0;
+      let clickKey = 0;
+      CLICKS.forEach((ct, idx) => {
+        if (e >= ct && e < ct + 0.6) clickKey = loopN * 10 + idx + 1;
+      });
+
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id === "cursor")
+            return { ...n, position: { x, y }, data: { ...n.data, grab, clickKey } };
+          if (n.id === "link" && grab)
+            return { ...n, position: { x: x - 22, y: y - 18 } };
+          return n;
+        }),
+      );
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [setNodes]);
 
   const onConnect = useCallback(
     (c: Connection) =>
@@ -455,7 +552,6 @@ export default function CanvasFlow() {
           <ZoomPill zoom={zoom} />
         </Panel>
       </ReactFlow>
-      <Collaborator />
     </div>
   );
 }
