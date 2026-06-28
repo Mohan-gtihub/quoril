@@ -65,7 +65,6 @@ interface TaskState {
 
     toggleTaskRecurring: (id: string) => Promise<void>
     syncRecurringTasks: () => Promise<void>
-    rolloverStaleTasks: () => Promise<void>
 
     /* Subtasks */
 
@@ -554,47 +553,6 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                 }
             }))
         }))
-    },
-
-    /**
-     * Day rollover: when the calendar day changes, push unfinished Today tasks
-     * (active/paused, non-recurring) back to Backlog so Today starts clean each
-     * day instead of accumulating indefinitely. A task is "stale" if it has no
-     * due_date or its due_date is before the start of today; tasks created/anchored
-     * for today (due_date === today) are left in place. Recurring tasks are handled
-     * separately by syncRecurringTasks and are skipped here.
-     */
-    rolloverStaleTasks: async () => {
-        const ROLLOVER_KEY = 'quoril.lastRolloverDate'
-        const now = new Date()
-        const year = now.getFullYear()
-        const month = String(now.getMonth() + 1).padStart(2, '0')
-        const day = String(now.getDate()).padStart(2, '0')
-        const today = `${year}-${month}-${day}`
-
-        let last: string | null = null
-        try { last = localStorage.getItem(ROLLOVER_KEY) } catch { /* ignore */ }
-        if (last === today) return
-
-        // First run on this device: record the date but don't move anything, so
-        // existing tasks aren't unexpectedly swept on first launch after upgrade.
-        const stamp = () => { try { localStorage.setItem(ROLLOVER_KEY, today) } catch { /* ignore */ } }
-        if (!last) { stamp(); return }
-
-        const startOfToday = new Date(year, now.getMonth(), now.getDate())
-
-        const stale = get().tasks.filter(t =>
-            !t.deleted_at &&
-            !t.is_recurring &&
-            COLUMN_STATUS.today.includes(t.status as TaskStatus) &&
-            (!t.due_date || new Date(t.due_date) < startOfToday)
-        )
-
-        for (const task of stale) {
-            await get().moveTaskToColumn(task.id, 'backlog')
-        }
-
-        stamp()
     },
 
     /* ---------------- SUBTASKS ---------------- */

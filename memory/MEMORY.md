@@ -1,1 +1,1 @@
-- [Planner task lifecycle](planner-task-lifecycle.md) — column=status model; unfinished Today tasks roll back to Backlog at day change
+- [Planner task lifecycle](planner-task-lifecycle.md) — column=status model; Jira-style, no auto date-movement of cards
