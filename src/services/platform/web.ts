@@ -42,6 +42,7 @@ export const webPlatform: Platform = {
     async signInWithPassword(email, password) { return supabase.auth.signInWithPassword({ email, password }) },
     async signOut() { await supabase.auth.signOut() },
     onDeepLink() { return UNAVAILABLE },
+    async getPendingDeepLink() { return null },
     setUser() { return UNAVAILABLE },
   },
   windowControls: {

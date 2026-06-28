@@ -4,6 +4,8 @@ import Waitlist from "@/components/Waitlist";
 import AppMockup from "@/components/AppMockup";
 import FocusPill from "@/components/FocusPill";
 import { Heatmap, Ring, Donut, CategoryBars, FOCUS, BREAK, WELLBEING } from "@/components/Charts";
+import PostCard from "@/components/PostCard";
+import { getPublishedPosts } from "@/lib/blog";
 
 const SLATE = "#8A8A82"; // neutral mid-grey accent — reads on light + dark
 import {
@@ -25,7 +27,10 @@ import {
   IconArrow,
 } from "@/components/icons";
 
-export default function Home() {
+export const revalidate = 60;
+
+export default async function Home() {
+  const posts = await getPublishedPosts(3);
   return (
     <>
       {/* ───────── HERO ───────── */}
@@ -339,6 +344,39 @@ export default function Home() {
           </div>
         </Container>
       </section>
+
+      {/* ───────── FROM THE BLOG ───────── */}
+      {posts.length > 0 && (
+        <section className="border-y border-line bg-surface py-16 sm:py-24">
+          <Container>
+            <div className="mb-10 flex flex-wrap items-end justify-between gap-4 sm:mb-14">
+              <div className="flex flex-col">
+                <div className="mb-4">
+                  <span className="inline-flex items-center gap-2 text-[12.5px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+                    From the blog
+                  </span>
+                </div>
+                <h2 className="font-heading text-[clamp(28px,4.2vw,46px)] font-semibold leading-[1.06] tracking-[-0.03em] text-ink">
+                  Ideas for deeper work.
+                </h2>
+              </div>
+              <Link
+                href="/blog"
+                className="inline-flex items-center gap-1.5 text-[14.5px] font-semibold text-ink transition hover:text-brand"
+              >
+                All posts <IconArrow className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-3">
+              {posts.map((post, i) => (
+                <Reveal key={post.id} delay={i * 0.05}>
+                  <PostCard post={post} />
+                </Reveal>
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* ───────── FINAL CTA ───────── */}
       <Container>

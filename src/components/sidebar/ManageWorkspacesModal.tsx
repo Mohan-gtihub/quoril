@@ -128,22 +128,22 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 8 }}
                     transition={{ duration: 0.18, ease: 'easeOut' }}
-                    className="w-full max-w-md bg-[var(--bg-secondary)] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                    className="w-full max-w-md bg-[var(--bg-secondary)] border border-[var(--border-default)] rounded-2xl shadow-2xl overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-default)]">
                         <div className="flex items-baseline gap-2">
                             <h2 className="text-base font-semibold text-[var(--text-primary)]">Workspaces</h2>
                             {workspaces.length > 0 && (
-                                <span className="text-xs font-medium text-white/40">
+                                <span className="text-xs font-medium text-[var(--text-tertiary)]">
                                     {workspaces.length}
                                 </span>
                             )}
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-1.5 rounded-full hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                            className="p-1.5 rounded-full hover:bg-[var(--border-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                         >
                             <X size={16} />
                         </button>
@@ -156,7 +156,7 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
                                 <Loader2 className="animate-spin text-[var(--accent-primary)]" size={24} />
                             </div>
                         ) : workspaces.length === 0 ? (
-                            <div className="text-center py-8 text-white/40 text-sm">
+                            <div className="text-center py-8 text-[var(--text-tertiary)] text-sm">
                                 No workspaces yet. Create your first one below.
                             </div>
                         ) : (
@@ -164,7 +164,7 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
                                 <motion.div
                                     key={ws.id}
                                     layout
-                                    className="flex items-center gap-3 px-2 py-2.5 rounded-lg group hover:bg-white/[0.04] transition-colors"
+                                    className="flex items-center gap-3 px-2 py-2.5 rounded-lg group hover:bg-[var(--bg-hover)] transition-colors"
                                 >
                                     {/* Color swatch / avatar */}
                                     <div
@@ -181,7 +181,7 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
                                                 type="text"
                                                 value={editName}
                                                 onChange={(e) => setEditName(e.target.value)}
-                                                className="bg-[var(--bg-tertiary)] border border-white/10 rounded-lg px-3 py-1.5 text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--accent-primary)] w-full"
+                                                className="bg-[var(--bg-tertiary)] border border-[var(--border-default)] rounded-lg px-3 py-1.5 text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--accent-primary)] w-full"
                                                 autoFocus
                                                 maxLength={50}
                                                 onKeyDown={(e) => {
@@ -233,7 +233,7 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
                                                 </button>
                                                 <button
                                                     onClick={handleCancelEdit}
-                                                    className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                                    className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-hover)] rounded-lg transition-colors"
                                                 >
                                                     <X size={15} />
                                                 </button>
@@ -251,7 +251,7 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
                                                 )}
                                                 <button
                                                     onClick={() => handleStartEdit(ws)}
-                                                    className="p-1.5 text-white/30 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                                    className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--border-hover)] rounded-lg transition-colors"
                                                     title="Rename"
                                                 >
                                                     <Edit2 size={14} />
@@ -259,7 +259,7 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
                                                 {workspaces.length > 1 && (
                                                     <button
                                                         onClick={() => handleDelete(ws)}
-                                                        className="p-1.5 text-white/20 hover:text-[var(--error)] hover:bg-[var(--error)]/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                                        className="p-1.5 text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--error)]/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                                                         title="Delete workspace"
                                                     >
                                                         <Trash2 size={14} />
@@ -280,10 +280,10 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
-                                className="overflow-hidden border-t border-white/10"
+                                className="overflow-hidden border-t border-[var(--border-default)]"
                             >
                                 <div className="p-4 space-y-3">
-                                    <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+                                    <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
                                         New Workspace
                                     </p>
                                     <input
@@ -293,7 +293,7 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
                                         value={newName}
                                         onChange={(e) => setNewName(e.target.value)}
                                         maxLength={50}
-                                        className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[var(--accent-primary)]"
+                                        className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-primary)]"
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter') handleCreate()
                                             if (e.key === 'Escape') setShowCreate(false)
@@ -325,7 +325,7 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
                                         </button>
                                         <button
                                             onClick={() => setShowCreate(false)}
-                                            className="px-3 py-2 text-sm text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                                            className="px-3 py-2 text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-hover)] rounded-lg transition-colors"
                                         >
                                             Cancel
                                         </button>
@@ -336,7 +336,7 @@ export const ManageWorkspacesModal: React.FC<ManageWorkspacesModalProps> = ({ is
                     </AnimatePresence>
 
                     {/* Footer */}
-                    <div className="px-4 py-3 border-t border-white/10 flex items-center justify-between gap-2">
+                    <div className="px-4 py-3 border-t border-[var(--border-default)] flex items-center justify-between gap-2">
                         {!showCreate ? (
                             <button
                                 onClick={() => setShowCreate(true)}

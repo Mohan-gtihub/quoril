@@ -24,7 +24,7 @@ export class CanvasErrorBoundary extends Component<{ children: ReactNode }, Stat
                     </div>
                     <button
                         onClick={this.reset}
-                        className="px-3 py-1.5 text-xs rounded-md bg-[var(--accent-primary)] text-white hover:opacity-90"
+                        className="px-3 py-1.5 text-xs rounded-md bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:opacity-90"
                     >
                         Reload canvas
                     </button>
