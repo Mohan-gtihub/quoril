@@ -66,7 +66,25 @@ const mergeSharedFromCloud = async (
 
         const byId = new Map<string, any>()
         for (const r of localRows) byId.set(r.id, r)
-        for (const r of shared) if (!byId.has(r.id)) byId.set(r.id, r)
+        const toMaterialize: any[] = []
+        for (const r of shared) {
+            if (!byId.has(r.id)) {
+                byId.set(r.id, r)
+                toMaterialize.push(r)
+            }
+        }
+
+        // Persist shared rows into local SQLite so they are first-class locally:
+        // taskExists() is true (no orphan focus sessions), db().updateTask() finds
+        // them (pause/edit persist), and focus-session FKs resolve. Written with
+        // synced=1 (via upsertFromCloud) so unedited shared rows aren't re-pushed;
+        // user_id (original owner) is preserved so a later local edit syncs back to
+        // the owner — enabling collaborative edits. Best-effort: a failure here just
+        // falls back to the previous in-memory-only behaviour.
+        if (toMaterialize.length) {
+            try { await db()?.upsertFromCloud?.(table, toMaterialize) } catch { /* best-effort */ }
+        }
+
         return [...byId.values()]
     } catch {
         return localRows

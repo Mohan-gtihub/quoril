@@ -16,6 +16,13 @@ const SYNC_ORDER = [
 
 type SyncTable = typeof SYNC_ORDER[number]
 
+/* Pagination order column per table. Most tables have updated_at, but
+   focus_sessions does not in the cloud schema — ordering it by updated_at makes
+   the whole pull fail with "column does not exist". Fall back to created_at. */
+const PULL_ORDER_COLUMN: Partial<Record<SyncTable, string>> = {
+    focus_sessions: 'created_at',
+}
+
 class DataSyncService {
 
     private syncing = false
@@ -25,6 +32,12 @@ class DataSyncService {
     private cacheRecoveryAttempts = 0
     private aborted = false
 
+    // Rows the server rejected this session (RLS/check violation). Tracked in
+    // memory — NOT marked synced — so we stop retrying them this session (no
+    // log spam, no infinite loop) but retry automatically next app launch, e.g.
+    // after the user fixes their RLS policy. Keyed `${table}:${id}`.
+    private rejected = new Set<string>()
+
     /* ================= START / STOP ================= */
 
     private pulledOnce = false
@@ -32,6 +45,8 @@ class DataSyncService {
     start() {
         if (this.timer) return
         this.aborted = false
+        // Fresh session (or re-login): give previously rejected rows another go.
+        this.rejected.clear()
 
         this.timer = window.setInterval(
             () => this.syncPendings(),
@@ -89,7 +104,7 @@ class DataSyncService {
                     const { data, error } = await (supabase.from(table) as any)
                         .select('*')
                         .eq('user_id', user.id)
-                        .order('updated_at', { ascending: true })
+                        .order(PULL_ORDER_COLUMN[table] ?? 'updated_at', { ascending: true })
                         .range(from, from + PAGE - 1)
 
                     if (error) {
@@ -136,6 +151,17 @@ class DataSyncService {
     /* ================= TRIGGER ================= */
 
     trigger() {
+        this.syncPendings()
+    }
+
+    /**
+     * Clear the in-memory rejected set and force a fresh push. Call after fixing
+     * server-side RLS policies to re-attempt parked rows without an app restart.
+     */
+    retryRejected() {
+        const n = this.rejected.size
+        this.rejected.clear()
+        if (n) console.log(`[Sync] Retrying ${n} previously rejected row(s)`)
         this.syncPendings()
     }
 
@@ -192,8 +218,14 @@ class DataSyncService {
         while (true) {
             if (this.aborted) return
 
-            const pendings = await window.electronAPI.db.getPending(table, BATCH_SIZE)
-            if (!pendings?.length) break
+            const allPendings = await window.electronAPI.db.getPending(table, BATCH_SIZE)
+            if (!allPendings?.length) break
+
+            // Skip rows the server already rejected this session. If every row in
+            // the batch is rejected, we'd otherwise spin forever (getPending keeps
+            // returning them since they're never marked synced) — so break out.
+            const pendings = allPendings.filter((r: any) => !this.rejected.has(`${table}:${r.id}`))
+            if (!pendings.length) break
 
             for (const row of pendings) {
 
@@ -209,19 +241,32 @@ class DataSyncService {
 
                     if (!exists) {
 
-                        console.warn('[Sync] Dropping orphan focus session:', row.id)
-
-                        await window.electronAPI.db.markSynced(table, row.id)
-
-                        continue
+                        // Parent task is gone locally (hard-deleted). Don't DROP the
+                        // session — that permanently loses focus-time history. Null
+                        // the FK and still push so the time survives in cloud reports,
+                        // mirroring how lists/tasks degrade on a missing parent.
+                        console.warn('[Sync] Orphan focus session, syncing without task_id:', row.id)
+                        row.task_id = null
                     }
                 }
 
                 /* ---------- Build payload ---------- */
 
-                // Overwrite user_id with current auth user
+                // Ownership rule:
+                //  - workspaces: ALWAYS the current user. Only an owner ever pushes
+                //    a workspace row (members can't edit it; shared workspaces arrive
+                //    via pull as synced=1 and are never pushed). Forcing the current
+                //    uid also reclaims rows whose local user_id is stale from a prior
+                //    session — otherwise the INSERT RLS check (auth.uid()=user_id)
+                //    rejects the owner's own workspace (42501).
+                //  - content tables (lists/tasks/subtasks/focus_sessions): preserve
+                //    the row's owner so collaborative edits sync back to that owner
+                //    rather than being re-homed to the editor.
+                const ownerId = table === 'workspaces'
+                    ? userId
+                    : (row.user_id || userId)
                 payload =
-                    await this.buildPayload(table, { ...row, user_id: userId })
+                    await this.buildPayload(table, { ...row, user_id: ownerId })
 
                 if (!payload) {
                     await window.electronAPI.db.markSynced(table, row.id)
@@ -325,6 +370,21 @@ class DataSyncService {
                         } else {
                             err = retryErr
                         }
+                    } else if (table === 'focus_sessions' && payload.task_id) {
+                        // Parent task not in cloud yet. Push without the FK so the
+                        // focus time is never lost; the task_id will reconcile on a
+                        // later full sync once the task lands.
+                        console.warn(`[Sync] Task missing in cloud for focus session ${row.id}. Retrying without task_id...`)
+                        payload.task_id = null
+                        const { error: retryErr } = await (supabase.from(table) as any)
+                            .upsert(payload, { onConflict: 'id' })
+
+                        if (!retryErr) {
+                            await window.electronAPI.db.markSynced(table, row.id)
+                            continue
+                        } else {
+                            err = retryErr
+                        }
                     }
                 }
 
@@ -342,12 +402,11 @@ class DataSyncService {
                         details: err?.details,
                         payload: payload
                     })
-                    console.warn(`[Sync] Marking as synced to prevent retry loop`)
-
-                    await window.electronAPI.db.markSynced(
-                        table,
-                        row.id
-                    )
+                    // Park it in-memory (NOT marked synced) so it stops retrying
+                    // this session but is re-attempted next launch — e.g. after an
+                    // RLS policy fix — instead of being permanently dropped.
+                    console.warn(`[Sync] Parking rejected row; will retry next session`)
+                    this.rejected.add(`${table}:${row.id}`)
                 } else {
                     // Log unexpected errors for debugging
                     console.error(`[Sync] Unexpected error for ${table}/${row.id}:`, {

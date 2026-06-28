@@ -177,7 +177,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             const { data, error } =
                 await localService.tasks.create(finalTask)
 
-            if (error || !data) throw error
+            if (error || !data) throw (error ?? new Error('Write returned no data (likely RLS/permission rejection)'))
 
             set((s) => ({
                 tasks: [data, ...s.tasks],
@@ -232,7 +232,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             const { data, error } =
                 await localService.tasks.update(id, final)
 
-            if (error || !data) throw error
+            if (error || !data) throw (error ?? new Error('Write returned no data (likely RLS/permission rejection)'))
 
             // The authoritative DB write succeeded. Clear the crash-recovery
             // backup so a stale-high value can never inflate future totals (L2).
@@ -356,7 +356,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             const { data, error } =
                 await localService.tasks.start(id)
 
-            if (error || !data) throw error
+            if (error || !data) throw (error ?? new Error('Write returned no data (likely RLS/permission rejection)'))
 
             set((s) => ({
                 tasks: s.tasks.map((t) =>
@@ -373,7 +373,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             const { data, error } =
                 await localService.tasks.pause(id)
 
-            if (error || !data) throw error
+            if (error || !data) throw (error ?? new Error('Write returned no data (likely RLS/permission rejection)'))
 
             set((s) => ({
                 tasks: s.tasks.map((t) =>
@@ -589,7 +589,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                     sort_order: currentSubtasks.length,
                 })
 
-            if (error || !data) throw error
+            if (error || !data) throw (error ?? new Error('Write returned no data (likely RLS/permission rejection)'))
 
             set((s) => ({
                 subtasks: {
@@ -627,7 +627,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                     completed: !sub.completed,
                 })
 
-            if (error || !data) throw error
+            if (error || !data) throw (error ?? new Error('Write returned no data (likely RLS/permission rejection)'))
 
             const taskId = foundTaskId
             set((s) => ({

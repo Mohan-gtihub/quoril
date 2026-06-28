@@ -425,9 +425,15 @@ export const useFocusStore = create<FocusState>()(
                         const updates: any = { actual_seconds: total, started_at: null }
                         if (updateStatus) updates.status = 'paused'
 
-                        await useTaskStore.getState().updateTask(s.taskId, updates)
-
-                        // Fix: Removed duplicate backupService.save call (already handled in task update + below)
+                        // Persist defensively: a failed cloud write (RLS/schema
+                        // rejection surfaces as a thrown null from updateTask) must
+                        // not abort the pause. We still apply the paused UI state
+                        // below so the timer actually stops for the user (L5).
+                        try {
+                            await useTaskStore.getState().updateTask(s.taskId, updates)
+                        } catch (e) {
+                            console.error('[Focus] Failed to persist paused task state', e)
+                        }
                     }
 
                     set({
