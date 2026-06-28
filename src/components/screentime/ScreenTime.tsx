@@ -442,7 +442,7 @@ export function ScreenTime() {
     // Hook must always run — capability is a module-level constant so conditional
     // rendering is safe: the hook result is simply unused on web.
     const data = useScreenTimeData()
-    const { loading, date, setDate, hourly, apps, categories, domains, weekly, timeline, totals, productivity, peakHour, avgDailySeconds, todayVsAvg } = data
+    const { loading, trackingAvailable, date, setDate, hourly, apps, categories, domains, weekly, timeline, totals, productivity, peakHour, avgDailySeconds, todayVsAvg } = data
 
     const isViewingToday = isToday(parseISO(date))
     const displayDate = isViewingToday ? 'Today' : format(parseISO(date), 'EEE, MMM d')
@@ -455,8 +455,9 @@ export function ScreenTime() {
     }
     const canGoForward = !isViewingToday
 
-    // App tracking is desktop-only — show empty state on web (all hooks already ran above)
-    if (!appTracking) {
+    // App tracking is optional. On web it is unavailable; on unsigned macOS builds
+    // it may be disabled until the user opts into Accessibility permission.
+    if (!appTracking || (!loading && !trackingAvailable)) {
         return (
             <div className="flex-1 overflow-y-auto w-full h-full custom-scrollbar select-none pb-24">
                 <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-10">
@@ -470,7 +471,14 @@ export function ScreenTime() {
                             <h1 className="text-[30px] leading-none font-semibold tracking-tight text-[var(--text-primary)]">Screen Time</h1>
                         </div>
                     </header>
-                    <TrackingUnavailable />
+                    <TrackingUnavailable
+                        title={appTracking ? 'App Tracking Optional' : undefined}
+                        description={
+                            appTracking
+                                ? 'Screen Time works when macOS Accessibility access is enabled. You can keep using planner, focus sessions, and manual reports without it.'
+                                : undefined
+                        }
+                    />
                 </div>
             </div>
         )

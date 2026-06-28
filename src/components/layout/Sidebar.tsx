@@ -272,7 +272,7 @@ export function Sidebar() {
 
             {/* Brand + collapse toggle */}
             <div className={cn("pt-5 pb-1 flex items-center", collapsed ? "px-0 justify-center" : "px-4 gap-2.5")}>
-                <img src="/brand-mark.png" alt="Quoril" className="w-7 h-7 shrink-0" style={{ borderRadius: 'var(--radius-card)' }} />
+                <img src={`${import.meta.env.BASE_URL}brand-mark.png`} alt="Quoril" className="w-7 h-7 shrink-0" style={{ borderRadius: 'var(--radius-card)' }} />
                 {!collapsed && (
                     <>
                         <span className="text-[15px] font-bold tracking-tight text-[var(--text-primary)] flex-1">Quoril<span className="text-[var(--accent-primary)]">.</span></span>

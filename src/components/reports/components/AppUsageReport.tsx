@@ -21,6 +21,7 @@ const appTracking = platform.capabilities.appTracking
 export function AppUsageReport({ dateRange }: AppUsageReportProps) {
     const [usage, setUsage] = useState<AppUsage[]>([])
     const [loading, setLoading] = useState(true)
+    const [trackingAvailable, setTrackingAvailable] = useState(appTracking)
 
     useEffect(() => {
         if (!appTracking) {
@@ -31,6 +32,12 @@ export function AppUsageReport({ dateRange }: AppUsageReportProps) {
         const load = async () => {
             setLoading(true)
             try {
+                const available = await Promise.resolve(platform.screenTime.isTrackingAvailable())
+                setTrackingAvailable(available)
+                if (!available) {
+                    setUsage([])
+                    return
+                }
                 // Fetch app usage from electron API
                 const end = new Date(dateRange.end)
                 end.setHours(23, 59, 59, 999)
@@ -49,9 +56,17 @@ export function AppUsageReport({ dateRange }: AppUsageReportProps) {
         load()
     }, [dateRange])
 
-    // App tracking is desktop-only — show empty state on web
-    if (!appTracking) {
-        return <TrackingUnavailable />
+    if (!appTracking || (!loading && !trackingAvailable)) {
+        return (
+            <TrackingUnavailable
+                title={appTracking ? 'App Tracking Optional' : undefined}
+                description={
+                    appTracking
+                        ? 'App usage reporting requires macOS Accessibility access. Focus and task reports remain available without it.'
+                        : undefined
+                }
+            />
+        )
     }
 
     const totalTime = usage.reduce((acc, curr) => acc + curr.totalSeconds, 0)

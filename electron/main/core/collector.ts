@@ -1,5 +1,8 @@
 import activeWin from 'active-win'
 import { powerMonitor, systemPreferences } from 'electron'
+import { execFile } from 'node:child_process'
+
+const IDLE_THRESHOLD_S = 180 // 3 minutes
 
 export interface ActiveWindow {
     appName: string
@@ -126,77 +129,134 @@ function detectSite(title: string) {
     return null
 }
 
+/**
+ * Resolve a window's category (and optional site/domain) from the app name and,
+ * when available, its title. Title is optional — the permission-free fallback
+ * only knows the app name, and still gets a sensible category from CATEGORY_MAP.
+ */
+export function categorize(
+    rawApp: string,
+    title: string = "",
+): { category: ActiveWindow["category"]; domain?: string } {
+    const normalizedApp = normalize(rawApp)
+
+    // 1. Base category from the app name.
+    let category: ActiveWindow["category"] = CATEGORY_MAP[normalizedApp] || "Other"
+    let domain: string | undefined
+
+    // 2. Browser → detect the site from the title (needs a title).
+    if (category === "Web" || normalizedApp.includes("browser") || normalizedApp.includes("chrome")) {
+        const site = detectSite(title)
+        if (site) {
+            domain = site
+            category = SITE_TO_CATEGORY[site] || "Web"
+        }
+    }
+
+    // 3. Title-based override for generically-named apps.
+    if (category === "Other") {
+        if (/visual studio|intellij|pycharm|webstorm|sublime|atom/i.test(title)) {
+            category = "Development"
+        } else if (/word|excel|powerpoint|outlook|onenote|pdf/i.test(title)) {
+            category = "Work"
+        }
+    }
+
+    return { category, domain }
+}
+
+function idleWindow(rawApp: string, rawPath?: string): ActiveWindow {
+    return {
+        appName: "Idle",
+        title: "Away from Keyboard",
+        rawApp,
+        rawPath,
+        isIdle: true,
+        category: "Idle",
+    }
+}
+
+/**
+ * Parse the app name out of `lsappinfo info -only name <asn>` output, which looks
+ * like:  "LSDisplayName"="Google Chrome"
+ */
+export function parseLsAppName(stdout: string): string | null {
+    const m = stdout.match(/"LSDisplayName"\s*=\s*"([^"]+)"/)
+    return m ? m[1].trim() || null : null
+}
+
+function run(cmd: string, args: string[], timeout = 1500): Promise<string> {
+    return new Promise((resolve) => {
+        try {
+            execFile(cmd, args, { timeout }, (err, stdout) => {
+                resolve(err ? "" : String(stdout))
+            })
+        } catch {
+            resolve("")
+        }
+    })
+}
+
+/**
+ * Permission-free frontmost app on macOS. `lsappinfo` reports the foreground app
+ * without any TCC permission (no Accessibility / Screen Recording prompt), so app
+ * level tracking keeps working even when the user hasn't granted access. The
+ * trade-off: no window title and therefore no in-browser site detection.
+ */
+async function macFrontmostAppName(): Promise<string | null> {
+    const asn = (await run("lsappinfo", ["front"])).trim()
+    if (!asn) return null
+    return parseLsAppName(await run("lsappinfo", ["info", "-only", "name", asn]))
+}
+
 /* ---------------- ENGINE ---------------- */
 
 export async function getActiveWindow(): Promise<ActiveWindow | null> {
     try {
-        // macOS: Check for accessibility permission without requesting it (false)
-        if (process.platform === 'darwin') {
-            const hasAccess = systemPreferences.isTrustedAccessibilityClient(false)
-            if (!hasAccess) {
-                // If we don't have access, we can still detect idle time via powerMonitor
-                // but we can't reliably get the active window title.
-                // We return null to indicate tracking is disabled/restricted.
-                return null
+        const isIdle = powerMonitor.getSystemIdleTime() > IDLE_THRESHOLD_S
+
+        // macOS without Accessibility: never call active-win (it can surface the
+        // permission prompt). Fall back to the permission-free app-name source so
+        // app-level screen time still records.
+        if (
+            process.platform === "darwin" &&
+            !systemPreferences.isTrustedAccessibilityClient(false)
+        ) {
+            const appName = await macFrontmostAppName()
+            if (!appName) return null
+            if (isIdle) return idleWindow(appName)
+            const { category } = categorize(appName)
+            return {
+                appName,
+                title: "",
+                rawApp: appName,
+                isIdle: false,
+                category,
             }
         }
 
+        // Full path: active-win gives app name + window title (+ site detection).
         const win = await activeWin()
         if (!win) return null
 
-        const idleTime = powerMonitor.getSystemIdleTime()
-        const isIdle = idleTime > 180 // 3 minutes for true idle
-
         const rawApp = win.owner.name
         const rawPath = win.owner.path
-        const title = win.title || ''
-        const normalizedApp = normalize(rawApp)
+        const title = win.title || ""
 
-        if (isIdle) {
-            return {
-                appName: 'Idle',
-                title: 'Away from Keyboard',
-                rawApp,
-                rawPath,
-                isIdle: true,
-                category: 'Idle'
-            }
-        }
+        if (isIdle) return idleWindow(rawApp, rawPath)
 
-        // 1. Determine base category from App Name
-        let category: ActiveWindow['category'] = CATEGORY_MAP[normalizedApp] || 'Other'
-        let domain: string | undefined
-
-        // 2. Special handling for Browsers (Site Detection)
-        if (category === 'Web' || normalizedApp.includes('browser') || normalizedApp.includes('chrome')) {
-            const site = detectSite(title)
-            if (site) {
-                domain = site
-                category = SITE_TO_CATEGORY[site] || 'Web'
-            }
-        }
-
-        // 3. Title-based override (for apps with generic names)
-        if (category === 'Other') {
-            if (/visual studio|intellij|pycharm|webstorm|sublime|atom/i.test(title)) {
-                category = 'Development'
-            } else if (/word|excel|powerpoint|outlook|onenote|pdf/i.test(title)) {
-                category = 'Work'
-            }
-        }
-
+        const { category, domain } = categorize(rawApp, title)
         return {
-            appName: rawApp.replace('.exe', ''), // Keep original app name
+            appName: rawApp.replace(".exe", ""),
             title,
             rawApp,
             rawPath,
             isIdle: false,
             category,
-            domain
+            domain,
         }
-
-    } catch (e: any) {
-        // Catch any remaining errors (e.g. from active-win native code)
+    } catch {
+        // Native errors (e.g. from active-win) — treat as "no data this pulse".
         return null
     }
 }
