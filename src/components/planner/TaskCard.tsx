@@ -174,6 +174,8 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
             if (timer.isPaused) focus.resumeSession()
             else focus.pauseSession()
         } else {
+            // Only the assignee (or anyone, if unassigned) may start a workspace task.
+            if (!canEditTime) return
             focus.startSession(task.id)
             focus.setShowFocusPanel(true)
         }
@@ -446,7 +448,12 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                             ) : (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleStartClick(); }}
-                                    className="h-7 px-3 rounded-full text-[11px] font-semibold flex items-center gap-1.5 transition-all active:scale-95 bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105"
+                                    disabled={!canEditTime}
+                                    title={canEditTime ? undefined : `Assigned to ${assigneeLabel} — only they can start this task`}
+                                    className={cn(
+                                        "h-7 px-3 rounded-full text-[11px] font-semibold flex items-center gap-1.5 transition-all bg-[var(--accent-primary)] text-[var(--accent-contrast)]",
+                                        canEditTime ? "active:scale-95 hover:brightness-105" : "opacity-40 cursor-not-allowed"
+                                    )}
                                 >
                                     <Play className="w-2.5 h-2.5 fill-current" />
                                     <span>Start</span>
@@ -603,10 +610,11 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                         </div>
                         <div className="flex gap-2">
                             <button
-                                onClick={() => { focus.startSession(task.id) }}
-                                className="p-2 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/20 transition-colors"
+                                onClick={() => { if (canEditTime) focus.startSession(task.id) }}
+                                disabled={!canEditTime}
+                                className="p-2 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-[var(--accent-primary)]/10"
                                 aria-label="Launch Task Now"
-                                title="Launch Task Now"
+                                title={canEditTime ? "Launch Task Now" : `Assigned to ${assigneeLabel} — only they can start this task`}
                             >
                                 <Play className="w-4 h-4 fill-current" />
                             </button>
