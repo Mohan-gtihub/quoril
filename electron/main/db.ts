@@ -320,6 +320,16 @@ export const dbOps = {
         return rows?.length > 0
     },
 
+    // Ids in `table` that are tombstoned locally (deleted_at set). Used to stop
+    // mergeSharedFromCloud from resurrecting a shared row the user just deleted
+    // locally when the cloud copy (owned by someone else) is still un-deleted.
+    getLocallyDeletedIds(table: string): string[] {
+        const ALLOWED = new Set(['tasks', 'lists', 'subtasks'])
+        if (!ALLOWED.has(table)) return []
+        const rows = exec(`SELECT id FROM ${table} WHERE deleted_at IS NOT NULL`) as any[]
+        return (rows || []).map((r: any) => r.id)
+    },
+
     requeueWorkspace(workspaceId: string) {
         exec('UPDATE workspaces SET synced=0 WHERE id=?', [workspaceId])
     },

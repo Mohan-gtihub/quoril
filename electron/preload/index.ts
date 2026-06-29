@@ -81,6 +81,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         getDailyDomainUsage: (date: string) => ipcRenderer.invoke('db:getDailyDomainUsage', date),
         genericUpdate: (table: string, id: string, updates: any) => ipcRenderer.invoke('db:genericUpdate', table, id, updates),
         taskExists: (taskId: string) => ipcRenderer.invoke('db:taskExists', taskId),
+        getLocallyDeletedIds: (table: string) => ipcRenderer.invoke('db:getLocallyDeletedIds', table),
         getPending: (table: string, limit?: number) => ipcRenderer.invoke('db:getPending', table, limit),
         markSynced: (table: string, id: string) => ipcRenderer.invoke('db:markSynced', table, id),
         upsertFromCloud: (table: string, rows: any[]) => ipcRenderer.invoke('db:upsertFromCloud', table, rows),
@@ -235,6 +236,7 @@ export interface ElectronAPI {
         getAppUsageByTask: (taskId: string) => Promise<any[]>
         genericUpdate: (table: string, id: string, updates: any) => Promise<any>
         taskExists: (taskId: string) => Promise<boolean>
+        getLocallyDeletedIds: (table: string) => Promise<string[]>
         getPending: (table: string) => Promise<any[]>
         markSynced: (table: string, id: string) => Promise<void>
         upsertFromCloud: (table: string, rows: any[]) => Promise<number>

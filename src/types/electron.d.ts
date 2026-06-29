@@ -63,6 +63,7 @@ export interface ElectronAPI {
         getDailyDomainUsage: (date: string) => Promise<any[]>
         genericUpdate: (table: string, id: string, updates: any) => Promise<any>
         taskExists: (taskId: string) => Promise<boolean>
+        getLocallyDeletedIds: (table: string) => Promise<string[]>
         getPending: (table: string, limit?: number) => Promise<any[]>
         markSynced: (table: string, id: string) => Promise<void>
         upsertFromCloud: (table: string, rows: any[]) => Promise<number>

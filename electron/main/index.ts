@@ -691,6 +691,10 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
         safe(() => dbOps.taskExists(taskId))
     )
 
+    ipcMain.handle('db:getLocallyDeletedIds', (_, table) =>
+        safe(() => dbOps.getLocallyDeletedIds(table))
+    )
+
     ipcMain.handle('db:requeueWorkspace', (_, workspaceId) =>
         safe(() => dbOps.requeueWorkspace(workspaceId))
     )
