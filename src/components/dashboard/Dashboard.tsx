@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import { useFocusStore } from '@/store/focusStore'
 import {
-    Plus, Search, CheckCircle2, Circle,
+    Plus, Search, CheckCircle2,
     Layers, MoreHorizontal, Archive, Copy, Edit3,
     Flame, ListPlus, FolderKanban, X, RotateCcw, Trash2,
     Zap, Target, GripVertical, AlarmClock, ChevronDown, Check
@@ -28,16 +28,12 @@ import type { List, Task } from '@/types/database'
 import { cn } from '@/utils/helpers'
 import { format, isToday, isTomorrow } from 'date-fns'
 import { calculateRealTimeFocus } from '@/utils/timeCalculations'
+import { PRIORITY_META, isUrgentPriority } from '@/utils/priority'
 
 /* ─────────────────────────────────────────
    HELPERS
 ───────────────────────────────────────── */
-const P_INFO: Record<string, { label: string; color: string }> = {
-    critical: { label: 'Critical', color: 'var(--text-primary)' },
-    high: { label: 'High', color: 'var(--text-secondary)' },
-    medium: { label: 'Medium', color: 'var(--text-tertiary)' },
-    low: { label: 'Low', color: 'var(--text-muted)' },
-}
+const P_INFO = PRIORITY_META
 
 function fmtDue(due: string | null | undefined) {
     if (!due) return null
@@ -605,29 +601,27 @@ function BentoListCard({
                             {previewTasks.map(t => {
                                 const p = P_INFO[t.priority]
                                 const due = fmtDue(t.due_date)
+                                const urgent = isUrgentPriority(t.priority)
                                 return (
-                                    <div key={t.id} className="flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-[var(--bg-hover)] transition-colors group/task">
-                                        <Circle
-                                            size={12}
-                                            className="mt-px shrink-0 transition-colors group-hover/task:text-[var(--text-secondary)]"
-                                            style={{ color: p ? p.color : 'var(--text-muted)' }}
+                                    <div key={t.id} className="flex items-start gap-2.5 rounded-lg px-2 py-1.5 hover:bg-[var(--bg-hover)] transition-colors group/task">
+                                        {/* Priority marker — colour is the signal; size nudges up with urgency */}
+                                        <span
+                                            className={cn("shrink-0 rounded-full", urgent ? "w-1.5 h-1.5 mt-[5px]" : "w-1 h-1 mt-1.5")}
+                                            style={{ backgroundColor: p ? p.color : 'var(--text-muted)' }}
+                                            title={p ? `${p.label} priority` : undefined}
                                         />
                                         <div className="flex-1 min-w-0">
                                             <p className="text-[11px] text-[var(--text-secondary)] truncate leading-tight group-hover/task:text-[var(--text-primary)] transition-colors">{hl(t.title, search)}</p>
-                                            {(due || p) && (
-                                                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                                    {due && (
-                                                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[var(--text-muted)] bg-[var(--bg-hover)] rounded-full px-1.5 py-px">
-                                                            <AlarmClock size={9} /> {due}
+                                            {(due || urgent) && (
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    {urgent && p && (
+                                                        <span className="text-[9px] font-bold uppercase tracking-[0.06em]" style={{ color: p.color }}>
+                                                            {p.label}
                                                         </span>
                                                     )}
-                                                    {p && (
-                                                        <span
-                                                            className="inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-1.5 py-px"
-                                                            style={{ color: p.color, backgroundColor: `color-mix(in srgb, ${p.color} 12%, transparent)` }}
-                                                        >
-                                                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.color }} />
-                                                            {p.label}
+                                                    {due && (
+                                                        <span className="inline-flex items-center gap-0.5 text-[10px] text-[var(--text-muted)]">
+                                                            <AlarmClock size={8} /> {due}
                                                         </span>
                                                     )}
                                                 </div>

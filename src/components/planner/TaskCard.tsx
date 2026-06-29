@@ -16,6 +16,7 @@ import { formatTimeInput, parseTimeInput } from '@/utils/timeParser'
 import { useTimerDisplay } from '@/hooks/useTimerDisplay'
 import { cn } from '@/utils/helpers'
 import { resolveAssigneeLabel, assigneeInitial, canEditTaskTime } from '@/utils/assignee'
+import { getPriorityMeta, isUrgentPriority } from '@/utils/priority'
 import { useSettingsStore } from '@/store/settingsStore'
 import { confirm } from '@/components/ui/ConfirmDialog'
 import { usePlannerStore } from '@/store/plannerStore'
@@ -149,6 +150,8 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
     const progressPercent = totalSub > 0 ? Math.round((doneSub / totalSub) * 100) : 0
 
     const isCompleted = task.status === 'done' || column === 'done'
+    const priorityMeta = getPriorityMeta(task.priority)
+    const urgent = isUrgentPriority(task.priority) && !isCompleted
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -345,7 +348,23 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
 
             {/* Bottom Row: Metadata & Timer */}
             <div className="flex items-center justify-between mt-3 pl-1">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3.5">
+                    {/* Priority — a coloured dot for every task; high/critical also
+                        get the word so urgency reads at a glance. */}
+                    {priorityMeta && !isCompleted && (
+                        <span className="flex items-center gap-1.5" title={`${priorityMeta.label} priority`}>
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: priorityMeta.color }} />
+                            {urgent && (
+                                <span
+                                    className="text-[10px] font-bold uppercase tracking-[0.08em]"
+                                    style={{ color: priorityMeta.color }}
+                                >
+                                    {priorityMeta.label}
+                                </span>
+                            )}
+                        </span>
+                    )}
+
                     {/* EST */}
                     {!settings.hideEstDoneTimes && (
                         <div

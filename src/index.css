@@ -63,6 +63,13 @@
   --warning: #f59e0b;
   --error: #ef4444;
 
+  /* Task priority — traffic-light scale: green is calm, red needs attention.
+     Kept identical across themes so a priority always means the same colour. */
+  --priority-low:      #22c55e; /* green  */
+  --priority-medium:   #f97316; /* orange */
+  --priority-high:     #ef4444; /* red    */
+  --priority-critical: #b91c1c; /* deep red — top of the scale */
+
   /* Quoril accent palette */
   --focus: #2b6bf5;        /* active focus sessions, sync status, ring timer fill */
   --focus-glow: rgba(43, 107, 245, 0.45);

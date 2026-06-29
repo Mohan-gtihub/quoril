@@ -3,6 +3,7 @@ import { X, Repeat } from 'lucide-react'
 import { useCreateTask } from '@/hooks/useCreateTask'
 import type { Task } from '@/types/database'
 import type { TaskColumn } from '@/types/list'
+import { PRIORITY_META, priorityTint } from '@/utils/priority'
 
 interface Props {
     isOpen: boolean
@@ -96,18 +97,24 @@ export function CreateTaskModal({ isOpen, onClose, listId, column = 'today', pos
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2.5">Priority</p>
 
                     <div className="flex gap-2">
-                        {(['low', 'medium', 'high'] as const).map((p) => (
-                            <button
-                                key={p}
-                                onClick={() => setPriority(p)}
-                                className={`flex-1 py-2 rounded-[var(--radius-tile)] text-xs font-medium transition-colors border ${priority === p
-                                    ? 'bg-[var(--accent-primary)] border-[var(--accent-primary)] text-[var(--accent-contrast)]'
-                                    : 'bg-[var(--bg-tertiary)] border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)]'
-                                    }`}
-                            >
-                                {p.charAt(0).toUpperCase() + p.slice(1)}
-                            </button>
-                        ))}
+                        {(['low', 'medium', 'high'] as const).map((p) => {
+                            const meta = PRIORITY_META[p]
+                            const selected = priority === p
+                            return (
+                                <button
+                                    key={p}
+                                    onClick={() => setPriority(p)}
+                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[var(--radius-tile)] text-xs font-semibold transition-colors border"
+                                    style={selected
+                                        ? { color: meta.color, backgroundColor: priorityTint(meta.color, 14), borderColor: priorityTint(meta.color, 45) }
+                                        : { color: 'var(--text-secondary)', backgroundColor: 'var(--bg-tertiary)', borderColor: 'transparent' }
+                                    }
+                                >
+                                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: meta.color }} />
+                                    {meta.label}
+                                </button>
+                            )
+                        })}
                     </div>
                 </div>
 

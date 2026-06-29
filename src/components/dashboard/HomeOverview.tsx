@@ -103,7 +103,7 @@ export function HomeOverview() {
         return { wsName: ws?.name || 'Unassigned', wsColor: ws?.color || 'var(--text-muted)' }
     }
     const PRIORITY_COLOR: Record<string, string> = {
-        critical: 'var(--error)', high: 'var(--warning)', medium: 'var(--accent-primary)', low: 'var(--text-muted)',
+        critical: 'var(--priority-critical)', high: 'var(--priority-high)', medium: 'var(--priority-medium)', low: 'var(--priority-low)',
     }
 
     return (

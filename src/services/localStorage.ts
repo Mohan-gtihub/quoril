@@ -271,6 +271,14 @@ export const localService = {
                 return { error: error?.message || null }
             }
             await db().hardDeleteTask(id)
+            // Also remove the cloud row. The push loop only upserts existing local
+            // rows, so a hard-deleted task would otherwise survive in the cloud and
+            // get restored on the next pull(). Best-effort: if offline this fails and
+            // the row may resurrect, but that's the rare edge case.
+            if (navigator.onLine) {
+                const { error } = await (supabase.from('tasks') as any).delete().eq('id', id)
+                if (error) console.warn('[Delete] Cloud hard-delete failed; task may resurrect on next sync:', error.message)
+            }
             dataSyncService.trigger()
             return { error: null }
         },
@@ -436,6 +444,12 @@ export const localService = {
                 return { error: error?.message || null }
             }
             await db().hardDeleteList(id)
+            // Remove the cloud row too — otherwise pull() restores it on next sync
+            // (same reason as tasks.permanentDelete above).
+            if (navigator.onLine) {
+                const { error } = await (supabase.from('lists') as any).delete().eq('id', id)
+                if (error) console.warn('[Delete] Cloud hard-delete failed; list may resurrect on next sync:', error.message)
+            }
             dataSyncService.trigger()
             return { error: null }
         },
