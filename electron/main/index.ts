@@ -7,7 +7,6 @@ import {
     nativeImage,
     shell,
     globalShortcut,
-    systemPreferences,
     Notification,
     screen
 } from 'electron'
@@ -722,29 +721,24 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
         return url
     })
 
-    /* macOS Accessibility Permission (needed for active-win app tracking) */
+    /* App-tracking permission. macOS uses the permission-free lsappinfo path, so we
+       intentionally never request Accessibility there — the prompt can't persist on
+       unsigned builds and detailed (title/website) tracking is disabled on mac. */
 
     ipcMain.handle('permissions:checkAccessibility', () => {
-        if (process.platform !== 'darwin') return true
-        return systemPreferences.isTrustedAccessibilityClient(false)
+        // On macOS we never use Accessibility, so detailed tracking is unavailable.
+        if (process.platform === 'darwin') return false
+        return true
     })
 
     ipcMain.handle('permissions:requestAccessibility', () => {
-        if (process.platform !== 'darwin') return true
-        // Passing true triggers the macOS system prompt
-        return systemPreferences.isTrustedAccessibilityClient(true)
+        // No-op: never surface the macOS Accessibility prompt.
+        return false
     })
 
     ipcMain.handle('permissions:startTracking', () => {
-        // Called after user grants accessibility permission from the in-app prompt
-        if (process.platform === 'darwin') {
-            const hasAccess = systemPreferences.isTrustedAccessibilityClient(false)
-            if (hasAccess) {
-                trackingEngine.start()
-                return true
-            }
-            return false
-        }
+        // Tracking runs without any permission; just (re)start the engine.
+        trackingEngine.start()
         return true
     })
 
@@ -808,10 +802,8 @@ app.whenReady().then(async () => {
     createTray()
     setupIPC()
 
-    // Start app tracking engine.
-    // On macOS, the engine handles passive permission checks via systemPreferences.
-    // This allows the app to start quietly even without permissions, and pick up 
-    // permissions automatically if the user grants them in System Settings later.
+    // Start app tracking engine. It runs without any OS permission — on macOS via
+    // the permission-free lsappinfo source, on Windows/Linux via active-win.
     trackingEngine.start()
 
     // Auto-launch on startup (Safe production-grade implementation)

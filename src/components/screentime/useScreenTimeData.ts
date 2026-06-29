@@ -63,6 +63,8 @@ export interface ProductivityBucket {
 export interface ScreenTimeData {
     loading: boolean
     trackingAvailable: boolean
+    /** Window titles + website/domain detail (macOS Accessibility / non-mac desktop). */
+    detailAvailable: boolean
     date: string
     setDate: (d: string) => void
     hourly: HourlyBucket[]
@@ -85,6 +87,7 @@ export function useScreenTimeData(): ScreenTimeData {
     const [raw, setRaw] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [trackingAvailable, setTrackingAvailable] = useState(platform.capabilities.appTracking)
+    const [detailAvailable, setDetailAvailable] = useState(platform.capabilities.appTracking)
 
     useEffect(() => {
         let cancelled = false
@@ -93,6 +96,9 @@ export function useScreenTimeData(): ScreenTimeData {
             .then(async (available) => {
                 if (cancelled) return
                 setTrackingAvailable(available)
+                Promise.resolve(platform.screenTime.isDetailTrackingAvailable())
+                    .then((detail) => { if (!cancelled) setDetailAvailable(detail) })
+                    .catch(() => { if (!cancelled) setDetailAvailable(false) })
                 if (!available) {
                     setRaw(null)
                     setLoading(false)
@@ -174,6 +180,7 @@ export function useScreenTimeData(): ScreenTimeData {
     return {
         loading,
         trackingAvailable,
+        detailAvailable,
         date,
         setDate,
         hourly,

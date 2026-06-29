@@ -41,6 +41,7 @@ export function ActivityDashboard() {
     const [domainUsage, setDomainUsage] = useState<DomainUsage[]>([])
     const [loading, setLoading] = useState(true)
     const [trackingAvailable, setTrackingAvailable] = useState(appTracking)
+    const [detailAvailable, setDetailAvailable] = useState(appTracking)
     const [categoryMap, setCategoryMap] = useState<Record<string, string>>({})
 
     useEffect(() => {
@@ -50,6 +51,9 @@ export function ActivityDashboard() {
             const available = await Promise.resolve(platform.screenTime.isTrackingAvailable())
             if (cancelled) return
             setTrackingAvailable(available)
+            Promise.resolve(platform.screenTime.isDetailTrackingAvailable())
+                .then((detail) => { if (!cancelled) setDetailAvailable(detail) })
+                .catch(() => { if (!cancelled) setDetailAvailable(false) })
             if (!available) {
                 setLoading(false)
                 return
@@ -264,7 +268,13 @@ export function ActivityDashboard() {
                         <Globe size={16} className="text-[var(--text-muted)]" />
                         Top Websites
                     </h3>
-                    {topDomains.length > 0 ? (
+                    {!detailAvailable ? (
+                        <div className="h-[300px] flex flex-col items-center justify-center text-center text-[var(--text-muted)] px-6">
+                            <Globe size={48} className="mb-4 opacity-20" />
+                            <p className="text-[var(--text-secondary)]">Website detail isn’t available on macOS</p>
+                            <p className="text-xs mt-2 max-w-xs leading-relaxed">App usage is tracked automatically. Per-website breakdowns aren’t available on macOS.</p>
+                        </div>
+                    ) : topDomains.length > 0 ? (
                         <div className="h-[300px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={topDomains} layout="vertical" margin={{ left: 10, right: 30 }}>

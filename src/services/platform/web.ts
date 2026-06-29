@@ -25,6 +25,7 @@ export const webPlatform: Platform = {
   screenTime: {
     async getData() { return UNAVAILABLE },
     isTrackingAvailable() { return false },
+    isDetailTrackingAvailable() { return false },
   },
   focusWindow: {
     setAlwaysOnTop() { return UNAVAILABLE },

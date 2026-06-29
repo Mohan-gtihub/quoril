@@ -22,7 +22,14 @@ export interface DataPort {
 
 export interface ScreenTimePort {
   getData(args: { date: string }): Promise<any | Unavailable>
+  /** App-level tracking — which apps are used. Works on all desktop platforms. */
   isTrackingAvailable(): boolean | Promise<boolean>
+  /**
+   * Detailed tracking — window titles + in-browser website/domain detection.
+   * Available on Windows/Linux and on macOS once Accessibility is granted; not
+   * available on the permission-free macOS (lsappinfo) path or on web.
+   */
+  isDetailTrackingAvailable(): boolean | Promise<boolean>
 }
 
 export interface FocusWindowPort {
