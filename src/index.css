@@ -90,6 +90,13 @@
      (--bg-hover is too faint to read as a filled track.) */
   --track: rgba(255, 255, 255, 0.08);
 
+  /* GitHub contribution-graph palette (dark default) */
+  --gh-l0: #161b22;
+  --gh-l1: #0e4429;
+  --gh-l2: #006d32;
+  --gh-l3: #26a641;
+  --gh-l4: #39d353;
+
   /* Shape tokens (FitSpark big-rounded bento look) */
   --radius-tile: 28px;
   --radius-card: 20px;
@@ -181,6 +188,13 @@
   /* visible empty-track tone (heatmap cells, progress rails) */
   --track: #e4e6ea;
 
+  /* GitHub contribution-graph palette (light) */
+  --gh-l0: #ebedf0;
+  --gh-l1: #9be9a8;
+  --gh-l2: #40c463;
+  --gh-l3: #30a14e;
+  --gh-l4: #216e39;
+
   /* balanced, professional radii (matches the site) */
   --radius-tile: 20px;
   --radius-card: 14px;
@@ -266,6 +280,13 @@
 
   /* visible empty-track tone */
   --track: #e2e5ea;
+
+  /* GitHub contribution-graph palette (light) */
+  --gh-l0: #ebedf0;
+  --gh-l1: #9be9a8;
+  --gh-l2: #40c463;
+  --gh-l3: #30a14e;
+  --gh-l4: #216e39;
 }
 
 /* Arcade Blue Theme */
