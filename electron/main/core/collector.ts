@@ -1,5 +1,5 @@
 import activeWin from 'active-win'
-import { powerMonitor, systemPreferences } from 'electron'
+import { powerMonitor } from 'electron'
 import { execFile } from 'node:child_process'
 
 const IDLE_THRESHOLD_S = 180 // 3 minutes
@@ -215,13 +215,13 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
     try {
         const isIdle = powerMonitor.getSystemIdleTime() > IDLE_THRESHOLD_S
 
-        // macOS without Accessibility: never call active-win (it can surface the
-        // permission prompt). Fall back to the permission-free app-name source so
-        // app-level screen time still records.
-        if (
-            process.platform === "darwin" &&
-            !systemPreferences.isTrustedAccessibilityClient(false)
-        ) {
+        // macOS: always use the permission-free app-name source (lsappinfo) and
+        // never call active-win. active-win's native helper invokes Accessibility
+        // APIs, which repeatedly surfaces the system permission prompt on unsigned
+        // builds (the grant can't persist without Developer ID notarization). We
+        // trade window titles / website detection for a prompt-free experience;
+        // app-level screen time still records fully.
+        if (process.platform === "darwin") {
             const appName = await macFrontmostAppName()
             if (!appName) return null
             if (isIdle) return idleWindow(appName)

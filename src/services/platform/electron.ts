@@ -24,7 +24,12 @@ export const electronPlatform: Platform = {
   },
   screenTime: {
     async getData(args) { return api().screenTime?.getData(args) },
-    async isTrackingAvailable() {
+    // App-level tracking works on every desktop platform — on macOS the
+    // permission-free lsappinfo path records app usage even without Accessibility.
+    async isTrackingAvailable() { return true },
+    // Window titles + website detection need active-win, which on macOS requires
+    // Accessibility. Windows/Linux always have it; web never does.
+    async isDetailTrackingAvailable() {
       const current = api()
       const platformName = await current.app?.getPlatform?.()
       if (platformName !== 'darwin') return true

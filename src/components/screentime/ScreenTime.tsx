@@ -442,7 +442,7 @@ export function ScreenTime() {
     // Hook must always run — capability is a module-level constant so conditional
     // rendering is safe: the hook result is simply unused on web.
     const data = useScreenTimeData()
-    const { loading, trackingAvailable, date, setDate, hourly, apps, categories, domains, weekly, timeline, totals, productivity, peakHour, avgDailySeconds, todayVsAvg } = data
+    const { loading, trackingAvailable, detailAvailable, date, setDate, hourly, apps, categories, domains, weekly, timeline, totals, productivity, peakHour, avgDailySeconds, todayVsAvg } = data
 
     const isViewingToday = isToday(parseISO(date))
     const displayDate = isViewingToday ? 'Today' : format(parseISO(date), 'EEE, MMM d')
@@ -598,9 +598,18 @@ export function ScreenTime() {
                                 </div>
                             </Tile>
                             <Tile>
-                                <TileHead title="Websites" hint={`${domains.length} total`} />
+                                <TileHead title="Websites" hint={detailAvailable ? `${domains.length} total` : undefined} />
                                 <div className="mt-5">
-                                    <DomainList domains={domains} />
+                                    {detailAvailable ? (
+                                        <DomainList domains={domains} />
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+                                            <p className="text-sm text-[var(--text-secondary)] font-medium">Website detail isn’t available on macOS</p>
+                                            <p className="text-xs text-[var(--text-tertiary)] mt-1.5 max-w-xs leading-relaxed">
+                                                Quoril tracks your app usage automatically. Per-website breakdowns aren’t available on macOS.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </Tile>
                         </div>

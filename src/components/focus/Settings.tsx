@@ -447,86 +447,32 @@ export function Settings() {
 
 function AccessibilityPermissionCard() {
     const [platform, setPlatform] = useState<string>('')
-    const [hasAccess, setHasAccess] = useState<boolean | null>(null)
-    const [requesting, setRequesting] = useState(false)
 
     useEffect(() => {
         const api = window.electronAPI
-        if (!api?.permissions) return
+        if (!api?.app) return
         api.app.getPlatform().then(setPlatform)
-        api.permissions.checkAccessibility().then(setHasAccess)
     }, [])
 
-    // Only show on macOS
+    // Only show on macOS — Windows/Linux track apps and titles without any prompt.
     if (platform !== 'darwin') return null
-    // Still loading
-    if (hasAccess === null) return null
 
-    const handleRequest = async () => {
-        const api = window.electronAPI
-        if (!api?.permissions) return
-        setRequesting(true)
-
-        const alreadyGranted = await api.permissions.checkAccessibility()
-        if (alreadyGranted) {
-            setHasAccess(true)
-            setRequesting(false)
-            await api.permissions.startTracking()
-            return
-        }
-        
-        // User-initiated only. This opens the macOS Accessibility prompt/settings.
-        await api.permissions.requestAccessibility()
-        
-        // Passive polling: Check every 5 seconds for 5 minutes, much more relaxed
-        const poll = setInterval(async () => {
-            const granted = await api.permissions.checkAccessibility()
-            if (granted) {
-                clearInterval(poll)
-                setHasAccess(true)
-                setRequesting(false)
-                // Now it's safe to start because we have confirmed access
-                await api.permissions.startTracking()
-            }
-        }, 5000)
-        
-        // Stop polling after 5 minutes
-        setTimeout(() => {
-            clearInterval(poll)
-            setRequesting(false)
-        }, 300000)
-    }
-
+    // macOS tracks apps permission-free via lsappinfo. We intentionally do not
+    // request Accessibility (the prompt can't persist on unsigned builds), so this
+    // is purely informational: app usage works, website/title detail does not.
     return (
         <SettingCard
             icon={ShieldCheck}
             title="App tracking"
-            description="Quoril records which apps you use automatically — no permission needed. Grant macOS Accessibility to also capture window titles and the websites you visit."
+            description="Quoril records which apps you use automatically — no permission needed."
         >
-            {hasAccess ? (
-                <div className="flex items-center gap-3 px-4 py-3.5 bg-[var(--bg-hover)] rounded-[var(--radius-card)]">
-                    <CheckCircle2 className="w-5 h-5 text-[var(--accent-primary)] shrink-0" />
-                    <div>
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">Detailed tracking active</p>
-                        <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">Apps, window titles, and websites are captured. Your usage data stays local on this device.</p>
-                    </div>
+            <div className="flex items-center gap-3 px-4 py-3.5 bg-[var(--bg-hover)] rounded-[var(--radius-card)]">
+                <CheckCircle2 className="w-5 h-5 text-[var(--accent-primary)] shrink-0" />
+                <div>
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">App tracking active</p>
+                    <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">App usage is captured automatically and stays local on this device. Window titles and website detection aren’t available on macOS.</p>
                 </div>
-            ) : (
-                <div className="space-y-4">
-                    <div className="px-4 py-3.5 bg-[var(--bg-hover)] rounded-[var(--radius-card)]">
-                        <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                            App-level usage is already being tracked. Grant Accessibility to enrich it with window titles and website detection. Your data stays local either way.
-                        </p>
-                    </div>
-                    <button
-                        onClick={handleRequest}
-                        disabled={requesting}
-                        className="w-full py-3 px-5 bg-[var(--accent-primary)] hover:brightness-105 active:scale-95 text-[var(--accent-contrast)] text-sm font-semibold rounded-full transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
-                    >
-                        {requesting ? 'Waiting for macOS permission...' : 'Enable detailed tracking'}
-                    </button>
-                </div>
-            )}
+            </div>
         </SettingCard>
     )
 }

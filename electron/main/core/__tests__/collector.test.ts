@@ -130,41 +130,40 @@ describe("getActiveWindow — macOS without permission", () => {
   });
 });
 
-/* ── macOS with permission → rich active-win path ─────────── */
+/* ── macOS always uses lsappinfo, never active-win ───────────
+   active-win is never called on darwin — its native helper triggers the
+   Accessibility prompt, which can't persist on unsigned builds. App tracking
+   stays permission-free via lsappinfo even when Accessibility is "granted". */
 
-describe("getActiveWindow — macOS with permission", () => {
+describe("getActiveWindow — macOS never calls active-win", () => {
   beforeEach(() => {
     setPlatform("darwin");
-    state.trusted = true;
+    state.trusted = true; // even when trusted, we still use lsappinfo
   });
 
-  it("uses active-win and detects in-browser site from the title", async () => {
+  it("uses lsappinfo and never invokes active-win", async () => {
+    state.lsName = '"LSDisplayName"="Safari"';
     state.activeWinResult = {
       owner: { name: "Google Chrome", path: "/Applications/Chrome.app" },
       title: "rick astley - YouTube",
     };
     const r = await getActiveWindow();
-    expect(r?.appName).toBe("Google Chrome");
-    expect(r?.title).toBe("rick astley - YouTube");
-    expect(r?.category).toBe("Entertainment");
-    expect(r?.domain).toBe("YouTube");
-    // No lsappinfo fallback used on the trusted path.
-    expect(state.execCalls.length).toBe(0);
+    expect(r?.appName).toBe("Safari");
+    expect(r?.title).toBe(""); // no title without active-win
+    const activeWin = (await import("active-win")).default as any;
+    expect(activeWin).not.toHaveBeenCalled();
   });
 
-  it("returns Idle (with the real app) when idle", async () => {
+  it("returns Idle (with the lsappinfo app) when idle", async () => {
     state.idle = 600;
-    state.activeWinResult = {
-      owner: { name: "Code", path: "/x" },
-      title: "main.ts",
-    };
+    state.lsName = '"LSDisplayName"="Code"';
     const r = await getActiveWindow();
     expect(r?.isIdle).toBe(true);
     expect(r?.rawApp).toBe("Code");
   });
 
-  it("returns null when active-win has no window", async () => {
-    state.activeWinResult = null;
+  it("returns null when lsappinfo yields no app", async () => {
+    state.lsFront = "";
     expect(await getActiveWindow()).toBeNull();
   });
 });
