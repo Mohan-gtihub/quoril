@@ -207,7 +207,7 @@ export function ActivityHeatmap() {
     }
 
     return (
-      <div className="flex flex-col lg:flex-row gap-4 w-full items-start animate-in fade-in duration-500">
+      <div className="flex flex-col lg:flex-row gap-4 w-full items-stretch animate-in fade-in duration-500">
         <div ref={heatmapCardRef} className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] shadow-[var(--shadow-soft)] p-5 flex-1 min-w-0 flex flex-col relative overflow-hidden">
             <div className="flex items-start justify-between mb-8 gap-4">
                 <div>
@@ -232,19 +232,19 @@ export function ActivityHeatmap() {
 
             {/* Heatmap Grid */}
             <div className="flex flex-col w-full">
-                <div className="flex mb-4">
+                <div className="flex items-stretch mb-4">
                     {/* Day Labels (Y-axis) */}
                     <div className="flex flex-col gap-[3px] pr-2 text-[10px] font-bold text-[var(--text-muted)] text-right opacity-60">
                         {['', 'Mon', '', 'Wed', '', 'Fri', ''].map((label, i) => (
-                            <div key={i} className="h-[12px] flex items-center justify-end leading-none">{label}</div>
+                            <div key={i} className="flex-1 flex items-center justify-end leading-none">{label}</div>
                         ))}
                     </div>
 
-                    {/* Grid — fixed compact cells, left-aligned, scrolls if narrow */}
-                    <div className="flex-1 min-w-0 overflow-x-auto">
-                        <div className="flex gap-[3px] w-max">
+                    {/* Grid — columns flex to fill the full width, cells stay square */}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex gap-[3px] w-full">
                             {days.map((week, wIdx) => (
-                                <div key={wIdx} className="flex flex-col gap-[3px]">
+                                <div key={wIdx} className="flex flex-1 flex-col gap-[3px]">
                                     {week.map((day, dIdx) => {
                                         const dateStr = format(day, 'yyyy-MM-dd')
                                         const mins = activityMap[dateStr] || 0
@@ -257,7 +257,7 @@ export function ActivityHeatmap() {
                                                 data-tooltip-id="heatmap-tooltip"
                                                 data-tooltip-content={isFuture ? undefined : `${format(day, 'MMM do, yyyy')}: ${Math.round(mins)} mins`}
                                                 className={cn(
-                                                    "w-[12px] h-[12px] rounded-[2px] transition-all duration-300",
+                                                    "w-full aspect-square rounded-[2px] transition-all duration-300",
                                                     isFuture ? "opacity-10 bg-[var(--text-muted)]" : "cursor-crosshair hover:scale-125 z-0 hover:z-10",
                                                     !isFuture && getColorClass(mins),
                                                     today && "ring-1 ring-[var(--text-primary)] ring-offset-1 ring-offset-[var(--bg-card)] !opacity-100"
@@ -319,7 +319,7 @@ export function ActivityHeatmap() {
             {/* Share */}
             <button
                 onClick={openShare}
-                className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 rounded-[12px] bg-[var(--accent-primary)] text-[var(--bg-card)] text-[12px] font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98]"
+                className="mt-auto flex items-center justify-center gap-2 w-full py-2.5 rounded-[12px] bg-[var(--accent-primary)] text-[var(--bg-card)] text-[12px] font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98]"
             >
                 <Share2 size={14} />
                 Share focus map
