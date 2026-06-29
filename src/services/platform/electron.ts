@@ -24,7 +24,12 @@ export const electronPlatform: Platform = {
   },
   screenTime: {
     async getData(args) { return api().screenTime?.getData(args) },
-    isTrackingAvailable() { return true },
+    async isTrackingAvailable() {
+      const current = api()
+      const platformName = await current.app?.getPlatform?.()
+      if (platformName !== 'darwin') return true
+      return Boolean(await current.permissions?.checkAccessibility?.())
+    },
   },
   focusWindow: {
     setAlwaysOnTop(flag) { legacy()?.setAlwaysOnTop?.(flag) },

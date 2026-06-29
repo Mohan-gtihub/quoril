@@ -22,7 +22,7 @@ export interface DataPort {
 
 export interface ScreenTimePort {
   getData(args: { date: string }): Promise<any | Unavailable>
-  isTrackingAvailable(): boolean
+  isTrackingAvailable(): boolean | Promise<boolean>
 }
 
 export interface FocusWindowPort {

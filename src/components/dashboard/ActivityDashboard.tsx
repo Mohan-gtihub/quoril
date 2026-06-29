@@ -40,13 +40,30 @@ export function ActivityDashboard() {
     const [appUsage, setAppUsage] = useState<AppUsage[]>([])
     const [domainUsage, setDomainUsage] = useState<DomainUsage[]>([])
     const [loading, setLoading] = useState(true)
+    const [trackingAvailable, setTrackingAvailable] = useState(appTracking)
     const [categoryMap, setCategoryMap] = useState<Record<string, string>>({})
 
     useEffect(() => {
         if (!appTracking) return
-        loadData()
-        const interval = setInterval(loadData, 5000) // Poll every 5s for live updates
-        return () => clearInterval(interval)
+        let cancelled = false
+        const start = async () => {
+            const available = await Promise.resolve(platform.screenTime.isTrackingAvailable())
+            if (cancelled) return
+            setTrackingAvailable(available)
+            if (!available) {
+                setLoading(false)
+                return
+            }
+            loadData()
+            const interval = setInterval(loadData, 5000) // Poll every 5s for live updates
+            return () => clearInterval(interval)
+        }
+        let cleanup: void | (() => void)
+        start().then((fn) => { cleanup = fn })
+        return () => {
+            cancelled = true
+            cleanup?.()
+        }
     }, [])
 
     const loadData = async () => {
@@ -67,7 +84,7 @@ export function ActivityDashboard() {
 
     // Load app categories for accurate productivity scoring
     useEffect(() => {
-        if (!appTracking) return
+        if (!appTracking || !trackingAvailable) return
         const today = format(new Date(), 'yyyy-MM-dd')
         window.electronAPI?.db?.getAppUsage(today + 'T00:00:00', today + 'T23:59:59')
             .then((rows: any[]) => {
@@ -78,7 +95,7 @@ export function ActivityDashboard() {
                 setCategoryMap(map)
             })
             .catch(() => {})
-    }, [])
+    }, [trackingAvailable])
 
     const { totalTime, topApps, topDomains, productivityScore } = useMemo(() => {
         const sortedApps = [...appUsage].sort((a, b) => b.total_seconds - a.total_seconds)
@@ -114,14 +131,21 @@ export function ActivityDashboard() {
     }
 
     // ── Web: app tracking unavailable ──────────────────────────────────────────
-    if (!appTracking) {
+    if (!appTracking || (!loading && !trackingAvailable)) {
         return (
             <div className="flex flex-col h-full overflow-y-auto bg-[var(--bg-primary)] px-6 md:px-10 py-8 text-[var(--text-primary)]">
                 <div className="mb-8">
                     <h1 className="text-3xl font-semibold tracking-tight">Activity</h1>
                     <p className="text-[var(--text-secondary)] mt-1 text-sm">Your digital footprint</p>
                 </div>
-                <TrackingUnavailable />
+                <TrackingUnavailable
+                    title={appTracking ? 'App Tracking Optional' : undefined}
+                    description={
+                        appTracking
+                            ? 'Activity tracking requires macOS Accessibility access. Quoril still works for planning and focus sessions without it.'
+                            : undefined
+                    }
+                />
             </div>
         )
     }

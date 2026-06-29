@@ -448,6 +448,7 @@ export function Settings() {
 function AccessibilityPermissionCard() {
     const [platform, setPlatform] = useState<string>('')
     const [hasAccess, setHasAccess] = useState<boolean | null>(null)
+    const [requesting, setRequesting] = useState(false)
 
     useEffect(() => {
         const api = window.electronAPI
@@ -464,9 +465,18 @@ function AccessibilityPermissionCard() {
     const handleRequest = async () => {
         const api = window.electronAPI
         if (!api?.permissions) return
+        setRequesting(true)
+
+        const alreadyGranted = await api.permissions.checkAccessibility()
+        if (alreadyGranted) {
+            setHasAccess(true)
+            setRequesting(false)
+            await api.permissions.startTracking()
+            return
+        }
         
-        // Triggers the OS prompt (should only happen once per app run or until decided)
-        api.permissions.requestAccessibility()
+        // User-initiated only. This opens the macOS Accessibility prompt/settings.
+        await api.permissions.requestAccessibility()
         
         // Passive polling: Check every 5 seconds for 5 minutes, much more relaxed
         const poll = setInterval(async () => {
@@ -474,42 +484,46 @@ function AccessibilityPermissionCard() {
             if (granted) {
                 clearInterval(poll)
                 setHasAccess(true)
+                setRequesting(false)
                 // Now it's safe to start because we have confirmed access
                 await api.permissions.startTracking()
             }
         }, 5000)
         
         // Stop polling after 5 minutes
-        setTimeout(() => clearInterval(poll), 300000)
+        setTimeout(() => {
+            clearInterval(poll)
+            setRequesting(false)
+        }, 300000)
     }
 
     return (
         <SettingCard
             icon={ShieldCheck}
-            title="App tracking permission"
-            description="Quoril tracks which apps you use during focus sessions for productivity insights. This requires macOS Accessibility permission."
+            title="App tracking"
+            description="Quoril records which apps you use automatically — no permission needed. Grant macOS Accessibility to also capture window titles and the websites you visit."
         >
             {hasAccess ? (
                 <div className="flex items-center gap-3 px-4 py-3.5 bg-[var(--bg-hover)] rounded-[var(--radius-card)]">
                     <CheckCircle2 className="w-5 h-5 text-[var(--accent-primary)] shrink-0" />
                     <div>
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">Permission Granted</p>
-                        <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">App tracking is active. Your usage data stays local on this device.</p>
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">Detailed tracking active</p>
+                        <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">Apps, window titles, and websites are captured. Your usage data stays local on this device.</p>
                     </div>
                 </div>
             ) : (
                 <div className="space-y-4">
                     <div className="px-4 py-3.5 bg-[var(--bg-hover)] rounded-[var(--radius-card)]">
                         <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                            To track which apps you use during focus sessions, Quoril needs Accessibility access.
-                            Your data never leaves this device.
+                            App-level usage is already being tracked. Grant Accessibility to enrich it with window titles and website detection. Your data stays local either way.
                         </p>
                     </div>
                     <button
                         onClick={handleRequest}
-                        className="w-full py-3 px-5 bg-[var(--accent-primary)] hover:brightness-105 active:scale-95 text-[var(--accent-contrast)] text-sm font-semibold rounded-full transition-all shadow-sm"
+                        disabled={requesting}
+                        className="w-full py-3 px-5 bg-[var(--accent-primary)] hover:brightness-105 active:scale-95 text-[var(--accent-contrast)] text-sm font-semibold rounded-full transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
                     >
-                        Grant Accessibility Access
+                        {requesting ? 'Waiting for macOS permission...' : 'Enable detailed tracking'}
                     </button>
                 </div>
             )}

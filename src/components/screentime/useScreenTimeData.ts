@@ -62,6 +62,7 @@ export interface ProductivityBucket {
 
 export interface ScreenTimeData {
     loading: boolean
+    trackingAvailable: boolean
     date: string
     setDate: (d: string) => void
     hourly: HourlyBucket[]
@@ -83,22 +84,37 @@ export function useScreenTimeData(): ScreenTimeData {
     const [date, setDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
     const [raw, setRaw] = useState<any>(null)
     const [loading, setLoading] = useState(true)
+    const [trackingAvailable, setTrackingAvailable] = useState(platform.capabilities.appTracking)
 
     useEffect(() => {
+        let cancelled = false
         setLoading(true)
-        platform.screenTime.getData({ date })
-            .then((data: any) => {
+        Promise.resolve(platform.screenTime.isTrackingAvailable())
+            .then(async (available) => {
+                if (cancelled) return
+                setTrackingAvailable(available)
+                if (!available) {
+                    setRaw(null)
+                    setLoading(false)
+                    return
+                }
+                const data = await platform.screenTime.getData({ date })
+                if (cancelled) return
                 setRaw(data)
                 setLoading(false)
             })
             .catch((err: any) => {
+                if (cancelled) return
                 console.error('[ScreenTime] Failed:', err)
+                setTrackingAvailable(false)
                 setLoading(false)
             })
+        return () => { cancelled = true }
     }, [date])
 
     // Refresh every 30s for live updates
     useEffect(() => {
+        if (!trackingAvailable) return
         const today = format(new Date(), 'yyyy-MM-dd')
         if (date !== today) return
         const interval = setInterval(() => {
@@ -107,7 +123,7 @@ export function useScreenTimeData(): ScreenTimeData {
                 .catch(() => {})
         }, 30000)
         return () => clearInterval(interval)
-    }, [date])
+    }, [date, trackingAvailable])
 
     const hourly = useMemo((): HourlyBucket[] => {
         const map: Record<number, HourlyBucket> = {}
@@ -157,6 +173,7 @@ export function useScreenTimeData(): ScreenTimeData {
 
     return {
         loading,
+        trackingAvailable,
         date,
         setDate,
         hourly,
