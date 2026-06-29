@@ -12,9 +12,22 @@ const SYNC_ORDER = [
     'tasks',
     'subtasks',
     'focus_sessions',
+    // Whiteboard data. canvases before blocks: blocks.canvas_id FK → canvases.id
+    'canvases',
+    'blocks',
 ] as const
 
 type SyncTable = typeof SYNC_ORDER[number]
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/* Local SQLite stores JSON columns (viewport_json, content_json, …) as TEXT, but
+   the cloud columns are JSONB. Parse before pushing so Supabase gets real JSON. */
+function parseJson<T>(value: any, fallback: T): T {
+    if (value == null) return fallback
+    if (typeof value === 'object') return value as T
+    try { return JSON.parse(value) as T } catch { return fallback }
+}
 
 /* Pagination order column per table. Most tables have updated_at, but
    focus_sessions does not in the cloud schema — ordering it by updated_at makes
@@ -250,15 +263,33 @@ class DataSyncService {
                     }
                 }
 
+                /* ---------- Shared-workspace guard ---------- */
+
+                // A workspace whose local row already carries a real owner that ISN'T
+                // the current user is a SHARED workspace (we're a member, not the
+                // owner). We must never push it: the cloud row is owned by someone
+                // else, so the upsert becomes an UPDATE that RLS rejects with 403
+                // (42501) — which previously logged an error and retried forever.
+                // Mark it synced so it's left alone. Only genuinely-owned or
+                // ownerless-local rows fall through to the push below.
+                if (
+                    table === 'workspaces' &&
+                    row.user_id &&
+                    row.user_id !== userId
+                ) {
+                    await window.electronAPI.db.markSynced(table, row.id)
+                    continue
+                }
+
                 /* ---------- Build payload ---------- */
 
                 // Ownership rule:
                 //  - workspaces: ALWAYS the current user. Only an owner ever pushes
-                //    a workspace row (members can't edit it; shared workspaces arrive
-                //    via pull as synced=1 and are never pushed). Forcing the current
-                //    uid also reclaims rows whose local user_id is stale from a prior
-                //    session — otherwise the INSERT RLS check (auth.uid()=user_id)
-                //    rejects the owner's own workspace (42501).
+                //    a workspace row (members can't edit it; shared workspaces are
+                //    skipped above and arrive via pull as synced=1). Forcing the
+                //    current uid also reclaims rows whose local user_id is empty/stale
+                //    from a prior session — otherwise the INSERT RLS check
+                //    (auth.uid()=user_id) rejects the owner's own workspace (42501).
                 //  - content tables (lists/tasks/subtasks/focus_sessions): preserve
                 //    the row's owner so collaborative edits sync back to that owner
                 //    rather than being re-homed to the editor.
@@ -538,6 +569,51 @@ class DataSyncService {
 
                 return payload
             }
+
+            /* ---------- CANVASES (whiteboards) ---------- */
+            case 'canvases':
+                // Cloud ids are UUID; skip any legacy/non-UUID rows (marked synced so
+                // they stop retrying) rather than letting Supabase reject them forever.
+                if (!UUID_RE.test(row.id)) return null
+                return {
+                    id: row.id,
+                    user_id: row.user_id,
+                    workspace_id: row.workspace_id ?? null,
+                    title: row.title ?? 'Untitled',
+                    icon: row.icon ?? null,
+                    color: row.color ?? null,
+                    // Local stores these as TEXT JSON; cloud columns are JSONB → parse.
+                    viewport_json: parseJson(row.viewport_json, { x: 0, y: 0, zoom: 1 }),
+                    home_viewport_json: parseJson(row.home_viewport_json, null),
+                    settings_json: parseJson(row.settings_json, { grid: true, snap: false, autoZoneHints: false }),
+                    schema_version: row.schema_version ?? 1,
+                    created_at: row.created_at,
+                    updated_at: row.updated_at,
+                    deleted_at: row.deleted_at,
+                }
+
+            /* ---------- BLOCKS (Excalidraw scene per canvas) ---------- */
+            case 'blocks':
+                // Skip legacy non-UUID ids (e.g. the old "<canvasId>:scene" rows).
+                if (!UUID_RE.test(row.id) || !UUID_RE.test(row.canvas_id)) return null
+                return {
+                    id: row.id,
+                    canvas_id: row.canvas_id,
+                    user_id: row.user_id,
+                    kind: row.kind,
+                    x: row.x ?? 0, y: row.y ?? 0, w: row.w ?? 0, h: row.h ?? 0,
+                    z: row.z ?? 0,
+                    rotation: row.rotation ?? 0,
+                    content_json: parseJson(row.content_json, {}),
+                    style_json: parseJson(row.style_json, null),
+                    tags_json: parseJson(row.tags_json, null),
+                    linked_task_id: row.linked_task_id ?? null,
+                    is_landmark: Boolean(row.is_landmark),
+                    last_touched_at: row.last_touched_at ?? null,
+                    created_at: row.created_at,
+                    updated_at: row.updated_at,
+                    deleted_at: row.deleted_at,
+                }
 
             default:
                 return null

@@ -220,8 +220,13 @@ export const dbOps = {
         )
         const hasUpdatedAt = localCols.has('updated_at')
 
-        const getLocalUpdated = hasUpdatedAt
-            ? db.prepare(`SELECT updated_at FROM ${table} WHERE id = ?`)
+        const hasDeletedAt = localCols.has('deleted_at')
+        // Only select columns that actually exist — some tables (e.g. focus_sessions)
+        // have deleted_at but no updated_at, so selecting both unconditionally throws
+        // "no such column: updated_at" and aborts the whole pull.
+        const selectCols = [hasUpdatedAt && 'updated_at', hasDeletedAt && 'deleted_at'].filter(Boolean) as string[]
+        const getLocalRow = selectCols.length
+            ? db.prepare(`SELECT ${selectCols.join(', ')} FROM ${table} WHERE id = ?`)
             : null
 
         let written = 0
@@ -230,16 +235,29 @@ export const dbOps = {
             for (const raw of batch) {
                 if (!raw || !raw.id) continue
 
+                const local = getLocalRow?.get(raw.id) as { updated_at?: string; deleted_at?: string } | undefined
+
+                // Tombstone guard: if the user deleted this row locally and the
+                // incoming cloud copy is NOT deleted, never resurrect it. The local
+                // delete is the user's intent; a stale-but-undeleted cloud row (e.g.
+                // a delete that couldn't be pushed, or a row owned by someone else)
+                // must not bring it back. This is what stopped deleted tasks from
+                // "coming back again and again".
+                if (hasDeletedAt && local?.deleted_at && !raw.deleted_at) {
+                    continue
+                }
+
                 // Last-write-wins guard
-                if (getLocalUpdated) {
-                    const local = getLocalUpdated.get(raw.id) as { updated_at?: string } | undefined
-                    if (local?.updated_at && raw.updated_at && local.updated_at >= raw.updated_at) {
-                        continue // local copy is newer or equal — keep it
-                    }
+                if (hasUpdatedAt && local?.updated_at && raw.updated_at && local.updated_at >= raw.updated_at) {
+                    continue // local copy is newer or equal — keep it
                 }
 
                 const row: Record<string, any> = { synced: 1 }
                 for (const [k, v] of Object.entries(raw)) {
+                    // Cloud JSONB columns (content_json, viewport_json, …) come back as
+                    // parsed JS objects but live locally in TEXT columns. sanitize()
+                    // below JSON.stringifies any object value, so they're stored as
+                    // valid JSON rather than "[object Object]".
                     if (localCols.has(k)) row[k] = v
                 }
 
@@ -798,7 +816,8 @@ function autoMigrate() {
             home_viewport_json TEXT,
             settings_json TEXT NOT NULL DEFAULT '{"grid":true,"snap":false,"autoZoneHints":false}',
             schema_version INTEGER DEFAULT 1,
-            created_at TEXT, updated_at TEXT, deleted_at TEXT
+            created_at TEXT, updated_at TEXT, deleted_at TEXT,
+            synced INTEGER DEFAULT 0
         );
         CREATE INDEX IF NOT EXISTS canvases_user_idx ON canvases(user_id, deleted_at);
 
@@ -817,7 +836,8 @@ function autoMigrate() {
             linked_task_id TEXT,
             is_landmark INTEGER DEFAULT 0,
             last_touched_at TEXT,
-            created_at TEXT, updated_at TEXT, deleted_at TEXT
+            created_at TEXT, updated_at TEXT, deleted_at TEXT,
+            synced INTEGER DEFAULT 0
         );
         CREATE INDEX IF NOT EXISTS blocks_canvas_idx ON blocks(canvas_id, deleted_at);
         CREATE INDEX IF NOT EXISTS blocks_linked_task_idx ON blocks(linked_task_id);
@@ -946,6 +966,20 @@ function autoMigrate() {
             db.prepare("UPDATE db_meta SET value='11' WHERE key='version'").run()
         })()
         version = 11
+    }
+    if (version < 12) {
+        // Canvas tables predate cloud sync — add the `synced` dirty-flag column so
+        // they flow through dataSyncService's push/pull like tasks/lists do.
+        db.transaction(() => {
+            for (const table of ['canvases', 'blocks']) {
+                const cols = (db.prepare(`PRAGMA table_info(${table})`).all() as any[]).map((r) => r.name)
+                if (!cols.includes('synced')) {
+                    db.exec(`ALTER TABLE ${table} ADD COLUMN synced INTEGER DEFAULT 0`)
+                }
+            }
+            db.prepare("UPDATE db_meta SET value='12' WHERE key='version'").run()
+        })()
+        version = 12
     }
 }
 
