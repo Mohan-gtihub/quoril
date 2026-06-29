@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import toast, { Toaster } from 'react-hot-toast'
 import { QueryProvider } from '@/providers/QueryProvider'
@@ -21,7 +21,8 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { SuperFocusPill } from '@/components/focus/SuperFocusPill'
 import { WorkspacesOverview } from '@/components/workspaces/WorkspacesOverview'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { CanvasApp } from '@/components/canvas/CanvasApp'
+// Excalidraw is large; load the whiteboard only when its route is opened.
+const CanvasApp = lazy(() => import('@/components/canvas/CanvasApp').then((m) => ({ default: m.CanvasApp })))
 
 import { cn } from '@/utils/helpers'
 import { platform } from '@/services/platform'
@@ -294,7 +295,7 @@ function App() {
                                                     <Route path="/reports" element={<Reports />} />
                                                     <Route path="/activity" element={<ActivityDashboard />} />
                                                     <Route path="/screen-time" element={<ScreenTime />} />
-                                                    <Route path="/canvas" element={<CanvasApp />} />
+                                                    <Route path="/canvas" element={<Suspense fallback={null}><CanvasApp /></Suspense>} />
                                                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                                                 </Routes>
                                             </Layout>

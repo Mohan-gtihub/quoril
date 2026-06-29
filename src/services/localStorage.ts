@@ -61,7 +61,21 @@ const mergeSharedFromCloud = async (
 
         const { data, error } = await query
         if (error || !data?.length) return localRows
-        const shared = data.filter((r: any) => r.user_id !== userId)
+        let shared = data.filter((r: any) => r.user_id !== userId)
+        if (!shared.length) return localRows
+
+        // Drop cloud rows the user already soft-deleted locally. The cloud copy is
+        // owned by someone else, so our delete can't be pushed (RLS) and the row
+        // still reads as un-deleted in the cloud — without this guard it would be
+        // resurrected into the in-memory list on every fetch ("deleted task keeps
+        // coming back"). The local tombstone is the source of truth for the user.
+        try {
+            const deletedIds: string[] = (await db()?.getLocallyDeletedIds?.(table)) || []
+            if (deletedIds.length) {
+                const tombstoned = new Set(deletedIds)
+                shared = shared.filter((r: any) => !tombstoned.has(r.id))
+            }
+        } catch { /* best-effort; fall back to unfiltered */ }
         if (!shared.length) return localRows
 
         const byId = new Map<string, any>()
@@ -241,6 +255,16 @@ export const localService = {
             // instead of silently no-op'ing against an absent local row.
             const ownsLocally = await db().taskExists(id).catch(() => false)
             if (!ownsLocally) {
+                // Soft-deleting a task we don't own locally (e.g. a workspace task
+                // shared by another user) can't be pushed — RLS rejects updating the
+                // owner's row. Write a local tombstone first so mergeSharedFromCloud's
+                // getLocallyDeletedIds guard stops the row from being resurrected on
+                // the next fetch ("deleted task keeps coming back").
+                if (row.deleted_at) {
+                    try {
+                        await db().upsertFromCloud('tasks', [{ id, deleted_at: row.deleted_at, updated_at: row.updated_at }])
+                    } catch { /* best-effort */ }
+                }
                 const { data, error } = await (supabase.from('tasks') as any)
                     .update(row).eq('id', id).select().single()
                 if (error) return { data: null, error: error.message }
