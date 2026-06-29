@@ -115,6 +115,7 @@ export const canvasOps = {
             created_at: c.createdAt ?? ts,
             updated_at: ts,
             deleted_at: null,
+            synced: 0,
         }
         const cols = Object.keys(row)
         exec(
@@ -130,7 +131,8 @@ export const canvasOps = {
         canvasOps.create({ ...merged, createdAt: current.createdAt })
     },
     softDelete(id: string) {
-        exec('UPDATE canvases SET deleted_at=?, updated_at=? WHERE id=?', [now(), now(), id])
+        const ts = now()
+        exec('UPDATE canvases SET deleted_at=?, updated_at=?, synced=0 WHERE id=?', [ts, ts, id])
     },
 }
 
@@ -156,6 +158,7 @@ function blockRow(b: any, ts: string) {
         created_at: b.createdAt ?? ts,
         updated_at: ts,
         deleted_at: b.deletedAt ?? null,
+        synced: 0,
     }
 }
 
@@ -189,12 +192,12 @@ export const blockOps = {
     },
     softDelete(id: string) {
         const ts = now()
-        exec('UPDATE blocks SET deleted_at=?, updated_at=? WHERE id=?', [ts, ts, id])
+        exec('UPDATE blocks SET deleted_at=?, updated_at=?, synced=0 WHERE id=?', [ts, ts, id])
     },
     softDeleteBatch(ids: string[]) {
         const ts = now()
         for (const id of ids) {
-            exec('UPDATE blocks SET deleted_at=?, updated_at=? WHERE id=?', [ts, ts, id])
+            exec('UPDATE blocks SET deleted_at=?, updated_at=?, synced=0 WHERE id=?', [ts, ts, id])
         }
     },
 }

@@ -632,7 +632,7 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
 
     /* Sync */
 
-    const SYNC_TABLES = new Set(['workspaces', 'lists', 'tasks', 'subtasks', 'focus_sessions'])
+    const SYNC_TABLES = new Set(['workspaces', 'lists', 'tasks', 'subtasks', 'focus_sessions', 'canvases', 'blocks'])
 
     ipcMain.handle('db:getPending', (_, table, limit?: number) => {
         if (!SYNC_TABLES.has(table)) throw new Error(`Invalid sync table: ${table}`)

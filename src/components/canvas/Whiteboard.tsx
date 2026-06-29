@@ -2,16 +2,25 @@ import { useEffect, useRef, useState } from 'react'
 import { Excalidraw } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 import { platform } from '@/services/platform'
+import { supabase } from '@/services/supabase'
 import { useSettingsStore } from '@/store/settingsStore'
 
 // The whole Excalidraw scene is stored as a single "block" row per canvas, so we
 // reuse the existing canvas/blocks backend (SQLite on desktop, Supabase on web)
-// with zero schema changes. The block id is derived from the canvas id so every
-// save overwrites the same row.
+// with zero schema changes.
 const SCENE_KIND = 'excalidraw'
-const sceneBlockId = (canvasId: string) => `${canvasId}:scene`
+// One scene block per canvas. Reuse the canvas's UUID as the block id so it stays
+// deterministic AND is a valid UUID for the cloud `blocks.id` column (required for sync).
+const sceneBlockId = (canvasId: string) => canvasId
+// Earlier builds stored the scene under this non-UUID id. We migrate it to the new
+// id on load so existing whiteboards aren't lost (and so they become sync-eligible).
+const legacySceneBlockId = (canvasId: string) => `${canvasId}:scene`
 
 const LIGHT_THEMES = new Set(['daylight', 'light'])
+
+// After a local save, ignore realtime echoes of our own write for this long (covers
+// the 10s desktop push interval + network latency) so the editor isn't disrupted.
+const SELF_ECHO_MS = 13000
 
 type SceneData = {
     elements?: readonly unknown[]
@@ -33,17 +42,39 @@ export function Whiteboard({ canvasId, userId }: { canvasId: string; userId: str
     const theme = LIGHT_THEMES.has(themeName) ? 'light' : 'dark'
 
     const [initialData, setInitialData] = useState<SceneData | null>(null)
+    const [reloadKey, setReloadKey] = useState(0)
     const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
     const pending = useRef<SceneData | null>(null)
+    const selfEchoUntil = useRef(0)
 
-    // Load the saved scene for this canvas.
+    // Load (or reload) the saved scene for this canvas.
     useEffect(() => {
         let cancelled = false
         setInitialData(null)
         ;(async () => {
             const blocks = (await platform.canvas.listBlocks(canvasId)) as any[]
             if (cancelled) return
-            const block = blocks.find((b) => b.id === sceneBlockId(canvasId))
+            const current = blocks.find((b) => b.id === sceneBlockId(canvasId))
+            const legacy = blocks.find((b) => b.id === legacySceneBlockId(canvasId))
+
+            const count = (b: any) =>
+                Array.isArray(b?.content?.data?.elements) ? b.content.data.elements.length : 0
+
+            // An earlier build changed the scene id, which could leave an empty row
+            // under the new id while the real work sits under the legacy id. Use
+            // whichever row actually has content; if the legacy one wins, migrate it
+            // onto the new id and retire the legacy row.
+            let block = current
+            if (legacy && count(legacy) > count(current)) {
+                block = legacy
+                void platform.canvas.upsertBlock({
+                    id: sceneBlockId(canvasId), canvasId, userId,
+                    kind: SCENE_KIND, x: 0, y: 0, w: 0, h: 0, z: 0,
+                    content: { kind: SCENE_KIND, data: legacy.content.data },
+                })
+                void platform.canvas.softDeleteBlock(legacy.id)
+            }
+
             const scene = (block?.content?.data ?? {}) as SceneData
             setInitialData({
                 elements: (scene.elements as any) ?? [],
@@ -54,7 +85,7 @@ export function Whiteboard({ canvasId, userId }: { canvasId: string; userId: str
         return () => {
             cancelled = true
         }
-    }, [canvasId])
+    }, [canvasId, reloadKey])
 
     // Flush any pending save when switching canvases or unmounting.
     const flush = useRef<() => void>(() => {})
@@ -66,6 +97,7 @@ export function Whiteboard({ canvasId, userId }: { canvasId: string; userId: str
             clearTimeout(saveTimer.current)
             saveTimer.current = null
         }
+        selfEchoUntil.current = Date.now() + SELF_ECHO_MS
         void platform.canvas.upsertBlock({
             id: sceneBlockId(canvasId),
             canvasId,
@@ -89,6 +121,51 @@ export function Whiteboard({ canvasId, userId }: { canvasId: string; userId: str
         }
     }, [canvasId])
 
+    // Realtime: when another device changes this whiteboard's scene in the cloud,
+    // pull it down and reload. Guards avoid clobbering in-progress local edits and
+    // ignore echoes of our own recent writes (which arrive via the 10s push).
+    useEffect(() => {
+        const blockId = sceneBlockId(canvasId)
+        const channel = supabase
+            .channel(`blocks:${canvasId}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'blocks', filter: `canvas_id=eq.${canvasId}` },
+                async () => {
+                    // Don't interrupt active local editing or echo our own push.
+                    if (pending.current) return
+                    if (Date.now() < selfEchoUntil.current) return
+
+                    // Re-fetch the full row (realtime payloads are size-capped; a
+                    // scene with inline base64 images can exceed that) and apply.
+                    const { data } = await supabase
+                        .from('blocks')
+                        .select('id')
+                        .eq('id', blockId)
+                        .is('deleted_at', null)
+                        .maybeSingle()
+                    if (!data) return
+
+                    // On desktop, mirror the cloud row into local SQLite first so the
+                    // reload (which reads local) sees it. dataSyncService's pull does
+                    // the same via upsertFromCloud; here we just need this one row.
+                    const db = (window as any).electronAPI?.db
+                    if (db?.upsertFromCloud) {
+                        const { data: full } = await supabase.from('blocks').select('*').eq('id', blockId).maybeSingle()
+                        if (full) {
+                            try { await db.upsertFromCloud('blocks', [full]) } catch { /* best-effort */ }
+                        }
+                    }
+                    setReloadKey((k) => k + 1)
+                },
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [canvasId])
+
     // Autosave: debounce changes ~1.5s after the user stops editing.
     const onChange = (
         elements: readonly unknown[],
@@ -105,7 +182,7 @@ export function Whiteboard({ canvasId, userId }: { canvasId: string; userId: str
     return (
         <div className="w-full h-full">
             <Excalidraw
-                key={canvasId}
+                key={`${canvasId}:${reloadKey}`}
                 theme={theme}
                 initialData={initialData as any}
                 onChange={onChange as any}

@@ -16,6 +16,48 @@ const getUser = async () => {
 
 const db = () => (window as any).electronAPI?.db
 
+/* ---------------- DELETED TOMBSTONES ----------------
+ * A persistent, renderer-side set of task ids the user deleted. This is the
+ * single source of truth for "the user does not want to see this task". It is
+ * independent of the cloud and of the Electron main process, so a deleted task
+ * can never reappear because:
+ *   - the cloud copy is owned by another user and our soft-delete was rejected
+ *     by RLS (shared/workspace tasks), or
+ *   - a sync pull / mergeSharedFromCloud re-materialised the row, or
+ *   - the desktop DB hasn't been rebuilt with the latest guards.
+ * Restoring a task removes its tombstone. */
+const DELETED_TASKS_KEY = 'quoril_deleted_task_ids'
+
+const deletedTombstones = {
+    all: (): Set<string> => {
+        try {
+            const raw = localStorage.getItem(DELETED_TASKS_KEY)
+            return new Set(raw ? (JSON.parse(raw) as string[]) : [])
+        } catch {
+            return new Set()
+        }
+    },
+    add: (id: string) => {
+        try {
+            const set = deletedTombstones.all()
+            set.add(id)
+            localStorage.setItem(DELETED_TASKS_KEY, JSON.stringify([...set]))
+        } catch { /* best-effort */ }
+    },
+    remove: (id: string) => {
+        try {
+            const set = deletedTombstones.all()
+            if (set.delete(id)) {
+                localStorage.setItem(DELETED_TASKS_KEY, JSON.stringify([...set]))
+            }
+        } catch { /* best-effort */ }
+    },
+    filter: <T extends { id: string }>(rows: T[]): T[] => {
+        const set = deletedTombstones.all()
+        return set.size ? rows.filter(r => !set.has(r.id)) : rows
+    },
+}
+
 /* ---------------- TASK MAP ---------------- */
 
 const mapTask = (row: any): Task => {
@@ -132,13 +174,13 @@ export const localService = {
 
                 const { data, error } = await query.order('sort_order', { ascending: true })
                 if (error) return { data: [], error: error.message }
-                return { data: (data || []).map(mapTask), error: null }
+                return { data: deletedTombstones.filter(data || []).map(mapTask), error: null }
             }
 
             const rows = await db().getTasks(user.id, listId)
             const merged = await mergeSharedFromCloud('tasks', rows, user.id,
                 (q) => (listId && listId !== 'all') ? q.eq('list_id', listId) : q)
-            return { data: merged.map(mapTask), error: null }
+            return { data: deletedTombstones.filter(merged).map(mapTask), error: null }
         },
 
         create: async (task: Partial<Task>) => {
@@ -181,6 +223,14 @@ export const localService = {
         },
 
         update: async (id: string, updates: any) => {
+            // Keep the persistent delete-tombstone in sync: soft-delete adds it,
+            // restore (deleted_at: null) clears it. This is what guarantees a
+            // deleted task stays hidden regardless of cloud/RLS/sync outcome.
+            if (updates.deleted_at !== undefined) {
+                if (updates.deleted_at) deletedTombstones.add(id)
+                else deletedTombstones.remove(id)
+            }
+
             const row: any = { ...updates, updated_at: new Date().toISOString(), synced: 0 }
 
             if (updates.is_recurring !== undefined) {
@@ -277,6 +327,7 @@ export const localService = {
         },
 
         delete: async (id: string) => {
+            deletedTombstones.add(id)
             if (!db()) {
                 const { error } = await (supabase.from('tasks') as any)
                     .update({ deleted_at: new Date().toISOString() })
@@ -290,6 +341,7 @@ export const localService = {
         },
 
         permanentDelete: async (id: string) => {
+            deletedTombstones.add(id)
             if (!db()) {
                 const { error } = await (supabase.from('tasks') as any).delete().eq('id', id)
                 return { error: error?.message || null }
