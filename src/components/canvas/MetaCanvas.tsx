@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Canvas } from '@/types/canvas'
-import { Plus, Pencil, Trash2, Check, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, X, Share2, Users } from 'lucide-react'
+import { ShareCanvasModal } from './ShareCanvasModal'
 
 export function MetaCanvas({
     canvases,
+    currentUserId,
     onPick,
     onNew,
     onRename,
     onDelete,
 }: {
     canvases: Canvas[]
+    currentUserId: string | null
     onPick: (id: string) => void
     onNew: () => Promise<string | null>
     onRename: (id: string, title: string) => void
@@ -18,6 +21,7 @@ export function MetaCanvas({
     const [editingId, setEditingId] = useState<string | null>(null)
     const [draft, setDraft] = useState('')
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+    const [shareCanvas, setShareCanvas] = useState<Canvas | null>(null)
     const inputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
@@ -64,6 +68,9 @@ export function MetaCanvas({
                     {canvases.map((c) => {
                         const isEditing = editingId === c.id
                         const isConfirming = confirmDeleteId === c.id
+                        // A canvas owned by someone else is shared WITH the current
+                        // user: they can open + edit it, but not rename/delete/share.
+                        const isOwner = !currentUserId || c.userId === currentUserId
                         return (
                             <div
                                 key={c.id}
@@ -100,14 +107,20 @@ export function MetaCanvas({
                                     ) : (
                                         <div className="text-sm font-medium text-[var(--text-primary)] truncate pr-12">{c.title}</div>
                                     )}
-                                    <div className="text-xs text-[var(--text-muted)] mt-1">
+                                    <div className="text-xs text-[var(--text-muted)] mt-1 flex items-center gap-1.5">
                                         {new Date(c.updatedAt).toLocaleDateString()}
+                                        {!isOwner && (
+                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-[var(--accent-primary)]/15 text-[var(--accent-primary)]">
+                                                <Users size={10} /> Shared
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Hover actions: rename + delete */}
-                                {!isEditing && !isConfirming && (
+                                {/* Hover actions: share + rename + delete (owner only) */}
+                                {!isEditing && !isConfirming && isOwner && (
                                     <div className="absolute top-2 right-2 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button type="button" onClick={() => setShareCanvas(c)} title="Share" className="p-1 rounded bg-[var(--bg-primary)]/70 hover:bg-[var(--bg-hover)] text-[var(--text-primary)]"><Share2 size={13} /></button>
                                         <button type="button" onClick={() => startEdit(c)} title="Rename" className="p-1 rounded bg-[var(--bg-primary)]/70 hover:bg-[var(--bg-hover)] text-[var(--text-primary)]"><Pencil size={13} /></button>
                                         <button type="button" onClick={() => { setEditingId(null); setConfirmDeleteId(c.id) }} title="Delete" className="p-1 rounded bg-[var(--bg-primary)]/70 hover:bg-[var(--bg-hover)] text-red-500"><Trash2 size={13} /></button>
                                     </div>
@@ -128,6 +141,14 @@ export function MetaCanvas({
                     })}
                 </div>
             </div>
+
+            {shareCanvas && (
+                <ShareCanvasModal
+                    canvasId={shareCanvas.id}
+                    canvasTitle={shareCanvas.title}
+                    onClose={() => setShareCanvas(null)}
+                />
+            )}
         </div>
     )
 }

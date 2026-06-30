@@ -263,17 +263,18 @@ class DataSyncService {
                     }
                 }
 
-                /* ---------- Shared-workspace guard ---------- */
+                /* ---------- Shared owner-only-row guard ---------- */
 
-                // A workspace whose local row already carries a real owner that ISN'T
-                // the current user is a SHARED workspace (we're a member, not the
-                // owner). We must never push it: the cloud row is owned by someone
-                // else, so the upsert becomes an UPDATE that RLS rejects with 403
-                // (42501) — which previously logged an error and retried forever.
-                // Mark it synced so it's left alone. Only genuinely-owned or
-                // ownerless-local rows fall through to the push below.
+                // A workspace OR canvas whose local row already carries a real owner
+                // that ISN'T the current user is SHARED (we're a member, not the
+                // owner). We must never push these owner-only metadata rows: the
+                // cloud row is owned by someone else, so the upsert becomes an UPDATE
+                // that RLS rejects with 403 (42501) — which previously logged an
+                // error and retried forever. Mark synced so it's left alone. Members
+                // still push the canvas *content* (the scene `blocks` row), which
+                // RLS permits via canvas_is_accessible(); that falls through below.
                 if (
-                    table === 'workspaces' &&
+                    (table === 'workspaces' || table === 'canvases') &&
                     row.user_id &&
                     row.user_id !== userId
                 ) {

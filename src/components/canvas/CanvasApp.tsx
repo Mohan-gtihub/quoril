@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Share2, Users } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { useCanvasStore } from '@/store/canvas/canvasStore'
 import { useAuthStore } from '@/store/authStore'
 import { Whiteboard } from './Whiteboard'
 import { MetaCanvas } from './MetaCanvas'
+import { ShareCanvasModal } from './ShareCanvasModal'
 import { CanvasErrorBoundary } from './CanvasErrorBoundary'
 import { platform } from '@/services/platform'
 import { supabase } from '@/services/supabase'
@@ -18,10 +19,10 @@ const NEW_CANVAS_DEFAULTS = {
 }
 
 async function ensureCanvas(userId: string): Promise<string> {
-    const api = platform.canvas
-    let list = (await api.list(userId)) as Canvas[]
+    // loadCanvases merges owned + canvases shared WITH the user (via cloud RLS).
+    let list = await useCanvasStore.getState().loadCanvases(userId)
     if (list.length === 0) {
-        const created = await api.create({
+        const created = await platform.canvas.create({
             id: uuid(),
             userId,
             title: 'My Whiteboard',
@@ -29,8 +30,8 @@ async function ensureCanvas(userId: string): Promise<string> {
             ...NEW_CANVAS_DEFAULTS,
         })
         list = [created as Canvas]
+        useCanvasStore.getState().setCanvases(list)
     }
-    useCanvasStore.getState().setCanvases(list)
     return list[0].id
 }
 
@@ -40,6 +41,7 @@ export function CanvasApp() {
     const canvases = useCanvasStore((s) => s.canvases)
     const setActive = useCanvasStore((s) => s.setActiveCanvas)
     const [showMeta, setShowMeta] = useState(false)
+    const [shareOpen, setShareOpen] = useState(false)
     const navigate = useNavigate()
 
     // Board-level title rename
@@ -159,6 +161,7 @@ export function CanvasApp() {
                 </button>
                 <MetaCanvas
                     canvases={canvases}
+                    currentUserId={user.id}
                     onPick={(id) => { setActive(id); setShowMeta(false) }}
                     onNew={createCanvas}
                     onRename={renameCanvas}
@@ -187,30 +190,62 @@ export function CanvasApp() {
                     Whiteboards
                 </button>
 
-                {active && (editingTitle ? (
-                    <input
-                        ref={titleRef}
-                        value={titleDraft}
-                        onChange={(e) => setTitleDraft(e.target.value)}
-                        onBlur={commitTitle}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') commitTitle()
-                            if (e.key === 'Escape') setEditingTitle(false)
-                        }}
-                        maxLength={120}
-                        className="text-xs px-2 py-1 rounded-md bg-[var(--bg-card)] border border-[var(--accent-primary)] text-[var(--text-primary)] outline-none"
-                    />
-                ) : (
-                    <button
-                        type="button"
-                        onClick={() => { setTitleDraft(active.title); setEditingTitle(true) }}
-                        className="px-2 py-1 text-xs rounded-md bg-[var(--bg-card)] border border-[var(--border-default)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] max-w-[200px] truncate"
-                        title="Rename whiteboard"
-                    >
-                        {active.title}
-                    </button>
-                ))}
+                {active && (() => {
+                    const isOwner = active.userId === user.id
+                    if (!isOwner) {
+                        // Shared with us: show title + a "Shared" badge, no rename/share.
+                        return (
+                            <span className="flex items-center gap-1.5 px-2 py-1 text-xs rounded-md bg-[var(--bg-card)] border border-[var(--border-default)] text-[var(--text-primary)] max-w-[240px]">
+                                <span className="truncate">{active.title}</span>
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-[var(--accent-primary)]/15 text-[var(--accent-primary)]">
+                                    <Users size={10} /> Shared
+                                </span>
+                            </span>
+                        )
+                    }
+                    return editingTitle ? (
+                        <input
+                            ref={titleRef}
+                            value={titleDraft}
+                            onChange={(e) => setTitleDraft(e.target.value)}
+                            onBlur={commitTitle}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') commitTitle()
+                                if (e.key === 'Escape') setEditingTitle(false)
+                            }}
+                            maxLength={120}
+                            className="text-xs px-2 py-1 rounded-md bg-[var(--bg-card)] border border-[var(--accent-primary)] text-[var(--text-primary)] outline-none"
+                        />
+                    ) : (
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => { setTitleDraft(active.title); setEditingTitle(true) }}
+                                className="px-2 py-1 text-xs rounded-md bg-[var(--bg-card)] border border-[var(--border-default)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] max-w-[200px] truncate"
+                                title="Rename whiteboard"
+                            >
+                                {active.title}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setShareOpen(true)}
+                                className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-[var(--bg-card)] border border-[var(--border-default)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)]"
+                                title="Share whiteboard"
+                            >
+                                <Share2 size={14} /> Share
+                            </button>
+                        </>
+                    )
+                })()}
             </div>
+
+            {shareOpen && active && (
+                <ShareCanvasModal
+                    canvasId={active.id}
+                    canvasTitle={active.title}
+                    onClose={() => setShareOpen(false)}
+                />
+            )}
         </div>
     )
 }
