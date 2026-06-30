@@ -26,6 +26,7 @@ const CanvasApp = lazy(() => import('@/components/canvas/CanvasApp').then((m) =>
 
 import { cn } from '@/utils/helpers'
 import { platform } from '@/services/platform'
+import { NavHistoryTracker } from '@/hooks/useNavHistory'
 
 
 import { dataSyncService } from '@/services/dataSyncService'
@@ -293,6 +294,7 @@ function App() {
         <ErrorBoundary>
             <QueryProvider>
                 <HashRouter>
+                    <NavHistoryTracker />
                     <div className={cn(
                         "flex flex-col h-screen overflow-hidden transition-all duration-500",
                         settings.theme === 'daylight' && "theme-daylight",
