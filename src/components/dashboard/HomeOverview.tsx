@@ -10,6 +10,8 @@ import { ArrowUpRight, Flame, CheckCircle2, Circle, Play } from 'lucide-react'
 import { ActivityHeatmap } from './ActivityHeatmap'
 import { cn } from '@/utils/helpers'
 import { calculateRealTimeFocus, calculateStreak } from '@/utils/timeCalculations'
+import { canEditTaskTime } from '@/utils/assignee'
+import { useTimerDisplay } from '@/hooks/useTimerDisplay'
 
 function getGreeting() {
     const hour = new Date().getHours()
@@ -30,16 +32,37 @@ function fmtMin(m: number) {
     return m ? `${m}m` : '0m'
 }
 
+// Seconds → m:ss (or h:mm:ss) for the live running-task clock.
+function fmtClock(totalSeconds: number) {
+    const s = Math.max(0, Math.round(Math.abs(totalSeconds)))
+    const h = Math.floor(s / 3600)
+    const m = Math.floor((s % 3600) / 60)
+    const sec = s % 60
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`
+}
+
 export function HomeOverview() {
     const { user } = useAuthStore()
     const { tasks, setSelectedTask, toggleComplete } = useTaskStore()
     const { lists, setSelectedList } = useListStore()
     const { workspaces, setActiveWorkspace } = useWorkspaceStore()
-    const { startTime, isActive, sessionType, sessions, setShowFocusPanel, startFocus } = useFocusStore()
+    const { startTime, isActive, sessionType, sessions, taskId: activeTaskId, setShowFocusPanel, startFocus } = useFocusStore()
+    const { displayTime, isOvertime } = useTimerDisplay()
     const navigate = useNavigate()
 
+    const currentEmail = user?.email ?? null
+
+    // A task assigned to someone else must not appear on (or be startable from)
+    // this user's Home — it belongs only to its assignee. Unassigned tasks and
+    // tasks assigned to me stay visible (canEditTaskTime encodes exactly that).
+    const visibleTasks = useMemo(
+        () => tasks.filter((t: any) => canEditTaskTime(t.assigned_to, currentEmail)),
+        [tasks, currentEmail]
+    )
+
     const stats = useMemo(() => {
-        const validTasks = tasks.filter((t: any) => !t.deleted_at && (!t.list_id || lists.some((l: any) => l.id === t.list_id)))
+        const validTasks = visibleTasks.filter((t: any) => !t.deleted_at && (!t.list_id || lists.some((l: any) => l.id === t.list_id)))
         const active = validTasks.filter((t: any) => t.status !== 'done')
         // Compare on the LOCAL calendar day (matches focus-minute bucketing).
         const todayKey = format(new Date(), 'yyyy-MM-dd')
@@ -52,10 +75,12 @@ export function HomeOverview() {
             focusMin,
             currentStreak: calculateStreak(sessions),
         }
-    }, [tasks, startTime, sessions, lists, isActive, sessionType])
+    }, [visibleTasks, startTime, sessions, lists, isActive, sessionType])
 
     const suggestedTasks = useMemo(() => {
-        const pending = tasks.filter((t: any) => !t.deleted_at && t.status !== 'done' && (!t.list_id || lists.some((l: any) => l.id === t.list_id)))
+        // Exclude the currently-running task — it gets its own card above — and
+        // tasks assigned to other people (visibleTasks already drops those).
+        const pending = visibleTasks.filter((t: any) => !t.deleted_at && t.status !== 'done' && t.id !== activeTaskId && (!t.list_id || lists.some((l: any) => l.id === t.list_id)))
         let priorityTasks = pending
             .filter((t: any) => ['critical', 'high'].includes(t.priority) || (t.due_date && isToday(new Date(t.due_date))))
             .sort((a: any, b: any) => {
@@ -68,7 +93,7 @@ export function HomeOverview() {
             priorityTasks = [...priorityTasks, ...rest]
         }
         return priorityTasks.slice(0, 6)
-    }, [tasks, lists])
+    }, [visibleTasks, lists, activeTaskId])
 
     const name = user?.email?.split('@')[0] || 'there'
 
@@ -93,9 +118,15 @@ export function HomeOverview() {
     const restTasks = suggestedTasks.slice(1)
 
     const startTask = (t: any) => {
+        // Guard: never let a non-assignee start someone else's task, even if a
+        // stale render surfaced it. Mirrors TaskCard's start gate.
+        if (!canEditTaskTime(t.assigned_to, currentEmail)) return
         setSelectedTask(t.id)
         startFocus(t.id)
     }
+
+    // The task for the in-flight focus session, shown above "Next task".
+    const runningTask = activeTaskId ? tasks.find((t: any) => t.id === activeTaskId) : null
 
     const taskMeta = (t: any) => {
         const list = t.list_id ? lists.find((l: any) => l.id === t.list_id) : null
@@ -144,6 +175,40 @@ export function HomeOverview() {
                         <Flame size={16} /> Start focus
                     </button>
                 </div>
+
+                {/* ── Running now (in-flight focus session) ── */}
+                {isActive && runningTask && (() => {
+                    const { wsName, wsColor } = taskMeta(runningTask)
+                    return (
+                        <Panel className="mb-4 flex flex-wrap items-center justify-between gap-5 border-[var(--focus)]/40">
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--focus)] mb-2 flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--focus)] animate-pulse" />
+                                    Running now
+                                </p>
+                                <button onClick={() => openTask(runningTask)} className="block text-left max-w-full">
+                                    <span className="block text-[19px] font-semibold tracking-tight text-[var(--text-primary)] truncate leading-tight">{runningTask.title}</span>
+                                </button>
+                                <div className="mt-2 flex items-center gap-2.5 text-[12.5px] text-[var(--text-tertiary)]">
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: wsColor }} />
+                                        {wsName}
+                                    </span>
+                                    <span className="w-px h-3 bg-[var(--border-default)]" />
+                                    <span className={cn('tabular-nums font-semibold', isOvertime ? 'text-[var(--priority-critical)]' : 'text-[var(--focus)]')}>
+                                        {isOvertime ? '+' : ''}{fmtClock(displayTime)}
+                                    </span>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowFocusPanel(true)}
+                                className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-[var(--focus)] text-[var(--accent-contrast)] rounded-[var(--radius-pill)] font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
+                            >
+                                <Flame size={15} /> View session
+                            </button>
+                        </Panel>
+                    )
+                })()}
 
                 {/* ── Next task ── */}
                 {featured && (() => {
