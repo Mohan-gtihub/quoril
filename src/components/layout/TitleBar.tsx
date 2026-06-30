@@ -1,12 +1,10 @@
-import { Minus, Square, Copy, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Minus, Square, Copy, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSyncStore } from '@/store/syncStore'
 import { platform } from '@/services/platform'
-import { useNavHistory } from '@/hooks/useNavHistory'
 
 export function TitleBar() {
     const { syncing, pendingCount, lastSync, error } = useSyncStore()
-    const { back, forward, canBack, canForward } = useNavHistory()
     const [isMaximized, setIsMaximized] = useState(false)
 
     useEffect(() => {
@@ -46,25 +44,6 @@ export function TitleBar() {
             onDoubleClick={handleMaximize}
         >
             <div className="flex items-center gap-2">
-                {/* Back / forward through the drill-down (no-drag so they're clickable) */}
-                <div className="flex items-center gap-0.5" style={{ WebkitAppRegion: 'no-drag' } as any}>
-                    <button
-                        onClick={back}
-                        disabled={!canBack}
-                        title="Back"
-                        className="p-1 rounded-md text-[var(--text-muted)] enabled:hover:bg-[var(--bg-hover)] enabled:hover:text-[var(--text-primary)] disabled:opacity-30 transition-colors"
-                    >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                        onClick={forward}
-                        disabled={!canForward}
-                        title="Forward"
-                        className="p-1 rounded-md text-[var(--text-muted)] enabled:hover:bg-[var(--bg-hover)] enabled:hover:text-[var(--text-primary)] disabled:opacity-30 transition-colors"
-                    >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                </div>
                 <span className="text-xs text-[var(--text-secondary)] font-semibold tracking-tight">Quoril</span>
 
                 {/* Sync status indicator */}

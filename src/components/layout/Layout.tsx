@@ -8,6 +8,7 @@ interface LayoutProps {
 import { useFocusStore } from '@/store/focusStore'
 import { FocusTimerPanel } from '../focus/FocusTimerPanel'
 import { BottomNav } from './BottomNav'
+import { NavToolbar } from './NavToolbar'
 import { platform } from '@/services/platform'
 
 export function Layout({ children }: LayoutProps) {
@@ -40,8 +41,11 @@ export function Layout({ children }: LayoutProps) {
         <div className="flex flex-col h-full bg-transparent transition-colors duration-500">
             <div className="flex flex-1 min-h-0 overflow-hidden">
                 <Sidebar />
-                <main className="flex-1 overflow-hidden min-h-0">
-                    {children}
+                <main className="flex-1 flex flex-col overflow-hidden min-h-0">
+                    <NavToolbar />
+                    <div className="flex-1 overflow-hidden min-h-0">
+                        {children}
+                    </div>
                 </main>
             </div>
             <BottomNav />
