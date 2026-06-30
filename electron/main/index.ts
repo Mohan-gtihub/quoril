@@ -54,6 +54,14 @@ let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let quitting = false
 
+// Tracks whether the focus pill is currently in "float across all Spaces" mode.
+// The renderer calls setAlwaysOnTop(true) several times while the pill mounts
+// (multiple resize passes), and on macOS each setVisibleOnAllWorkspaces call
+// transforms the app's process type, briefly hiding the window. Repeating that
+// thrashes the Space-collection behaviour and makes following intermittent, so
+// we only (un)apply it when the desired state actually changes.
+let pillFloating = false
+
 // Buffer for a deep link that arrives before the renderer has registered its
 // listener (cold-start via OAuth callback, or a send that races ready-to-show).
 // The renderer pulls this on mount via the 'auth:getPendingDeepLink' IPC.
@@ -186,6 +194,12 @@ function createWindow() {
         resizable: true,
         maximizable: true,
         fullscreenable: true,
+        // macOS: create the window as a native NSPanel. A panel is the only
+        // window kind macOS lets float over *another* app's fullscreen Space,
+        // which is what makes the focus pill follow the user across Spaces
+        // (Ctrl+arrow) and onto fullscreen apps. Combined with
+        // setVisibleOnAllWorkspaces({ visibleOnFullScreen }) below.
+        ...(process.platform === 'darwin' ? { type: 'panel' } : {}),
         icon: getIconPath(),
 
         webPreferences: {
@@ -415,7 +429,26 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
     })
 
     ipcMain.handle('window:setAlwaysOnTop', (_, flag: boolean) => {
-        mainWindow?.setAlwaysOnTop(flag, 'screen-saver')
+        if (!mainWindow) return
+        mainWindow.setAlwaysOnTop(flag, 'screen-saver')
+        // macOS: by default a window lives on the Space it was created on, so the
+        // focus pill stays stuck on the initial screen while the user switches
+        // Spaces (Ctrl+Cmd+arrow) or moves into a maximized/fullscreen app.
+        // Make it ride along on every Space — including over fullscreen windows —
+        // while the pill is active, and reset to normal behaviour when it closes.
+        if (process.platform === 'darwin' && flag !== pillFloating) {
+            pillFloating = flag
+            // macOS gotcha: a `fullscreenable` window carries the FullScreenPrimary
+            // collection behaviour, which is mutually exclusive with the
+            // FullScreenAuxiliary behaviour that `visibleOnFullScreen` relies on.
+            // So while the pill is active we must drop fullscreenable, otherwise
+            // the OS silently ignores `visibleOnFullScreen`.
+            mainWindow.setFullScreenable(!flag)
+            // Because the window is a panel (see createWindow), this reliably makes
+            // the pill ride along on every Space — including over fullscreen apps —
+            // while active, and reverts to a normal single-Space window when closed.
+            mainWindow.setVisibleOnAllWorkspaces(flag, { visibleOnFullScreen: flag })
+        }
     })
 
     ipcMain.handle('window:setResizable', (_, flag: boolean) => {
