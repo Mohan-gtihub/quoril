@@ -823,6 +823,23 @@ export const useFocusStore = create<FocusState>()(
             onRehydrateStorage: () => (state) => {
                 if (!state) return
 
+                // A live session can rehydrate for two very different reasons:
+                //  1) genuine cold start / crash recovery (app was closed a while), or
+                //  2) a quick window handoff — e.g. minimising into the separate
+                //     focus-pill window, or handing the session back to the main
+                //     window on exit — which restarts a renderer within seconds.
+                // Only (1) should force-pause. Detect (2) by a tiny gap since the
+                // last tick and keep the session running seamlessly (no fold, no
+                // pause) so minimising into the pill doesn't auto-pause the task.
+                const HANDOFF_GRACE = 30 // seconds
+                const lastSeen = state.lastTickTime ?? state.startTime
+                const gapSinceSeen = lastSeen
+                    ? Math.floor((Date.now() - lastSeen) / 1000)
+                    : Infinity
+                if (state.isActive && state.startTime && !state.isPaused && gapSinceSeen <= HANDOFF_GRACE) {
+                    return
+                }
+
                 // H2: If we persisted a live startTime, the app was closed/crashed
                 // mid-session. Reconstruct the in-flight time from wall-clock and
                 // fold it into the accumulated total, then land in a paused state
