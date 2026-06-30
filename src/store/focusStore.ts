@@ -685,11 +685,26 @@ export const useFocusStore = create<FocusState>()(
                         } catch (e) {
                             console.error('[Focus] auto-complete break log failed', e)
                         }
+                        // End the break for real: leaving isBreak=true here makes
+                        // the timer recompute a fresh full break (breakRemainingAtStart
+                        // minus the just-zeroed breakElapsed) and effectively loop.
+                        // Mirror stopBreak's transition — drop out of break and arm the
+                        // next focus pomodoro — but land paused so an unattended
+                        // break-complete doesn't silently start counting focus time.
+                        const bSettings = useSettingsStore.getState()
+                        const bPLength = (bSettings.pomodoroLength || 25) * 60
+                        const bPTime = bSettings.pomodorosEnabled ? bPLength : 0
                         set({
+                            isBreak: false,
+                            isLongBreak: false,
                             breakRemaining: 0,
                             breakElapsed: 0,
                             isPaused: true,
-                            startTime: null
+                            startTime: null,
+                            lastTickTime: null,
+                            pomodoroRemaining: bPTime,
+                            pomodoroRemainingAtStart: bPTime,
+                            pomodoroTotal: bPTime,
                         })
                         focusNotify('Break complete')
                     }
