@@ -42,6 +42,15 @@ export const electronPlatform: Platform = {
     restore() { legacy()?.restoreWindow?.() },
     setResizable(flag) { legacy()?.setResizable?.(flag) },
     closeDevTools() { legacy()?.closeDevTools?.() },
+    enterPill() {
+      const r = api()?.pill?.enter?.()
+      if (r && typeof r.catch === 'function') r.catch(console.error)
+    },
+    exitPill() {
+      const r = api()?.pill?.exit?.()
+      if (r && typeof r.catch === 'function') r.catch(console.error)
+    },
+    onRehydrate(cb) { return api()?.pill?.onRehydrate?.(cb) ?? { available: false as const } },
   },
   store: {
     async get(key) { return api().store?.get(key) ?? null },
@@ -68,6 +77,15 @@ export const electronPlatform: Platform = {
       const fn = api()?.file?.openExternal
       if (typeof fn !== 'function') return { available: false as const }
       const r = fn(url)
+      if (r && typeof r.catch === 'function') r.catch(console.error)
+      return undefined
+    },
+  },
+  notifications: {
+    show(title, body) {
+      const fn = api()?.notification?.show
+      if (typeof fn !== 'function') return { available: false as const }
+      const r = fn(title, body)
       if (r && typeof r.catch === 'function') r.catch(console.error)
       return undefined
     },

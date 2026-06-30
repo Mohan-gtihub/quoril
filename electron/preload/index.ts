@@ -23,6 +23,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
             ipcRenderer.invoke('notification:show', { title, body }),
     },
 
+    // Focus pill window lifecycle (separate overlay window)
+    pill: {
+        enter: () => ipcRenderer.invoke('pill:enter'),
+        exit: () => ipcRenderer.invoke('pill:exit'),
+        // Main window asks the renderer to re-read persisted state after the
+        // pill window handed the focus session back.
+        onRehydrate: (cb: () => void) => {
+            const listener = () => cb()
+            ipcRenderer.on('app:rehydrate', listener)
+            return () => ipcRenderer.removeListener('app:rehydrate', listener)
+        },
+    },
+
     // Focus session
     focus: {
         started: (data: { duration: number; taskId: string }) =>

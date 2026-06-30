@@ -20,9 +20,13 @@ import { platform } from '@/services/platform'
 /**
  * Focus notification — shows inline inside the Super Focus pill (so it never
  * overlaps the floating pill window) and falls back to a normal toast when the
- * full app UI is visible.
+ * full app UI is visible. Also fires a native OS notification (outside the app)
+ * so the user is alerted even when the app isn't the focused window.
  */
 function focusNotify(message: string) {
+    // Native OS notification (no-op on web / when unavailable).
+    platform.notifications.show('Quoril', message)
+
     const inSuperFocus = useSettingsStore.getState().superFocusMode
     if (inSuperFocus) {
         useFocusStore.setState({ focusFlash: message })

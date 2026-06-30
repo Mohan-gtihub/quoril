@@ -38,6 +38,12 @@ export interface FocusWindowPort {
   restore(): void | Unavailable
   setResizable(flag: boolean): void | Unavailable
   closeDevTools(): void | Unavailable
+  /** Open the dedicated focus-pill overlay window and hide the main window. */
+  enterPill(): void | Unavailable
+  /** Close the pill window and bring the main app window back. */
+  exitPill(): void | Unavailable
+  /** Subscribe to the main window's "re-read persisted state" signal. */
+  onRehydrate(cb: () => void): (() => void) | Unavailable
 }
 
 export interface KeyValuePort {
@@ -66,6 +72,11 @@ export interface TrackerPort {
 
 export interface LinksPort {
   openExternal(url: string): void | Unavailable
+}
+
+export interface NotificationsPort {
+  /** Fire a native OS notification (outside the app window). No-op on web. */
+  show(title: string, body: string): void | Unavailable
 }
 
 export interface CanvasPort {
@@ -102,5 +113,6 @@ export interface Platform {
   windowControls: WindowControlsPort
   tracker: TrackerPort
   links: LinksPort
+  notifications: NotificationsPort
   canvas: CanvasPort
 }

@@ -33,6 +33,9 @@ export const webPlatform: Platform = {
     restore() { return UNAVAILABLE },
     setResizable() { return UNAVAILABLE },
     closeDevTools() { return UNAVAILABLE },
+    enterPill() { return UNAVAILABLE },
+    exitPill() { return UNAVAILABLE },
+    onRehydrate() { return UNAVAILABLE },
   },
   store: {
     async get(key) { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null },
@@ -56,6 +59,9 @@ export const webPlatform: Platform = {
   },
   links: {
     openExternal() { return UNAVAILABLE },
+  },
+  notifications: {
+    show() { return UNAVAILABLE },
   },
   canvas: webCanvas,
 }

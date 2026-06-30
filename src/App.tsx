@@ -44,6 +44,30 @@ function App() {
         }
     }, [initialize, initialized])
 
+    // Super-focus drives a dedicated pill OVERLAY WINDOW (electron only): when it
+    // turns on, hide this window and open the pill window; when off, close the
+    // pill window and bring this one back. Keeps the pill able to roam across
+    // Spaces without the whole app window roaming with it.
+    useEffect(() => {
+        if (!platform.capabilities.nativeOverlay) return
+        if (settings.superFocusMode) {
+            platform.focusWindow.enterPill()
+        } else {
+            platform.focusWindow.exitPill()
+        }
+    }, [settings.superFocusMode])
+
+    // When the pill window hands the session back, re-read the persisted stores
+    // so this window reflects whatever happened while it was dormant.
+    useEffect(() => {
+        if (!platform.capabilities.nativeOverlay) return
+        const off = platform.focusWindow.onRehydrate(() => {
+            ;(useSettingsStore as any).persist?.rehydrate?.()
+            ;(useFocusStore as any).persist?.rehydrate?.()
+        })
+        return typeof off === 'function' ? off : undefined
+    }, [])
+
     // Start background sync + realtime subscriptions when user is logged in
     useEffect(() => {
         if (!user) {
@@ -136,6 +160,9 @@ function App() {
     // Keep store elapsed in sync for persistence and endSession; use getState() so effect doesn't re-run
     useEffect(() => {
         if (!isActive || (isPaused && !isBreak)) return
+        // During super-focus the dedicated pill window owns the authoritative
+        // tick (electron). Don't double-tick from this dormant window.
+        if (platform.capabilities.nativeOverlay && settings.superFocusMode) return
 
         let intervalId: NodeJS.Timeout | null = null
 
@@ -158,7 +185,7 @@ function App() {
                 intervalId = null
             }
         }
-    }, [isActive, isPaused, isBreak])
+    }, [isActive, isPaused, isBreak, settings.superFocusMode])
 
     // When user comes back to the app, sync store elapsed from real time
     useEffect(() => {
@@ -280,7 +307,10 @@ function App() {
                         <div className="flex-1 overflow-hidden">
                             {user ? (
                                 settings.superFocusMode ? (
-                                    <SuperFocusPill />
+                                    // On electron the pill lives in its own overlay
+                                    // window (this window is hidden); only the web
+                                    // build renders it inline here.
+                                    platform.capabilities.nativeOverlay ? null : <SuperFocusPill />
                                 ) : (
                                     <Routes>
                                         <Route path="/focus-popup" element={<FocusPopup />} />

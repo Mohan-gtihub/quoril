@@ -51,16 +51,9 @@ if (process.platform === 'win32') {
 /* ---------------- STATE ---------------- */
 
 let mainWindow: BrowserWindow | null = null
+let pillWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let quitting = false
-
-// Tracks whether the focus pill is currently in "float across all Spaces" mode.
-// The renderer calls setAlwaysOnTop(true) several times while the pill mounts
-// (multiple resize passes), and on macOS each setVisibleOnAllWorkspaces call
-// transforms the app's process type, briefly hiding the window. Repeating that
-// thrashes the Space-collection behaviour and makes following intermittent, so
-// we only (un)apply it when the desired state actually changes.
-let pillFloating = false
 
 // Buffer for a deep link that arrives before the renderer has registered its
 // listener (cold-start via OAuth callback, or a send that races ready-to-show).
@@ -194,12 +187,6 @@ function createWindow() {
         resizable: true,
         maximizable: true,
         fullscreenable: true,
-        // macOS: create the window as a native NSPanel. A panel is the only
-        // window kind macOS lets float over *another* app's fullscreen Space,
-        // which is what makes the focus pill follow the user across Spaces
-        // (Ctrl+arrow) and onto fullscreen apps. Combined with
-        // setVisibleOnAllWorkspaces({ visibleOnFullScreen }) below.
-        ...(process.platform === 'darwin' ? { type: 'panel' } : {}),
         icon: getIconPath(),
 
         webPreferences: {
@@ -310,6 +297,84 @@ function createWindow() {
     mainWindow.on('closed', () => {
         mainWindow = null
     })
+}
+
+/* ---------------- FOCUS PILL WINDOW (macOS-friendly overlay) ---------------- */
+
+// Load the renderer with the given query string in both dev and production.
+function loadRenderer(win: BrowserWindow, query: Record<string, string> = {}) {
+    if (isDev && VITE_DEV_SERVER_URL) {
+        const url = new URL(VITE_DEV_SERVER_URL)
+        for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v)
+        win.loadURL(url.toString())
+    } else {
+        win.loadFile(path.join(__dirname, '../dist/index.html'), { query })
+    }
+}
+
+// The focus pill lives in its OWN window so it can travel across Spaces (and,
+// on macOS, float over other apps' fullscreen Spaces via type:'panel') WITHOUT
+// turning the whole app window into a roaming panel.
+function createPillWindow() {
+    if (pillWindow && !pillWindow.isDestroyed()) return pillWindow
+
+    const display = screen.getDisplayMatching(mainWindow?.getBounds() ?? screen.getPrimaryDisplay().bounds)
+    const area = display.workArea
+
+    pillWindow = new BrowserWindow({
+        width: 340,
+        height: 80,
+        x: area.x + 40,
+        y: area.y + 40,
+        show: false,
+        frame: false,
+        transparent: true,
+        backgroundColor: '#00000000',
+        hasShadow: false,
+        resizable: false,
+        fullscreenable: false,
+        skipTaskbar: true,
+        // macOS: a native NSPanel is the only window kind allowed to float over
+        // another app's fullscreen Space — this is what lets the pill follow the
+        // user with Ctrl+arrow and onto fullscreen apps.
+        ...(process.platform === 'darwin' ? { type: 'panel' } : {}),
+        webPreferences: {
+            preload: path.join(__dirname, 'index.mjs'),
+            contextIsolation: true,
+            nodeIntegration: false,
+            sandbox: true,
+        },
+    })
+
+    loadRenderer(pillWindow, { pill: '1' })
+
+    pillWindow.setAlwaysOnTop(true, 'screen-saver')
+    if (process.platform === 'darwin') {
+        pillWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+    }
+
+    pillWindow.once('ready-to-show', () => pillWindow?.showInactive())
+    pillWindow.on('closed', () => { pillWindow = null })
+
+    return pillWindow
+}
+
+function enterPill() {
+    createPillWindow()
+    // Hide the full app so only the pill is visible while focusing.
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide()
+}
+
+function exitPill() {
+    if (pillWindow && !pillWindow.isDestroyed()) pillWindow.close()
+    pillWindow = null
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show()
+        mainWindow.focus()
+        // The main window was dormant while the pill ran the session; pull the
+        // latest persisted focus/settings state so it reflects what happened.
+        mainWindow.webContents.send('app:rehydrate')
+    }
 }
 
 /* ---------------- WINDOW RESTORATION ---------------- */
@@ -424,36 +489,27 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
         mainWindow?.close()
     )
 
-    ipcMain.handle('window:closeDevTools', () => {
-        mainWindow?.webContents.closeDevTools()
+    ipcMain.handle('window:closeDevTools', (event) => {
+        const win = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
+        win?.webContents.closeDevTools()
     })
 
-    ipcMain.handle('window:setAlwaysOnTop', (_, flag: boolean) => {
-        if (!mainWindow) return
-        mainWindow.setAlwaysOnTop(flag, 'screen-saver')
-        // macOS: by default a window lives on the Space it was created on, so the
-        // focus pill stays stuck on the initial screen while the user switches
-        // Spaces (Ctrl+Cmd+arrow) or moves into a maximized/fullscreen app.
-        // Make it ride along on every Space — including over fullscreen windows —
-        // while the pill is active, and reset to normal behaviour when it closes.
-        if (process.platform === 'darwin' && flag !== pillFloating) {
-            pillFloating = flag
-            // macOS gotcha: a `fullscreenable` window carries the FullScreenPrimary
-            // collection behaviour, which is mutually exclusive with the
-            // FullScreenAuxiliary behaviour that `visibleOnFullScreen` relies on.
-            // So while the pill is active we must drop fullscreenable, otherwise
-            // the OS silently ignores `visibleOnFullScreen`.
-            mainWindow.setFullScreenable(!flag)
-            // Because the window is a panel (see createWindow), this reliably makes
-            // the pill ride along on every Space — including over fullscreen apps —
-            // while active, and reverts to a normal single-Space window when closed.
-            mainWindow.setVisibleOnAllWorkspaces(flag, { visibleOnFullScreen: flag })
-        }
+    // Act on the window that sent the request (the pill window when called from
+    // the pill) so the pill — not the main window — becomes the floating overlay.
+    ipcMain.handle('window:setAlwaysOnTop', (event, flag: boolean) => {
+        const win = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
+        win?.setAlwaysOnTop(flag, 'screen-saver')
     })
 
-    ipcMain.handle('window:setResizable', (_, flag: boolean) => {
-        mainWindow?.setResizable(flag)
+    ipcMain.handle('window:setResizable', (event, flag: boolean) => {
+        const win = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
+        win?.setResizable(flag)
     })
+
+    /* Focus pill window lifecycle */
+
+    ipcMain.handle('pill:enter', () => enterPill())
+    ipcMain.handle('pill:exit', () => exitPill())
 
     ipcMain.on('resize-window', (event, { width, height, x, y }) => {
         const win = BrowserWindow.fromWebContents(event.sender)
