@@ -44,6 +44,21 @@ function App() {
         }
     }, [initialize, initialized])
 
+    // [DIAG] Visible pointer probe. If clicking a "dead" button flashes a toast,
+    // the click reached the DOM (JS/handler issue). If clicking it shows NOTHING,
+    // the OS swallowed it (drag-region / window-level issue). Remove after diag.
+    useEffect(() => {
+        const onDown = (e: PointerEvent) => {
+            const el = e.target as HTMLElement
+            const label = el?.closest('button')?.getAttribute('title')
+                || el?.closest('button')?.textContent?.trim().slice(0, 20)
+                || el?.tagName
+            toast(`click: ${label} @${Math.round(e.clientX)},${Math.round(e.clientY)}`, { duration: 1500 })
+        }
+        window.addEventListener('pointerdown', onDown, true)
+        return () => window.removeEventListener('pointerdown', onDown, true)
+    }, [])
+
     // Super-focus drives a dedicated pill OVERLAY WINDOW (electron only): when it
     // turns on, hide this window and open the pill window; when off, close the
     // pill window and bring this one back. Keeps the pill able to roam across
