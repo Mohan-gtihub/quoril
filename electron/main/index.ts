@@ -48,6 +48,24 @@ if (process.platform === 'win32') {
     app.setAppUserModelId('com.quoril.in')
 }
 
+/* ---------------- CACHE LOCATION ----------------
+ * Chromium's GPU/disk cache defaults to userData (AppData\Roaming), which is
+ * synced and can be held open by a stale Electron child from a previous dev
+ * run — producing "Unable to move the cache: Access is denied (0x5)" on the
+ * next launch. Relocate the cache to LOCALAPPDATA (never synced) and let the
+ * shader cache stay in memory so a locked folder can't block startup. */
+try {
+    const cacheDir = path.join(
+        process.env.LOCALAPPDATA || app.getPath('temp'),
+        'quoril-cache'
+    )
+    fs.mkdirSync(cacheDir, { recursive: true })
+    app.commandLine.appendSwitch('disk-cache-dir', cacheDir)
+    app.commandLine.appendSwitch('disable-gpu-shader-disk-cache')
+} catch {
+    // Non-fatal: fall back to Chromium's default cache path.
+}
+
 /* ---------------- STATE ---------------- */
 
 let mainWindow: BrowserWindow | null = null
