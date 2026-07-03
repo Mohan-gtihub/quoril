@@ -104,10 +104,10 @@ export default function RootLayout({
     >
       <head>
         {/* No-flash theme init: apply the saved theme before first paint.
-            Light is the default; dark only when the user explicitly chose it. */}
+            Dark is the default; light only when the user explicitly chose it. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('quoril-theme');if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('quoril-theme');if(t!=='light'){document.documentElement.classList.add('dark');}}catch(e){document.documentElement.classList.add('dark');}})();`,
           }}
         />
       </head>

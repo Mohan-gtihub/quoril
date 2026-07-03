@@ -2,6 +2,7 @@ import Link from "next/link";
 import Reveal from "@/components/Reveal";
 import Waitlist from "@/components/Waitlist";
 import AppMockup from "@/components/AppMockup";
+import HeroVideo from "@/components/HeroVideo";
 import FocusPill from "@/components/FocusPill";
 import { Heatmap, Ring, Donut, CategoryBars, FOCUS, BREAK, WELLBEING } from "@/components/Charts";
 import PostCard from "@/components/PostCard";
@@ -35,6 +36,8 @@ export default async function Home() {
     <>
       {/* ───────── HERO ───────── */}
       <header className="dotgrid relative overflow-hidden px-5 pb-14 pt-[120px] text-center sm:px-6 sm:pb-16 sm:pt-[150px]">
+        {/* Ambient background video (poster-first, plays only in view). */}
+        <HeroVideo />
         {/* light theme: soft paper fade; dark theme: cool aurora glow */}
         <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] bg-gradient-to-b from-paper to-transparent dark:hidden" />
         <div className="aurora pointer-events-none absolute inset-x-0 top-0 -z-10 hidden h-[620px] dark:block" />
