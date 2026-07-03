@@ -11,26 +11,27 @@ export function FocusTrendChart({ data }: {
     }
     const rows = data.map(d => ({ ...d, label: format(parseISO(d.day), 'EEE') }))
     return (
-        <ResponsiveContainer width="100%" height={224}>
-            <ComposedChart data={rows} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height={240}>
+            <ComposedChart data={rows} margin={{ top: 10, right: 6, left: 6, bottom: 0 }}>
                 <defs>
                     <linearGradient id="focusFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--focus)" stopOpacity={0.35} />
+                        <stop offset="0%" stopColor="var(--focus)" stopOpacity={0.30} />
                         <stop offset="100%" stopColor="var(--focus)" stopOpacity={0} />
                     </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--track)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={34} />
+                <CartesianGrid strokeDasharray="2 4" stroke="var(--border-default)" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} dy={4} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={34} allowDecimals={false} tickFormatter={(v: number) => `${v}`} />
                 <Tooltip
-                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 12, fontSize: 12 }}
-                    labelStyle={{ color: 'var(--text-secondary)' }}
+                    cursor={{ fill: 'var(--bg-hover)' }}
+                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 12, fontSize: 12, boxShadow: 'var(--shadow-soft)' }}
+                    labelStyle={{ color: 'var(--text-secondary)', fontWeight: 600 }}
                     formatter={(v: number, name: string) => [`${v}m`, name === 'focusMinutes' ? 'Focus' : 'Deep work']}
                 />
-                <Area type="monotone" dataKey="focusMinutes" stroke="var(--focus)" strokeWidth={2}
-                    fill="url(#focusFill)" animationDuration={600} />
-                <Bar dataKey="deepMinutes" barSize={10} radius={[3, 3, 0, 0]} fill="#8b5cf6"
-                    fillOpacity={0.85} animationDuration={600} />
+                <Bar dataKey="deepMinutes" barSize={12} radius={[3, 3, 0, 0]} fill="var(--wellbeing)"
+                    fillOpacity={0.9} animationDuration={600} />
+                <Area type="monotone" dataKey="focusMinutes" stroke="var(--focus)" strokeWidth={2.5}
+                    fill="url(#focusFill)" animationDuration={600} dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
             </ComposedChart>
         </ResponsiveContainer>
     )

@@ -16,10 +16,10 @@ export function PeakHoursChart({ bins }: {
     }
     const rows = bins.map(b => ({ ...b, label: hourLabel(b.hour) }))
     return (
-        <ResponsiveContainer width="100%" height={192}>
-            <BarChart data={rows} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                <XAxis dataKey="label" interval={2} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={34} />
+        <ResponsiveContainer width="100%" height={196}>
+            <BarChart data={rows} margin={{ top: 10, right: 6, left: 6, bottom: 0 }} barCategoryGap={2}>
+                <XAxis dataKey="label" interval={2} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} dy={4} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={34} tickFormatter={(v: number) => `${v}`} allowDecimals={false} />
                 <Tooltip
                     cursor={{ fill: 'var(--bg-hover)' }}
                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-default)', borderRadius: 12, fontSize: 12 }}
