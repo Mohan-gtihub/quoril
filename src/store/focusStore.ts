@@ -8,6 +8,13 @@ import { localService } from '@/services/localStorage'
 import { backupService } from '@/services/backupService'
 import { soundService } from '@/services/soundService'
 import { hydrateElapsed, getTaskEstimate, shouldFireOvertimeAlert } from '@/utils/sessionUtils'
+
+/**
+ * Dedicated sound for timer lifecycle transitions (time's-up / overtime,
+ * break-over, pomodoro→break) — distinct from the interval "stay focused" nag,
+ * which uses the user's configured alertSound. Swap this one value to change it.
+ */
+const LIFECYCLE_ALERT_SOUND = 'sonar'
 import { sanitizeSessionData, mapSessionTypeToDB } from '@/utils/dataValidation'
 import { useTaskStore } from './taskStore'
 import { useSettingsStore } from './settingsStore'
@@ -710,7 +717,7 @@ export const useFocusStore = create<FocusState>()(
                             pomodoroRemainingAtStart: bPTime,
                             pomodoroTotal: bPTime,
                         })
-                        soundService.playAlert(bSettings.alertSound)
+                        soundService.playAlert(LIFECYCLE_ALERT_SOUND)
                         focusNotify('Break over — back to focus')
                         await get().resumeSession()
                     }
@@ -726,7 +733,7 @@ export const useFocusStore = create<FocusState>()(
                         set({ pomodoroRemaining: 0 }) // Sync update
 
                         // Trigger Break (auto ⇒ advances long-break cadence)
-                        soundService.playAlert(useSettingsStore.getState().alertSound)
+                        soundService.playAlert(LIFECYCLE_ALERT_SOUND)
                         focusNotify('Session complete — take a break')
                         get().startBreak(undefined, { auto: true })
                         return // EXIT to avoid double-process
@@ -744,7 +751,7 @@ export const useFocusStore = create<FocusState>()(
                 // TIME'S UP — the task countdown just crossed its goal. Fire a sound +
                 // reminder ONCE per crossing instead of silently slipping into overtime.
                 if (shouldFireOvertimeAlert(total, s.duration, s.overtimeAlerted)) {
-                    soundService.playAlert(settings.alertSound)
+                    soundService.playAlert(LIFECYCLE_ALERT_SOUND)
                     focusNotify("Time's up — you're now in overtime")
                     set({ overtimeAlerted: true })
                 } else if (s.duration > 0 && total < s.duration && s.overtimeAlerted) {
