@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react'
-import { format, parseISO } from 'date-fns'
 import {
     ArrowLeft, RefreshCw, AlertCircle, Timer, CheckCircle2,
     Gauge as GaugeIcon, Activity, Layers, AppWindow, Repeat, Zap
@@ -7,8 +6,9 @@ import {
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useReportsData, getLast7DaysRange } from './hooks/useReportsData'
-import { INTERRUPT_PENALTY_SECONDS } from './hooks/useFocusReport'
 import { DateRangePicker, type DateRange } from './components/ReportsDatePicker'
+import { FocusTrendChart } from './components/charts/FocusTrendChart'
+import { PeakHoursChart } from './components/charts/PeakHoursChart'
 
 /* ─── Helpers ───────────────────────────────────────────────── */
 
@@ -108,47 +108,6 @@ function Bar({ value, max, color = 'var(--accent-primary)', label, sub }: {
     )
 }
 
-// Vertical day bars
-function DayBars({ points, max, color = 'var(--focus)', days }: {
-    points: number[]; max: number; color?: string; days: string[]
-}) {
-    if (max === 0) return <EmptyState msg="No data yet for this range" />
-    const peakIdx = points.indexOf(Math.max(...points))
-    return (
-        <div className="flex flex-col gap-2">
-            <div className="flex items-end gap-1.5 h-28">
-                {points.map((v, i) => (
-                    <div key={i} className="flex-1 flex flex-col justify-end items-stretch relative group h-full" title={`${format(parseISO(days[i]), 'EEE MMM d')}: ${v}`}>
-                        {i === peakIdx && v > 0 && (
-                            <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[11px] font-bold whitespace-nowrap tabular-nums" style={{ color }}>
-                                {v}
-                            </span>
-                        )}
-                        <div className="absolute inset-x-0 bottom-0 top-0 rounded-md bg-[var(--track)] opacity-40" />
-                        <motion.div
-                            className="relative rounded-md w-full"
-                            initial={{ height: 0 }}
-                            animate={{ height: `${Math.max(3, pct(v, max))}%` }}
-                            transition={{ duration: 0.6, delay: i * 0.04, ease: 'easeOut' }}
-                            style={{
-                                backgroundColor: v > 0 ? (i === peakIdx ? color : `color-mix(in srgb, ${color} 55%, transparent)`) : 'transparent',
-                                minHeight: v > 0 ? '4px' : '0',
-                            }}
-                        />
-                    </div>
-                ))}
-            </div>
-            <div className="flex gap-1.5">
-                {days.map((d, i) => (
-                    <div key={i} className="flex-1 text-center text-[10px] font-medium text-[var(--text-muted)]">
-                        {format(parseISO(d), 'EEE')[0]}
-                    </div>
-                ))}
-            </div>
-        </div>
-    )
-}
-
 // Ring gauge
 function Gauge({ score, size = 92, color = 'var(--focus)' }: { score: number; size?: number; color?: string }) {
     const r = (size / 2) - 9
@@ -178,16 +137,14 @@ export function Reports() {
     const [range, setRange] = useState<DateRange>(getLast7DaysRange)
     const [retryKey, setRetryKey] = useState(0)
     const data = useReportsData(range, retryKey)
-    const { loading, error, focusSummary, focusReport, taskReport, appReport, workspaceStats, days } = data
-    const { trendByDay, qualityByDay, movingAvg } = focusReport
-    const { topApps, categoryBreakdown, productivityScore, contextByDay, avgDailySwitches, idleRatio } = appReport
-    const { total, completed, completionRate, overallAccuracy, mostUnderestimated, mostOverestimated, recurringData, recurringCompletedCount } = taskReport
+    const { loading, error, focusSummary, focusReport, taskReport, appReport, workspaceStats, hasAppData } = data
+    const { movingAvg, deepWorkTotals, peakHourBins, focusTrend } = focusReport
+    const { topApps, categoryBreakdown, productivityScore, contextByDay, avgDailySwitches, idleRatio, distractionDuringFocus } = appReport
+    const { total, completed, completionRate, overallAccuracy, mostUnderestimated, mostOverestimated, recurringData, recurringCompletedCount, focusLinkage, plannedToday } = taskReport
 
     /* derived */
-    const todayMinutes = Math.round((focusSummary?.totalSeconds ?? 0) / 60)
     const sessions = focusSummary?.sessionCount ?? 0
     const topDistract = topApps.find(a => ['Social', 'Entertainment', 'Gaming', 'News'].includes(a.category))
-    const maxFocusMin = useMemo(() => Math.max(1, ...trendByDay.map(d => d.focusMinutes)), [trendByDay])
     const maxTaskComp = useMemo(() => Math.max(1, total), [total])
     const maxWsFocus = useMemo(() => Math.max(1, ...workspaceStats.map((w: any) => w.focusSeconds ?? 0)), [workspaceStats])
 
@@ -230,29 +187,60 @@ export function Reports() {
                     <>
                         {/* ══ HEADLINE STATS ══════════════════════════════════ */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                            <Stat label="Focus Time" accent={C.focus} icon={Timer}
-                                value={fmt(focusSummary?.totalSeconds ?? 0)} sub={`${todayMinutes}m · ${sessions} sessions`} />
-                            <Stat label="Tasks Done" accent={C.well} icon={CheckCircle2}
-                                value={`${completed}/${total}`} sub={`${completionRate}% completion`} />
-                            <Stat label="Productivity" accent={C.violet} icon={GaugeIcon}
+                            <Stat label="Deep Work" accent={C.focus} icon={Timer}
+                                value={`${deepWorkTotals.hours}h`} sub={`${deepWorkTotals.blocks} deep blocks (≥25m)`} />
+                            <Stat label="Focus Quality" accent={C.well} icon={GaugeIcon}
                                 value={`${productivityScore.score}%`} sub="focus + work apps" />
-                            <Stat label="Avg Session" accent={C.break} icon={Zap}
-                                value={fmt(focusSummary?.avgSeconds ?? 0)} sub={sessions > 0 ? `across ${sessions}` : 'No sessions'} />
+                            <Stat label="Tasks Done" accent={C.violet} icon={CheckCircle2}
+                                value={`${completed}/${total}`} sub={`${completionRate}% completion`} />
+                            {hasAppData ? (
+                                <Stat label="Distraction" accent={C.error} icon={Zap}
+                                    value={`${distractionDuringFocus.pct}%`} sub="of focus time" />
+                            ) : (
+                                <Stat label="Avg Session" accent={C.break} icon={Zap}
+                                    value={fmt(focusSummary?.avgSeconds ?? 0)} sub={sessions > 0 ? `across ${sessions}` : 'No sessions'} />
+                            )}
                         </div>
 
                         {/* ══ BENTO GRID ══════════════════════════════════════ */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
 
                             {/* Focus trend */}
-                            <Card title="Focus Minutes / Day" icon={Activity} accent={C.focus}
-                                hint={`7d avg ${movingAvg[movingAvg.length - 1] ?? 0}m`}>
-                                <DayBars points={trendByDay.map(d => d.focusMinutes)} max={maxFocusMin} color={C.focus} days={days} />
+                            <Card title="Focus & Deep Work" icon={Activity} accent={C.focus}
+                                hint={`7d avg ${movingAvg[movingAvg.length - 1] ?? 0}m`} className="lg:col-span-2">
+                                <FocusTrendChart data={focusTrend} />
+                                <div className="flex gap-4 mt-3 text-[11px] text-[var(--text-muted)]">
+                                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--focus)' }} />Focus minutes</span>
+                                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--violet)' }} />Deep work</span>
+                                </div>
                             </Card>
 
-                            {/* Focus quality */}
-                            <Card title="Focus Quality / Day" icon={Activity} accent={C.well}
-                                hint={`−${INTERRUPT_PENALTY_SECONDS}s / interruption`}>
-                                <DayBars points={qualityByDay.map(d => d.qualityScore)} max={100} color={C.well} days={days} />
+                            {/* Peak productivity hours */}
+                            <Card title="Peak Productivity Hours" icon={Activity} accent={C.focus}
+                                hint="by focus time">
+                                <PeakHoursChart bins={peakHourBins} />
+                            </Card>
+
+                            {/* Task <-> focus linkage */}
+                            <Card title="Tasks Powered by Focus" icon={CheckCircle2} accent={C.well}
+                                hint={`${focusLinkage.linkedPct}% of done tasks`}>
+                                <div className="flex items-center gap-5 mb-4">
+                                    <Gauge score={focusLinkage.linkedPct} color={C.well} />
+                                    <p className="text-[11px] text-[var(--text-muted)] leading-relaxed flex-1">
+                                        Share of completed tasks that had at least one tracked focus session.
+                                    </p>
+                                </div>
+                                {focusLinkage.topTasks.length === 0
+                                    ? <EmptyState msg="Start a focus session on a task to see it here" />
+                                    : <div className="space-y-3">
+                                        {focusLinkage.topTasks.map(t => (
+                                            <Bar key={t.taskId} label={t.title}
+                                                value={t.focusSeconds}
+                                                max={focusLinkage.topTasks[0].focusSeconds || 1}
+                                                color={C.well} sub={fmt(t.focusSeconds)} />
+                                        ))}
+                                    </div>
+                                }
                             </Card>
 
                             {/* Productivity score */}
@@ -289,6 +277,12 @@ export function Reports() {
                                     <EmptyState msg="Complete tasks with time estimates to see how accurate they were" />
                                 ) : (
                                     <div className="space-y-4">
+                                        <div className="flex items-center justify-between px-3 py-2.5 rounded-[var(--radius-card)] bg-[var(--bg-secondary)] border border-[var(--border-default)]">
+                                            <span className="text-[11px] text-[var(--text-muted)]">Due today — completed</span>
+                                            <span className="text-[13px] font-semibold tabular-nums text-[var(--text-primary)]">
+                                                {plannedToday.completedOfDue}/{plannedToday.dueToday}
+                                            </span>
+                                        </div>
                                         <div className="flex items-center gap-5">
                                             <Gauge score={Math.min(100, overallAccuracy)} size={84} color={C.focus} />
                                             <div>
@@ -346,65 +340,69 @@ export function Reports() {
                                 </Card>
                             )}
 
-                            {/* Top apps */}
-                            <Card title="Top Apps" icon={AppWindow} accent={C.break} hint="active time">
-                                {topApps.length === 0
-                                    ? <EmptyState msg="Screen time is tracked while the app is running" />
-                                    : <div className="space-y-3">
-                                        {topApps.slice(0, 6).map((app, i) => (
-                                            <Bar key={i} label={app.appName} value={app.activeSeconds}
-                                                max={topApps[0]?.activeSeconds ?? 1} color={C.break}
-                                                sub={fmt(app.activeSeconds)} />
-                                        ))}
-                                    </div>
-                                }
-                            </Card>
+                            {hasAppData && (
+                                <>
+                                    {/* Top apps */}
+                                    <Card title="Top Apps" icon={AppWindow} accent={C.break} hint="active time">
+                                        {topApps.length === 0
+                                            ? <EmptyState msg="Screen time is tracked while the app is running" />
+                                            : <div className="space-y-3">
+                                                {topApps.slice(0, 6).map((app, i) => (
+                                                    <Bar key={i} label={app.appName} value={app.activeSeconds}
+                                                        max={topApps[0]?.activeSeconds ?? 1} color={C.break}
+                                                        sub={fmt(app.activeSeconds)} />
+                                                ))}
+                                            </div>
+                                        }
+                                    </Card>
 
-                            {/* Category breakdown */}
-                            {categoryBreakdown.length > 0 && (
-                                <Card title="By Category" icon={Layers} accent={C.well}>
-                                    <div className="space-y-3">
-                                        {categoryBreakdown.slice(0, 6).map(c => (
-                                            <Bar key={c.category} label={c.category} value={c.seconds}
-                                                max={categoryBreakdown[0]?.seconds ?? 1} color={C.well} sub={fmt(c.seconds)} />
-                                        ))}
-                                    </div>
-                                </Card>
+                                    {/* Category breakdown */}
+                                    {categoryBreakdown.length > 0 && (
+                                        <Card title="By Category" icon={Layers} accent={C.well}>
+                                            <div className="space-y-3">
+                                                {categoryBreakdown.slice(0, 6).map(c => (
+                                                    <Bar key={c.category} label={c.category} value={c.seconds}
+                                                        max={categoryBreakdown[0]?.seconds ?? 1} color={C.well} sub={fmt(c.seconds)} />
+                                                ))}
+                                            </div>
+                                        </Card>
+                                    )}
+
+                                    {/* Attention / context switching */}
+                                    <Card title="Attention" icon={Activity} accent={C.focus}
+                                        hint={`${avgDailySwitches} switches / day`}>
+                                        <div className="grid grid-cols-2 gap-3 mb-5">
+                                            <div className="rounded-[var(--radius-card)] border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3.5">
+                                                <p className="text-[11px] text-[var(--text-muted)] mb-1">Active</p>
+                                                <p className="text-xl font-semibold tabular-nums" style={{ color: C.well }}>{100 - idleRatio}%</p>
+                                            </div>
+                                            <div className="rounded-[var(--radius-card)] border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3.5">
+                                                <p className="text-[11px] text-[var(--text-muted)] mb-1">Idle</p>
+                                                <p className="text-xl font-semibold tabular-nums" style={{ color: idleRatio > 40 ? C.error : 'var(--text-primary)' }}>{idleRatio}%</p>
+                                            </div>
+                                        </div>
+                                        {contextByDay.length === 0
+                                            ? <EmptyState msg="App tracking records context switches automatically" />
+                                            : <div className="space-y-2">
+                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1">Context switches / day</p>
+                                                {contextByDay.map(d => {
+                                                    const col = d.label === 'Deep Work' ? C.well : d.label === 'Balanced' ? C.break : C.error
+                                                    return (
+                                                        <div key={d.day} className="flex items-center gap-2.5">
+                                                            <span className="text-[11px] text-[var(--text-muted)] w-14 flex-shrink-0 truncate">{d.day}</span>
+                                                            <div className="flex-1 h-2 bg-[var(--track)] rounded-full overflow-hidden">
+                                                                <div className="h-full rounded-full transition-all"
+                                                                    style={{ width: `${pct(d.sessionCount, Math.max(...contextByDay.map(x => x.sessionCount)) || 1)}%`, backgroundColor: col }} />
+                                                            </div>
+                                                            <span className="text-[11px] font-semibold tabular-nums flex-shrink-0 w-6 text-right" style={{ color: col }}>{d.sessionCount}</span>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        }
+                                    </Card>
+                                </>
                             )}
-
-                            {/* Attention / context switching */}
-                            <Card title="Attention" icon={Activity} accent={C.focus}
-                                hint={`${avgDailySwitches} switches / day`}>
-                                <div className="grid grid-cols-2 gap-3 mb-5">
-                                    <div className="rounded-[var(--radius-card)] border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3.5">
-                                        <p className="text-[11px] text-[var(--text-muted)] mb-1">Active</p>
-                                        <p className="text-xl font-semibold tabular-nums" style={{ color: C.well }}>{100 - idleRatio}%</p>
-                                    </div>
-                                    <div className="rounded-[var(--radius-card)] border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3.5">
-                                        <p className="text-[11px] text-[var(--text-muted)] mb-1">Idle</p>
-                                        <p className="text-xl font-semibold tabular-nums" style={{ color: idleRatio > 40 ? C.error : 'var(--text-primary)' }}>{idleRatio}%</p>
-                                    </div>
-                                </div>
-                                {contextByDay.length === 0
-                                    ? <EmptyState msg="App tracking records context switches automatically" />
-                                    : <div className="space-y-2">
-                                        <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1">Context switches / day</p>
-                                        {contextByDay.map(d => {
-                                            const col = d.label === 'Deep Work' ? C.well : d.label === 'Balanced' ? C.break : C.error
-                                            return (
-                                                <div key={d.day} className="flex items-center gap-2.5">
-                                                    <span className="text-[11px] text-[var(--text-muted)] w-14 flex-shrink-0 truncate">{d.day}</span>
-                                                    <div className="flex-1 h-2 bg-[var(--track)] rounded-full overflow-hidden">
-                                                        <div className="h-full rounded-full transition-all"
-                                                            style={{ width: `${pct(d.sessionCount, Math.max(...contextByDay.map(x => x.sessionCount)) || 1)}%`, backgroundColor: col }} />
-                                                    </div>
-                                                    <span className="text-[11px] font-semibold tabular-nums flex-shrink-0 w-6 text-right" style={{ color: col }}>{d.sessionCount}</span>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                }
-                            </Card>
 
                             {/* Habit consistency */}
                             <Card title="Habit Consistency" icon={Repeat} accent={C.well}
@@ -429,23 +427,24 @@ export function Reports() {
                                 }
                             </Card>
 
-                            {/* Top distraction callout */}
-                            <Card title="Top Distraction" icon={Zap} accent={C.error}>
-                                {topDistract ? (
-                                    <div className="flex items-center gap-4">
-                                        <span className="w-12 h-12 rounded-[var(--radius-card)] flex items-center justify-center text-lg font-semibold shrink-0"
-                                            style={{ background: `color-mix(in srgb, ${C.error} 14%, transparent)`, color: C.error }}>
-                                            {topDistract.appName.charAt(0).toUpperCase()}
-                                        </span>
-                                        <div className="min-w-0">
-                                            <p className="text-base font-semibold text-[var(--text-primary)] truncate">{topDistract.appName}</p>
-                                            <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">{topDistract.category} · {fmt(topDistract.activeSeconds)}</p>
+                            {hasAppData && (
+                                <Card title="Top Distraction" icon={Zap} accent={C.error}>
+                                    {topDistract ? (
+                                        <div className="flex items-center gap-4">
+                                            <span className="w-12 h-12 rounded-[var(--radius-card)] flex items-center justify-center text-lg font-semibold shrink-0"
+                                                style={{ background: `color-mix(in srgb, ${C.error} 14%, transparent)`, color: C.error }}>
+                                                {topDistract.appName.charAt(0).toUpperCase()}
+                                            </span>
+                                            <div className="min-w-0">
+                                                <p className="text-base font-semibold text-[var(--text-primary)] truncate">{topDistract.appName}</p>
+                                                <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">{topDistract.category} · {fmt(topDistract.activeSeconds)}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                ) : (
-                                    <EmptyState msg="No distracting app usage found in this range" />
-                                )}
-                            </Card>
+                                    ) : (
+                                        <EmptyState msg="No distracting app usage found in this range" />
+                                    )}
+                                </Card>
+                            )}
 
                         </div>
                     </>
