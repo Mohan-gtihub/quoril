@@ -13,7 +13,8 @@ describe('computeTaskFocusLinkage', () => {
     // 3 done tasks total; 2 done tasks (a,b) appear in taskFocus -> 67%
     expect(out.linkedPct).toBe(67)
     expect(out.topTasks[0]).toEqual({ taskId: 'a', title: 'A', focusSeconds: 3600 })
-    expect(out.topTasks).toHaveLength(3)
+    expect(out.topTasks[1]).toEqual({ taskId: 'b', title: 'B', focusSeconds: 600 })
+    expect(out.topTasks).toHaveLength(2)
   })
 
   it('returns 0% when there are no done tasks', () => {

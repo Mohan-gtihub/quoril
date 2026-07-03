@@ -29,7 +29,7 @@ export function FocusTrendChart({ data }: {
                 />
                 <Area type="monotone" dataKey="focusMinutes" stroke="var(--focus)" strokeWidth={2}
                     fill="url(#focusFill)" animationDuration={600} />
-                <Bar dataKey="deepMinutes" barSize={10} radius={[3, 3, 0, 0]} fill="var(--violet)"
+                <Bar dataKey="deepMinutes" barSize={10} radius={[3, 3, 0, 0]} fill="#8b5cf6"
                     fillOpacity={0.85} animationDuration={600} />
             </ComposedChart>
         </ResponsiveContainer>

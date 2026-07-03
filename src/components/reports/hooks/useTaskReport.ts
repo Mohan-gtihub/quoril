@@ -42,6 +42,7 @@ export function computeTaskFocusLinkage(
     const doneWithFocus = taskFocus.filter(t => t.status === 'done' && t.focusSeconds > 0).length
     const linkedPct = totalDone > 0 ? Math.round((doneWithFocus / totalDone) * 100) : 0
     const topTasks = [...taskFocus]
+        .filter(t => t.status === 'done')
         .sort((a, b) => b.focusSeconds - a.focusSeconds)
         .slice(0, 5)
         .map(t => ({ taskId: t.taskId, title: t.title, focusSeconds: t.focusSeconds }))

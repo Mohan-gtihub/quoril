@@ -211,7 +211,7 @@ export function Reports() {
                                 <FocusTrendChart data={focusTrend} />
                                 <div className="flex gap-4 mt-3 text-[11px] text-[var(--text-muted)]">
                                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--focus)' }} />Focus minutes</span>
-                                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--violet)' }} />Deep work</span>
+                                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: C.violet }} />Deep work</span>
                                 </div>
                             </Card>
 
