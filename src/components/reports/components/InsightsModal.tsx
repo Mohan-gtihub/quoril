@@ -11,6 +11,24 @@ const sessionCache = new Map<string, { result: InsightsResult; model: string }>(
 
 type Status = 'idle' | 'loading' | 'done' | 'error'
 
+function normalizeInsightsResult(raw: unknown): InsightsResult {
+    const r = raw as Partial<InsightsResult> | null | undefined
+    return {
+        summary: typeof r?.summary === 'string' ? r.summary : '',
+        insights: Array.isArray(r?.insights)
+            ? r.insights.filter((i): i is InsightsResult['insights'][number] =>
+                !!i &&
+                typeof i.title === 'string' &&
+                typeof i.detail === 'string' &&
+                typeof i.suggestion === 'string'
+            )
+            : [],
+        tomorrow_plan: Array.isArray(r?.tomorrow_plan)
+            ? r.tomorrow_plan.filter((p): p is string => typeof p === 'string')
+            : [],
+    }
+}
+
 function summaryToText(s: InsightsResult): string {
     const lines = [s.summary, '']
     s.insights.forEach(i => lines.push(`• ${i.title}\n  ${i.detail}\n  → ${i.suggestion}`, ''))
@@ -35,15 +53,16 @@ export function InsightsModal({ open, onClose, summary, cacheKey }: {
     const run = useCallback(async (force = false) => {
         if (!summary) return
         if (!force && sessionCache.has(cacheKey)) {
-            setResult(sessionCache.get(cacheKey)!.result)
+            setResult(normalizeInsightsResult(sessionCache.get(cacheKey)!.result))
             setStatus('done')
             return
         }
         setStatus('loading'); setError('')
         const resp = await getPlatform().insights.generate(summary)
         if (resp.ok) {
-            sessionCache.set(cacheKey, { result: resp.result, model: resp.model })
-            setResult(resp.result)
+            const normalized = normalizeInsightsResult(resp.result)
+            sessionCache.set(cacheKey, { result: normalized, model: resp.model })
+            setResult(normalized)
             setStatus('done')
         } else {
             setError(resp.error)
@@ -87,6 +106,12 @@ export function InsightsModal({ open, onClose, summary, cacheKey }: {
                     >
                         {/* Header */}
                         <div className="flex items-center gap-3 px-6 py-5 border-b border-[var(--border-default)]">
+                            <span
+                                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                                style={{ background: 'color-mix(in srgb, var(--focus) 12%, transparent)', color: 'var(--focus)' }}
+                            >
+                                <Lightbulb className="w-[18px] h-[18px]" />
+                            </span>
                             <div className="flex-1 min-w-0">
                                 <h2 className="text-[15px] font-semibold text-[var(--text-primary)] leading-tight">Quoril Suggestions</h2>
                                 <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Based on your report · {cacheKey}</p>
