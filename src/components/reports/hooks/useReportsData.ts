@@ -71,6 +71,7 @@ export function useReportsData(range: DateRange, retryKey = 0) {
         raw?.taskStats ?? [],
         raw?.taskFocus ?? [],
         raw?.plannedToday ?? { dueToday: 0, completedOfDue: 0 },
+        raw?.doneInRange ?? 0,
     )
 
     const appReport = useAppReport(

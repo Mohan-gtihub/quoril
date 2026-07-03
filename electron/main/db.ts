@@ -583,6 +583,17 @@ export const dbOps = {
             WHERE user_id = ? AND deleted_at IS NULL AND due_at IS NOT NULL
         `, [userId]) as any[])?.[0] ?? { dueToday: 0, completedOfDue: 0 }
 
+        // Completed-in-range count — denominator for task<->focus linkage
+        const doneInRangeRow = (exec(`
+            SELECT COUNT(*) AS n FROM tasks
+            WHERE user_id = ?
+              AND deleted_at IS NULL
+              AND status = 'done'
+              AND completed_at IS NOT NULL
+              AND completed_at >= ? AND completed_at <= ?
+        `, [userId, startDate, endDate]) as any[])?.[0] ?? { n: 0 }
+        const doneInRange = doneInRangeRow.n ?? 0
+
         // 15. Does any app-tracking data exist in range? (drives adaptive UI)
         const appDataRow = (exec(`
             SELECT COUNT(*) AS n FROM app_sessions
@@ -605,6 +616,7 @@ export const dbOps = {
             focusWindows,
             distractingSessions,
             plannedToday,
+            doneInRange,
             hasAppData,
         }
     },
