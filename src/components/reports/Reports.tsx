@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import {
     ArrowLeft, RefreshCw, AlertCircle, CheckCircle2,
-    Gauge as GaugeIcon, Activity, Layers, AppWindow, Repeat, Zap, Clock, Sparkles
+    Gauge as GaugeIcon, Activity, Layers, AppWindow, Repeat, Zap, Clock
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
@@ -286,7 +286,7 @@ export function Reports() {
                                 className="h-9 px-3.5 rounded-[var(--radius-card)] text-[12.5px] font-semibold text-white flex items-center gap-1.5 transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.98] shadow-[var(--shadow-soft)]"
                                 style={{ background: 'var(--focus)' }}
                             >
-                                <Sparkles className="w-4 h-4" /> Generate Insights
+                                Generate Insights
                             </button>
                         )}
                         <DateRangePicker value={range} onChange={setRange} />

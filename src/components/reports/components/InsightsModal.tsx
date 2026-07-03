@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, X, RefreshCw, Copy, Check, Lightbulb, CalendarCheck, ShieldCheck, AlertCircle } from 'lucide-react'
+import { X, RefreshCw, Copy, Check, Lightbulb, CalendarCheck, ShieldCheck, AlertCircle } from 'lucide-react'
 import { getPlatform } from '@/services/platform'
 import type { ReportInsightSummary, InsightsResult } from '@/services/insights/types'
 
@@ -87,10 +87,6 @@ export function InsightsModal({ open, onClose, summary, cacheKey }: {
                     >
                         {/* Header */}
                         <div className="flex items-center gap-3 px-6 py-5 border-b border-[var(--border-default)]">
-                            <span className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                                style={{ background: 'color-mix(in srgb, var(--focus) 14%, transparent)', color: 'var(--focus)' }}>
-                                <Sparkles className="w-4 h-4" />
-                            </span>
                             <div className="flex-1 min-w-0">
                                 <h2 className="text-[15px] font-semibold text-[var(--text-primary)] leading-tight">Quoril Suggestions</h2>
                                 <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Based on your report · {cacheKey}</p>
