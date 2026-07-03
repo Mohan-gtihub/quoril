@@ -334,6 +334,14 @@ export function Settings() {
                                                 onChange={(v: boolean) => settings.updateSettings({ scrollingTitle: v })}
                                             />
                                         </Group>
+                                        <Group title="AI">
+                                            <ToggleRow
+                                                label="Generate Insights"
+                                                description="Show the Generate Insights button on Reports. Sends only summarized report metrics — never your raw screen history."
+                                                value={settings.aiInsightsEnabled}
+                                                onChange={(v: boolean) => settings.updateSettings({ aiInsightsEnabled: v })}
+                                            />
+                                        </Group>
                                     </>
                                 )}
 

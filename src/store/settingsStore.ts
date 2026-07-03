@@ -6,6 +6,9 @@ interface SettingsState {
     theme: 'system' | 'daylight' | 'dark' | 'light' | 'blue' | 'red' | 'nebula'
     timezone: string
 
+    // AI — Generate Insights on the Reports page (can be turned off entirely).
+    aiInsightsEnabled: boolean
+
     // Blitz mode / Focus Settings
     pomodorosEnabled: boolean
     pomodoroLength: number // minutes
@@ -41,6 +44,8 @@ export const useSettingsStore = create<SettingsState>()(
             hideEstDoneTimes: false,
             theme: 'daylight',
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+
+            aiInsightsEnabled: true,
 
             pomodorosEnabled: false,
             pomodoroLength: 25,

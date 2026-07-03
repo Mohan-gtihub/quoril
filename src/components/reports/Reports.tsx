@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import {
     ArrowLeft, RefreshCw, AlertCircle, CheckCircle2,
-    Gauge as GaugeIcon, Activity, Layers, AppWindow, Repeat, Zap, Clock
+    Gauge as GaugeIcon, Activity, Layers, AppWindow, Repeat, Zap, Clock, Sparkles
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
@@ -10,6 +10,10 @@ import { DateRangePicker, type DateRange } from './components/ReportsDatePicker'
 import { FocusTrendChart } from './components/charts/FocusTrendChart'
 import { PeakHoursChart } from './components/charts/PeakHoursChart'
 import { DonutChart } from './components/charts/DonutChart'
+import { InsightsModal } from './components/InsightsModal'
+import { getPlatform } from '@/services/platform'
+import { useSettingsStore } from '@/store/settingsStore'
+import { buildInsightSummary, DISTRACTING } from '@/services/insights/buildSummary'
 
 /* ─── Helpers ───────────────────────────────────────────────── */
 
@@ -220,6 +224,9 @@ export function Reports() {
     const navigate = useNavigate()
     const [range, setRange] = useState<DateRange>(getLast7DaysRange)
     const [retryKey, setRetryKey] = useState(0)
+    const [insightsOpen, setInsightsOpen] = useState(false)
+    const aiInsightsEnabled = useSettingsStore(s => s.aiInsightsEnabled)
+    const aiAvailable = getPlatform().capabilities.aiInsights && aiInsightsEnabled
     const data = useReportsData(range, retryKey)
     const { loading, error, focusSummary, focusReport, taskReport, appReport, workspaceStats, hasAppData } = data
     const { movingAvg, deepWorkTotals, peakHourBins, focusTrend } = focusReport
@@ -231,6 +238,28 @@ export function Reports() {
     const topDistract = topApps.find(a => ['Social', 'Entertainment', 'Gaming', 'News'].includes(a.category))
     const maxWsFocus = useMemo(() => Math.max(1, ...workspaceStats.map((w: any) => w.focusSeconds ?? 0)), [workspaceStats])
     const avg7 = movingAvg[movingAvg.length - 1] ?? 0
+
+    // Privacy-safe aggregated summary for the AI Insights module.
+    const insightSummary = useMemo(() => buildInsightSummary({
+        rangeLabel: range.label,
+        activeSeconds: productivityScore.totalActiveSeconds,
+        deepWorkHours: deepWorkTotals.hours,
+        deepWorkBlocks: deepWorkTotals.blocks,
+        focusSessions: focusSummary?.sessionCount ?? 0,
+        focusSeconds: focusSummary?.totalSeconds ?? 0,
+        avgSessionSeconds: focusSummary?.avgSeconds ?? 0,
+        contextSwitchesPerDay: avgDailySwitches,
+        idlePercent: idleRatio,
+        tasksCompleted: completed,
+        tasksTotal: total,
+        completionRate,
+        focusLinkedPercent: focusLinkage.linkedPct,
+        distractionDuringFocusSeconds: distractionDuringFocus.distractionSeconds,
+        distractionPercent: distractionDuringFocus.pct,
+        peakHours: peakHourBins,
+        topCategories: categoryBreakdown.map(c => ({ name: c.category, seconds: c.seconds })),
+        distractingApps: topApps.filter(a => DISTRACTING.includes(a.category)).map(a => ({ name: a.appName, seconds: a.activeSeconds })),
+    }), [range.label, productivityScore, deepWorkTotals, focusSummary, avgDailySwitches, idleRatio, completed, total, completionRate, focusLinkage, distractionDuringFocus, peakHourBins, categoryBreakdown, topApps])
 
     return (
         <div className="flex-1 overflow-y-auto w-full h-full custom-scrollbar select-none pb-24">
@@ -246,9 +275,22 @@ export function Reports() {
                         <div>
                             <Eyebrow>Performance</Eyebrow>
                             <h1 className="text-[32px] leading-none font-semibold tracking-tight text-[var(--text-primary)] mt-1.5">Analytics</h1>
+                            <p className="text-[12.5px] text-[var(--text-muted)] mt-2">Understand your focus, distractions, and work patterns.</p>
                         </div>
                     </div>
-                    <DateRangePicker value={range} onChange={setRange} />
+                    <div className="flex items-center gap-3">
+                        {aiAvailable && (
+                            <button
+                                onClick={() => setInsightsOpen(true)}
+                                title="Get suggestions based on this report"
+                                className="h-9 px-3.5 rounded-[var(--radius-card)] text-[12.5px] font-semibold text-white flex items-center gap-1.5 transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.98] shadow-[var(--shadow-soft)]"
+                                style={{ background: 'var(--focus)' }}
+                            >
+                                <Sparkles className="w-4 h-4" /> Generate Insights
+                            </button>
+                        )}
+                        <DateRangePicker value={range} onChange={setRange} />
+                    </div>
                 </header>
 
                 {/* Error banner */}
@@ -571,6 +613,15 @@ export function Reports() {
                     </>
                 )}
             </div>
+
+            {aiAvailable && (
+                <InsightsModal
+                    open={insightsOpen}
+                    onClose={() => setInsightsOpen(false)}
+                    summary={insightSummary}
+                    cacheKey={range.label}
+                />
+            )}
         </div>
     )
 }
