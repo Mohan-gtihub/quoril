@@ -7,7 +7,7 @@ import type { FocusSession } from '@/types/database'
 import { localService } from '@/services/localStorage'
 import { backupService } from '@/services/backupService'
 import { soundService } from '@/services/soundService'
-import { hydrateElapsed, getTaskEstimate } from '@/utils/sessionUtils'
+import { hydrateElapsed, getTaskEstimate, shouldFireOvertimeAlert } from '@/utils/sessionUtils'
 import { sanitizeSessionData, mapSessionTypeToDB } from '@/utils/dataValidation'
 import { useTaskStore } from './taskStore'
 import { useSettingsStore } from './settingsStore'
@@ -88,6 +88,7 @@ export interface FocusState {
     pomodoroRemainingAtStart: number // seconds (base for delta)
     pomodoroTotal: number // seconds (progress denominator)
     lastAlertElapsed: number // seconds (at which last alert played)
+    overtimeAlerted: boolean // whether the "time's up" alert already fired for the current countdown
     focusFlash: string | null // transient reminder text shown inline in the Super Focus pill
     lastTickTime: number | null // ms (wall-clock of last syncTimer tick; sleep detection)
     completedPomodoros: number // count of focus pomodoros completed in the current cycle (long-break cadence)
@@ -169,6 +170,7 @@ export const useFocusStore = create<FocusState>()(
             pomodoroRemainingAtStart: 0,
             pomodoroTotal: 1500,
             lastAlertElapsed: 0,
+            overtimeAlerted: false,
             focusFlash: null,
             lastTickTime: null,
             completedPomodoros: 0,
@@ -333,6 +335,7 @@ export const useFocusStore = create<FocusState>()(
                         breakRemaining: 0,
                         breakRemainingAtStart: 0,
                         lastAlertElapsed: previous,
+                        overtimeAlerted: false,
                         lastTickTime: now,
                         showCelebration: false,
                         celebratedTask: null,
@@ -688,9 +691,10 @@ export const useFocusStore = create<FocusState>()(
                         // End the break for real: leaving isBreak=true here makes
                         // the timer recompute a fresh full break (breakRemainingAtStart
                         // minus the just-zeroed breakElapsed) and effectively loop.
-                        // Mirror stopBreak's transition — drop out of break and arm the
-                        // next focus pomodoro — but land paused so an unattended
-                        // break-complete doesn't silently start counting focus time.
+                        // Drop out of break and arm the next focus pomodoro, then
+                        // AUTO-RESUME the task countdown (better UX than landing paused).
+                        // A sound + reminder covers the "unattended" case so focus time
+                        // never resumes silently.
                         const bSettings = useSettingsStore.getState()
                         const bPLength = (bSettings.pomodoroLength || 25) * 60
                         const bPTime = bSettings.pomodorosEnabled ? bPLength : 0
@@ -699,14 +703,16 @@ export const useFocusStore = create<FocusState>()(
                             isLongBreak: false,
                             breakRemaining: 0,
                             breakElapsed: 0,
-                            isPaused: true,
+                            isPaused: true,        // momentary — resumeSession() flips this
                             startTime: null,
                             lastTickTime: null,
                             pomodoroRemaining: bPTime,
                             pomodoroRemainingAtStart: bPTime,
                             pomodoroTotal: bPTime,
                         })
-                        focusNotify('Break complete')
+                        soundService.playAlert(bSettings.alertSound)
+                        focusNotify('Break over — back to focus')
+                        await get().resumeSession()
                     }
                     return // EXIT early
                 }
@@ -720,6 +726,7 @@ export const useFocusStore = create<FocusState>()(
                         set({ pomodoroRemaining: 0 }) // Sync update
 
                         // Trigger Break (auto ⇒ advances long-break cadence)
+                        soundService.playAlert(useSettingsStore.getState().alertSound)
                         focusNotify('Session complete — take a break')
                         get().startBreak(undefined, { auto: true })
                         return // EXIT to avoid double-process
@@ -733,6 +740,18 @@ export const useFocusStore = create<FocusState>()(
 
                 // ALERTS
                 const settings = useSettingsStore.getState()
+
+                // TIME'S UP — the task countdown just crossed its goal. Fire a sound +
+                // reminder ONCE per crossing instead of silently slipping into overtime.
+                if (shouldFireOvertimeAlert(total, s.duration, s.overtimeAlerted)) {
+                    soundService.playAlert(settings.alertSound)
+                    focusNotify("Time's up — you're now in overtime")
+                    set({ overtimeAlerted: true })
+                } else if (s.duration > 0 && total < s.duration && s.overtimeAlerted) {
+                    // Countdown was extended back under the goal — re-arm the alert.
+                    set({ overtimeAlerted: false })
+                }
+
                 if (settings.timedAlertsEnabled) {
                     const currentElapsed = s.elapsed + delta
                     const intervalSeconds = settings.alertInterval * 60
@@ -773,6 +792,7 @@ export const useFocusStore = create<FocusState>()(
                     pomodoroRemaining: 0,
                     breakRemaining: 0,
                     lastTickTime: null,
+                    overtimeAlerted: false,
                     showCelebration: false,
                     celebratedTask: null,
                     celebratedDuration: 0
