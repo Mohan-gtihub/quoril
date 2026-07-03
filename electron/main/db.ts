@@ -507,6 +507,89 @@ export const dbOps = {
             WHERE start_time >= ? AND start_time <= ?
         `, [startDate, endDate]) as any[])?.[0] ?? {}
 
+        // 9. Deep-work blocks per day (sessions >= 25 min uninterrupted)
+        const deepWorkByDay = (exec(`
+            SELECT
+                strftime('%Y-%m-%d', start_time)    AS day,
+                COALESCE(SUM(seconds), 0)           AS deepSeconds,
+                COUNT(*)                            AS blockCount
+            FROM focus_sessions
+            WHERE user_id = ?
+              AND type != 'break'
+              AND seconds >= 1500
+              AND start_time >= ? AND start_time <= ?
+            GROUP BY day
+            ORDER BY day ASC
+        `, [userId, startDate, endDate]) as any[]) ?? []
+
+        // 10. Peak productivity hours — focus seconds by hour-of-day (local)
+        const peakHours = (exec(`
+            SELECT
+                CAST(strftime('%H', start_time, 'localtime') AS INTEGER) AS hour,
+                COALESCE(SUM(seconds), 0)           AS focusSeconds
+            FROM focus_sessions
+            WHERE user_id = ?
+              AND type != 'break'
+              AND start_time >= ? AND start_time <= ?
+            GROUP BY hour
+            ORDER BY hour ASC
+        `, [userId, startDate, endDate]) as any[]) ?? []
+
+        // 11. Focus time per task (for task<->focus linkage)
+        const taskFocus = (exec(`
+            SELECT
+                fs.task_id                          AS taskId,
+                COALESCE(t.title, 'Untitled')       AS title,
+                COALESCE(t.status, 'unknown')       AS status,
+                COALESCE(SUM(fs.seconds), 0)        AS focusSeconds
+            FROM focus_sessions fs
+            LEFT JOIN tasks t ON t.id = fs.task_id
+            WHERE fs.user_id = ?
+              AND fs.type != 'break'
+              AND fs.task_id IS NOT NULL
+              AND fs.start_time >= ? AND fs.start_time <= ?
+            GROUP BY fs.task_id
+            ORDER BY focusSeconds DESC
+            LIMIT 30
+        `, [userId, startDate, endDate]) as any[]) ?? []
+
+        // 12. Raw focus windows in range (for distraction-during-focus overlap, computed in JS)
+        const focusWindows = (exec(`
+            SELECT start_time AS start, end_time AS end
+            FROM focus_sessions
+            WHERE user_id = ?
+              AND type != 'break'
+              AND end_time IS NOT NULL
+              AND start_time >= ? AND start_time <= ?
+        `, [userId, startDate, endDate]) as any[]) ?? []
+
+        // 13. Distracting app sessions in range (desktop only; empty on web)
+        const distractingSessions = (exec(`
+            SELECT s.start_time AS start, s.end_time AS end,
+                   COALESCE(a.category, 'Other') AS category
+            FROM app_sessions s
+            LEFT JOIN apps a ON s.app_id = a.id
+            WHERE s.end_time IS NOT NULL
+              AND s.start_time >= ? AND s.start_time <= ?
+              AND COALESCE(a.category, 'Other') IN ('Social', 'Entertainment', 'Gaming', 'News')
+        `, [startDate, endDate]) as any[]) ?? []
+
+        // 14. Planned vs actual — tasks due today vs completed
+        const plannedToday = (exec(`
+            SELECT
+                COALESCE(SUM(CASE WHEN date(due_at,'localtime') = date('now','localtime') THEN 1 ELSE 0 END), 0) AS dueToday,
+                COALESCE(SUM(CASE WHEN date(due_at,'localtime') = date('now','localtime') AND status='done' THEN 1 ELSE 0 END), 0) AS completedOfDue
+            FROM tasks
+            WHERE user_id = ? AND deleted_at IS NULL AND due_at IS NOT NULL
+        `, [userId]) as any[])?.[0] ?? { dueToday: 0, completedOfDue: 0 }
+
+        // 15. Does any app-tracking data exist in range? (drives adaptive UI)
+        const appDataRow = (exec(`
+            SELECT COUNT(*) AS n FROM app_sessions
+            WHERE start_time >= ? AND start_time <= ?
+        `, [startDate, endDate]) as any[])?.[0] ?? { n: 0 }
+        const hasAppData = (appDataRow.n ?? 0) > 0
+
         return {
             focusSummary,
             weeklyTrend,
@@ -516,6 +599,13 @@ export const dbOps = {
             workspaceStats,
             productiveAppSeconds,
             allAppSeconds,
+            deepWorkByDay,
+            peakHours,
+            taskFocus,
+            focusWindows,
+            distractingSessions,
+            plannedToday,
+            hasAppData,
         }
     },
 
