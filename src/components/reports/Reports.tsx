@@ -9,6 +9,7 @@ import { useReportsData, getLast7DaysRange } from './hooks/useReportsData'
 import { DateRangePicker, type DateRange } from './components/ReportsDatePicker'
 import { FocusTrendChart } from './components/charts/FocusTrendChart'
 import { PeakHoursChart } from './components/charts/PeakHoursChart'
+import { DonutChart } from './components/charts/DonutChart'
 
 /* ─── Helpers ───────────────────────────────────────────────── */
 
@@ -31,6 +32,9 @@ const C = {
     error: 'var(--error)',      // distraction / scattered / idle
     ink: 'var(--text-tertiary)',
 }
+
+// Categorical palette for donut slices (distinct hues, not semantic).
+const CAT_PALETTE = ['var(--focus)', 'var(--wellbeing)', 'var(--break)', '#8b5cf6', 'var(--error)', 'var(--text-tertiary)']
 
 /* ─── Primitives ────────────────────────────────────────────── */
 
@@ -465,29 +469,48 @@ export function Reports() {
                             <>
                                 <SectionLabel>Screen activity</SectionLabel>
                                 <div className="columns-1 lg:columns-2 gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
-                                    {/* Top apps */}
+                                    {/* Top apps — ranked, iconographic */}
                                     <Card title="Top Apps" icon={AppWindow} accent={C.focus} hint="active time">
                                         {topApps.length === 0
                                             ? <EmptyState msg="Screen time is tracked while the app is running" />
-                                            : <div className="space-y-3">
+                                            : <div className="space-y-3.5">
                                                 {topApps.slice(0, 6).map((app, i) => (
-                                                    <Bar key={i} label={app.appName} value={app.activeSeconds}
-                                                        max={topApps[0]?.activeSeconds ?? 1} color={C.focus}
-                                                        sub={fmt(app.activeSeconds)} />
+                                                    <div key={i} className="flex items-center gap-3">
+                                                        <span className="w-4 text-[11px] font-semibold tabular-nums text-[var(--text-muted)] text-right shrink-0">{i + 1}</span>
+                                                        <span className="w-7 h-7 rounded-lg flex items-center justify-center text-[12px] font-semibold shrink-0"
+                                                            style={{ background: `color-mix(in srgb, ${C.focus} 12%, transparent)`, color: C.focus }}>
+                                                            {app.appName.charAt(0).toUpperCase()}
+                                                        </span>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex justify-between text-[11px] mb-1 gap-2">
+                                                                <span className="truncate text-[var(--text-secondary)] font-medium">{app.appName}</span>
+                                                                <span className="tabular-nums text-[var(--text-muted)] shrink-0">{fmt(app.activeSeconds)}</span>
+                                                            </div>
+                                                            <div className="h-1.5 bg-[var(--track)] rounded-full overflow-hidden">
+                                                                <motion.div className="h-full rounded-full"
+                                                                    initial={{ width: 0 }} animate={{ width: `${pct(app.activeSeconds, topApps[0]?.activeSeconds ?? 1)}%` }}
+                                                                    transition={{ duration: 0.7, ease: 'easeOut' }}
+                                                                    style={{ background: C.focus }} />
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 ))}
                                             </div>
                                         }
                                     </Card>
 
-                                    {/* Category breakdown */}
+                                    {/* Category breakdown — donut */}
                                     {categoryBreakdown.length > 0 && (
                                         <Card title="By Category" icon={Layers} accent={C.well}>
-                                            <div className="space-y-3">
-                                                {categoryBreakdown.slice(0, 6).map(c => (
-                                                    <Bar key={c.category} label={c.category} value={c.seconds}
-                                                        max={categoryBreakdown[0]?.seconds ?? 1} color={C.well} sub={fmt(c.seconds)} />
-                                                ))}
-                                            </div>
+                                            <DonutChart
+                                                centerValue={fmt(categoryBreakdown.reduce((s, c) => s + c.seconds, 0))}
+                                                centerSub="active"
+                                                data={categoryBreakdown.slice(0, 6).map((c, i) => ({
+                                                    name: c.category,
+                                                    value: c.seconds,
+                                                    color: CAT_PALETTE[i % CAT_PALETTE.length],
+                                                    label: fmt(c.seconds),
+                                                }))} />
                                         </Card>
                                     )}
 
