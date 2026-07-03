@@ -12,6 +12,7 @@ import {
 } from '@/utils/securityUtils'
 import { SECURITY_CONFIG } from '@/config/security'
 import { platform } from '@/services/platform'
+import { rolesOf, tierOf, type AppRole, type SubscriptionTier } from '@/utils/permissions'
 
 interface AuthState {
     user: User | null
@@ -20,6 +21,11 @@ interface AuthState {
     initialized: boolean
     lastActivity: number
     sessionFingerprint: string | null
+
+    // Roles & entitlements, decoded from the session JWT (via the Supabase
+    // custom_access_token_hook). Kept in sync wherever the session is set.
+    roles: AppRole[]
+    tier: SubscriptionTier
 
     // Actions
     initialize: () => Promise<void>
@@ -37,6 +43,14 @@ interface AuthState {
 let sessionTimeoutInterval: NodeJS.Timeout | null = null
 let activityCheckInterval: NodeJS.Timeout | null = null
 
+// Derive the role/tier fields from a SESSION so every session-setting path
+// stays consistent. The custom_access_token_hook injects roles/tier into the
+// access token (JWT), not user.app_metadata, so we must decode the session's
+// token — rolesOf/tierOf handle that when given a session.
+function claimsOf(session: Session | null) {
+    return { roles: rolesOf(session), tier: tierOf(session) }
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
     user: null,
     session: null,
@@ -44,6 +58,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     initialized: false,
     lastActivity: Date.now(),
     sessionFingerprint: null,
+    roles: [],
+    tier: 'free',
 
     initialize: async () => {
         const state = get()
@@ -80,6 +96,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 set({
                     session,
                     user: session.user,
+                    ...claimsOf(session),
                     initialized: true,
                     loading: false,
                     lastActivity: Date.now(),
@@ -91,6 +108,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 set({
                     session: null,
                     user: null,
+                    roles: [],
+                    tier: 'free',
                     initialized: true,
                     loading: false,
                 })
@@ -104,6 +123,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     set({
                         session,
                         user: session.user,
+                        ...claimsOf(session),
                         loading: false,
                         lastActivity: Date.now(),
                     })
@@ -114,12 +134,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     set({
                         session: null,
                         user: null,
+                        roles: [],
+                        tier: 'free',
                         loading: false,
                     })
                 } else if (event === 'TOKEN_REFRESHED' && session) {
-                    // Update session on token refresh
+                    // Update session on token refresh — re-read claims in case
+                    // roles/tier changed since the last token was minted.
                     set({
                         session,
+                        user: session.user,
+                        ...claimsOf(session),
                         lastActivity: Date.now(),
                     })
                 }
@@ -177,6 +202,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({
                 session: data.session,
                 user: data.user,
+                ...claimsOf(data.session),
                 loading: false,
                 lastActivity: Date.now(),
             })
@@ -242,6 +268,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 set({
                     session: data.session,
                     user: data.user,
+                    ...claimsOf(data.session),
                     loading: false,
                     lastActivity: Date.now(),
                 })
@@ -348,6 +375,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({
                 user: null,
                 session: null,
+                roles: [],
+                tier: 'free',
                 loading: false,
                 lastActivity: 0,
             })
@@ -391,8 +420,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
     },
 
+    // setUser has no access token, so it can't refresh claims — it only updates
+    // the user object. Claims are derived from the session (setSession / auth
+    // events), which is where the JWT with roles/tier lives.
     setUser: (user) => set({ user }),
-    setSession: (session) => set({ session }),
+    setSession: (session) =>
+        set({ session, user: session?.user ?? null, ...claimsOf(session ?? null) }),
 }))
 
 // ==================== SESSION MONITORING ====================

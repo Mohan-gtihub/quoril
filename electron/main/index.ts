@@ -18,6 +18,7 @@ import { fileURLToPath } from 'url'
 import { initDatabase, dbOps } from './db'
 import { trackingEngine } from './core/core'
 import { registerCanvasIpc } from './canvas/ipc'
+import { initAutoUpdate } from './updater'
 
 /* ---------------- PATH ---------------- */
 
@@ -371,16 +372,30 @@ function createPillWindow() {
         pillWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
     }
 
-    pillWindow.once('ready-to-show', () => pillWindow?.showInactive())
+    // Reveal the pill AND hand off from the main window in one place, so the main
+    // window is never hidden before the pill is actually on screen. On Windows a
+    // transparent/frameless window's 'ready-to-show' can be unreliable, so a
+    // timeout fallback force-shows the pill — otherwise the main window hides,
+    // the pill never appears, and the app looks like it shut down.
+    let handedOff = false
+    const revealPill = () => {
+        if (handedOff || !pillWindow || pillWindow.isDestroyed()) return
+        handedOff = true
+        pillWindow.showInactive()
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide()
+    }
+    pillWindow.once('ready-to-show', revealPill)
+    setTimeout(revealPill, 1500)
     pillWindow.on('closed', () => { pillWindow = null })
 
     return pillWindow
 }
 
 function enterPill() {
+    // createPillWindow reveals the pill and hides the main window together once
+    // the pill is on screen (see revealPill), so we never end up with no visible
+    // window if the pill is slow to paint.
     createPillWindow()
-    // Hide the full app so only the pill is visible while focusing.
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide()
 }
 
 function exitPill() {
@@ -591,6 +606,21 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
     ipcMain.handle('notification:show', (_, { title, body }: { title: string; body: string }) => {
         if (Notification.isSupported()) {
             new Notification({ title, body }).show()
+        }
+    })
+
+    // Capture the sender's own window for the alpha feedback widget. Returns a
+    // PNG data URL, or null if the window is gone. Runs in main because the
+    // renderer can't screenshot the native window contents itself.
+    ipcMain.handle('feedback:capture', async (event) => {
+        try {
+            const win = BrowserWindow.fromWebContents(event.sender)
+            if (!win || win.isDestroyed()) return null
+            const image = await win.webContents.capturePage()
+            return image.isEmpty() ? null : image.toDataURL()
+        } catch (err) {
+            console.error('[feedback:capture] failed', err)
+            return null
         }
     })
 
@@ -912,6 +942,9 @@ app.whenReady().then(async () => {
     createWindow()
     createTray()
     setupIPC()
+
+    // Silent background auto-update (check → download → prompt to restart).
+    initAutoUpdate()
 
     // Start app tracking engine. It runs without any OS permission — on macOS via
     // the permission-free lsappinfo source, on Windows/Linux via active-win.

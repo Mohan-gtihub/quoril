@@ -8,7 +8,8 @@ import {
     format,
     isToday,
     startOfMonth,
-    isAfter
+    isAfter,
+    addDays
 } from 'date-fns'
 import { Tooltip } from 'react-tooltip'
 import { useFocusStore } from '@/store/focusStore'
@@ -46,10 +47,10 @@ export function ActivityHeatmap() {
         return map
     }, [sessions, isActive, startTime, sessionType])
 
-    // 2. Generate date grid for the last 6 months (aligned to week start/end)
+    // 2. Generate date grid for the last 4 months (aligned to week start/end)
     const { days } = useMemo(() => {
         const endDate = endOfWeek(new Date())
-        const startDate = startOfWeek(subMonths(endDate, 6))
+        const startDate = startOfWeek(subMonths(endDate, 4))
 
         const allDays = eachDayOfInterval({ start: startDate, end: endDate })
 
@@ -123,6 +124,26 @@ export function ActivityHeatmap() {
             bestMinsStr: bestDay.date ? fmtHrs(bestDay.mins) : '—',
         }
     }, [activityMap])
+
+    // Duolingo-style current-week strip (Mon→Sun) with per-day focus state.
+    const weekDays = useMemo(() => {
+        const start = startOfWeek(new Date(), { weekStartsOn: 1 })
+        return Array.from({ length: 7 }, (_, i) => {
+            const d = addDays(start, i)
+            const key = format(d, 'yyyy-MM-dd')
+            const mins = activityMap[key] || 0
+            return {
+                key,
+                label: format(d, 'EEEEE'), // single-letter weekday
+                mins,
+                active: mins > 0,
+                today: isToday(d),
+                future: d > new Date(),
+            }
+        })
+    }, [activityMap])
+
+    const weekActiveCount = weekDays.filter(d => d.active).length
 
     // Open the share dialog and mint a public link (uploads a snapshot to Supabase).
     const openShare = async () => {
@@ -209,7 +230,7 @@ export function ActivityHeatmap() {
     return (
       <div className="flex flex-col lg:flex-row gap-4 w-full items-stretch animate-in fade-in duration-500">
         <div ref={heatmapCardRef} className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] shadow-[var(--shadow-soft)] p-5 flex-1 min-w-0 flex flex-col relative overflow-hidden">
-            <div className="flex items-start justify-between mb-8 gap-4">
+            <div className="flex items-start justify-between mb-5 gap-4">
                 <div>
                     <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">Focus map</h2>
                     <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Daily deep work</p>
@@ -231,47 +252,89 @@ export function ActivityHeatmap() {
             </div>
 
             {/* Heatmap Grid */}
-            <div className="flex flex-col w-full">
-                <div className="flex items-stretch mb-4">
+            <div className="flex-1 flex flex-col w-full">
+                <div className="flex items-start mb-4 overflow-x-auto custom-scrollbar pb-1">
                     {/* Day Labels (Y-axis) */}
-                    <div className="flex flex-col gap-[3px] pr-2 text-[10px] font-bold text-[var(--text-muted)] text-right opacity-60">
+                    <div className="flex flex-col gap-[3px] pr-2 shrink-0 text-[9px] font-bold text-[var(--text-muted)] text-right opacity-60">
                         {['', 'Mon', '', 'Wed', '', 'Fri', ''].map((label, i) => (
-                            <div key={i} className="flex-1 flex items-center justify-end leading-none">{label}</div>
+                            <div key={i} className="h-[13px] flex items-center justify-end leading-none">{label}</div>
                         ))}
                     </div>
 
-                    {/* Grid — columns flex to fill the full width, cells stay square */}
-                    <div className="flex-1 min-w-0">
-                        <div className="flex gap-[3px] w-full">
-                            {days.map((week, wIdx) => (
-                                <div key={wIdx} className="flex flex-1 flex-col gap-[3px]">
-                                    {week.map((day, dIdx) => {
-                                        const dateStr = format(day, 'yyyy-MM-dd')
-                                        const mins = activityMap[dateStr] || 0
-                                        const isFuture = day > new Date()
-                                        const today = isToday(day)
+                    {/* Grid — compact fixed-size cells (GitHub style), scrolls if narrow */}
+                    <div className="flex gap-[3px] mx-auto">
+                        {days.map((week, wIdx) => (
+                            <div key={wIdx} className="flex flex-col gap-[3px]">
+                                {week.map((day, dIdx) => {
+                                    const dateStr = format(day, 'yyyy-MM-dd')
+                                    const mins = activityMap[dateStr] || 0
+                                    const isFuture = day > new Date()
+                                    const today = isToday(day)
 
-                                        return (
-                                            <div
-                                                key={dIdx}
-                                                data-tooltip-id="heatmap-tooltip"
-                                                data-tooltip-content={isFuture ? undefined : `${format(day, 'MMM do, yyyy')}: ${Math.round(mins)} mins`}
-                                                className={cn(
-                                                    "w-full aspect-square rounded-[2px] transition-all duration-300",
-                                                    isFuture ? "opacity-10 bg-[var(--text-muted)]" : "cursor-crosshair hover:scale-125 z-0 hover:z-10",
-                                                    !isFuture && getColorClass(mins),
-                                                    today && "ring-1 ring-[var(--text-primary)] ring-offset-1 ring-offset-[var(--bg-card)] !opacity-100"
-                                                )}
-                                            />
-                                        )
-                                    })}
-                                </div>
-                            ))}
-                        </div>
+                                    return (
+                                        <div
+                                            key={dIdx}
+                                            data-tooltip-id="heatmap-tooltip"
+                                            data-tooltip-content={isFuture ? undefined : `${format(day, 'MMM do, yyyy')}: ${Math.round(mins)} mins`}
+                                            className={cn(
+                                                "w-[13px] h-[13px] rounded-[3px] transition-all duration-300",
+                                                isFuture ? "opacity-10 bg-[var(--text-muted)]" : "cursor-crosshair hover:scale-125 z-0 hover:z-10",
+                                                !isFuture && getColorClass(mins),
+                                                today && "ring-1 ring-[var(--text-primary)] ring-offset-1 ring-offset-[var(--bg-card)] !opacity-100"
+                                            )}
+                                        />
+                                    )
+                                })}
+                            </div>
+                        ))}
                     </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-1.5 mt-2 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider pt-3 border-t border-[var(--border-default)]">
+                {/* Duolingo-style weekly streak strip — fills the card body */}
+                <div className="flex-1 flex flex-col justify-center gap-3 py-4 border-t border-[var(--border-default)] mt-1">
+                    <div className="flex items-center justify-between gap-3">
+                        <span className="flex items-center gap-1.5 text-[13px] font-semibold text-[var(--text-primary)]">
+                            <Flame size={15} className="text-[var(--break)]" />
+                            {stats.streak > 0 ? `${stats.streak}-day streak` : 'Start your streak'}
+                        </span>
+                        <span className="text-[11px] font-medium text-[var(--text-tertiary)] tabular-nums">
+                            {weekActiveCount}/7 days this week
+                        </span>
+                    </div>
+
+                    <div className="relative flex items-start justify-between">
+                        {/* connecting track behind the day dots */}
+                        <div className="absolute left-[7%] right-[7%] top-[18px] h-[3px] rounded-full bg-[var(--bg-tertiary)]" />
+                        {weekDays.map(day => (
+                            <div key={day.key} className="relative flex flex-col items-center gap-1.5 z-10">
+                                <div
+                                    className={cn(
+                                        'w-9 h-9 rounded-full flex items-center justify-center transition-all',
+                                        day.active
+                                            ? 'bg-[var(--break)] text-white shadow-[0_2px_8px_-1px_var(--break)]'
+                                            : day.future
+                                                ? 'bg-[var(--bg-tertiary)] opacity-40'
+                                                : 'bg-[var(--bg-tertiary)] border border-dashed border-[var(--border-hover)]',
+                                        day.today && !day.active && 'ring-2 ring-[var(--break)] ring-offset-2 ring-offset-[var(--bg-card)]'
+                                    )}
+                                >
+                                    {day.active && <Flame size={16} className="fill-current" />}
+                                    {!day.active && !day.future && (
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)]" />
+                                    )}
+                                </div>
+                                <span className={cn(
+                                    'text-[10px] font-bold uppercase',
+                                    day.today ? 'text-[var(--break)]' : 'text-[var(--text-muted)]'
+                                )}>
+                                    {day.label}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-1.5 mt-auto text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider pt-3 border-t border-[var(--border-default)]">
                     <span className="mr-1">Less</span>
                     <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--gh-l0)]" />
                     <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--gh-l1)]" />
@@ -289,37 +352,45 @@ export function ActivityHeatmap() {
             />
         </div>
 
-        {/* Streak card */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] shadow-[var(--shadow-soft)] p-4 w-full lg:w-[220px] shrink-0 flex flex-col relative overflow-hidden">
-            {/* Hero streak */}
-            <div className="relative flex flex-col items-center justify-center text-center py-2 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-[var(--accent-primary)]/12 to-transparent pointer-events-none" />
-                <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-[var(--accent-primary)]/15 mb-2">
-                    <Flame size={18} className="text-[var(--accent-primary)]" />
+        {/* Streak card — balanced vertical rhythm so there's no dead space */}
+        <div className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] shadow-[var(--shadow-soft)] p-5 w-full lg:w-[228px] shrink-0 flex flex-col relative overflow-hidden">
+            {/* soft ambient wash behind the hero */}
+            <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[var(--accent-primary)]/[0.10] to-transparent pointer-events-none" />
+
+            {/* Hero streak — centered, given room to breathe */}
+            <div className="relative flex flex-1 flex-col items-center justify-center text-center">
+                <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-[var(--accent-primary)]/12 mb-4">
+                    <Flame size={24} className="text-[var(--accent-primary)]" />
                 </div>
-                <div className="relative flex items-baseline gap-1">
-                    <span className="text-[32px] font-extrabold leading-none tabular-nums text-[var(--text-primary)]">{stats.streak}</span>
-                    <span className="text-[13px] font-bold text-[var(--text-muted)]">{stats.streak === 1 ? 'day' : 'days'}</span>
+                <div className="flex items-baseline gap-1.5">
+                    <span className="text-[44px] font-extrabold leading-none tabular-nums text-[var(--text-primary)]">{stats.streak}</span>
+                    <span className="text-[15px] font-bold text-[var(--text-muted)]">{stats.streak === 1 ? 'day' : 'days'}</span>
                 </div>
-                <span className="relative mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Current streak</span>
+                <span className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Current streak</span>
+
+                <p className="mt-3 text-[12px] leading-relaxed text-[var(--text-tertiary)] max-w-[170px]">
+                    {stats.streak > 0
+                        ? 'Keep it going — focus today to extend your streak.'
+                        : 'Start a focus session today to begin your streak.'}
+                </p>
             </div>
 
             {/* Sub-stats */}
-            <div className="grid grid-cols-2 mt-3 border-y border-[var(--border-default)] divide-x divide-[var(--border-default)]">
-                <div className="flex flex-col items-center justify-center py-2.5 gap-0.5">
-                    <span className="text-[15px] font-bold tabular-nums text-[var(--text-primary)] leading-none">{stats.activeDays}</span>
-                    <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Active</span>
+            <div className="relative grid grid-cols-2 border-y border-[var(--border-default)] divide-x divide-[var(--border-default)]">
+                <div className="flex flex-col items-center justify-center py-3 gap-1">
+                    <span className="text-[17px] font-bold tabular-nums text-[var(--text-primary)] leading-none">{stats.activeDays}</span>
+                    <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Active days</span>
                 </div>
-                <div className="flex flex-col items-center justify-center py-2.5 gap-0.5">
-                    <span className="text-[15px] font-bold tabular-nums text-[var(--text-primary)] leading-none">{stats.totalStr}</span>
-                    <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Total</span>
+                <div className="flex flex-col items-center justify-center py-3 gap-1">
+                    <span className="text-[17px] font-bold tabular-nums text-[var(--text-primary)] leading-none">{stats.totalStr}</span>
+                    <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Total focus</span>
                 </div>
             </div>
 
             {/* Share */}
             <button
                 onClick={openShare}
-                className="mt-auto flex items-center justify-center gap-2 w-full py-2.5 rounded-[12px] bg-[var(--accent-primary)] text-[var(--bg-card)] text-[12px] font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98]"
+                className="relative mt-4 flex items-center justify-center gap-2 w-full py-3 rounded-[14px] bg-[var(--accent-primary)] text-[var(--bg-card)] text-[12px] font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98]"
             >
                 <Share2 size={14} />
                 Share focus map

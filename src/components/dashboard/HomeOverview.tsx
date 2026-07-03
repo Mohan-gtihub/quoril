@@ -139,19 +139,29 @@ export function HomeOverview() {
 
     return (
         <div className="flex-1 overflow-y-auto w-full h-full custom-scrollbar pb-24">
-            <div className="w-full max-w-[1320px] mx-auto px-6 md:px-10 py-8">
+            <div className="w-full max-w-[1320px] mx-auto px-4 sm:px-6 md:px-10 py-6 sm:py-8">
 
-                {/* ── Hero band ── */}
-                <div className="mb-10 flex flex-wrap items-center justify-between gap-5">
-                    <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2.5">
-                            {format(new Date(), 'EEEE, MMMM d')}
-                        </p>
-                        <h1 className="text-[30px] leading-none font-semibold tracking-tight text-[var(--text-primary)] flex items-center gap-2.5">
-                            <span>{getGreeting()}, {name}</span>
-                            <span className="text-[26px] leading-none" aria-hidden>{getGreetingEmoji()}</span>
-                        </h1>
-                        <div className="mt-4 flex items-center gap-4 text-[13px]">
+                {/* ── Glassy hero band ── */}
+                <div className="relative mb-6 sm:mb-8 overflow-hidden rounded-[var(--radius-tile)] glass-regular">
+                    {/* Ambient wash */}
+                    <div
+                        className="pointer-events-none absolute inset-0 opacity-90"
+                        style={{
+                            background:
+                                'radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent-primary) 12%, transparent) 0%, transparent 55%), radial-gradient(120% 140% at 100% 100%, color-mix(in srgb, var(--focus) 10%, transparent) 0%, transparent 55%)',
+                        }}
+                    />
+                    <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-5 sm:p-6 md:p-7">
+                        {/* Greeting + inline stats */}
+                        <div className="min-w-0">
+                            <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+                                {format(new Date(), 'EEEE, MMMM d')}
+                            </p>
+                            <h1 className="text-[26px] sm:text-[30px] leading-none font-semibold tracking-tight text-[var(--text-primary)] flex items-center gap-2.5">
+                                <span className="truncate">{getGreeting()}, {name}</span>
+                                <span className="text-[24px] sm:text-[26px] leading-none shrink-0" aria-hidden>{getGreetingEmoji()}</span>
+                            </h1>
+                            <div className="mt-4 flex flex-wrap items-center gap-3 sm:gap-4 text-[13px]">
                                 <span className="flex items-baseline gap-1.5">
                                     <span className="font-semibold text-[var(--text-primary)] tabular-nums">{stats.active}</span>
                                     <span className="text-[var(--text-tertiary)]">to do</span>
@@ -164,93 +174,38 @@ export function HomeOverview() {
                                 <span className="w-px h-3.5 bg-[var(--border-default)]" />
                                 <span className="flex items-baseline gap-1.5">
                                     <span className={cn('font-semibold tabular-nums', isActive ? 'text-[var(--focus)]' : 'text-[var(--text-primary)]')}>{fmtMin(stats.focusMin)}</span>
-                                <span className="text-[var(--text-tertiary)]">focused</span>
-                            </span>
+                                    <span className="text-[var(--text-tertiary)]">focused</span>
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                    <button
-                        onClick={() => setShowFocusPanel(true)}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-[var(--radius-pill)] font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
-                    >
-                        <Flame size={16} /> Start focus
-                    </button>
-                </div>
 
-                {/* ── Running now (in-flight focus session) ── */}
-                {isActive && runningTask && (() => {
-                    const { wsName, wsColor } = taskMeta(runningTask)
-                    return (
-                        <Panel className="mb-4 flex flex-wrap items-center justify-between gap-5 border-[var(--focus)]/40">
-                            <div className="min-w-0 flex-1">
-                                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--focus)] mb-2 flex items-center gap-1.5">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--focus)] animate-pulse" />
-                                    Running now
-                                </p>
-                                <button onClick={() => openTask(runningTask)} className="block text-left max-w-full">
-                                    <span className="block text-[19px] font-semibold tracking-tight text-[var(--text-primary)] truncate leading-tight">{runningTask.title}</span>
-                                </button>
-                                <div className="mt-2 flex items-center gap-2.5 text-[12.5px] text-[var(--text-tertiary)]">
-                                    <span className="flex items-center gap-1.5">
-                                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: wsColor }} />
-                                        {wsName}
-                                    </span>
-                                    <span className="w-px h-3 bg-[var(--border-default)]" />
-                                    <span className={cn('tabular-nums font-semibold', isOvertime ? 'text-[var(--priority-critical)]' : 'text-[var(--focus)]')}>
-                                        {isOvertime ? '+' : ''}{fmtClock(displayTime)}
-                                    </span>
+                        {/* Progress ring + action */}
+                        <div className="flex items-center gap-4 sm:gap-5 shrink-0">
+                            <div className="flex items-center gap-3 pr-4 sm:pr-5 border-r border-[var(--border-default)]">
+                                <ProgressRing pct={progressPct} live={isActive} />
+                                <div className="leading-tight">
+                                    <p className="text-[20px] font-semibold tabular-nums text-[var(--text-primary)]">
+                                        {stats.doneToday}<span className="text-[var(--text-muted)] text-[14px]">/{totalToday || 0}</span>
+                                    </p>
+                                    <p className="text-[11px] font-medium text-[var(--text-tertiary)]">today's progress</p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setShowFocusPanel(true)}
-                                className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-[var(--focus)] text-[var(--accent-contrast)] rounded-[var(--radius-pill)] font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
+                                className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-[var(--radius-pill)] font-semibold text-sm shadow-[var(--shadow-soft)] hover:opacity-90 active:scale-[0.98] transition-all"
                             >
-                                <Flame size={15} /> View session
+                                <Flame size={16} /> Start focus
                             </button>
-                        </Panel>
-                    )
-                })()}
+                        </div>
+                    </div>
+                </div>
 
-                {/* ── Next task ── */}
-                {featured && (() => {
-                    const { wsName, wsColor } = taskMeta(featured)
-                    const est = featured.estimated_minutes ? fmtMin(featured.estimated_minutes) : null
-                    const pColor = PRIORITY_COLOR[featured.priority] || 'var(--text-muted)'
-                    return (
-                        <Panel className="mb-4 flex flex-wrap items-center justify-between gap-5">
-                            <div className="min-w-0 flex-1">
-                                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Next task</p>
-                                <button onClick={() => openTask(featured)} className="block text-left max-w-full">
-                                    <span className="block text-[19px] font-semibold tracking-tight text-[var(--text-primary)] truncate leading-tight">{featured.title}</span>
-                                </button>
-                                <div className="mt-2 flex items-center gap-2.5 text-[12.5px] text-[var(--text-tertiary)]">
-                                    <span className="flex items-center gap-1.5">
-                                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: wsColor }} />
-                                        {wsName}
-                                    </span>
-                                    {est && (<><span className="w-px h-3 bg-[var(--border-default)]" /><span>{est}</span></>)}
-                                    {(featured.priority === 'critical' || featured.priority === 'high') && (
-                                        <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md" style={{ background: `color-mix(in srgb, ${pColor} 14%, transparent)`, color: pColor }}>
-                                            {featured.priority === 'critical' ? 'Urgent' : 'High'}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => startTask(featured)}
-                                className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-[var(--radius-pill)] font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
-                            >
-                                <Play size={15} /> Start task
-                            </button>
-                        </Panel>
-                    )
-                })()}
+                {/* ── Main bento: Today (left) · focus + workspaces rail (right) ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
 
-                {/* ── Main asymmetric grid ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
-
-                    {/* LEFT: Today */}
-                    <Panel className="p-0 overflow-hidden">
-                        <div className="px-5 py-4 flex items-center justify-between border-b border-[var(--border-default)]">
+                    {/* LEFT: Today — fills two-thirds and stretches to column height */}
+                    <Panel className="lg:col-span-2 p-0 overflow-hidden flex flex-col min-w-0">
+                        <div className="px-5 py-4 flex items-center justify-between border-b border-[var(--border-default)] shrink-0">
                             <div className="flex items-center gap-2.5">
                                 <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">Today</h2>
                                 {stats.active > 0 && (
@@ -266,14 +221,14 @@ export function HomeOverview() {
                         </div>
 
                         {restTasks.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center text-center gap-3 py-20 px-6">
+                            <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 py-16 px-6">
                                 <div className="w-12 h-12 rounded-2xl bg-[var(--bg-tertiary)] flex items-center justify-center">
                                     <CheckCircle2 size={24} className="text-[var(--text-tertiary)]" />
                                 </div>
                                 <p className="text-sm text-[var(--text-tertiary)]">{featured ? "That's your last one — nice." : "You're all clear. Good time for deep work."}</p>
                             </div>
                         ) : (
-                            <ul className="divide-y divide-[var(--border-default)]">
+                            <ul className="flex-1 divide-y divide-[var(--border-default)]">
                                 {restTasks.map(t => {
                                     const urgent = t.priority === 'critical' || t.priority === 'high'
                                     const dueToday = t.due_date && isToday(new Date(t.due_date))
@@ -317,36 +272,82 @@ export function HomeOverview() {
                         )}
                     </Panel>
 
-                    {/* RIGHT rail */}
-                    <div className="space-y-4">
+                    {/* RIGHT rail: running now · next task · workspaces (fills column height) */}
+                    <div className="flex flex-col gap-4 min-w-0">
 
-                        {/* Focus snapshot with progress ring */}
-                        <Panel className="flex items-center gap-4">
-                            <ProgressRing pct={progressPct} live={isActive} />
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Today's progress</p>
-                                <p className="mt-1.5 text-[20px] font-semibold tracking-tight tabular-nums text-[var(--text-primary)] leading-none">
-                                    {stats.doneToday}<span className="text-[var(--text-muted)] text-[15px]">/{totalToday || 0}</span>
-                                    <span className="ml-1.5 text-[12px] font-medium text-[var(--text-tertiary)]">done</span>
-                                </p>
-                            </div>
-                            <div className="shrink-0 flex flex-col items-end gap-1 pl-3 border-l border-[var(--border-default)] self-stretch justify-center">
-                                <span className="flex items-center gap-1.5 text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">
-                                    <Flame size={14} className="text-[var(--break)]" />
-                                    {stats.currentStreak}
-                                </span>
-                                <span className="text-[11px] text-[var(--text-tertiary)]">day streak</span>
-                            </div>
-                        </Panel>
+                        {/* Running now (in-flight focus session) */}
+                        {isActive && runningTask && (() => {
+                            const { wsName, wsColor } = taskMeta(runningTask)
+                            return (
+                                <Panel className="border-[var(--focus)]/40">
+                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--focus)] mb-2 flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--focus)] animate-pulse" />
+                                        Running now
+                                    </p>
+                                    <button onClick={() => openTask(runningTask)} className="block text-left w-full">
+                                        <span className="block text-[17px] font-semibold tracking-tight text-[var(--text-primary)] truncate leading-tight">{runningTask.title}</span>
+                                    </button>
+                                    <div className="mt-2 flex items-center gap-2.5 text-[12.5px] text-[var(--text-tertiary)]">
+                                        <span className="flex items-center gap-1.5 min-w-0">
+                                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: wsColor }} />
+                                            <span className="truncate">{wsName}</span>
+                                        </span>
+                                        <span className="w-px h-3 bg-[var(--border-default)] shrink-0" />
+                                        <span className={cn('tabular-nums font-semibold shrink-0', isOvertime ? 'text-[var(--priority-critical)]' : 'text-[var(--focus)]')}>
+                                            {isOvertime ? '+' : ''}{fmtClock(displayTime)}
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowFocusPanel(true)}
+                                        className="mt-4 w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-[var(--focus)] text-[var(--accent-contrast)] rounded-[var(--radius-pill)] font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
+                                    >
+                                        <Flame size={15} /> View session
+                                    </button>
+                                </Panel>
+                            )
+                        })()}
 
-                        {/* Workspaces */}
+                        {/* Next task */}
+                        {featured && (() => {
+                            const { wsName, wsColor } = taskMeta(featured)
+                            const est = featured.estimated_minutes ? fmtMin(featured.estimated_minutes) : null
+                            const pColor = PRIORITY_COLOR[featured.priority] || 'var(--text-muted)'
+                            return (
+                                <Panel>
+                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Next task</p>
+                                    <button onClick={() => openTask(featured)} className="block text-left w-full">
+                                        <span className="block text-[17px] font-semibold tracking-tight text-[var(--text-primary)] truncate leading-tight">{featured.title}</span>
+                                    </button>
+                                    <div className="mt-2 flex flex-wrap items-center gap-2.5 text-[12.5px] text-[var(--text-tertiary)]">
+                                        <span className="flex items-center gap-1.5 min-w-0">
+                                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: wsColor }} />
+                                            <span className="truncate">{wsName}</span>
+                                        </span>
+                                        {est && (<><span className="w-px h-3 bg-[var(--border-default)]" /><span>{est}</span></>)}
+                                        {(featured.priority === 'critical' || featured.priority === 'high') && (
+                                            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md" style={{ background: `color-mix(in srgb, ${pColor} 14%, transparent)`, color: pColor }}>
+                                                {featured.priority === 'critical' ? 'Urgent' : 'High'}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={() => startTask(featured)}
+                                        className="mt-4 w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-[var(--radius-pill)] font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
+                                    >
+                                        <Play size={15} /> Start task
+                                    </button>
+                                </Panel>
+                            )
+                        })()}
+
+                        {/* Workspaces — grows to fill the remaining rail height */}
                         {workspaces.length > 0 && (
-                            <Panel className="p-0 overflow-hidden">
-                                <div className="px-4 py-3.5 flex items-center justify-between border-b border-[var(--border-default)]">
+                            <Panel className="p-0 overflow-hidden flex-1 flex flex-col">
+                                <div className="px-4 py-3.5 flex items-center justify-between border-b border-[var(--border-default)] shrink-0">
                                     <h2 className="text-[14px] font-semibold text-[var(--text-primary)]">Workspaces</h2>
                                     <span className="text-xs text-[var(--text-tertiary)] tabular-nums">{workspaces.length}</span>
                                 </div>
-                                <div className="divide-y divide-[var(--border-default)]">
+                                <div className="flex-1 flex flex-col divide-y divide-[var(--border-default)]">
                                     {workspaces.map((ws: any) => {
                                         const listIds = new Set(lists.filter(l => l.workspace_id === ws.id).map(l => l.id))
                                         const wsTasks = tasks.filter(t => !t.deleted_at && t.list_id && listIds.has(t.list_id))
@@ -357,7 +358,7 @@ export function HomeOverview() {
                                             <button
                                                 key={ws.id}
                                                 onClick={() => { setActiveWorkspace(ws.id); navigate('/dashboard') }}
-                                                className="group w-full text-left px-4 py-3.5 hover:bg-[var(--bg-hover)] transition-colors"
+                                                className="group flex-1 flex flex-col justify-center w-full text-left px-4 py-3.5 hover:bg-[var(--bg-hover)] transition-colors"
                                             >
                                                 <div className="flex items-center gap-2.5">
                                                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ws.color }} />
@@ -377,7 +378,7 @@ export function HomeOverview() {
                     </div>
                 </div>
 
-                {/* ── Activity heatmap ── */}
+                {/* ── Focus map ── */}
                 <div className="mt-4">
                     <ActivityHeatmap />
                 </div>
@@ -388,7 +389,7 @@ export function HomeOverview() {
 
 function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
-        <div className={`rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-[var(--shadow-soft)] p-5 ${className || ''}`}>
+        <div className={`rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-[var(--shadow-soft)] transition-colors hover:border-[var(--border-hover)] p-5 ${className || ''}`}>
             {children}
         </div>
     )

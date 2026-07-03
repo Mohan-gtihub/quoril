@@ -21,6 +21,9 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { SuperFocusPill } from '@/components/focus/SuperFocusPill'
 import { WorkspacesOverview } from '@/components/workspaces/WorkspacesOverview'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { UpdateNotification } from '@/components/updates/UpdateNotification'
+import { FeedbackWidget } from '@/components/feedback/FeedbackWidget'
+import { isTester } from '@/utils/permissions'
 // Excalidraw is large; load the whiteboard only when its route is opened.
 const CanvasApp = lazy(() => import('@/components/canvas/CanvasApp').then((m) => ({ default: m.CanvasApp })))
 
@@ -35,7 +38,7 @@ import { useListStore } from '@/store/listStore'
 import { supabase } from '@/services/supabase'
 
 function App() {
-    const { initialize, initialized, user } = useAuthStore()
+    const { initialize, initialized, user, session } = useAuthStore()
     const { isActive, isPaused, isBreak } = useFocusStore()
     const settings = useSettingsStore()
 
@@ -359,6 +362,8 @@ function App() {
                                 }}
                             />
                             <ConfirmDialog />
+                            {!settings.superFocusMode && <UpdateNotification />}
+                            {session && !settings.superFocusMode && isTester(session) && <FeedbackWidget />}
                         </div>
                     </div>
                 </HashRouter>

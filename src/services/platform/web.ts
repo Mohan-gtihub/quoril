@@ -63,5 +63,14 @@ export const webPlatform: Platform = {
   notifications: {
     show() { return UNAVAILABLE },
   },
+  updates: {
+    async getStatus() { return { state: 'not-available' as const } },
+    async check() { return { state: 'not-available' as const } },
+    async restartAndInstall() { return false },
+    onStatus() { return UNAVAILABLE },
+  },
+  feedback: {
+    async captureScreen() { return UNAVAILABLE },
+  },
   canvas: webCanvas,
 }

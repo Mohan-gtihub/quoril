@@ -23,6 +23,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
             ipcRenderer.invoke('notification:show', { title, body }),
     },
 
+    // Alpha feedback — screenshot the current window (PNG data URL, or null).
+    feedback: {
+        capture: (): Promise<string | null> => ipcRenderer.invoke('feedback:capture'),
+    },
+
+    // Auto-update (silent background check → download → restart prompt)
+    updates: {
+        getStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:getStatus'),
+        check: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:check'),
+        restartAndInstall: (): Promise<boolean> => ipcRenderer.invoke('update:restartAndInstall'),
+        onStatus: (callback: (status: UpdateStatus) => void) => {
+            const subscription = (_: any, status: UpdateStatus) => callback(status)
+            ipcRenderer.on('update:status', subscription)
+            return () => ipcRenderer.removeListener('update:status', subscription)
+        },
+    },
+
     // Focus pill window lifecycle (separate overlay window)
     pill: {
         enter: () => ipcRenderer.invoke('pill:enter'),
@@ -188,6 +205,17 @@ contextBridge.exposeInMainWorld('electron', {
 })
 
 // Type definitions for TypeScript
+
+// Mirrors UpdateStatus in electron/main/updater.ts.
+export type UpdateStatus =
+    | { state: 'idle' }
+    | { state: 'checking' }
+    | { state: 'not-available' }
+    | { state: 'available'; version: string }
+    | { state: 'downloading'; version: string; percent: number; bytesPerSecond: number; transferred: number; total: number }
+    | { state: 'downloaded'; version: string }
+    | { state: 'error'; message: string }
+
 export interface ElectronAPI {
     window: {
         minimize: () => Promise<void>
@@ -201,6 +229,15 @@ export interface ElectronAPI {
     }
     notification: {
         show: (title: string, body: string) => Promise<void>
+    }
+    feedback: {
+        capture: () => Promise<string | null>
+    }
+    updates: {
+        getStatus: () => Promise<UpdateStatus>
+        check: () => Promise<UpdateStatus>
+        restartAndInstall: () => Promise<boolean>
+        onStatus: (callback: (status: UpdateStatus) => void) => () => void
     }
     focus: {
         started: (data: { duration: number; taskId: string }) => void

@@ -48,7 +48,7 @@ type AuditRow = {
   created_at: string;
 };
 
-type Tab = "overview" | "waitlist" | "visitors" | "blog" | "audit";
+type Tab = "overview" | "waitlist" | "users" | "feedback" | "visitors" | "blog" | "audit";
 
 type Post = {
   id: string;
@@ -145,6 +145,14 @@ function IconDoc({ className = ic }: IconProps) {
       <path d="M6 3h7l5 5v13H6V3z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
       <path d="M13 3v5h5" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
       <path d="M9 13h6M9 16.5h6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+function IconChat({ className = ic }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M4 5h16v11H8l-4 4V5z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M8 9h8M8 12h5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }
@@ -277,6 +285,8 @@ function initials(email: string | null): string {
 const NAV: { id: Tab; label: string; icon: (p: IconProps) => JSX.Element }[] = [
   { id: "overview", label: "Overview", icon: IconOverview },
   { id: "waitlist", label: "Waitlist", icon: IconList },
+  { id: "users", label: "Users", icon: IconUsers },
+  { id: "feedback", label: "Feedback", icon: IconChat },
   { id: "visitors", label: "Visitors", icon: IconUsers },
   { id: "blog", label: "Blog", icon: IconDoc },
   { id: "audit", label: "Audit log", icon: IconShield },
@@ -367,6 +377,8 @@ function Dashboard({
         <main className="flex-1 px-5 py-6 sm:px-8">
           {tab === "overview" && <OverviewTab token={token} />}
           {tab === "waitlist" && <WaitlistTab token={token} />}
+          {tab === "users" && <UsersTab token={token} />}
+          {tab === "feedback" && <FeedbackTab token={token} />}
           {tab === "visitors" && <VisitorsTab token={token} />}
           {tab === "blog" && <BlogTab token={token} />}
           {tab === "audit" && <AuditTab token={token} />}
@@ -1487,5 +1499,492 @@ function AuditTab({ token }: { token: string }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+/* ─────────────────────── Users ─────────────────────── */
+
+type UserRow = {
+  id: string;
+  email: string;
+  created_at: string;
+  last_sign_in_at: string | null;
+  roles: string[];
+  tier: string;
+  sub_status: string;
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Admin",
+  alpha_tester: "Alpha",
+  beta_tester: "Beta",
+  blog_publisher: "Blog",
+  end_user: "User",
+};
+const ASSIGNABLE_ROLES = ["admin", "alpha_tester", "beta_tester", "blog_publisher"];
+const TIER_OPTIONS = ["free", "monthly", "annual", "lifetime"];
+
+function UsersTab({ token }: { token: string }) {
+  const [rows, setRows] = useState<UserRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(q), 300);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setErr("");
+    try {
+      const params = new URLSearchParams();
+      if (debouncedQ) params.set("q", debouncedQ);
+      const res = await authFetch(token, `/api/admin/users?${params}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to load");
+      setRows(data.rows);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  }, [token, debouncedQ]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function patch(userId: string, body: Record<string, unknown>) {
+    setBusy(userId);
+    try {
+      const res = await authFetch(token, "/api/admin/users", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ user_id: userId, ...body }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error ?? "Update failed");
+      }
+      await load();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function toggleRole(u: UserRow, role: string) {
+    const has = u.roles.includes(role);
+    patch(u.id, { action: has ? "revoke_role" : "grant_role", role });
+  }
+
+  const inputCls =
+    "rounded-pill border border-line-strong bg-surface px-4 py-2.5 text-[14px] text-ink outline-none transition focus:border-focus/50 focus:ring-4 focus:ring-focus/10";
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search email…"
+          className={`${inputCls} w-full max-w-[280px]`}
+        />
+        <button
+          onClick={load}
+          className="ml-auto rounded-pill border border-line-strong bg-surface px-4 py-2.5 text-[13px] font-semibold text-ink transition hover:bg-sunken"
+        >
+          Refresh
+        </button>
+      </div>
+
+      <p className="text-[12.5px] text-ink-faint">
+        Alpha &amp; beta testers get full premium access for free until you
+        revoke the role. Roles and subscription tier are independent.
+      </p>
+
+      {err && <ErrorNote msg={err} />}
+
+      {loading ? (
+        <Loading />
+      ) : rows.length === 0 ? (
+        <EmptyState>No users match your search.</EmptyState>
+      ) : (
+        <div className="overflow-x-auto rounded-card border border-line bg-surface shadow-soft">
+          <table className="w-full min-w-[820px] text-left text-[14px]">
+            <thead className="border-b border-line text-[11.5px] uppercase tracking-[0.05em] text-ink-faint">
+              <tr>
+                <th className="px-4 py-3 font-semibold">User</th>
+                <th className="px-4 py-3 font-semibold">Roles</th>
+                <th className="px-4 py-3 font-semibold">Tier</th>
+                <th className="px-4 py-3 font-semibold">Last seen</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((u) => (
+                <tr
+                  key={u.id}
+                  className={`border-b border-line transition last:border-0 hover:bg-sunken/50 ${
+                    busy === u.id ? "opacity-50" : ""
+                  }`}
+                >
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-ink">{u.email}</p>
+                    <p className="text-[12px] text-ink-faint">
+                      Joined {fmtDate(u.created_at)}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1.5">
+                      {ASSIGNABLE_ROLES.map((role) => {
+                        const on = u.roles.includes(role);
+                        return (
+                          <button
+                            key={role}
+                            disabled={busy === u.id}
+                            onClick={() => toggleRole(u, role)}
+                            className={`rounded-pill px-2.5 py-1 text-[12px] font-semibold transition ${
+                              on
+                                ? "bg-ink text-paper"
+                                : "border border-line-strong bg-surface text-ink-faint hover:bg-sunken"
+                            }`}
+                            title={on ? "Click to revoke" : "Click to grant"}
+                          >
+                            {ROLE_LABELS[role]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <select
+                      value={u.tier}
+                      disabled={busy === u.id}
+                      onChange={(e) =>
+                        patch(u.id, { action: "set_tier", tier: e.target.value })
+                      }
+                      className="rounded-pill border border-line-strong bg-paper px-3 py-1.5 text-[13px] text-ink outline-none focus:border-focus/50"
+                    >
+                      {TIER_OPTIONS.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-4 py-3 tabular-nums text-ink-muted">
+                    {u.last_sign_in_at ? fmtDate(u.last_sign_in_at) : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────── Feedback ─────────────────────── */
+
+type FeedbackRow = {
+  id: string;
+  user_email: string | null;
+  type: "bug" | "idea" | "confusing";
+  message: string;
+  route: string | null;
+  app_version: string | null;
+  platform: string | null;
+  os_version: string | null;
+  app_state: Record<string, unknown> | null;
+  console_logs: { level: string; message: string; at: string }[] | null;
+  screenshot_url: string | null;
+  status: "new" | "triaged" | "resolved" | "wontfix";
+  admin_notes: string | null;
+  created_at: string;
+};
+
+const FB_TYPE_META: Record<string, { emoji: string; label: string }> = {
+  bug: { emoji: "🐛", label: "Bug" },
+  idea: { emoji: "💡", label: "Idea" },
+  confusing: { emoji: "😕", label: "Confusing" },
+};
+const FB_STATUSES = ["new", "triaged", "resolved", "wontfix"];
+
+function FeedbackTab({ token }: { token: string }) {
+  const [rows, setRows] = useState<FeedbackRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setErr("");
+    try {
+      const params = new URLSearchParams({ limit: "50" });
+      if (statusFilter) params.set("status", statusFilter);
+      if (typeFilter) params.set("type", typeFilter);
+      const res = await authFetch(token, `/api/admin/feedback?${params}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to load");
+      setRows(data.rows);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  }, [token, statusFilter, typeFilter]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function update(id: string, body: Record<string, unknown>) {
+    const res = await authFetch(token, "/api/admin/feedback", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, ...body }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...data.row } : r)));
+    } else {
+      alert("Update failed.");
+    }
+  }
+
+  async function remove(id: string) {
+    if (!confirm("Delete this report? This cannot be undone.")) return;
+    const res = await authFetch(token, "/api/admin/feedback", {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (res.ok) {
+      setRows((rs) => rs.filter((r) => r.id !== id));
+      if (openId === id) setOpenId(null);
+    } else alert("Delete failed.");
+  }
+
+  const selectCls =
+    "rounded-pill border border-line-strong bg-surface px-3.5 py-2.5 text-[13px] text-ink outline-none focus:border-focus/50";
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className={selectCls}
+        >
+          <option value="">All statuses</option>
+          {FB_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          className={selectCls}
+        >
+          <option value="">All types</option>
+          {Object.entries(FB_TYPE_META).map(([id, m]) => (
+            <option key={id} value={id}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={load}
+          className="ml-auto rounded-pill border border-line-strong bg-surface px-4 py-2.5 text-[13px] font-semibold text-ink transition hover:bg-sunken"
+        >
+          Refresh
+        </button>
+      </div>
+
+      {err && <ErrorNote msg={err} />}
+
+      {loading ? (
+        <Loading />
+      ) : rows.length === 0 ? (
+        <EmptyState>No reports yet.</EmptyState>
+      ) : (
+        <div className="space-y-2.5">
+          {rows.map((r) => {
+            const meta = FB_TYPE_META[r.type];
+            const open = openId === r.id;
+            return (
+              <div
+                key={r.id}
+                className="rounded-card border border-line bg-surface shadow-soft"
+              >
+                <button
+                  onClick={() => setOpenId(open ? null : r.id)}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                >
+                  <span className="text-[18px]">{meta.emoji}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[14px] font-medium text-ink">
+                      {r.message}
+                    </p>
+                    <p className="text-[12px] text-ink-faint">
+                      {r.user_email ?? "unknown"} · {r.route ?? "—"} · v
+                      {r.app_version ?? "?"} · {fmtDate(r.created_at)}
+                    </p>
+                  </div>
+                  <StatusPill status={r.status} />
+                </button>
+
+                {open && (
+                  <div className="border-t border-line px-4 py-4">
+                    <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+                      <div className="space-y-4">
+                        <div>
+                          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-faint">
+                            Message
+                          </p>
+                          <p className="whitespace-pre-wrap text-[14px] text-ink">
+                            {r.message}
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[13px]">
+                          <Meta k="Route" v={r.route} />
+                          <Meta k="Platform" v={r.platform} />
+                          <Meta k="Version" v={r.app_version} />
+                          <Meta k="OS" v={r.os_version} />
+                        </div>
+
+                        {r.app_state && (
+                          <details className="text-[13px]">
+                            <summary className="cursor-pointer font-semibold text-ink-muted">
+                              App state
+                            </summary>
+                            <pre className="mt-2 overflow-x-auto rounded-card bg-sunken p-3 text-[12px] text-ink-muted">
+                              {JSON.stringify(r.app_state, null, 2)}
+                            </pre>
+                          </details>
+                        )}
+
+                        {r.console_logs && r.console_logs.length > 0 && (
+                          <details className="text-[13px]">
+                            <summary className="cursor-pointer font-semibold text-ink-muted">
+                              Recent console ({r.console_logs.length})
+                            </summary>
+                            <pre className="mt-2 max-h-56 overflow-auto rounded-card bg-sunken p-3 text-[12px] text-ink-muted">
+                              {r.console_logs
+                                .map(
+                                  (l) =>
+                                    `[${l.level}] ${l.at.slice(11, 19)} ${l.message}`,
+                                )
+                                .join("\n")}
+                            </pre>
+                          </details>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        {r.screenshot_url ? (
+                          <a href={r.screenshot_url} target="_blank" rel="noreferrer">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={r.screenshot_url}
+                              alt="Screenshot"
+                              className="w-full rounded-card border border-line object-cover"
+                            />
+                          </a>
+                        ) : (
+                          <p className="rounded-card border border-dashed border-line-strong px-3 py-6 text-center text-[12px] text-ink-faint">
+                            No screenshot
+                          </p>
+                        )}
+
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-faint">
+                            Status
+                          </label>
+                          <select
+                            value={r.status}
+                            onChange={(e) =>
+                              update(r.id, { status: e.target.value })
+                            }
+                            className="w-full rounded-card border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink outline-none focus:border-focus/50"
+                          >
+                            {FB_STATUSES.map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-faint">
+                            Internal notes
+                          </label>
+                          <textarea
+                            defaultValue={r.admin_notes ?? ""}
+                            rows={3}
+                            onBlur={(e) => {
+                              if (e.target.value !== (r.admin_notes ?? ""))
+                                update(r.id, { admin_notes: e.target.value });
+                            }}
+                            placeholder="Triage notes… (saved on blur)"
+                            className="w-full resize-y rounded-card border border-line-strong bg-paper px-3 py-2 text-[13px] text-ink outline-none focus:border-focus/50"
+                          />
+                        </div>
+
+                        <button
+                          onClick={() => remove(r.id)}
+                          className="text-[13px] font-semibold text-ink-faint transition hover:text-state-error"
+                        >
+                          Delete report
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Meta({ k, v }: { k: string; v: string | null }) {
+  return (
+    <div>
+      <span className="text-ink-faint">{k}: </span>
+      <span className="text-ink">{v ?? "—"}</span>
+    </div>
+  );
+}
+
+function StatusPill({ status }: { status: string }) {
+  const cls =
+    status === "resolved"
+      ? "bg-wellbeing/12 text-wellbeing"
+      : status === "new"
+        ? "bg-focus/10 text-focus"
+        : status === "wontfix"
+          ? "bg-state-error/8 text-state-error"
+          : "bg-sunken text-ink-muted";
+  return (
+    <span
+      className={`shrink-0 rounded-pill px-2.5 py-1 text-[12px] font-semibold ${cls}`}
+    >
+      {status}
+    </span>
   );
 }

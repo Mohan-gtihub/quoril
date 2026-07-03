@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
     ArrowLeft, Play, Check, Palette, Timer, Target,
-    Maximize2, Bell, Send, ShieldCheck, CheckCircle2, Plus, Minus
+    Maximize2, Bell, Send, ShieldCheck, CheckCircle2, Plus, Minus,
+    RefreshCw, Download, RotateCw
 } from 'lucide-react'
+import { useAppUpdate } from '@/hooks/useAppUpdate'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useFocusStore } from '@/store/focusStore'
@@ -191,6 +193,7 @@ const SECTIONS = [
     { id: 'notifications', label: 'Notifications', icon: Send, desc: 'System notifications and sounds for timers and tasks.' },
     { id: 'superfocus', label: 'Super Focus', icon: Maximize2, desc: 'Collapse the app to a minimal floating pill.' },
     { id: 'about', label: 'App Tracking', icon: ShieldCheck, desc: 'How Quoril records the apps you use.' },
+    { id: 'updates', label: 'Updates', icon: RefreshCw, desc: 'How Quoril keeps itself up to date.' },
 ] as const
 
 type SectionId = typeof SECTIONS[number]['id']
@@ -202,6 +205,9 @@ export function Settings() {
     const settings = useSettingsStore()
     const [active, setActive] = useState<SectionId>('appearance')
     const [platform, setPlatform] = useState<string>('')
+    const { status: updateStatus, check: checkForUpdate, restart: restartToUpdate } = useAppUpdate()
+    // Only electron ships an auto-updater; the web build exposes 'not-available'.
+    const isDesktop = !!window.electronAPI
 
     useEffect(() => {
         window.electronAPI?.app?.getPlatform?.().then(setPlatform)
@@ -222,8 +228,12 @@ export function Settings() {
         }
     }
 
-    // macOS-only section is hidden elsewhere; drop it from the rail on other OSes.
-    const sections = SECTIONS.filter(s => s.id !== 'about' || platform === 'darwin')
+    // macOS-only section is hidden elsewhere; Updates is desktop-only.
+    const sections = SECTIONS.filter(s => {
+        if (s.id === 'about') return platform === 'darwin'
+        if (s.id === 'updates') return isDesktop
+        return true
+    })
     const activeSection = sections.find(s => s.id === active) ?? sections[0]
 
     return (
@@ -507,6 +517,61 @@ export function Settings() {
                                                     Window titles and website detection aren’t available on macOS.
                                                 </p>
                                             </div>
+                                        </div>
+                                    </Group>
+                                )}
+
+                                {activeSection.id === 'updates' && (
+                                    <Group title="Automatic updates">
+                                        <div className="py-5 border-b border-[var(--border-default)] last:border-0">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-semibold text-[var(--text-primary)]">
+                                                        {(() => {
+                                                            switch (updateStatus.state) {
+                                                                case 'checking': return 'Checking for updates…'
+                                                                case 'available': return 'Update found — preparing download…'
+                                                                case 'downloading': return `Downloading update… ${updateStatus.percent}%`
+                                                                case 'downloaded': return 'Update ready to install'
+                                                                case 'error': return 'Could not check for updates'
+                                                                default: return 'Quoril is up to date'
+                                                            }
+                                                        })()}
+                                                    </p>
+                                                    <p className="text-xs text-[var(--text-tertiary)] mt-0.5 leading-relaxed max-w-md">
+                                                        Quoril checks for updates automatically and downloads them in the
+                                                        background. You’ll be asked to restart once an update is ready.
+                                                    </p>
+                                                </div>
+                                                {updateStatus.state === 'downloaded' ? (
+                                                    <button
+                                                        onClick={() => restartToUpdate()}
+                                                        className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[var(--radius-card)] text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:opacity-90 transition-opacity"
+                                                    >
+                                                        <RotateCw className="w-3.5 h-3.5" />
+                                                        Restart Now
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => checkForUpdate()}
+                                                        disabled={updateStatus.state === 'checking' || updateStatus.state === 'downloading'}
+                                                        className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[var(--radius-card)] text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-secondary)] border border-[var(--border-default)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                                    >
+                                                        {updateStatus.state === 'downloading'
+                                                            ? <Download className="w-3.5 h-3.5" />
+                                                            : <RefreshCw className={cn('w-3.5 h-3.5', updateStatus.state === 'checking' && 'animate-spin')} />}
+                                                        Check for updates
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {(updateStatus.state === 'downloading' || updateStatus.state === 'downloaded') && (
+                                                <div className="h-1.5 w-full rounded-full bg-[var(--bg-tertiary)] overflow-hidden mt-4">
+                                                    <div
+                                                        className="h-full rounded-full bg-[var(--accent-primary)] transition-[width] duration-300 ease-out"
+                                                        style={{ width: `${updateStatus.state === 'downloading' ? updateStatus.percent : 100}%` }}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     </Group>
                                 )}

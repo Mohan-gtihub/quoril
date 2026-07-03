@@ -5,6 +5,7 @@
 // provides a structurally-correct impl that compiles and passes the selector test.
 
 import type { Platform } from './types'
+import { UNAVAILABLE } from './types'
 
 const api = () => (window as any).electronAPI
 const legacy = () => (window as any).electron
@@ -88,6 +89,18 @@ export const electronPlatform: Platform = {
       const r = fn(title, body)
       if (r && typeof r.catch === 'function') r.catch(console.error)
       return undefined
+    },
+  },
+  updates: {
+    async getStatus() { return api().updates?.getStatus?.() ?? { state: 'idle' } },
+    async check() { return api().updates?.check?.() ?? { state: 'not-available' } },
+    async restartAndInstall() { return Boolean(await api().updates?.restartAndInstall?.()) },
+    onStatus(cb) { return api().updates?.onStatus?.(cb) ?? { available: false as const } },
+  },
+  feedback: {
+    async captureScreen() {
+      const dataUrl = await api()?.feedback?.capture?.()
+      return dataUrl ?? UNAVAILABLE
     },
   },
   canvas: {

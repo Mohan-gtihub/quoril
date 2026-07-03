@@ -247,6 +247,48 @@ export interface Database {
                     created_at?: string
                 }
             }
+            feedback: {
+                Row: {
+                    id: string
+                    user_id: string
+                    user_email: string | null
+                    type: 'bug' | 'idea' | 'confusing'
+                    message: string
+                    route: string | null
+                    app_version: string | null
+                    platform: string | null
+                    os_version: string | null
+                    app_state: Json | null
+                    console_logs: Json | null
+                    screenshot_path: string | null
+                    status: 'new' | 'triaged' | 'resolved' | 'wontfix'
+                    admin_notes: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    user_email?: string | null
+                    type?: 'bug' | 'idea' | 'confusing'
+                    message: string
+                    route?: string | null
+                    app_version?: string | null
+                    platform?: string | null
+                    os_version?: string | null
+                    app_state?: Json | null
+                    console_logs?: Json | null
+                    screenshot_path?: string | null
+                    status?: 'new' | 'triaged' | 'resolved' | 'wontfix'
+                    admin_notes?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    status?: 'new' | 'triaged' | 'resolved' | 'wontfix'
+                    admin_notes?: string | null
+                }
+            }
         }
     }
 }

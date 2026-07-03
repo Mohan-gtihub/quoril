@@ -79,6 +79,35 @@ export interface NotificationsPort {
   show(title: string, body: string): void | Unavailable
 }
 
+// Mirrors UpdateStatus in electron/main/updater.ts + electron/preload/index.ts.
+export type UpdateStatus =
+  | { state: 'idle' }
+  | { state: 'checking' }
+  | { state: 'not-available' }
+  | { state: 'available'; version: string }
+  | { state: 'downloading'; version: string; percent: number; bytesPerSecond: number; transferred: number; total: number }
+  | { state: 'downloaded'; version: string }
+  | { state: 'error'; message: string }
+
+export interface UpdatesPort {
+  /** Current updater status (pulled on mount so we don't miss the first event). */
+  getStatus(): Promise<UpdateStatus>
+  /** Trigger a manual check. */
+  check(): Promise<UpdateStatus>
+  /** Quit and install a downloaded update ("Restart Now"). Resolves false if none ready. */
+  restartAndInstall(): Promise<boolean>
+  /** Subscribe to status changes. Returns an unsubscribe fn, or Unavailable on web. */
+  onStatus(cb: (status: UpdateStatus) => void): (() => void) | Unavailable
+}
+
+export interface FeedbackPort {
+  /**
+   * Capture the current app window as a PNG data URL for the alpha feedback
+   * widget. Desktop-only (native window capture); web returns Unavailable.
+   */
+  captureScreen(): Promise<string | Unavailable>
+}
+
 export interface CanvasPort {
   list(userId: string): Promise<any[]>
   get(id: string): Promise<any | null>
@@ -114,5 +143,7 @@ export interface Platform {
   tracker: TrackerPort
   links: LinksPort
   notifications: NotificationsPort
+  updates: UpdatesPort
   canvas: CanvasPort
+  feedback: FeedbackPort
 }

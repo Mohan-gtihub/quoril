@@ -9,7 +9,10 @@ const isWeb = process.env.VITE_TARGET === 'web'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-    define: { __VITE_TARGET__: JSON.stringify(process.env.VITE_TARGET ?? 'electron') },
+    define: {
+        __VITE_TARGET__: JSON.stringify(process.env.VITE_TARGET ?? 'electron'),
+        __APP_VERSION__: JSON.stringify(pkg.version ?? '0.0.0'),
+    },
     plugins: [
         react(),
         ...(isWeb ? [] : [electron({
