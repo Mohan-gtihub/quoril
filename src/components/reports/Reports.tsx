@@ -53,7 +53,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 // Section header inside the grid — separates personal metrics from screen activity.
 function SectionLabel({ children }: { children: React.ReactNode }) {
     return (
-        <div className="lg:col-span-2 flex items-center gap-3 pt-4 pb-0.5">
+        <div className="flex items-center gap-3 pt-1 pb-0.5">
             <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">{children}</span>
             <span className="flex-1 h-px bg-[var(--border-default)]" />
         </div>
@@ -71,7 +71,8 @@ function Card({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
-            className={`flex flex-col rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-[var(--shadow-soft)] p-6 ${className || ''}`}
+            className={`group relative flex flex-col rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-[var(--shadow-soft)] p-6 transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_36px_-16px_rgba(15,23,42,0.35)] ${className || ''}`}
+            style={{ ['--card-accent' as any]: accent }}
         >
             <div className="flex items-center gap-2.5 mb-5">
                 <span
@@ -181,15 +182,14 @@ function SegBar({ segments }: { segments: { label: string; value: number; color:
     )
 }
 
-// Ring gauge with animated draw + subtle glow.
-function Gauge({ score, size = 96, color = 'var(--focus)' }: { score: number; size?: number; color?: string }) {
-    const stroke = 9
+// Ring gauge with animated draw.
+function Gauge({ score, size = 96, color = 'var(--focus)', suffix }: { score: number; size?: number; color?: string; suffix?: string }) {
+    const stroke = 8
     const r = (size / 2) - stroke
     const circ = 2 * Math.PI * r
     const dash = circ * Math.max(0, Math.min(100, score)) / 100
     return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0"
-            style={{ filter: `drop-shadow(0 0 6px color-mix(in srgb, ${color} 30%, transparent))` }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
             <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--track)" strokeWidth={stroke} />
             <motion.circle cx={size / 2} cy={size / 2} r={r} fill="none"
                 stroke={color} strokeWidth={stroke} strokeLinecap="round"
@@ -199,7 +199,11 @@ function Gauge({ score, size = 96, color = 'var(--focus)' }: { score: number; si
                 animate={{ strokeDasharray: `${dash} ${circ}` }}
                 transition={{ duration: 0.9, ease: 'easeOut' }} />
             <text x={size / 2} y={size / 2} textAnchor="middle" dominantBaseline="central"
-                fill="var(--text-primary)" fontSize={size * 0.28} fontWeight="700" className="tabular-nums">{score}</text>
+                fill="var(--text-primary)" fontSize={size * 0.26} fontWeight="700" className="tabular-nums">{score}</text>
+            {suffix && (
+                <text x={size / 2} y={size / 2 + size * 0.20} textAnchor="middle" dominantBaseline="central"
+                    fill="var(--text-muted)" fontSize={size * 0.11} fontWeight="600" className="uppercase" style={{ letterSpacing: '0.08em' }}>{suffix}</text>
+            )}
         </svg>
     )
 }
@@ -315,8 +319,8 @@ export function Reports() {
                             </div>
                         </Card>
 
-                        {/* ══ BENTO GRID ══════════════════════════════════════ */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                        {/* ══ BENTO — masonry so uneven-height cards pack tight ═ */}
+                        <div className="columns-1 lg:columns-2 gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
 
                             {/* Peak productivity hours */}
                             <Card title="Peak Productivity Hours" icon={Activity} accent={C.focus}
@@ -454,11 +458,13 @@ export function Reports() {
                                 }
                             </Card>
 
-                            {/* ── Screen activity (desktop only) ── */}
-                            {hasAppData && (
-                                <>
-                                    <SectionLabel>Screen activity</SectionLabel>
+                        </div>
 
+                        {/* ── Screen activity (desktop only) ── */}
+                        {hasAppData && (
+                            <>
+                                <SectionLabel>Screen activity</SectionLabel>
+                                <div className="columns-1 lg:columns-2 gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
                                     {/* Top apps */}
                                     <Card title="Top Apps" icon={AppWindow} accent={C.focus} hint="active time">
                                         {topApps.length === 0
@@ -536,10 +542,9 @@ export function Reports() {
                                             <EmptyState msg="No distracting app usage found in this range" />
                                         )}
                                     </Card>
-                                </>
-                            )}
-
-                        </div>
+                                </div>
+                            </>
+                        )}
                     </>
                 )}
             </div>
