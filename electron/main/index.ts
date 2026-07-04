@@ -18,6 +18,7 @@ import { fileURLToPath } from 'url'
 import { initDatabase, dbOps } from './db'
 import { trackingEngine } from './core/core'
 import { registerCanvasIpc } from './canvas/ipc'
+import { generateInsights } from './insights'
 import { initAutoUpdate } from './updater'
 
 /* ---------------- PATH ---------------- */
@@ -911,6 +912,9 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
     ipcMain.handle('screenTime:getData', (_, { date }: { date: string }) => {
         return dbOps.getScreenTimeData(date)
     })
+
+    /* AI Insights (Groq — key stays in main) */
+    ipcMain.handle('insights:generate', (_, summary: unknown) => generateInsights(summary))
 
     /* Canvas */
     registerCanvasIpc()

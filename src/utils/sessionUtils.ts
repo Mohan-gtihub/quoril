@@ -61,3 +61,18 @@ export const calculateRemainingSeconds = (task: Task | null | undefined, activeE
 export const calculateSessionDuration = (task: Task): number => {
     return calculateRemainingSeconds(task, 0)
 }
+
+/**
+ * Whether the "time's up" alert should fire this tick: the task countdown just
+ * crossed its goal (elapsed reached the goal) and we haven't already alerted for
+ * this overtime crossing. `duration <= 0` means stopwatch mode (no countdown, no
+ * alert). Pure so the crossing rule is unit-tested independently of the timer loop.
+ */
+export const shouldFireOvertimeAlert = (
+    totalElapsedSeconds: number,
+    goalSeconds: number,
+    alreadyAlerted: boolean,
+): boolean => {
+    if (goalSeconds <= 0) return false
+    return totalElapsedSeconds >= goalSeconds && !alreadyAlerted
+}

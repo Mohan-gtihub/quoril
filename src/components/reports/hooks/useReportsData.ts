@@ -63,9 +63,16 @@ export function useReportsData(range: DateRange, retryKey = 0) {
         raw?.focusSummary ?? null,
         raw?.weeklyTrend ?? [],
         days,
+        raw?.deepWorkByDay ?? [],
+        raw?.peakHours ?? [],
     )
 
-    const taskReport = useTaskReport(raw?.taskStats ?? [])
+    const taskReport = useTaskReport(
+        raw?.taskStats ?? [],
+        raw?.taskFocus ?? [],
+        raw?.plannedToday ?? { dueToday: 0, completedOfDue: 0 },
+        raw?.doneInRange ?? 0,
+    )
 
     const appReport = useAppReport(
         raw?.appUsage ?? [],
@@ -73,6 +80,8 @@ export function useReportsData(range: DateRange, retryKey = 0) {
         raw?.focusSummary?.totalSeconds ?? 0,
         raw?.productiveAppSeconds ?? null,
         raw?.allAppSeconds ?? null,
+        raw?.focusWindows ?? [],
+        raw?.distractingSessions ?? [],
     )
 
     const workspaceStats: any[] = useMemo(() => raw?.workspaceStats ?? [], [raw])
@@ -86,5 +95,6 @@ export function useReportsData(range: DateRange, retryKey = 0) {
         appReport,
         workspaceStats,
         focusSummary: raw?.focusSummary ?? null,
+        hasAppData: raw?.hasAppData ?? false,
     }
 }

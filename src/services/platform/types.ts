@@ -3,6 +3,8 @@ export interface Capabilities {
   nativeOverlay: boolean
   pictureInPicture: boolean
   localDb: boolean
+  /** AI-generated report insights are available (key + backend present). */
+  aiInsights: boolean
 }
 
 export type Unavailable = { available: false }
@@ -132,6 +134,17 @@ export interface CanvasPort {
   unfurlLink(url: string): Promise<{ url: string; title: string; description: string; image?: string; siteName?: string; fetchedAt?: number }>
 }
 
+export interface InsightsPort {
+  /**
+   * Turn an aggregated, privacy-safe report summary into structured suggestions.
+   * `summary` is the ReportInsightSummary from services/insights; typed as unknown
+   * here so the platform layer stays decoupled from the insights module's shape.
+   * Returns an InsightsResponse ({ ok, ... }); web/mobile without a backend return
+   * { ok: false }. A future mobile target implements this against an HTTPS endpoint.
+   */
+  generate(summary: unknown): Promise<{ ok: true; result: any; model: string } | { ok: false; error: string }>
+}
+
 export interface Platform {
   capabilities: Capabilities
   data: DataPort
@@ -146,4 +159,5 @@ export interface Platform {
   updates: UpdatesPort
   canvas: CanvasPort
   feedback: FeedbackPort
+  insights: InsightsPort
 }

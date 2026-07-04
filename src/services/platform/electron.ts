@@ -11,7 +11,7 @@ const api = () => (window as any).electronAPI
 const legacy = () => (window as any).electron
 
 export const electronPlatform: Platform = {
-  capabilities: { appTracking: true, nativeOverlay: true, pictureInPicture: false, localDb: true },
+  capabilities: { appTracking: true, nativeOverlay: true, pictureInPicture: false, localDb: true, aiInsights: true },
   data: {
     async listTasks() { return api().db.listTasks?.() ?? [] },
     async saveTask(t) { return api().db.saveTask?.(t) },
@@ -121,5 +121,12 @@ export const electronPlatform: Platform = {
     upsertZone: (z) => api().canvas.upsertZone(z),
     softDeleteZone: (id) => api().canvas.softDeleteZone(id),
     unfurlLink: (url) => api().canvas.unfurlLink(url),
+  },
+  insights: {
+    async generate(summary) {
+      const fn = api()?.insights?.generate
+      if (typeof fn !== 'function') return { ok: false as const, error: 'AI insights are unavailable in this build.' }
+      return fn(summary)
+    },
   },
 }

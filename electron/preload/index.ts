@@ -28,6 +28,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
         capture: (): Promise<string | null> => ipcRenderer.invoke('feedback:capture'),
     },
 
+    // AI Insights — send an aggregated report summary, get structured suggestions.
+    insights: {
+        generate: (summary: unknown) => ipcRenderer.invoke('insights:generate', summary),
+    },
+
     // Auto-update (silent background check → download → restart prompt)
     updates: {
         getStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:getStatus'),

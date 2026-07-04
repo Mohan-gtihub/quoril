@@ -5,6 +5,50 @@ import { useMemo } from 'react'
 /** Penalty in seconds per interruption when calculating focus quality */
 export const INTERRUPT_PENALTY_SECONDS = 30
 
+/** Minimum uninterrupted seconds for a focus session to count as deep work (25 min). */
+export const DEEP_WORK_MIN_SECONDS = 1500
+
+/* ─── Pure Functions ─────────────────────────────────────────── */
+
+export function buildPeakHours(
+    rows: { hour: number; focusSeconds: number }[],
+): { hour: number; minutes: number; isPeak: boolean }[] {
+    const bySec: Record<number, number> = {}
+    rows.forEach(r => { bySec[r.hour] = (bySec[r.hour] ?? 0) + r.focusSeconds })
+    const bins = Array.from({ length: 24 }, (_, hour) => ({
+        hour,
+        minutes: Math.round((bySec[hour] ?? 0) / 60),
+        isPeak: false,
+    }))
+    const maxMin = Math.max(0, ...bins.map(b => b.minutes))
+    if (maxMin > 0) {
+        const peak = bins.find(b => b.minutes === maxMin)
+        if (peak) peak.isPeak = true
+    }
+    return bins
+}
+
+export function computeDeepWorkTotals(
+    rows: { deepSeconds: number; blockCount: number }[],
+): { hours: number; blocks: number } {
+    const seconds = rows.reduce((s, r) => s + (r.deepSeconds ?? 0), 0)
+    const blocks = rows.reduce((s, r) => s + (r.blockCount ?? 0), 0)
+    return { hours: Math.round((seconds / 3600) * 10) / 10, blocks }
+}
+
+export function mergeDeepWorkTrend(
+    trendByDay: { day: string; focusMinutes: number }[],
+    deepWorkByDay: { day: string; deepSeconds: number }[],
+): { day: string; focusMinutes: number; deepMinutes: number }[] {
+    const deepMap: Record<string, number> = {}
+    deepWorkByDay.forEach(d => { deepMap[d.day] = Math.round((d.deepSeconds ?? 0) / 60) })
+    return trendByDay.map(t => ({
+        day: t.day,
+        focusMinutes: t.focusMinutes,
+        deepMinutes: deepMap[t.day] ?? 0,
+    }))
+}
+
 /* ─── Types ─────────────────────────────────────────────────── */
 
 export interface FocusSummary {
@@ -33,7 +77,9 @@ export interface FocusQualityDay {
 export function useFocusReport(
     focusSummary: FocusSummary | null,
     weeklyTrend: any[],
-    targetDays: string[]  // array of 'yyyy-MM-dd' for the selected range
+    targetDays: string[],  // array of 'yyyy-MM-dd' for the selected range
+    deepWorkByDay: { day: string; deepSeconds: number; blockCount: number }[] = [],
+    peakHours: { hour: number; focusSeconds: number }[] = [],
 ) {
     // Fill missing days with zeros → gapless chart
     const trendByDay = useMemo(() => {
@@ -88,6 +134,10 @@ export function useFocusReport(
         return withFocus.reduce((a, b) => b.qualityScore < a.qualityScore ? b : a, withFocus[0])
     }, [qualityByDay])
 
+    const deepWorkTotals = useMemo(() => computeDeepWorkTotals(deepWorkByDay), [deepWorkByDay])
+    const peakHourBins = useMemo(() => buildPeakHours(peakHours), [peakHours])
+    const focusTrend = useMemo(() => mergeDeepWorkTrend(trendByDay, deepWorkByDay), [trendByDay, deepWorkByDay])
+
     return {
         trendByDay,
         movingAvg,
@@ -96,5 +146,8 @@ export function useFocusReport(
         qualityByDay,
         bestDay,
         worstDay,
+        deepWorkTotals,
+        peakHourBins,
+        focusTrend,
     }
 }

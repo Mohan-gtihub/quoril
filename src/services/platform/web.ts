@@ -6,7 +6,7 @@ import { webCanvas } from './webCanvas'
 const hasPiP = typeof window !== 'undefined' && 'documentPictureInPicture' in window
 
 export const webPlatform: Platform = {
-  capabilities: { appTracking: false, nativeOverlay: false, pictureInPicture: hasPiP, localDb: false },
+  capabilities: { appTracking: false, nativeOverlay: false, pictureInPicture: hasPiP, localDb: false, aiInsights: false },
   data: {
     async listTasks() { const { data } = await supabase.from('tasks').select('*'); return data ?? [] },
     async saveTask(t) { const { data } = await supabase.from('tasks').upsert(t).select().single(); return data },
@@ -73,4 +73,11 @@ export const webPlatform: Platform = {
     async captureScreen() { return UNAVAILABLE },
   },
   canvas: webCanvas,
+  insights: {
+    // Web/mobile without a proxy can't hold the key; a future target implements
+    // this against an HTTPS endpoint. Until then it degrades gracefully.
+    async generate() {
+      return { ok: false as const, error: 'AI insights are only available in the Quoril desktop app.' }
+    },
+  },
 }
