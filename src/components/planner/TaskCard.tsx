@@ -349,8 +349,8 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
             </div>
 
             {/* Bottom Row: Metadata & Timer */}
-            <div className="flex items-center justify-between mt-3 pl-1">
-                <div className="flex items-center gap-3.5">
+            <div className="flex items-center justify-between gap-2 mt-3 pl-1 min-w-0">
+                <div className="flex items-center gap-3.5 min-w-0 flex-1 overflow-hidden">
                     {/* Priority — a coloured dot for every task; high/critical also
                         get the word so urgency reads at a glance. */}
                     {priorityMeta && !isCompleted && (
@@ -419,7 +419,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                 </div>
 
                 {/* Right Side: Timer Controls */}
-                <div className="flex items-center gap-1.5" onPointerDown={e => e.stopPropagation()}>
+                <div className="flex items-center gap-1.5 shrink-0" onPointerDown={e => e.stopPropagation()}>
                     {!isCompleted && !disableTimer && (
                         <>
                             {isTaskActive ? (

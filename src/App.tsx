@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react'
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import toast, { Toaster } from 'react-hot-toast'
 import { QueryProvider } from '@/providers/QueryProvider'
 import { useAuthStore } from '@/store/authStore'
@@ -363,7 +363,11 @@ function App() {
                             />
                             <ConfirmDialog />
                             {!settings.superFocusMode && <UpdateNotification />}
-                            {session && !settings.superFocusMode && isTester(session) && <FeedbackWidget />}
+                            {/* Report pill (top-right, below the title bar). Hidden
+                                in the compact focus-popup window. */}
+                            {session && !settings.superFocusMode && isTester(session) && (
+                                <FeedbackWidgetGate />
+                            )}
                         </div>
                     </div>
                 </HashRouter>
@@ -371,6 +375,15 @@ function App() {
 
         </ErrorBoundary>
     )
+}
+
+// Renders the feedback pill only on the main app screens. The compact
+// focus-popup window has its own bottom toolbar that the fixed pill would
+// overlap, so it's suppressed there. Route-aware so it toggles on navigation.
+function FeedbackWidgetGate() {
+    const { pathname } = useLocation()
+    if (pathname.startsWith('/focus-popup')) return null
+    return <FeedbackWidget />
 }
 
 export default App

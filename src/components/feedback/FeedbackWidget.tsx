@@ -1,7 +1,8 @@
-// Floating "Report" affordance (bottom-right, all screens). One click to open,
-// one field to type, everything else auto-captured. Rendered once in App.tsx,
-// gated on the tester role. Visual language matches the app's cards: light
-// surface, soft shadow, hairline borders, quiet line icons, dark pill trigger.
+// Floating "Report" affordance. Drag the pill to any corner — it snaps to the
+// nearest one and remembers where you left it. One click to open, one field to
+// type, everything else auto-captured. Rendered once in App.tsx, gated on the
+// tester role. Visual language matches the app's cards: light surface, soft
+// shadow, hairline borders, quiet line icons, dark pill trigger.
 
 import { useEffect, useRef, useState } from 'react'
 import { submitFeedback, type FeedbackType } from '@/services/feedbackService'
@@ -70,7 +71,38 @@ const TYPES: { id: FeedbackType; label: string; Icon: (p: IconProps) => JSX.Elem
 // Screenshots only work on the native desktop window.
 const canScreenshot = platform.capabilities.nativeOverlay
 
+/* ── Corner placement: drag the pill, snap to nearest corner, persist ── */
+
+type Corner = 'tl' | 'tr' | 'bl' | 'br'
+const CORNER_KEY = 'feedback-widget-corner'
+const MARGIN = 20 // px gap from the window edge
+
+// Fixed-position styles per corner. flex-direction keeps the panel stacked
+// away from the edge the pill is docked to.
+const CORNER_POS: Record<Corner, React.CSSProperties> = {
+    tl: { top: MARGIN + 40, left: MARGIN },
+    tr: { top: MARGIN + 40, right: MARGIN },
+    bl: { bottom: MARGIN, left: MARGIN },
+    br: { bottom: MARGIN, right: MARGIN },
+}
+
+function loadCorner(): Corner {
+    try {
+        const v = localStorage.getItem(CORNER_KEY)
+        if (v === 'tl' || v === 'tr' || v === 'bl' || v === 'br') return v
+    } catch { /* ignore */ }
+    return 'tr'
+}
+
+function nearestCorner(x: number, y: number): Corner {
+    const top = y < window.innerHeight / 2
+    const left = x < window.innerWidth / 2
+    return `${top ? 't' : 'b'}${left ? 'l' : 'r'}` as Corner
+}
+
 export function FeedbackWidget() {
+    const [corner, setCorner] = useState<Corner>(loadCorner)
+    const [drag, setDrag] = useState<{ x: number; y: number } | null>(null)
     const [open, setOpen] = useState(false)
     const [type, setType] = useState<FeedbackType>('bug')
     const [message, setMessage] = useState('')
@@ -109,13 +141,56 @@ export function FeedbackWidget() {
         if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); send() }
     }
 
+    // Drag the pill by its handle. We track pointer position live so the pill
+    // follows the cursor, then snap to the nearest corner on release. A tiny
+    // move threshold keeps a plain click from being treated as a drag.
+    function onDragStart(e: React.PointerEvent) {
+        const startX = e.clientX
+        const startY = e.clientY
+        let moved = false
+            ; (e.target as Element).setPointerCapture?.(e.pointerId)
+
+        const onMove = (ev: PointerEvent) => {
+            if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 4) moved = true
+            if (moved) setDrag({ x: ev.clientX, y: ev.clientY })
+        }
+        const onUp = (ev: PointerEvent) => {
+            window.removeEventListener('pointermove', onMove)
+            window.removeEventListener('pointerup', onUp)
+            setDrag(null)
+            if (moved) {
+                const next = nearestCorner(ev.clientX, ev.clientY)
+                setCorner(next)
+                try { localStorage.setItem(CORNER_KEY, next) } catch { /* ignore */ }
+            } else {
+                setOpen((o) => !o) // treat as a click
+            }
+        }
+        window.addEventListener('pointermove', onMove)
+        window.addEventListener('pointerup', onUp)
+    }
+
+    const isTop = corner === 'tl' || corner === 'tr'
+    const isLeft = corner === 'tl' || corner === 'bl'
+    // While dragging, float the pill under the cursor; otherwise dock to corner.
+    const containerStyle: React.CSSProperties = drag
+        ? { left: drag.x, top: drag.y, transform: 'translate(-50%, -50%)' }
+        : CORNER_POS[corner]
+
     return (
-        <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3 print:hidden">
+        <div
+            style={containerStyle}
+            className={cn(
+                'fixed z-[9999] flex flex-col gap-3 print:hidden',
+                isTop ? 'flex-col-reverse' : 'flex-col',
+                isLeft ? 'items-start' : 'items-end',
+            )}
+        >
             {open && (
                 <div
                     role="dialog"
                     aria-label="Report an issue"
-                    className="w-[344px] overflow-hidden rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-card)] shadow-[0_24px_64px_-16px_rgba(0,0,0,0.28)]"
+                    className="flex max-h-[calc(100vh-96px)] w-[min(344px,calc(100vw-32px))] flex-col overflow-hidden rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-card)] shadow-[0_24px_64px_-16px_rgba(0,0,0,0.28)]"
                 >
                     {phase === 'done' ? (
                         <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
@@ -128,7 +203,7 @@ export function FeedbackWidget() {
                             </p>
                         </div>
                     ) : (
-                        <div className="px-5 pb-5 pt-4">
+                        <div className="min-h-0 overflow-y-auto px-5 pb-5 pt-4">
                             {/* Header */}
                             <div className="mb-5 flex items-center justify-between">
                                 <div>
@@ -220,11 +295,12 @@ export function FeedbackWidget() {
 
             {/* Trigger — dark pill, matches the app's "SHARE FOCUS MAP" button */}
             <button
-                onClick={() => setOpen((o) => !o)}
-                aria-label="Report an issue"
+                onPointerDown={onDragStart}
+                aria-label="Report an issue (drag to move)"
                 aria-expanded={open}
                 className={cn(
-                    'flex items-center gap-2 rounded-full bg-[var(--text-primary)] py-2.5 pl-3.5 pr-4 text-[13px] font-semibold text-[var(--bg-card)] shadow-[0_10px_28px_-8px_rgba(0,0,0,0.5)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-10px_rgba(0,0,0,0.55)] active:translate-y-0',
+                    'flex touch-none select-none items-center gap-2 rounded-full bg-[var(--text-primary)] py-2.5 pl-3.5 pr-4 text-[13px] font-semibold text-[var(--bg-card)] shadow-[0_10px_28px_-8px_rgba(0,0,0,0.5)] transition active:translate-y-0',
+                    drag ? 'cursor-grabbing shadow-[0_20px_40px_-10px_rgba(0,0,0,0.6)]' : 'cursor-grab hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-10px_rgba(0,0,0,0.55)]',
                     open && 'opacity-95',
                 )}
             >

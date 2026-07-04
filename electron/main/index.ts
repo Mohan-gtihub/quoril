@@ -230,16 +230,8 @@ function createWindow() {
         if (!mainWindow || mainWindow.isDestroyed()) return
         mainWindow.show()
         mainWindow.focus()
-        // Windows: transparent + frameless windows can paint as fully
-        // invisible until the compositor is nudged. Toggle always-on-top and
-        // force a 1px repaint to guarantee the window actually appears.
-        if (process.platform === 'win32') {
-            mainWindow.setAlwaysOnTop(true)
-            mainWindow.setAlwaysOnTop(false)
-            const bounds = mainWindow.getBounds()
-            mainWindow.setBounds({ ...bounds, width: bounds.width + 1 })
-            mainWindow.setBounds(bounds)
-        }
+        // Guarantee the window actually paints (see nudgeRepaint).
+        nudgeRepaint(mainWindow)
     }
 
     mainWindow.once('ready-to-show', showMainWindow)
@@ -398,12 +390,28 @@ function enterPill() {
     createPillWindow()
 }
 
+// Windows: a transparent + frameless window that was hidden can repaint as
+// fully invisible/ghosted until the compositor is nudged. Toggle always-on-top
+// and force a 1px bounds change to guarantee a real repaint. Shared by both the
+// initial show and the pill-exit restore.
+function nudgeRepaint(win: BrowserWindow) {
+    if (process.platform !== 'win32' || win.isDestroyed()) return
+    win.setAlwaysOnTop(true)
+    win.setAlwaysOnTop(false)
+    const bounds = win.getBounds()
+    win.setBounds({ ...bounds, width: bounds.width + 1 })
+    win.setBounds(bounds)
+}
+
 function exitPill() {
     if (pillWindow && !pillWindow.isDestroyed()) pillWindow.close()
     pillWindow = null
     if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.show()
         mainWindow.focus()
+        // Guarantee the restored window actually paints — without this, coming
+        // back from Super Focus can leave a ghosted/blank frame on Windows.
+        nudgeRepaint(mainWindow)
         // The main window was dormant while the pill ran the session; pull the
         // latest persisted focus/settings state so it reflects what happened.
         mainWindow.webContents.send('app:rehydrate')
