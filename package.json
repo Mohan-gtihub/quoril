@@ -1,7 +1,7 @@
 {
   "name": "quoril",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "Desktop productivity and focus tracking application",
   "author": "Erik Vale",
@@ -154,7 +154,9 @@
       "target": [
         "nsis"
       ],
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "certificateFile": "build/quoril-selfsigned.pfx",
+      "certificatePassword": "quoril-dev"
     },
     "nsis": {
       "oneClick": false,

@@ -736,7 +736,7 @@ export function FocusTimerPanel() {
                     <CreateTaskModal
                         isOpen={true}
                         onClose={() => setShowCreateModal(false)}
-                        listId={(selectedListId && selectedListId !== 'all' ? selectedListId : lists.find(l => l.id !== 'all')?.id) || ''}
+                        listId={selectedListId && selectedListId !== 'all' ? selectedListId : undefined}
                     />
                 )
             }

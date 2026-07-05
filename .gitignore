@@ -1,3 +1,7 @@
+# Code-signing certificates (never commit)
+*.pfx
+*.p12
+
 # Logs
 logs
 *.log

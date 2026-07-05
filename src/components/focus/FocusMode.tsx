@@ -24,7 +24,7 @@ import { platform } from '@/services/platform'
 export function FocusMode() {
     const navigate = useNavigate()
     const { fetchTasksByColumn, moveTaskToColumn, reorderTasks, fetchTasks, tasks: allStoreTasks } = useTaskStore()
-    const { selectedListId, lists } = useListStore()
+    const { selectedListId } = useListStore()
     const settings = useSettingsStore()
 
     const {
@@ -469,7 +469,7 @@ export function FocusMode() {
                     <CreateTaskModal
                         isOpen={true}
                         onClose={() => setShowCreateModal(false)}
-                        listId={selectedListId && selectedListId !== 'all' ? selectedListId : (lists.find(l => l.id !== 'all')?.id || '')}
+                        listId={selectedListId && selectedListId !== 'all' ? selectedListId : undefined}
                         onCreated={(task) => {
                             if (selectedListId !== 'all' && task.list_id !== selectedListId) return
                             setTasks(prev => {

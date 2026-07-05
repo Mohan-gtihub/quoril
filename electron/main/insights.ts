@@ -18,7 +18,10 @@ function ensureEnv() {
     envLoaded = true
 }
 
-const DEFAULT_INSIGHTS_URL = 'https://quoril.in/api/insights'
+// Use the canonical www host directly — quoril.in issues a 308 redirect to
+// www.quoril.in, which a POST fetch does not reliably re-issue, surfacing as
+// "Could not reach the insights service" in the app.
+const DEFAULT_INSIGHTS_URL = 'https://www.quoril.in/api/insights'
 
 type InsightsResponse =
     | { ok: true; result: unknown; model: string }
