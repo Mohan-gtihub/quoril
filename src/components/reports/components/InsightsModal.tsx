@@ -1,13 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, RefreshCw, Copy, Check, Lightbulb, CalendarCheck, ShieldCheck, AlertCircle } from 'lucide-react'
+import { X, RefreshCw, Copy, Check, Lightbulb, CalendarCheck, ShieldCheck, AlertCircle, Lock } from 'lucide-react'
 import { getPlatform } from '@/services/platform'
 import type { ReportInsightSummary, InsightsResult } from '@/services/insights/types'
-
-// Session cache keyed by range — avoids re-calling the model when the user
-// reopens the same report. Cleared on app reload (V1: no cross-restart persistence).
-const sessionCache = new Map<string, { result: InsightsResult; model: string }>()
+import { loadInsights, saveInsights, isRegenEligible, msUntilRegenEligible, formatCooldown } from '@/services/insights/insightsCache'
+import { InsightsVisuals } from './InsightsVisuals'
 
 type Status = 'idle' | 'loading' | 'done' | 'error'
 
@@ -49,20 +47,30 @@ export function InsightsModal({ open, onClose, summary, cacheKey }: {
     const [result, setResult] = useState<InsightsResult | null>(null)
     const [error, setError] = useState<string>('')
     const [copied, setCopied] = useState(false)
+    // When this cache entry was generated — backs the per-range 6h regen cooldown.
+    const [generatedAt, setGeneratedAt] = useState<number | null>(null)
+    // Ticks every minute while open so the cooldown countdown label stays live.
+    const [now, setNow] = useState(() => Date.now())
 
     const run = useCallback(async (force = false) => {
         if (!summary) return
-        if (!force && sessionCache.has(cacheKey)) {
-            setResult(normalizeInsightsResult(sessionCache.get(cacheKey)!.result))
-            setStatus('done')
-            return
+        if (!force) {
+            const cached = loadInsights(cacheKey)
+            if (cached) {
+                setResult(normalizeInsightsResult(cached.result))
+                setGeneratedAt(cached.generatedAt)
+                setStatus('done')
+                return
+            }
         }
         setStatus('loading'); setError('')
         const resp = await getPlatform().insights.generate(summary)
         if (resp.ok) {
             const normalized = normalizeInsightsResult(resp.result)
-            sessionCache.set(cacheKey, { result: normalized, model: resp.model })
+            const at = Date.now()
+            saveInsights(cacheKey, { result: normalized, model: resp.model, generatedAt: at })
             setResult(normalized)
+            setGeneratedAt(at)
             setStatus('done')
         } else {
             setError(resp.error)
@@ -72,8 +80,15 @@ export function InsightsModal({ open, onClose, summary, cacheKey }: {
 
     // Generate (or restore from cache) whenever the modal opens.
     useEffect(() => {
-        if (open) { setCopied(false); run(false) }
+        if (open) { setCopied(false); setNow(Date.now()); run(false) }
     }, [open, run])
+
+    // Keep the cooldown countdown current while the modal is open.
+    useEffect(() => {
+        if (!open) return
+        const id = setInterval(() => setNow(Date.now()), 60_000)
+        return () => clearInterval(id)
+    }, [open])
 
     // Close on Escape.
     useEffect(() => {
@@ -87,6 +102,9 @@ export function InsightsModal({ open, onClose, summary, cacheKey }: {
         if (!result) return
         try { await navigator.clipboard.writeText(summaryToText(result)); setCopied(true); setTimeout(() => setCopied(false), 1600) } catch { /* ignore */ }
     }
+
+    const regenEligible = isRegenEligible(generatedAt, now)
+    const cooldownLabel = formatCooldown(msUntilRegenEligible(generatedAt, now))
 
     return createPortal(
         <AnimatePresence>
@@ -107,10 +125,10 @@ export function InsightsModal({ open, onClose, summary, cacheKey }: {
                         {/* Header */}
                         <div className="flex items-center gap-3 px-6 py-5 border-b border-[var(--border-default)]">
                             <span
-                                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                                style={{ background: 'color-mix(in srgb, var(--focus) 12%, transparent)', color: 'var(--focus)' }}
+                                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
+                                style={{ background: 'color-mix(in srgb, var(--focus) 12%, transparent)' }}
                             >
-                                <Lightbulb className="w-[18px] h-[18px]" />
+                                <img src={`${import.meta.env.BASE_URL}brand-mark.png`} alt="Quoril" className="w-[22px] h-[22px] object-contain" />
                             </span>
                             <div className="flex-1 min-w-0">
                                 <h2 className="text-[15px] font-semibold text-[var(--text-primary)] leading-tight">Quoril Suggestions</h2>
@@ -148,6 +166,9 @@ export function InsightsModal({ open, onClose, summary, cacheKey }: {
 
                             {status === 'done' && result && (
                                 <div className="space-y-5">
+                                    {/* Visualizations — from the aggregated summary already sent to the model */}
+                                    {summary && <InsightsVisuals summary={summary} />}
+
                                     {/* Summary */}
                                     <p className="text-[14px] leading-relaxed text-[var(--text-primary)]">{result.summary}</p>
 
@@ -195,9 +216,12 @@ export function InsightsModal({ open, onClose, summary, cacheKey }: {
                                 <span>Quoril sends only summarized report metrics, not your raw screen history.</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button onClick={() => run(true)} disabled={status === 'loading'}
-                                    className="flex-1 h-9 rounded-[var(--radius-card)] border border-[var(--border-default)] text-[12.5px] font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
-                                    <RefreshCw className="w-3.5 h-3.5" /> Regenerate
+                                <button onClick={() => run(true)} disabled={status === 'loading' || !regenEligible}
+                                    title={!regenEligible ? `You can regenerate again in ${cooldownLabel}` : undefined}
+                                    className="flex-1 h-9 rounded-[var(--radius-card)] border border-[var(--border-default)] text-[12.5px] font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {regenEligible
+                                        ? <><RefreshCw className="w-3.5 h-3.5" /> Regenerate</>
+                                        : <><Lock className="w-3.5 h-3.5" /> Regenerate in {cooldownLabel}</>}
                                 </button>
                                 <button onClick={copy} disabled={status !== 'done'}
                                     className="flex-1 h-9 rounded-[var(--radius-card)] border border-[var(--border-default)] text-[12.5px] font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50">
