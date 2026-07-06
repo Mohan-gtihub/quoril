@@ -17,6 +17,12 @@ const base: BuildSummaryInput = {
     focusLinkedPercent: 91,
     distractionDuringFocusSeconds: 31 * 60,
     distractionPercent: 17,
+    overallDistractionSeconds: 44 * 60,
+    overallDistractionPercent: 11,
+    distractionByCategory: [
+        { category: 'Social', seconds: 22 * 60 },
+        { category: 'Entertainment', seconds: 22 * 60 },
+    ],
     peakHours: [
         { hour: 10, minutes: 90, isPeak: true },
         { hour: 15, minutes: 20, isPeak: false },

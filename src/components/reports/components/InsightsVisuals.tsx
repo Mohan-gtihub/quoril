@@ -58,7 +58,7 @@ function BarList({ title, items, color }: {
     const max = Math.max(...items.map(i => i.minutes), 1)
     return (
         <div>
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)] mb-2">{title}</p>
+            {title && <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)] mb-2">{title}</p>}
             <div className="space-y-1.5">
                 {items.slice(0, 3).map((it, i) => (
                     <div key={i} className="flex items-center gap-2.5">
@@ -102,8 +102,27 @@ export function InsightsVisuals({ summary }: { summary: ReportInsightSummary }) 
                 <StatTile label="Deep work" value={fmtMin(summary.deep_work_minutes)} accent="var(--focus)" />
                 <StatTile label="Focus sessions" value={String(summary.focus_sessions)} accent="var(--break)" />
                 <StatTile label="Completion" value={pct(summary.completion_rate)} accent="var(--wellbeing)" />
-                <StatTile label="Distraction" value={pct(summary.distraction_percent)} accent="var(--error)" />
+                <StatTile label="Distraction" value={pct(summary.overall_distraction_percent)} accent="var(--error)" />
             </div>
+
+            {/* Distraction breakdown — where the distracting time actually went */}
+            {summary.distraction_by_category.length > 0 && (
+                <div className="rounded-[var(--radius-card)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-3">
+                    <div className="flex items-baseline justify-between mb-2">
+                        <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">Distraction breakdown</p>
+                        <p className="text-[11px] text-[var(--text-secondary)]">
+                            {fmtMin(summary.overall_distraction_minutes)} · {pct(summary.overall_distraction_percent)} of active time
+                        </p>
+                    </div>
+                    <BarList title="" color="var(--error)"
+                        items={summary.distraction_by_category.map(c => ({ label: c.category, minutes: c.minutes }))} />
+                    {summary.distraction_percent > 0 && (
+                        <p className="text-[11px] text-[var(--text-muted)] mt-2.5 leading-relaxed">
+                            <span style={{ color: 'var(--error)' }}>{pct(summary.distraction_percent)}</span> of that landed inside focus sessions.
+                        </p>
+                    )}
+                </div>
+            )}
 
             <CompletionRing completion={summary.completion_rate} focusLinked={summary.focus_linked_percent} />
 

@@ -5,6 +5,22 @@ import { app } from 'electron'
 
 let db: Database.Database
 
+// Categories treated as attention leaks. Keep in sync with DISTRACTING_CATEGORIES
+// in electron/main/core/collector.ts and DISTRACTING in
+// src/services/insights/buildSummary.ts.
+const DISTRACTING_CATEGORIES = ['Social', 'Entertainment', 'Gaming', 'News']
+// Safe to interpolate: internal constant, never user input.
+const DISTRACTING_SQL = DISTRACTING_CATEGORIES.map(c => `'${c}'`).join(', ')
+
+// Browser app_ids collapse every website under one row with a thrashing category,
+// so real site categories live in domain_sessions/domain_categories instead. We
+// count distracting *websites* from the domain tables and exclude browsers from
+// the app-based distraction count to avoid double-counting. app_id is the browser
+// display name on macOS ("Google Chrome") and the exe stem on Windows ("chrome"),
+// so match with case-insensitive LIKE on common browser needles.
+const BROWSER_NEEDLES = ['chrome', 'chromium', 'msedge', 'edge', 'firefox', 'brave', 'safari', 'opera', 'arc', 'vivaldi']
+const NOT_BROWSER_SQL = BROWSER_NEEDLES.map(n => `LOWER(s.app_id) NOT LIKE '%${n}%'`).join(' AND ')
+
 /* ---------------- HELPERS ---------------- */
 
 function now() {
@@ -507,6 +523,41 @@ export const dbOps = {
             WHERE start_time >= ? AND start_time <= ?
         `, [startDate, endDate]) as any[])?.[0] ?? {}
 
+        // 8b. Overall distraction — active time on distracting apps/sites across the
+        // whole range (timer-independent), grouped by category. Non-browser desktop
+        // apps come from app_sessions; distracting websites come from the domain
+        // tables (browser app rows can't carry a per-site category). Merged in JS.
+        const distractionByCategoryRows = (exec(`
+            SELECT COALESCE(a.category, 'Other')                         AS category,
+                   COALESCE(SUM(s.duration_seconds - s.idle_seconds), 0) AS activeSeconds
+            FROM app_sessions s
+            LEFT JOIN apps a ON s.app_id = a.id
+            WHERE s.start_time >= ? AND s.start_time <= ?
+              AND COALESCE(a.category, 'Other') IN (${DISTRACTING_SQL})
+              AND ${NOT_BROWSER_SQL}
+            GROUP BY category
+            UNION ALL
+            SELECT COALESCE(dc.category, 'Web')            AS category,
+                   COALESCE(SUM(ds.duration_seconds), 0)   AS activeSeconds
+            FROM domain_sessions ds
+            LEFT JOIN domain_categories dc ON ds.domain = dc.domain
+            WHERE ds.start_time >= ? AND ds.start_time <= ?
+              AND COALESCE(dc.category, 'Web') IN (${DISTRACTING_SQL})
+            GROUP BY category
+        `, [startDate, endDate, startDate, endDate]) as any[]) ?? []
+
+        // Fold the two sources into one seconds-per-category map.
+        const distractionMap = new Map<string, number>()
+        for (const r of distractionByCategoryRows) {
+            const sec = Number(r.activeSeconds) || 0
+            distractionMap.set(r.category, (distractionMap.get(r.category) ?? 0) + sec)
+        }
+        const distractionByCategory = [...distractionMap.entries()]
+            .map(([category, activeSeconds]) => ({ category, activeSeconds }))
+            .filter(c => c.activeSeconds > 0)
+            .sort((a, b) => b.activeSeconds - a.activeSeconds)
+        const distractionActiveSeconds = distractionByCategory.reduce((s, c) => s + c.activeSeconds, 0)
+
         // 9. Deep-work blocks per day (sessions >= 25 min uninterrupted)
         const deepWorkByDay = (exec(`
             SELECT
@@ -563,16 +614,25 @@ export const dbOps = {
               AND start_time >= ? AND start_time <= ?
         `, [userId, startDate, endDate]) as any[]) ?? []
 
-        // 13. Distracting app sessions in range (desktop only; empty on web)
+        // 13. Distracting sessions in range — non-browser desktop apps plus
+        // distracting websites (from domain tables, since browser app rows can't
+        // carry a per-site category). Used for focus-session overlap.
         const distractingSessions = (exec(`
-            SELECT s.start_time AS start, s.end_time AS end,
-                   COALESCE(a.category, 'Other') AS category
+            SELECT s.start_time AS start, s.end_time AS end
             FROM app_sessions s
             LEFT JOIN apps a ON s.app_id = a.id
             WHERE s.end_time IS NOT NULL
               AND s.start_time >= ? AND s.start_time <= ?
-              AND COALESCE(a.category, 'Other') IN ('Social', 'Entertainment', 'Gaming', 'News')
-        `, [startDate, endDate]) as any[]) ?? []
+              AND COALESCE(a.category, 'Other') IN (${DISTRACTING_SQL})
+              AND ${NOT_BROWSER_SQL}
+            UNION ALL
+            SELECT ds.start_time AS start, ds.end_time AS end
+            FROM domain_sessions ds
+            LEFT JOIN domain_categories dc ON ds.domain = dc.domain
+            WHERE ds.end_time IS NOT NULL
+              AND ds.start_time >= ? AND ds.start_time <= ?
+              AND COALESCE(dc.category, 'Web') IN (${DISTRACTING_SQL})
+        `, [startDate, endDate, startDate, endDate]) as any[]) ?? []
 
         // 14. Planned vs actual — tasks due today vs completed
         const plannedToday = (exec(`
@@ -615,10 +675,53 @@ export const dbOps = {
             taskFocus,
             focusWindows,
             distractingSessions,
+            distractionActiveSeconds,
+            distractionByCategory,
             plannedToday,
             doneInRange,
             hasAppData,
         }
+    },
+
+    /* ---- Live distraction for the current focus sitting ---- */
+    // Distracting active time overlapping [startISO, endISO], for the live focus
+    // strip. Non-browser desktop apps + distracting websites (domain tables), with
+    // overlap computed in JS so partial sessions at the window edges count fairly.
+    getSessionDistraction(startISO: string, endISO: string) {
+        const winStart = Date.parse(startISO)
+        const winEnd = Date.parse(endISO)
+        if (!(winEnd > winStart)) return { distractionSeconds: 0, byCategory: [] as { category: string; seconds: number }[] }
+
+        const rows = (exec(`
+            SELECT s.start_time AS start, s.end_time AS end, COALESCE(a.category, 'Other') AS category
+            FROM app_sessions s
+            LEFT JOIN apps a ON s.app_id = a.id
+            WHERE COALESCE(a.category, 'Other') IN (${DISTRACTING_SQL})
+              AND ${NOT_BROWSER_SQL}
+              AND s.start_time <= ? AND (s.end_time IS NULL OR s.end_time >= ?)
+            UNION ALL
+            SELECT ds.start_time AS start, ds.end_time AS end, COALESCE(dc.category, 'Web') AS category
+            FROM domain_sessions ds
+            LEFT JOIN domain_categories dc ON ds.domain = dc.domain
+            WHERE COALESCE(dc.category, 'Web') IN (${DISTRACTING_SQL})
+              AND ds.start_time <= ? AND (ds.end_time IS NULL OR ds.end_time >= ?)
+        `, [endISO, startISO, endISO, startISO]) as any[]) ?? []
+
+        const byCat = new Map<string, number>()
+        for (const r of rows) {
+            const s = Date.parse(r.start)
+            const e = r.end ? Date.parse(r.end) : winEnd // open session → up to window end
+            if (isNaN(s) || isNaN(e)) continue
+            const overlapMs = Math.max(0, Math.min(winEnd, e) - Math.max(winStart, s))
+            if (overlapMs <= 0) continue
+            byCat.set(r.category, (byCat.get(r.category) ?? 0) + overlapMs / 1000)
+        }
+        const byCategory = [...byCat.entries()]
+            .map(([category, seconds]) => ({ category, seconds: Math.round(seconds) }))
+            .filter(c => c.seconds > 0)
+            .sort((a, b) => b.seconds - a.seconds)
+        const distractionSeconds = byCategory.reduce((sum, c) => sum + c.seconds, 0)
+        return { distractionSeconds, byCategory }
     },
 
     /* ---- Screen Time / Digital Wellbeing (one aggregated call) ---- */
@@ -734,7 +837,7 @@ export const dbOps = {
             SELECT
                 CASE
                     WHEN COALESCE(a.category, 'Other') IN ('Development', 'Work') THEN 'productive'
-                    WHEN COALESCE(a.category, 'Other') IN ('Entertainment', 'Gaming') THEN 'unproductive'
+                    WHEN COALESCE(a.category, 'Other') IN (${DISTRACTING_SQL}) THEN 'unproductive'
                     ELSE 'neutral'
                 END AS bucket,
                 SUM(s.duration_seconds) AS totalSeconds

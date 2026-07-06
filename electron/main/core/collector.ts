@@ -10,9 +10,13 @@ export interface ActiveWindow {
     rawApp: string
     rawPath?: string
     isIdle: boolean
-    category: 'Work' | 'Web' | 'Development' | 'Communication' | 'Entertainment' | 'Other' | 'Idle'
+    category: 'Work' | 'Web' | 'Development' | 'Communication' | 'Entertainment' | 'Social' | 'News' | 'Gaming' | 'Other' | 'Idle'
     domain?: string
 }
+
+// Categories treated as attention leaks. Keep in sync with DISTRACTING_CATEGORIES
+// in electron/main/db.ts and DISTRACTING in src/services/insights/buildSummary.ts.
+export const DISTRACTING_CATEGORIES = ['Social', 'Entertainment', 'Gaming', 'News'] as const
 
 /* ---------------- PATTERNS ---------------- */
 
@@ -65,6 +69,21 @@ const CATEGORY_MAP: Record<string, ActiveWindow['category']> = {
     'iterm': 'Development',
     'powershell': 'Development',
     'cmd': 'Development',
+    // Gaming clients / launchers
+    'steam': 'Gaming',
+    'epicgameslauncher': 'Gaming',
+    'epic games launcher': 'Gaming',
+    'riotclientservices': 'Gaming',
+    'league of legends': 'Gaming',
+    'valorant': 'Gaming',
+    'minecraft': 'Gaming',
+    'roblox': 'Gaming',
+    'battle.net': 'Gaming',
+    'origin': 'Gaming',
+    'gog galaxy': 'Gaming',
+    // Social desktop apps
+    'instagram': 'Social',
+    'tiktok': 'Social',
 }
 
 const SITE_TO_CATEGORY: Record<string, ActiveWindow['category']> = {
@@ -88,9 +107,20 @@ const SITE_TO_CATEGORY: Record<string, ActiveWindow['category']> = {
     'Google Sheets': 'Work',
     'Google Slides': 'Work',
     'LinkedIn': 'Web',
-    'Twitter': 'Web',
-    'X/Twitter': 'Web',
-    'Reddit': 'Entertainment',
+    'Twitter/X': 'Social',
+    'Instagram': 'Social',
+    'Facebook': 'Social',
+    'Reddit': 'Social',
+    'TikTok': 'Social',
+    'Snapchat': 'Social',
+    'Threads': 'Social',
+    'BBC': 'News',
+    'CNN': 'News',
+    'NYTimes': 'News',
+    'The Guardian': 'News',
+    'Steam': 'Gaming',
+    'Epic Games': 'Gaming',
+    'IGN': 'Gaming',
     'Amazon': 'Other',
     'eBay': 'Other',
 }
@@ -109,6 +139,19 @@ const SITE_PATTERNS = [
     { name: 'WhatsApp', match: /whatsapp/i },
     { name: 'Discord', match: /discord/i },
     { name: 'Twitter/X', match: /twitter|x\.com/i },
+    { name: 'Instagram', match: /instagram/i },
+    { name: 'Facebook', match: /facebook|fb\.com/i },
+    { name: 'Reddit', match: /reddit/i },
+    { name: 'TikTok', match: /tiktok/i },
+    { name: 'Snapchat', match: /snapchat/i },
+    { name: 'Threads', match: /threads\.net/i },
+    { name: 'BBC', match: /bbc\.com|bbc news/i },
+    { name: 'CNN', match: /cnn\.com/i },
+    { name: 'NYTimes', match: /nytimes|new york times/i },
+    { name: 'The Guardian', match: /theguardian/i },
+    { name: 'Steam', match: /steampowered|steamcommunity/i },
+    { name: 'Epic Games', match: /epicgames\.com/i },
+    { name: 'IGN', match: /ign\.com/i },
     { name: 'Gmail', match: /gmail|mail\.google/i },
     { name: 'Meet', match: /meet\.google/i },
 ]

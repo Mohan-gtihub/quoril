@@ -156,6 +156,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     reports: {
         getDashboardData: (args: { userId: string; startDate: string; endDate: string }) =>
             ipcRenderer.invoke('reports:getDashboardData', args),
+        getSessionDistraction: (args: { startISO: string; endISO: string }) =>
+            ipcRenderer.invoke('reports:getSessionDistraction', args),
     },
 
     // Screen Time
@@ -318,6 +320,7 @@ export interface ElectronAPI {
     }
     reports: {
         getDashboardData: (args: { userId: string; startDate: string; endDate: string }) => Promise<any>
+        getSessionDistraction: (args: { startISO: string; endISO: string }) => Promise<{ distractionSeconds: number; byCategory: { category: string; seconds: number }[] }>
     }
     screenTime: {
         getData: (args: { date: string }) => Promise<any>

@@ -230,7 +230,7 @@ export function Reports() {
     const data = useReportsData(range, retryKey)
     const { loading, error, focusSummary, focusReport, taskReport, appReport, workspaceStats, hasAppData } = data
     const { movingAvg, deepWorkTotals, peakHourBins, focusTrend } = focusReport
-    const { topApps, categoryBreakdown, productivityScore, contextByDay, avgDailySwitches, idleRatio, distractionDuringFocus } = appReport
+    const { topApps, categoryBreakdown, productivityScore, contextByDay, avgDailySwitches, idleRatio, distractionDuringFocus, distractionOverall } = appReport
     const { total, completed, completionRate, overallAccuracy, mostUnderestimated, mostOverestimated, recurringData, recurringCompletedCount, focusLinkage, plannedToday } = taskReport
 
     /* derived */
@@ -256,10 +256,13 @@ export function Reports() {
         focusLinkedPercent: focusLinkage.linkedPct,
         distractionDuringFocusSeconds: distractionDuringFocus.distractionSeconds,
         distractionPercent: distractionDuringFocus.pct,
+        overallDistractionSeconds: distractionOverall.distractingSeconds,
+        overallDistractionPercent: distractionOverall.pct,
+        distractionByCategory: distractionOverall.byCategory,
         peakHours: peakHourBins,
         topCategories: categoryBreakdown.map(c => ({ name: c.category, seconds: c.seconds })),
         distractingApps: topApps.filter(a => DISTRACTING.includes(a.category)).map(a => ({ name: a.appName, seconds: a.activeSeconds })),
-    }), [range.label, productivityScore, deepWorkTotals, focusSummary, avgDailySwitches, idleRatio, completed, total, completionRate, focusLinkage, distractionDuringFocus, peakHourBins, categoryBreakdown, topApps])
+    }), [range.label, productivityScore, deepWorkTotals, focusSummary, avgDailySwitches, idleRatio, completed, total, completionRate, focusLinkage, distractionDuringFocus, distractionOverall, peakHourBins, categoryBreakdown, topApps])
 
     return (
         <div className="flex-1 overflow-y-auto w-full h-full custom-scrollbar select-none pb-24">
@@ -345,8 +348,8 @@ export function Reports() {
                                     <HeroStat label="Tasks done" accent={C.focus}
                                         value={`${completed}/${total}`} sub={`${completionRate}% completed`} />
                                     {hasAppData ? (
-                                        <HeroStat label="Distraction" accent={distractionDuringFocus.pct > 20 ? C.error : C.break}
-                                            value={`${distractionDuringFocus.pct}%`} sub="of focus time" />
+                                        <HeroStat label="Distraction" accent={distractionOverall.pct > 20 ? C.error : C.break}
+                                            value={`${distractionOverall.pct}%`} sub={`${fmt(distractionOverall.distractingSeconds)} of active time`} />
                                     ) : (
                                         <HeroStat label="Avg session" accent={C.break}
                                             value={fmt(focusSummary?.avgSeconds ?? 0)} sub={sessions > 0 ? `${sessions} sessions` : 'No sessions'} />

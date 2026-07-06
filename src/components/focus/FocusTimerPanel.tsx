@@ -10,6 +10,7 @@ import { cn } from '@/utils/helpers'
 import { confirm } from '@/components/ui/ConfirmDialog'
 import { platform } from '@/services/platform'
 import { FocusPiP } from './FocusPiP'
+import { SessionStats } from './SessionStats'
 
 import {
     Play,
@@ -466,6 +467,13 @@ export function FocusTimerPanel() {
                                                     : progress)}%`,
                                             }}
                                         />
+                                    </div>
+                                )}
+
+                                {/* Session stats — condensed focused/distracted bar */}
+                                {!isBreak && (
+                                    <div className="mb-4">
+                                        <SessionStats activeTask={activeTask} variant="condensed" />
                                     </div>
                                 )}
 

@@ -82,6 +82,8 @@ export function useReportsData(range: DateRange, retryKey = 0) {
         raw?.allAppSeconds ?? null,
         raw?.focusWindows ?? [],
         raw?.distractingSessions ?? [],
+        raw?.distractionActiveSeconds ?? 0,
+        raw?.distractionByCategory ?? [],
     )
 
     const workspaceStats: any[] = useMemo(() => raw?.workspaceStats ?? [], [raw])

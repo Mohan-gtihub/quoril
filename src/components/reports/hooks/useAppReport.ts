@@ -62,6 +62,8 @@ export function useAppReport(
     allAppSecondsRow: { totalSeconds: number; idleSeconds: number } | null,
     focusWindows: { start: string; end: string }[] = [],
     distractingSessions: { start: string; end: string }[] = [],
+    distractionActiveSeconds: number = 0,
+    distractionByCategory: { category: string; activeSeconds: number }[] = [],
 ) {
     // Top 10 apps by active time
     const topApps = useMemo(() => {
@@ -135,6 +137,20 @@ export function useAppReport(
         [focusWindows, distractingSessions],
     )
 
+    // Overall distraction — distracting active time as a share of total active
+    // (non-idle) time across the whole range. Timer-independent, so it stays
+    // meaningful even when the user never runs a focus session.
+    const distractionOverall = useMemo(() => {
+        const totalActive = Math.max(0, (allAppSecondsRow?.totalSeconds ?? 0) - (allAppSecondsRow?.idleSeconds ?? 0))
+        const distractingSeconds = Math.max(0, distractionActiveSeconds)
+        const pct = totalActive > 0 ? Math.min(100, Math.round((distractingSeconds / totalActive) * 100)) : 0
+        const byCategory = distractionByCategory
+            .map(c => ({ category: c.category, seconds: Math.max(0, c.activeSeconds) }))
+            .filter(c => c.seconds > 0)
+            .sort((a, b) => b.seconds - a.seconds)
+        return { distractingSeconds, totalActiveSeconds: totalActive, pct, byCategory }
+    }, [allAppSecondsRow, distractionActiveSeconds, distractionByCategory])
+
     return {
         topApps,
         categoryBreakdown,
@@ -143,5 +159,6 @@ export function useAppReport(
         contextByDay,
         avgDailySwitches,
         distractionDuringFocus,
+        distractionOverall,
     }
 }

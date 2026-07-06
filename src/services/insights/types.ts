@@ -19,7 +19,10 @@ export interface ReportInsightSummary {
     completion_rate: number
     focus_linked_percent: number
     distraction_during_focus_minutes: number
-    distraction_percent: number
+    distraction_percent: number // leaks during focus-timer sessions (focus quality)
+    overall_distraction_percent: number // distracting time / total active time in range
+    overall_distraction_minutes: number
+    distraction_by_category: { category: string; minutes: number }[]
     best_focus_window: string | null
     worst_focus_window: string | null
     top_categories: { name: string; minutes: number }[]
