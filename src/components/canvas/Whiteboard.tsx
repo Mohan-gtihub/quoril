@@ -1,9 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
-import { Excalidraw } from '@excalidraw/excalidraw'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Excalidraw, MainMenu, serializeAsJSON } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
+import { FileJson2 } from 'lucide-react'
 import { platform } from '@/services/platform'
 import { supabase } from '@/services/supabase'
 import { useSettingsStore } from '@/store/settingsStore'
+
+// Minimal slice of Excalidraw's imperative API — just what we need to read the
+// current scene for the "Export as JSON" action. Avoids importing the full types.
+type ExcalidrawAPI = {
+    getSceneElements: () => readonly unknown[]
+    getAppState: () => Record<string, unknown>
+    getFiles: () => Record<string, unknown>
+}
 
 // The whole Excalidraw scene is stored as a single "block" row per canvas, so we
 // reuse the existing canvas/blocks backend (SQLite on desktop, Supabase on web)
@@ -37,7 +46,17 @@ function sanitizeAppState(appState: Record<string, unknown> = {}): Record<string
     return rest
 }
 
-export function Whiteboard({ canvasId, userId }: { canvasId: string; userId: string }) {
+export function Whiteboard({
+    canvasId,
+    userId,
+    renderTopRight,
+}: {
+    canvasId: string
+    userId: string
+    // Rendered inside Excalidraw's top-right grid cell so the centered toolbar
+    // reserves space and never slides underneath these controls.
+    renderTopRight?: () => ReactNode
+}) {
     const themeName = useSettingsStore((s) => s.theme)
     const theme = LIGHT_THEMES.has(themeName) ? 'light' : 'dark'
 
@@ -46,6 +65,30 @@ export function Whiteboard({ canvasId, userId }: { canvasId: string; userId: str
     const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
     const pending = useRef<SceneData | null>(null)
     const selfEchoUntil = useRef(0)
+    const apiRef = useRef<ExcalidrawAPI | null>(null)
+
+    // Export the entire board — elements, appState and embedded files — as a
+    // portable JSON file the user can re-import or archive. Uses Excalidraw's
+    // canonical serializer so the output round-trips cleanly.
+    const handleExportJSON = () => {
+        const api = apiRef.current
+        if (!api) return
+        const json = serializeAsJSON(
+            api.getSceneElements() as any,
+            api.getAppState() as any,
+            api.getFiles() as any,
+            'local',
+        )
+        const blob = new Blob([json], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `quoril-canvas-${new Date().toISOString().slice(0, 10)}.json`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+    }
 
     // Load (or reload) the saved scene for this canvas.
     useEffect(() => {
@@ -180,20 +223,50 @@ export function Whiteboard({ canvasId, userId }: { canvasId: string; userId: str
     if (!initialData) return null
 
     return (
-        <div className="w-full h-full">
+        <div className="quoril-canvas w-full h-full">
+            {/* Strip the Excalidraw-branded chrome so the board reads as native
+                Quoril: hide the library trigger + docked library sidebar and the
+                "Excalidraw+" / help affordances that a custom MainMenu can't reach. */}
+            <style>{`
+                .quoril-canvas .layer-ui__wrapper__top-right .sidebar-trigger,
+                .quoril-canvas .default-sidebar-trigger,
+                .quoril-canvas .layer-ui__wrapper .sidebar-trigger,
+                .quoril-canvas .welcome-screen-decor--menu-hint,
+                .quoril-canvas .welcome-screen-decor--help-hint,
+                .quoril-canvas .dropdown-menu-item--social,
+                .quoril-canvas .excalidraw-plus,
+                .quoril-canvas a[href*="excalidraw.com"],
+                .quoril-canvas a[href*="plus.excalidraw"] {
+                    display: none !important;
+                }
+            `}</style>
             <Excalidraw
                 key={`${canvasId}:${reloadKey}`}
                 theme={theme}
                 initialData={initialData as any}
                 onChange={onChange as any}
+                excalidrawAPI={(api) => { apiRef.current = api as unknown as ExcalidrawAPI }}
+                renderTopRightUI={renderTopRight ? () => <>{renderTopRight()}</> : undefined}
                 UIOptions={{
                     canvasActions: {
                         loadScene: false,
                         saveToActiveFile: false,
-                        export: { saveFileToDisk: true },
+                        export: false,
                     },
                 }}
-            />
+            >
+                {/* Custom, branded menu — replaces Excalidraw's default items
+                    (which include Socials, Help and "Excalidraw+" promos). */}
+                <MainMenu>
+                    <MainMenu.Item icon={<FileJson2 size={16} />} onSelect={handleExportJSON}>
+                        Export as JSON
+                    </MainMenu.Item>
+                    <MainMenu.DefaultItems.SaveAsImage />
+                    <MainMenu.Separator />
+                    <MainMenu.DefaultItems.ChangeCanvasBackground />
+                    <MainMenu.DefaultItems.ClearCanvas />
+                </MainMenu>
+            </Excalidraw>
         </div>
     )
 }

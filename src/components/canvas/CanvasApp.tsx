@@ -173,13 +173,10 @@ export function CanvasApp() {
 
     /* ---------------- Board ---------------- */
 
-    return (
-        <div className="w-full h-full relative">
-            <CanvasErrorBoundary>
-                <Whiteboard canvasId={activeId} userId={user.id} />
-            </CanvasErrorBoundary>
-            {/* Controls top-right to avoid colliding with Excalidraw's top-left menu */}
-            <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
+    // Rendered inside Excalidraw's top-right grid cell (via renderTopRightUI) so the
+    // centered shape toolbar reserves space for it instead of sliding underneath.
+    const renderTopRight = () => (
+        <div className="flex items-center gap-2">
                 <button
                     type="button"
                     onClick={() => setShowMeta(true)}
@@ -237,7 +234,14 @@ export function CanvasApp() {
                         </>
                     )
                 })()}
-            </div>
+        </div>
+    )
+
+    return (
+        <div className="w-full h-full relative">
+            <CanvasErrorBoundary>
+                <Whiteboard canvasId={activeId} userId={user.id} renderTopRight={renderTopRight} />
+            </CanvasErrorBoundary>
 
             {shareOpen && active && (
                 <ShareCanvasModal

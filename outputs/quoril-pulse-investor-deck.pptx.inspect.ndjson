@@ -1,0 +1,395 @@
+{"kind":"deck","id":"pr/6lt72u","name":"Deck"}
+{"kind":"layout","layoutId":"baf48813-910d-47f4-ad7c-8b783ab59524","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"b969af31-e6fe-49ef-9463-a99567ff5d28","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/cbbmq9","slide":1,"title":"Quoril.","textShapes":16}
+{"kind":"shape","id":"sh/4zidonyd","slide":1,"bbox":[910,-210,520,520]}
+{"kind":"shape","id":"sh/fepkzupw","slide":1,"bbox":[-250,430,520,520]}
+{"kind":"textbox","id":"sh/xc3ylc7u","slide":1,"text":"Quoril.","textPreview":"Quoril.","textChars":7,"textLines":1,"bbox":[132,66,160,30]}
+{"kind":"textbox","id":"sh/4r65wjud","slide":1,"text":"Quoril Pulse","textPreview":"Quoril Pulse","textChars":12,"textLines":1,"bbox":[72,168,780,70]}
+{"kind":"textbox","id":"sh/f6dcbulw","slide":1,"text":"The operating layer for focused organizations.","textPreview":"The operating layer for focused organizations.","textChars":46,"textLines":1,"bbox":[74,250,720,84]}
+{"kind":"textbox","id":"sh/mlkjm1cf","slide":1,"text":"Plan work. Execute with focus. Ask AI what is happening across the org.","textPreview":"Plan work. Execute with focus. Ask AI what is happening across the org.","textChars":71,"textLines":1,"bbox":[74,350,700,58]}
+{"kind":"shape","id":"sh/x0nuxc3y","slide":1,"bbox":[782,118,410,318]}
+{"kind":"textbox","id":"sh/4fu18jqh","slide":1,"text":"Backlog","textPreview":"Backlog","textChars":7,"textLines":1,"bbox":[798,134,89.5,18]}
+{"kind":"shape","id":"sh/6dcbulwv","slide":1,"bbox":[798,160,89.5,256]}
+{"kind":"shape","id":"sh/vy90je9c","slide":1,"bbox":[808,176,69.5,42]}
+{"kind":"shape","id":"sh/oj2t83it","slide":1,"bbox":[808,234,69.5,42]}
+{"kind":"shape","id":"sh/d4vmtwra","slide":1,"bbox":[808,292,69.5,42]}
+{"kind":"textbox","id":"sh/61032lsz","slide":1,"text":"This Week","textPreview":"This Week","textChars":9,"textLines":1,"bbox":[894.5,134,89.5,18]}
+{"kind":"shape","id":"sh/vmtwra5g","slide":1,"bbox":[894.5,160,89.5,256]}
+{"kind":"shape","id":"sh/o7qpg3ex","slide":1,"bbox":[904.5,176,69.5,42]}
+{"kind":"shape","id":"sh/dsji5sne","slide":1,"bbox":[904.5,234,69.5,42]}
+{"kind":"shape","id":"sh/6tovahoz","slide":1,"bbox":[904.5,292,69.5,42]}
+{"kind":"textbox","id":"sh/vahoza1g","slide":1,"text":"Today","textPreview":"Today","textChars":5,"textLines":1,"bbox":[991,134,89.5,18]}
+{"kind":"shape","id":"sh/r65wjudg","slide":1,"bbox":[991,160,89.5,256]}
+{"kind":"shape","id":"sh/ylc7u54z","slide":1,"bbox":[1001,176,69.5,42]}
+{"kind":"shape","id":"sh/9cvixcze","slide":1,"bbox":[1001,234,69.5,58]}
+{"kind":"shape","id":"sh/gr2p8nqx","slide":1,"bbox":[1001,292,69.5,42]}
+{"kind":"textbox","id":"sh/nih4byhg","slide":1,"text":"Done","textPreview":"Done","textChars":4,"textLines":1,"bbox":[1087.5,134,89.5,18]}
+{"kind":"shape","id":"sh/yxobm58z","slide":1,"bbox":[1087.5,160,89.5,256]}
+{"kind":"shape","id":"sh/5o7qpg3e","slide":1,"bbox":[1097.5,176,69.5,42]}
+{"kind":"shape","id":"sh/g3ex0nux","slide":1,"bbox":[1097.5,234,69.5,42]}
+{"kind":"shape","id":"sh/rmhk3q5o","slide":1,"bbox":[1097.5,292,69.5,42]}
+{"kind":"shape","id":"sh/y1kre1w7","slide":1,"bbox":[782,466,410,142]}
+{"kind":"textbox","id":"sh/sji5snel","slide":1,"text":"Pulse AI","textPreview":"Pulse AI","textChars":8,"textLines":1,"bbox":[806,486,120,24]}
+{"kind":"shape","id":"sh/h4byhgn2","slide":1,"bbox":[1018,488,142,28]}
+{"kind":"textbox","id":"sh/adsji5sn","slide":1,"text":"LIVE ORG CONTEXT","textPreview":"LIVE ORG CONTEXT","textChars":16,"textLines":1,"bbox":[1030,495,118,15]}
+{"kind":"shape","id":"sh/3ylc7u54","slide":1,"bbox":[806,526,260,36]}
+{"kind":"textbox","id":"sh/s72x4nap","slide":1,"text":"Ask: what is blocked in engineering?","textPreview":"Ask: what is blocked in engineering?","textChars":36,"textLines":1,"bbox":[822,536,220,14]}
+{"kind":"shape","id":"sh/lszqtcj6","slide":1,"bbox":[846,570,314,34]}
+{"kind":"textbox","id":"sh/a5gbq1or","slide":1,"text":"3 blocked. 1 unassigned. Launch handoff is late.","textPreview":"3 blocked. 1 unassigned. Launch handoff is late.","textChars":48,"textLines":1,"bbox":[862,580,282,14]}
+{"kind":"shape","id":"sh/3m94fu18","slide":1,"bbox":[74,450,240,28]}
+{"kind":"textbox","id":"sh/s36hcrmh","slide":1,"text":"ORG-LEVEL PRODUCTIVITY OS","textPreview":"ORG-LEVEL PRODUCTIVITY OS","textChars":25,"textLines":1,"bbox":[86,457,216,15]}
+{"kind":"shape","id":"sh/hoza1gvy","slide":1,"bbox":[330,450,230,28]}
+{"kind":"textbox","id":"sh/dcbulwva","slide":1,"text":"CANVAS + COLLABORATION","textPreview":"CANVAS + COLLABORATION","textChars":22,"textLines":1,"bbox":[342,457,206,15]}
+{"kind":"shape","id":"sh/kre1w7mp","slide":1,"bbox":[576,450,120,28]}
+{"kind":"textbox","id":"sh/val87ed8","slide":1,"text":"PULSE AI","textPreview":"PULSE AI","textChars":8,"textLines":1,"bbox":[588,457,96,15]}
+{"kind":"textbox","id":"sh/6psfil0r","slide":1,"text":"Investor / product narrative deck","textPreview":"Investor / product narrative deck","textChars":33,"textLines":1,"bbox":[74,626,420,20]}
+{"kind":"image","id":"im/b6xkf6dc","slide":1,"name":"","alt":"Quoril brand mark","bbox":[72,58,48,48]}
+{"kind":"notes","id":"nt/cbbmq9","slide":1,"text":"Animation cue: fade in title first, then three chips, then product mock on the right.\nOpening line: Quoril started as a personal deep-work command center. Pulse turns that loop into an operating layer for teams."}
+{"kind":"slide","id":"sl/4t1yrl","slide":2,"title":"QUORIL PULSE","textShapes":15}
+{"kind":"shape","id":"sh/2t83itgf","slide":2,"bbox":[910,-210,520,520]}
+{"kind":"shape","id":"sh/9knih4by","slide":2,"bbox":[-250,430,520,520]}
+{"kind":"shape","id":"sh/kzupwb2h","slide":2,"bbox":[72,54,360,30]}
+{"kind":"textbox","id":"sh/rqd4vmtw","slide":2,"text":"QUORIL PULSE","textPreview":"QUORIL PULSE","textChars":12,"textLines":1,"bbox":[88,61,328,16]}
+{"kind":"textbox","id":"sh/25kb6xkf","slide":2,"text":"Teams do not lack tools. They lack live operating truth.","textPreview":"Teams do not lack tools. They lack live operating truth.","textChars":56,"textLines":1,"bbox":[72,104,760,96]}
+{"kind":"textbox","id":"sh/9w3m94fu","slide":2,"text":"Work is planned in one app, discussed in meetings, tracked in another, and summarized manually for leadership.","textPreview":"Work is planned in one app, discussed in meetings, tracked in another, and summarized manually for leadership.","textChars":110,"textLines":1,"bbox":[72,202,800,56]}
+{"kind":"shape","id":"sh/kb6xkf6d","slide":2,"bbox":[64,674,1152,1]}
+{"kind":"textbox","id":"sh/r2p8nqxs","slide":2,"text":"Quoril Pulse","textPreview":"Quoril Pulse","textChars":12,"textLines":1,"bbox":[64,684,260,18]}
+{"kind":"textbox","id":"sh/2hwfyxob","slide":2,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1168,684,48,18]}
+{"kind":"shape","id":"sh/crmhk3q5","slide":2,"bbox":[88,330,334,190]}
+{"kind":"textbox","id":"sh/1cfa9w3m","slide":2,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[112,354,52,26]}
+{"kind":"textbox","id":"sh/ulwval87","slide":2,"text":"Fragmented execution","textPreview":"Fragmented execution","textChars":20,"textLines":1,"bbox":[112,396,270,32]}
+{"kind":"textbox","id":"sh/j6tovaho","slide":2,"text":"Tasks, docs, meetings, time data, and reports live in separate systems.","textPreview":"Tasks, docs, meetings, time data, and reports live in separate systems.","textChars":71,"textLines":1,"bbox":[112,442,280,58]}
+{"kind":"shape","id":"sh/c3ylc7u5","slide":2,"bbox":[466,330,334,190]}
+{"kind":"textbox","id":"sh/1kre1w7m","slide":2,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[490,354,52,26]}
+{"kind":"textbox","id":"sh/uxc3ylc7","slide":2,"text":"No real-time hierarchy view","textPreview":"No real-time hierarchy view","textChars":27,"textLines":1,"bbox":[490,396,270,32]}
+{"kind":"textbox","id":"sh/ji5snelo","slide":2,"text":"Managers see status updates after the fact. Leaders cannot ask the org a direct question.","textPreview":"Managers see status updates after the fact. Leaders cannot ask the org a direct question.","textChars":89,"textLines":1,"bbox":[490,442,280,58]}
+{"kind":"shape","id":"sh/8bat47y1","slide":2,"bbox":[844,330,334,190]}
+{"kind":"textbox","id":"sh/1w7mp0bi","slide":2,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[868,354,52,26]}
+{"kind":"textbox","id":"sh/1orytsvu","slide":2,"text":"Meetings do not become action","textPreview":"Meetings do not become action","textChars":29,"textLines":1,"bbox":[868,396,270,32]}
+{"kind":"textbox","id":"sh/c7u54zid","slide":2,"text":"Transcripts capture conversation, but ownership and task updates still depend on manual follow-through.","textPreview":"Transcripts capture conversation, but ownership and task updates still depend on manual follow-through.","textChars":103,"textLines":1,"bbox":[868,442,280,58]}
+{"kind":"textbox","id":"sh/jm1cfa9w","slide":2,"text":"Pulse is built for the moment between work happening and leadership knowing.","textPreview":"Pulse is built for the moment between work happening and leadership knowing.","textChars":76,"textLines":1,"bbox":[140,574,1000,40]}
+{"kind":"notes","id":"nt/4t1yrl","slide":2,"text":"Animation cue: reveal the three problem cards one by one, then the Pulse statement.\nDo not position this as another task manager. Position it as an operating truth layer."}
+{"kind":"slide","id":"sl/lfyopi","slide":3,"title":"QUORIL PULSE","textShapes":17}
+{"kind":"shape","id":"sh/xczed8v6","slide":3,"bbox":[910,-210,520,520]}
+{"kind":"shape","id":"sh/qpg3ex0n","slide":3,"bbox":[-250,430,520,520]}
+{"kind":"shape","id":"sh/fa9w3m94","slide":3,"bbox":[72,54,360,30]}
+{"kind":"textbox","id":"sh/8jqh0fep","slide":3,"text":"QUORIL PULSE","textPreview":"QUORIL PULSE","textChars":12,"textLines":1,"bbox":[88,61,328,16]}
+{"kind":"textbox","id":"sh/x4nap4r6","slide":3,"text":"Quoril closes the productivity loop.","textPreview":"Quoril closes the productivity loop.","textChars":36,"textLines":1,"bbox":[72,104,760,96]}
+{"kind":"textbox","id":"sh/qd4vmtwr","slide":3,"text":"The personal product already connects planning, focus, tracking, reports, and insight. Pulse scales that loop to teams.","textPreview":"The personal product already connects planning, focus, tracking, reports, and insight. Pulse scales that loop to teams.","textChars":119,"textLines":1,"bbox":[72,202,800,56]}
+{"kind":"shape","id":"sh/fyxobm58","slide":3,"bbox":[64,674,1152,1]}
+{"kind":"textbox","id":"sh/87ed8bat","slide":3,"text":"Quoril Pulse","textPreview":"Quoril Pulse","textChars":12,"textLines":1,"bbox":[64,684,260,18]}
+{"kind":"textbox","id":"sh/xs72x4na","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1168,684,48,18]}
+{"kind":"shape","id":"sh/xkf6dcbu","slide":3,"bbox":[582,202,116,116]}
+{"kind":"textbox","id":"sh/4zidonyd","slide":3,"text":"Plan","textPreview":"Plan","textChars":4,"textLines":1,"bbox":[586,240,108,22]}
+{"kind":"textbox","id":"sh/fepkzupw","slide":3,"text":"Kanban, lists, workspaces, canvas","textPreview":"Kanban, lists, workspaces, canvas","textChars":33,"textLines":1,"bbox":[542,330,196,40]}
+{"kind":"shape","id":"sh/mtwra5gb","slide":3,"bbox":[895.85,305.65,116,116]}
+{"kind":"textbox","id":"sh/xc3ylc7u","slide":3,"text":"Execute","textPreview":"Execute","textChars":7,"textLines":1,"bbox":[899.85,343.65,108,22]}
+{"kind":"textbox","id":"sh/4r65wjud","slide":3,"text":"Focus engine, timers, task ownership","textPreview":"Focus engine, timers, task ownership","textChars":36,"textLines":1,"bbox":[855.85,433.65,196,40]}
+{"kind":"shape","id":"sh/f6dcbulw","slide":3,"bbox":[775.97,473.35,116,116]}
+{"kind":"textbox","id":"sh/mlkjm1cf","slide":3,"text":"Measure","textPreview":"Measure","textChars":7,"textLines":1,"bbox":[779.97,511.35,108,22]}
+{"kind":"textbox","id":"sh/x0nuxc3y","slide":3,"text":"App usage, focus sessions, completion","textPreview":"App usage, focus sessions, completion","textChars":37,"textLines":1,"bbox":[735.97,601.35,196,40]}
+{"kind":"shape","id":"sh/4fu18jqh","slide":3,"bbox":[388.03,473.35,116,116]}
+{"kind":"textbox","id":"sh/4nap4r65","slide":3,"text":"Understand","textPreview":"Understand","textChars":10,"textLines":1,"bbox":[392.03,511.35,108,22]}
+{"kind":"textbox","id":"sh/t83itgfm","slide":3,"text":"Reports, AI insights, context","textPreview":"Reports, AI insights, context","textChars":29,"textLines":1,"bbox":[348.03,601.35,196,40]}
+{"kind":"shape","id":"sh/mhk3q5o7","slide":3,"bbox":[268.15,305.65,116,116]}
+{"kind":"textbox","id":"sh/b2hwfyxo","slide":3,"text":"Act","textPreview":"Act","textChars":3,"textLines":1,"bbox":[272.15,343.65,108,22]}
+{"kind":"textbox","id":"sh/4byhgn29","slide":3,"text":"Pulse AI assigns and updates work","textPreview":"Pulse AI assigns and updates work","textChars":33,"textLines":1,"bbox":[228.15,433.65,196,40]}
+{"kind":"shape","id":"sh/twra5gbq","slide":3,"bbox":[454,254,372,220]}
+{"kind":"textbox","id":"sh/m58z25kb","slide":3,"text":"Productivity Graph","textPreview":"Productivity Graph","textChars":18,"textLines":1,"bbox":[472,338,336,42]}
+{"kind":"textbox","id":"sh/bq1oryts","slide":3,"text":"Every task, session, meeting, owner, and signal becomes queryable.","textPreview":"Every task, session, meeting, owner, and signal becomes queryable.","textChars":66,"textLines":1,"bbox":[486,386,308,44]}
+{"kind":"notes","id":"nt/lfyopi","slide":3,"text":"Animation cue: use Morph from an empty center to the five-loop diagram, or reveal each node clockwise.\nThis slide is the core thesis: Quoril is not a point tool; it is the loop."}
+{"kind":"slide","id":"sl/y8nxqy","slide":4,"title":"QUORIL PULSE","textShapes":19}
+{"kind":"shape","id":"sh/9gr2p8nq","slide":4,"bbox":[910,-210,520,520]}
+{"kind":"shape","id":"sh/2p8nqxs7","slide":4,"bbox":[-250,430,520,520]}
+{"kind":"shape","id":"sh/ra5gbq1o","slide":4,"bbox":[72,54,360,30]}
+{"kind":"textbox","id":"sh/kjm1cfa9","slide":4,"text":"QUORIL PULSE","textPreview":"QUORIL PULSE","textChars":12,"textLines":1,"bbox":[88,61,328,16]}
+{"kind":"textbox","id":"sh/94fu18jq","slide":4,"text":"The canvas board is where strategy becomes executable.","textPreview":"The canvas board is where strategy becomes executable.","textChars":54,"textLines":1,"bbox":[72,104,760,96]}
+{"kind":"textbox","id":"sh/2hwfyxob","slide":4,"text":"Quoril's visual board turns messy thinking into tasks, owners, notes, links, and shared context.","textPreview":"Quoril's visual board turns messy thinking into tasks, owners, notes, links, and shared context.","textChars":96,"textLines":1,"bbox":[72,202,800,56]}
+{"kind":"shape","id":"sh/r2p8nqxs","slide":4,"bbox":[64,674,1152,1]}
+{"kind":"textbox","id":"sh/kb6xkf6d","slide":4,"text":"Quoril Pulse","textPreview":"Quoril Pulse","textChars":12,"textLines":1,"bbox":[64,684,260,18]}
+{"kind":"textbox","id":"sh/9w3m94fu","slide":4,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1168,684,48,18]}
+{"kind":"shape","id":"sh/xczed8v6","slide":4,"bbox":[82,286,718,300]}
+{"kind":"shape","id":"sh/8v6psfil","slide":4,"bbox":[122,350,300,2]}
+{"kind":"shape","id":"sh/fa9w3m94","slide":4,"bbox":[420,433,210,2]}
+{"kind":"shape","id":"sh/qpg3ex0n","slide":4,"bbox":[618,364,120,2]}
+{"kind":"shape","id":"sh/x4nap4r6","slide":4,"bbox":[118,318,188,64]}
+{"kind":"textbox","id":"sh/8jqh0fep","slide":4,"text":"Launch plan","textPreview":"Launch plan","textChars":11,"textLines":1,"bbox":[134,338,156,22]}
+{"kind":"shape","id":"sh/fyxobm58","slide":4,"bbox":[420,398,204,72]}
+{"kind":"textbox","id":"sh/qd4vmtwr","slide":4,"text":"Content sprint","textPreview":"Content sprint","textChars":14,"textLines":1,"bbox":[436,418,172,22]}
+{"kind":"shape","id":"sh/xs72x4na","slide":4,"bbox":[642,332,118,64]}
+{"kind":"textbox","id":"sh/87ed8bat","slide":4,"text":"Report UI","textPreview":"Report UI","textChars":9,"textLines":1,"bbox":[658,352,86,22]}
+{"kind":"shape","id":"sh/4fu18jqh","slide":4,"bbox":[246,452,214,68]}
+{"kind":"textbox","id":"sh/x0nuxc3y","slide":4,"text":"Meeting notes","textPreview":"Meeting notes","textChars":13,"textLines":1,"bbox":[262,472,182,22]}
+{"kind":"shape","id":"sh/m94fu18j","slide":4,"bbox":[510,292,152,58]}
+{"kind":"textbox","id":"sh/fu18jqh0","slide":4,"text":"Owners","textPreview":"Owners","textChars":6,"textLines":1,"bbox":[526,312,120,22]}
+{"kind":"shape","id":"sh/83itgfml","slide":4,"bbox":[870,300,54,28]}
+{"kind":"textbox","id":"sh/xobm58z2","slide":4,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[882,307,30,15]}
+{"kind":"textbox","id":"sh/qxs72x4n","slide":4,"text":"Visual planning","textPreview":"Visual planning","textChars":15,"textLines":1,"bbox":[944,301,260,26]}
+{"kind":"textbox","id":"sh/fil0rqd4","slide":4,"text":"Free-form boards for product roadmaps, campaigns, workflows, and sprint maps.","textPreview":"Free-form boards for product roadmaps, campaigns, workflows, and sprint maps.","textChars":77,"textLines":1,"bbox":[944,334,260,42]}
+{"kind":"shape","id":"sh/4zidonyd","slide":4,"bbox":[870,390,54,28]}
+{"kind":"textbox","id":"sh/xkf6dcbu","slide":4,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[882,397,30,15]}
+{"kind":"textbox","id":"sh/jm1cfa9w","slide":4,"text":"Tasks inside context","textPreview":"Tasks inside context","textChars":20,"textLines":1,"bbox":[944,391,260,26]}
+{"kind":"textbox","id":"sh/u18jqh0f","slide":4,"text":"Turn canvas nodes into owned tasks without losing why the work exists.","textPreview":"Turn canvas nodes into owned tasks without losing why the work exists.","textChars":70,"textLines":1,"bbox":[944,424,260,42]}
+{"kind":"shape","id":"sh/1orytsvu","slide":4,"bbox":[870,480,54,28]}
+{"kind":"textbox","id":"sh/c7u54zid","slide":4,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[882,487,30,15]}
+{"kind":"textbox","id":"sh/judg7ads","slide":4,"text":"Shared thinking","textPreview":"Shared thinking","textChars":15,"textLines":1,"bbox":[944,481,260,26]}
+{"kind":"textbox","id":"sh/u9knih4b","slide":4,"text":"Invite teammates, preserve context, and let departments work from one live board.","textPreview":"Invite teammates, preserve context, and let departments work from one live board.","textChars":81,"textLines":1,"bbox":[944,514,260,42]}
+{"kind":"notes","id":"nt/y8nxqy","slide":4,"text":"Animation cue: wipe in the canvas links first, then pop the nodes, then reveal the three right-side value points.\nEmphasize that canvas is not a side feature; it is the planning surface for complex team work."}
+{"kind":"slide","id":"sl/z9jow3","slide":5,"title":"QUORIL PULSE","textShapes":21}
+{"kind":"shape","id":"sh/qd4vmtwr","slide":5,"bbox":[910,-210,520,520]}
+{"kind":"shape","id":"sh/x4nap4r6","slide":5,"bbox":[-250,430,520,520]}
+{"kind":"shape","id":"sh/8jqh0fep","slide":5,"bbox":[72,54,360,30]}
+{"kind":"textbox","id":"sh/fa9w3m94","slide":5,"text":"QUORIL PULSE","textPreview":"QUORIL PULSE","textChars":12,"textLines":1,"bbox":[88,61,328,16]}
+{"kind":"textbox","id":"sh/qpg3ex0n","slide":5,"text":"Collaboration is modeled around hierarchy, departments, and ownership.","textPreview":"Collaboration is modeled around hierarchy, departments, and ownership.","textChars":70,"textLines":1,"bbox":[72,104,760,96]}
+{"kind":"textbox","id":"sh/xczed8v6","slide":5,"text":"Pulse gives every level of the org a working view without forcing every leader into every team's tool.","textPreview":"Pulse gives every level of the org a working view without forcing every leader into every team's tool.","textChars":102,"textLines":1,"bbox":[72,202,800,56]}
+{"kind":"shape","id":"sh/8v6psfil","slide":5,"bbox":[64,674,1152,1]}
+{"kind":"textbox","id":"sh/je9cvixc","slide":5,"text":"Quoril Pulse","textPreview":"Quoril Pulse","textChars":12,"textLines":1,"bbox":[64,684,260,18]}
+{"kind":"textbox","id":"sh/qtcj6tov","slide":5,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1168,684,48,18]}
+{"kind":"shape","id":"sh/svu9knih","slide":5,"bbox":[180,276,920,62]}
+{"kind":"textbox","id":"sh/hgn29gr2","slide":5,"text":"Executive","textPreview":"Executive","textChars":9,"textLines":1,"bbox":[204,290,180,24]}
+{"kind":"textbox","id":"sh/ap4r65wj","slide":5,"text":"Ask Pulse AI for org status, risks, unassigned work, and blockers.","textPreview":"Ask Pulse AI for org status, risks, unassigned work, and blockers.","textChars":66,"textLines":1,"bbox":[404,293,660,20]}
+{"kind":"shape","id":"sh/za1gvy90","slide":5,"bbox":[240,354,800,62]}
+{"kind":"textbox","id":"sh/s36hcrmh","slide":5,"text":"Department","textPreview":"Department","textChars":10,"textLines":1,"bbox":[264,368,180,24]}
+{"kind":"textbox","id":"sh/hoza1gvy","slide":5,"text":"Create initiatives, assign across teams, track delivery health.","textPreview":"Create initiatives, assign across teams, track delivery health.","textChars":63,"textLines":1,"bbox":[464,371,540,20]}
+{"kind":"shape","id":"sh/a1gvy90j","slide":5,"bbox":[300,432,680,62]}
+{"kind":"textbox","id":"sh/zidonyd0","slide":5,"text":"Team","textPreview":"Team","textChars":4,"textLines":1,"bbox":[324,446,180,24]}
+{"kind":"textbox","id":"sh/s72x4nap","slide":5,"text":"Plan boards, execute tasks, attach meetings, update status.","textPreview":"Plan boards, execute tasks, attach meetings, update status.","textChars":59,"textLines":1,"bbox":[524,449,420,20]}
+{"kind":"shape","id":"sh/lszqtcj6","slide":5,"bbox":[360,510,560,62]}
+{"kind":"textbox","id":"sh/pg3ex0nu","slide":5,"text":"Individual","textPreview":"Individual","textChars":10,"textLines":1,"bbox":[384,524,180,24]}
+{"kind":"textbox","id":"sh/wval87ed","slide":5,"text":"Focus sessions, personal reports, task-level evidence.","textPreview":"Focus sessions, personal reports, task-level evidence.","textChars":54,"textLines":1,"bbox":[584,527,300,20]}
+{"kind":"shape","id":"sh/7adsji5s","slide":5,"bbox":[84,560,220,112]}
+{"kind":"textbox","id":"sh/epkzupwb","slide":5,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[102,580,184,48]}
+{"kind":"textbox","id":"sh/psfil0rq","slide":5,"text":"Role-aware views","textPreview":"Role-aware views","textChars":16,"textLines":1,"bbox":[104,632,180,24]}
+{"kind":"shape","id":"sh/w7mp0bi9","slide":5,"bbox":[330,560,220,112]}
+{"kind":"textbox","id":"sh/7mp0bi9s","slide":5,"text":"All","textPreview":"All","textChars":3,"textLines":1,"bbox":[348,580,184,48]}
+{"kind":"textbox","id":"sh/e1w7mp0b","slide":5,"text":"Task states queryable","textPreview":"Task states queryable","textChars":21,"textLines":1,"bbox":[350,632,180,24]}
+{"kind":"shape","id":"sh/l0rqd4vm","slide":5,"bbox":[576,560,220,112]}
+{"kind":"textbox","id":"sh/wfyxobm5","slide":5,"text":"Live","textPreview":"Live","textChars":4,"textLines":1,"bbox":[594,580,184,48]}
+{"kind":"textbox","id":"sh/a9w3m94f","slide":5,"text":"Context preserved","textPreview":"Context preserved","textChars":17,"textLines":1,"bbox":[596,632,180,24]}
+{"kind":"shape","id":"sh/zupwb2hw","slide":5,"bbox":[822,560,220,112]}
+{"kind":"textbox","id":"sh/sfil0rqd","slide":5,"text":"AI","textPreview":"AI","textChars":2,"textLines":1,"bbox":[840,580,184,48]}
+{"kind":"textbox","id":"sh/h0fepkzu","slide":5,"text":"Meetings -> work","textPreview":"Meetings -> work","textChars":16,"textLines":1,"bbox":[842,632,180,24]}
+{"kind":"notes","id":"nt/z9jow3","slide":5,"text":"Animation cue: reveal hierarchy from Individual upward to Executive, then bring in the metric strip.\nThis is where Quoril Pulse becomes materially different from personal productivity tools."}
+{"kind":"slide","id":"sl/yeu2vv","slide":6,"title":"QUORIL PULSE","textShapes":19}
+{"kind":"shape","id":"sh/dcbulwva","slide":6,"bbox":[910,-210,520,520]}
+{"kind":"shape","id":"sh/6psfil0r","slide":6,"bbox":[-250,430,520,520]}
+{"kind":"shape","id":"sh/val87ed8","slide":6,"bbox":[72,54,360,30]}
+{"kind":"textbox","id":"sh/k3q5o7qp","slide":6,"text":"QUORIL PULSE","textPreview":"QUORIL PULSE","textChars":12,"textLines":1,"bbox":[88,61,328,16]}
+{"kind":"textbox","id":"sh/donyd0z6","slide":6,"text":"Pulse AI is the conversational control plane for work.","textPreview":"Pulse AI is the conversational control plane for work.","textChars":54,"textLines":1,"bbox":[72,104,760,96]}
+{"kind":"textbox","id":"sh/2x4nap4r","slide":6,"text":"Leaders and operators can ask, create, assign, summarize, and modify work without spelunking through dashboards.","textPreview":"Leaders and operators can ask, create, assign, summarize, and modify work without spelunking through dashboards.","textChars":112,"textLines":1,"bbox":[72,202,800,56]}
+{"kind":"shape","id":"sh/vixczed8","slide":6,"bbox":[64,674,1152,1]}
+{"kind":"textbox","id":"sh/kf6dcbul","slide":6,"text":"Quoril Pulse","textPreview":"Quoril Pulse","textChars":12,"textLines":1,"bbox":[64,684,260,18]}
+{"kind":"textbox","id":"sh/d0z61032","slide":6,"text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1168,684,48,18]}
+{"kind":"shape","id":"sh/dsji5sne","slide":6,"bbox":[70,286,540,320]}
+{"kind":"textbox","id":"sh/o7qpg3ex","slide":6,"text":"Pulse AI","textPreview":"Pulse AI","textChars":8,"textLines":1,"bbox":[94,308,180,28]}
+{"kind":"shape","id":"sh/vmtwra5g","slide":6,"bbox":[428,308,150,28]}
+{"kind":"textbox","id":"sh/61032lsz","slide":6,"text":"LIVE ORG CONTEXT","textPreview":"LIVE ORG CONTEXT","textChars":16,"textLines":1,"bbox":[440,315,126,15]}
+{"kind":"shape","id":"sh/d4vmtwra","slide":6,"bbox":[98,314,410,48]}
+{"kind":"textbox","id":"sh/oj2t83it","slide":6,"text":"Ask: what is blocked in engineering?","textPreview":"Ask: what is blocked in engineering?","textChars":36,"textLines":1,"bbox":[116,328,374,18]}
+{"kind":"shape","id":"sh/vy90je9c","slide":6,"bbox":[134,372,448,48]}
+{"kind":"textbox","id":"sh/6dcbulwv","slide":6,"text":"3 tasks are blocked. 1 has no owner. Design handoff is late.","textPreview":"3 tasks are blocked. 1 has no owner. Design handoff is late.","textChars":60,"textLines":1,"bbox":[152,386,412,18]}
+{"kind":"shape","id":"sh/d8v6psfi","slide":6,"bbox":[98,446,410,48]}
+{"kind":"textbox","id":"sh/onyd0z61","slide":6,"text":"Assign the launch checklist to Growth.","textPreview":"Assign the launch checklist to Growth.","textChars":38,"textLines":1,"bbox":[116,460,374,18]}
+{"kind":"shape","id":"sh/kre1w7mp","slide":6,"bbox":[134,504,448,48]}
+{"kind":"textbox","id":"sh/dcbulwva","slide":6,"text":"Created 6 tasks, tagged Growth, due Friday, owners notified.","textPreview":"Created 6 tasks, tagged Growth, due Friday, owners notified.","textChars":60,"textLines":1,"bbox":[152,518,412,18]}
+{"kind":"shape","id":"sh/6psfil0r","slide":6,"bbox":[670,292,236,122]}
+{"kind":"textbox","id":"sh/val87ed8","slide":6,"text":"Ask status","textPreview":"Ask status","textChars":10,"textLines":1,"bbox":[688,312,200,24]}
+{"kind":"textbox","id":"sh/k3q5o7qp","slide":6,"text":"What is ongoing, stuck, overdue, or unassigned?","textPreview":"What is ongoing, stuck, overdue, or unassigned?","textChars":47,"textLines":1,"bbox":[688,346,200,44]}
+{"kind":"shape","id":"sh/donyd0z6","slide":6,"bbox":[940,292,236,122]}
+{"kind":"textbox","id":"sh/2x4nap4r","slide":6,"text":"Assign work","textPreview":"Assign work","textChars":11,"textLines":1,"bbox":[958,312,200,24]}
+{"kind":"textbox","id":"sh/vixczed8","slide":6,"text":"Create tasks for any department or owner from a natural-language request.","textPreview":"Create tasks for any department or owner from a natural-language request.","textChars":73,"textLines":1,"bbox":[958,346,200,44]}
+{"kind":"shape","id":"sh/kf6dcbul","slide":6,"bbox":[670,446,236,122]}
+{"kind":"textbox","id":"sh/d0z61032","slide":6,"text":"Read meetings","textPreview":"Read meetings","textChars":13,"textLines":1,"bbox":[688,466,200,24]}
+{"kind":"textbox","id":"sh/3ylc7u54","slide":6,"text":"Understand transcripts and turn decisions into created or modified tasks.","textPreview":"Understand transcripts and turn decisions into created or modified tasks.","textChars":73,"textLines":1,"bbox":[688,500,200,44]}
+{"kind":"shape","id":"sh/adsji5sn","slide":6,"bbox":[940,446,236,122]}
+{"kind":"textbox","id":"sh/h4byhgn2","slide":6,"text":"Explain the org","textPreview":"Explain the org","textChars":15,"textLines":1,"bbox":[958,466,200,24]}
+{"kind":"textbox","id":"sh/sji5snel","slide":6,"text":"Roll up team-level execution into leadership-ready answers.","textPreview":"Roll up team-level execution into leadership-ready answers.","textChars":59,"textLines":1,"bbox":[958,500,200,44]}
+{"kind":"notes","id":"nt/yeu2vv","slide":6,"text":"Animation cue: first show chat, then reveal action cards in this order: Ask status, Assign work, Read meetings, Explain the org.\nImportant framing: Pulse AI is not a chatbot bolted onto Quoril. It is the interface to the productivity graph."}
+{"kind":"slide","id":"sl/2zx27u","slide":7,"title":"QUORIL PULSE","textShapes":19}
+{"kind":"shape","id":"sh/8z25kb6x","slide":7,"bbox":[910,-210,520,520]}
+{"kind":"shape","id":"sh/je9cvixc","slide":7,"bbox":[-250,430,520,520]}
+{"kind":"shape","id":"sh/qtcj6tov","slide":7,"bbox":[72,54,360,30]}
+{"kind":"textbox","id":"sh/xs72x4na","slide":7,"text":"QUORIL PULSE","textPreview":"QUORIL PULSE","textChars":12,"textLines":1,"bbox":[88,61,328,16]}
+{"kind":"textbox","id":"sh/87ed8bat","slide":7,"text":"Reports become a decision engine with Generate Insights.","textPreview":"Reports become a decision engine with Generate Insights.","textChars":56,"textLines":1,"bbox":[72,104,760,96]}
+{"kind":"textbox","id":"sh/fmlkjm1c","slide":7,"text":"The analytics layer surfaces deep work, distraction, task-focus linkage, planned vs actual, and AI-generated next steps.","textPreview":"The analytics layer surfaces deep work, distraction, task-focus linkage, planned vs actual, and AI-generated next steps.","textChars":120,"textLines":1,"bbox":[72,202,800,56]}
+{"kind":"shape","id":"sh/q1orytsv","slide":7,"bbox":[64,674,1152,1]}
+{"kind":"textbox","id":"sh/x4nap4r6","slide":7,"text":"Quoril Pulse","textPreview":"Quoril Pulse","textChars":12,"textLines":1,"bbox":[64,684,260,18]}
+{"kind":"textbox","id":"sh/8jqh0fep","slide":7,"text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1168,684,48,18]}
+{"kind":"shape","id":"sh/mp0bi9s3","slide":7,"bbox":[76,292,690,318]}
+{"kind":"textbox","id":"sh/bat47y1k","slide":7,"text":"Generate Insights","textPreview":"Generate Insights","textChars":17,"textLines":1,"bbox":[112,320,300,34]}
+{"kind":"textbox","id":"sh/4vmtwra5","slide":7,"text":"AI summary cached per report range, with visual context before recommendations.","textPreview":"AI summary cached per report range, with visual context before recommendations.","textChars":79,"textLines":1,"bbox":[112,362,560,24]}
+{"kind":"shape","id":"sh/tgfmlkjm","slide":7,"bbox":[112,410,142,112]}
+{"kind":"textbox","id":"sh/m1cfa9w3","slide":7,"text":"6.2h","textPreview":"6.2h","textChars":4,"textLines":1,"bbox":[130,430,106,48]}
+{"kind":"textbox","id":"sh/bm58z25k","slide":7,"text":"Deep work","textPreview":"Deep work","textChars":9,"textLines":1,"bbox":[132,482,102,24]}
+{"kind":"shape","id":"sh/47y1kre1","slide":7,"bbox":[274,410,142,112]}
+{"kind":"textbox","id":"sh/tsvu9kni","slide":7,"text":"83","textPreview":"83","textChars":2,"textLines":1,"bbox":[292,430,106,48]}
+{"kind":"textbox","id":"sh/m58z25kb","slide":7,"text":"Focus score","textPreview":"Focus score","textChars":11,"textLines":1,"bbox":[294,482,102,24]}
+{"kind":"shape","id":"sh/bq1oryts","slide":7,"bbox":[436,410,142,112]}
+{"kind":"textbox","id":"sh/7mp0bi9s","slide":7,"text":"71","textPreview":"71","textChars":2,"textLines":1,"bbox":[454,430,106,48]}
+{"kind":"textbox","id":"sh/e1w7mp0b","slide":7,"text":"Complete","textPreview":"Complete","textChars":8,"textLines":1,"bbox":[456,482,102,24]}
+{"kind":"shape","id":"sh/psfil0rq","slide":7,"bbox":[598,410,142,112]}
+{"kind":"textbox","id":"sh/w7mp0bi9","slide":7,"text":"9%","textPreview":"9%","textChars":2,"textLines":1,"bbox":[616,430,106,48]}
+{"kind":"textbox","id":"sh/7adsji5s","slide":7,"text":"Distraction","textPreview":"Distraction","textChars":11,"textLines":1,"bbox":[618,482,102,24]}
+{"kind":"shape","id":"sh/epkzupwb","slide":7,"bbox":[112,548,628,38]}
+{"kind":"textbox","id":"sh/pg3ex0nu","slide":7,"text":"Tomorrow: schedule deep work from 9-11am, assign blocked review, reduce comms windows.","textPreview":"Tomorrow: schedule deep work from 9-11am, assign blocked review, reduce comms windows.","textChars":86,"textLines":1,"bbox":[130,559,590,16]}
+{"kind":"shape","id":"sh/36hcrmhk","slide":7,"bbox":[820,354,24,24]}
+{"kind":"textbox","id":"sh/eloj2t83","slide":7,"text":"Turns raw activity into plain-English decisions.","textPreview":"Turns raw activity into plain-English decisions.","textChars":48,"textLines":1,"bbox":[860,349,310,38]}
+{"kind":"shape","id":"sh/sfil0rqd","slide":7,"bbox":[820,420,24,24]}
+{"kind":"textbox","id":"sh/h0fepkzu","slide":7,"text":"Shows the why behind productivity, not just a score.","textPreview":"Shows the why behind productivity, not just a score.","textChars":52,"textLines":1,"bbox":[860,415,310,38]}
+{"kind":"shape","id":"sh/a9w3m94f","slide":7,"bbox":[820,486,24,24]}
+{"kind":"textbox","id":"sh/zupwb2hw","slide":7,"text":"Connects personal reports to org-level Pulse intelligence.","textPreview":"Connects personal reports to org-level Pulse intelligence.","textChars":58,"textLines":1,"bbox":[860,481,310,38]}
+{"kind":"chart","id":"ch/cj6tovah","slide":7,"name":"","chartType":"bar","bbox":[810,584,350,58]}
+{"kind":"notes","id":"nt/2zx27u","slide":7,"text":"Animation cue: reveal report metrics first, then chart, then AI recommendation strip.\nCall out Generate Insights as the bridge between analytics and action."}
+{"kind":"slide","id":"sl/lw9rn0","slide":8,"title":"QUORIL PULSE","textShapes":18}
+{"kind":"shape","id":"sh/ixczed8v","slide":8,"bbox":[910,-210,520,520]}
+{"kind":"shape","id":"sh/tovahoza","slide":8,"bbox":[-250,430,520,520]}
+{"kind":"shape","id":"sh/032lszqt","slide":8,"bbox":[72,54,360,30]}
+{"kind":"textbox","id":"sh/bulwval8","slide":8,"text":"QUORIL PULSE","textPreview":"QUORIL PULSE","textChars":12,"textLines":1,"bbox":[88,61,328,16]}
+{"kind":"textbox","id":"sh/i9s36hcr","slide":8,"text":"The market owns pieces. Quoril owns the loop.","textPreview":"The market owns pieces. Quoril owns the loop.","textChars":45,"textLines":1,"bbox":[72,104,760,96]}
+{"kind":"textbox","id":"sh/p0bi9s36","slide":8,"text":"Competitors optimize for lists, tracking, or focus. Quoril connects intent, execution, evidence, insight, and AI action.","textPreview":"Competitors optimize for lists, tracking, or focus. Quoril connects intent, execution, evidence, insight, and AI action.","textChars":120,"textLines":1,"bbox":[72,202,800,56]}
+{"kind":"shape","id":"sh/0fepkzup","slide":8,"bbox":[64,674,1152,1]}
+{"kind":"textbox","id":"sh/byhgn29g","slide":8,"text":"Quoril Pulse","textPreview":"Quoril Pulse","textChars":12,"textLines":1,"bbox":[64,684,260,18]}
+{"kind":"textbox","id":"sh/idonyd0z","slide":8,"text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1168,684,48,18]}
+{"kind":"textbox","id":"sh/c7u54zid","slide":8,"text":"Capability","textPreview":"Capability","textChars":10,"textLines":1,"bbox":[96,250,220,22]}
+{"kind":"textbox","id":"sh/1orytsvu","slide":8,"text":"Planner","textPreview":"Planner","textChars":7,"textLines":1,"bbox":[316,250,130,22]}
+{"kind":"textbox","id":"sh/u18jqh0f","slide":8,"text":"Focus","textPreview":"Focus","textChars":5,"textLines":1,"bbox":[454,250,130,22]}
+{"kind":"textbox","id":"sh/jm1cfa9w","slide":8,"text":"Tracking","textPreview":"Tracking","textChars":8,"textLines":1,"bbox":[592,250,130,22]}
+{"kind":"textbox","id":"sh/cfa9w3m9","slide":8,"text":"Reports","textPreview":"Reports","textChars":7,"textLines":1,"bbox":[730,250,130,22]}
+{"kind":"textbox","id":"sh/1032lszq","slide":8,"text":"AI action","textPreview":"AI action","textChars":9,"textLines":1,"bbox":[868,250,130,22]}
+{"kind":"textbox","id":"sh/u9knih4b","slide":8,"text":"Org Pulse","textPreview":"Org Pulse","textChars":9,"textLines":1,"bbox":[1006,250,130,22]}
+{"kind":"shape","id":"sh/judg7ads","slide":8,"bbox":[96,292,1048,44]}
+{"kind":"textbox","id":"sh/cj6tovah","slide":8,"text":"Todo apps","textPreview":"Todo apps","textChars":9,"textLines":1,"bbox":[114,307,200,18]}
+{"kind":"shape","id":"sh/54zidony","slide":8,"bbox":[374,305,22,22]}
+{"kind":"shape","id":"sh/9s36hcrm","slide":8,"bbox":[512,305,22,22]}
+{"kind":"shape","id":"sh/g7adsji5","slide":8,"bbox":[650,305,22,22]}
+{"kind":"shape","id":"sh/rmhk3q5o","slide":8,"bbox":[788,305,22,22]}
+{"kind":"shape","id":"sh/y1kre1w7","slide":8,"bbox":[926,305,22,22]}
+{"kind":"shape","id":"sh/90je9cvi","slide":8,"bbox":[1064,305,22,22]}
+{"kind":"shape","id":"sh/gfmlkjm1","slide":8,"bbox":[96,344,1048,44]}
+{"kind":"textbox","id":"sh/rytsvu9k","slide":8,"text":"Time trackers","textPreview":"Time trackers","textChars":13,"textLines":1,"bbox":[114,359,200,18]}
+{"kind":"shape","id":"sh/yd0z6103","slide":8,"bbox":[374,357,22,22]}
+{"kind":"shape","id":"sh/9cvixcze","slide":8,"bbox":[512,357,22,22]}
+{"kind":"shape","id":"sh/gr2p8nqx","slide":8,"bbox":[650,357,22,22]}
+{"kind":"shape","id":"sh/a5gbq1or","slide":8,"bbox":[788,357,22,22]}
+{"kind":"shape","id":"sh/3m94fu18","slide":8,"bbox":[926,357,22,22]}
+{"kind":"shape","id":"sh/s72x4nap","slide":8,"bbox":[1064,357,22,22]}
+{"kind":"shape","id":"sh/lszqtcj6","slide":8,"bbox":[96,396,1048,44]}
+{"kind":"textbox","id":"sh/adsji5sn","slide":8,"text":"Focus apps","textPreview":"Focus apps","textChars":10,"textLines":1,"bbox":[114,411,200,18]}
+{"kind":"shape","id":"sh/3ylc7u54","slide":8,"bbox":[374,409,22,22]}
+{"kind":"shape","id":"sh/sji5snel","slide":8,"bbox":[512,409,22,22]}
+{"kind":"shape","id":"sh/h4byhgn2","slide":8,"bbox":[650,409,22,22]}
+{"kind":"shape","id":"sh/ap4r65wj","slide":8,"bbox":[788,409,22,22]}
+{"kind":"shape","id":"sh/za1gvy90","slide":8,"bbox":[926,409,22,22]}
+{"kind":"shape","id":"sh/32lszqtc","slide":8,"bbox":[1064,409,22,22]}
+{"kind":"shape","id":"sh/ahoza1gv","slide":8,"bbox":[96,448,1048,44]}
+{"kind":"textbox","id":"sh/l87ed8ba","slide":8,"text":"Project tools","textPreview":"Project tools","textChars":13,"textLines":1,"bbox":[114,463,200,18]}
+{"kind":"shape","id":"sh/sneloj2t","slide":8,"bbox":[374,461,22,22]}
+{"kind":"shape","id":"sh/3ex0nuxc","slide":8,"bbox":[512,461,22,22]}
+{"kind":"shape","id":"sh/at47y1kr","slide":8,"bbox":[650,461,22,22]}
+{"kind":"shape","id":"sh/lkjm1cfa","slide":8,"bbox":[788,461,22,22]}
+{"kind":"shape","id":"sh/szqtcj6t","slide":8,"bbox":[926,461,22,22]}
+{"kind":"shape","id":"sh/3itgfmlk","slide":8,"bbox":[1064,461,22,22]}
+{"kind":"shape","id":"sh/ex0nuxc3","slide":8,"bbox":[96,500,1048,44]}
+{"kind":"textbox","id":"sh/ovahoza1","slide":8,"text":"Quoril Pulse","textPreview":"Quoril Pulse","textChars":12,"textLines":1,"bbox":[114,515,200,18]}
+{"kind":"shape","id":"sh/dg7adsji","slide":8,"bbox":[374,513,22,22]}
+{"kind":"shape","id":"sh/6tovahoz","slide":8,"bbox":[512,513,22,22]}
+{"kind":"shape","id":"sh/vahoza1g","slide":8,"bbox":[650,513,22,22]}
+{"kind":"shape","id":"sh/onyd0z61","slide":8,"bbox":[788,513,22,22]}
+{"kind":"shape","id":"sh/d8v6psfi","slide":8,"bbox":[926,513,22,22]}
+{"kind":"shape","id":"sh/6hcrmhk3","slide":8,"bbox":[1064,513,22,22]}
+{"kind":"textbox","id":"sh/z25kb6xk","slide":8,"text":"Differentiation is not one feature. It is the integrated data model that makes Pulse AI possible.","textPreview":"Differentiation is not one feature. It is the integrated data model that makes Pulse AI possible.","textChars":97,"textLines":1,"bbox":[150,594,980,34]}
+{"kind":"notes","id":"nt/lw9rn0","slide":8,"text":"Animation cue: reveal competitor rows first, then the Quoril Pulse row as the payoff.\nAvoid attacking specific competitors. The point is category fragmentation."}
+{"kind":"slide","id":"sl/qwmqif","slide":9,"title":"QUORIL PULSE","textShapes":15}
+{"kind":"shape","id":"sh/tsvu9kni","slide":9,"bbox":[910,-210,520,520]}
+{"kind":"shape","id":"sh/m1cfa9w3","slide":9,"bbox":[-250,430,520,520]}
+{"kind":"shape","id":"sh/bm58z25k","slide":9,"bbox":[72,54,360,30]}
+{"kind":"textbox","id":"sh/4vmtwra5","slide":9,"text":"QUORIL PULSE","textPreview":"QUORIL PULSE","textChars":12,"textLines":1,"bbox":[88,61,328,16]}
+{"kind":"textbox","id":"sh/tgfmlkjm","slide":9,"text":"Roadmap: free data loop -> paid AI layer -> tokenised productivity network.","textPreview":"Roadmap: free data loop -> paid AI layer -> tokenised productivity network.","textChars":75,"textLines":1,"bbox":[72,104,760,96]}
+{"kind":"textbox","id":"sh/mp0bi9s3","slide":9,"text":"The product grows from a personal daily habit into an organization graph, then into a gamified reward platform.","textPreview":"The product grows from a personal daily habit into an organization graph, then into a gamified reward platform.","textChars":111,"textLines":1,"bbox":[72,202,800,56]}
+{"kind":"shape","id":"sh/bat47y1k","slide":9,"bbox":[64,674,1152,1]}
+{"kind":"textbox","id":"sh/4nap4r65","slide":9,"text":"Quoril Pulse","textPreview":"Quoril Pulse","textChars":12,"textLines":1,"bbox":[64,684,260,18]}
+{"kind":"textbox","id":"sh/t83itgfm","slide":9,"text":"09","textPreview":"09","textChars":2,"textLines":1,"bbox":[1168,684,48,18]}
+{"kind":"shape","id":"sh/9gr2p8nq","slide":9,"bbox":[92,302,336,250]}
+{"kind":"textbox","id":"sh/gvy90je9","slide":9,"text":"V1","textPreview":"V1","textChars":2,"textLines":1,"bbox":[116,326,96,56]}
+{"kind":"textbox","id":"sh/ra5gbq1o","slide":9,"text":"Free personal loop","textPreview":"Free personal loop","textChars":18,"textLines":1,"bbox":[116,398,270,32]}
+{"kind":"textbox","id":"sh/2p8nqxs7","slide":9,"text":"Tasks, canvas, focus, reports, and lightweight sync create daily habit and ethically collect productivity data.","textPreview":"Tasks, canvas, focus, reports, and lightweight sync create daily habit and ethically collect productivity data.","textChars":111,"textLines":1,"bbox":[116,442,276,78]}
+{"kind":"shape","id":"sh/94fu18jq","slide":9,"bbox":[430,400,42,52]}
+{"kind":"shape","id":"sh/kjm1cfa9","slide":9,"bbox":[474,302,336,250]}
+{"kind":"textbox","id":"sh/r2p8nqxs","slide":9,"text":"V2","textPreview":"V2","textChars":2,"textLines":1,"bbox":[498,326,96,56]}
+{"kind":"textbox","id":"sh/2hwfyxob","slide":9,"text":"Paid AI-native layer","textPreview":"Paid AI-native layer","textChars":20,"textLines":1,"bbox":[498,398,270,32]}
+{"kind":"textbox","id":"sh/9w3m94fu","slide":9,"text":"Integrations, Pulse AI, meeting transcript intelligence, deeper insights, and org workflows live behind paywall.","textPreview":"Integrations, Pulse AI, meeting transcript intelligence, deeper insights, and org workflows live behind paywall.","textChars":112,"textLines":1,"bbox":[498,442,276,78]}
+{"kind":"shape","id":"sh/kb6xkf6d","slide":9,"bbox":[812,400,42,52]}
+{"kind":"shape","id":"sh/0z61032l","slide":9,"bbox":[856,302,336,250]}
+{"kind":"textbox","id":"sh/pkzupwb2","slide":9,"text":"V3","textPreview":"V3","textChars":2,"textLines":1,"bbox":[880,326,96,56]}
+{"kind":"textbox","id":"sh/itgfmlkj","slide":9,"text":"Tokenised rewards","textPreview":"Tokenised rewards","textChars":17,"textLines":1,"bbox":[880,398,270,32]}
+{"kind":"textbox","id":"sh/7ed8bat4","slide":9,"text":"Users and teams earn productivity rewards, turning progress into a game-like incentive system.","textPreview":"Users and teams earn productivity rewards, turning progress into a game-like incentive system.","textChars":94,"textLines":1,"bbox":[880,442,276,78]}
+{"kind":"textbox","id":"sh/0nuxc3yl","slide":9,"text":"The strategic center: Quoril Pulse ships in V2 as the organization-level software layer.","textPreview":"The strategic center: Quoril Pulse ships in V2 as the organization-level software layer.","textChars":88,"textLines":1,"bbox":[168,596,944,30]}
+{"kind":"notes","id":"nt/qwmqif","slide":9,"text":"Animation cue: reveal V1, then V2, then V3. Use emphasis on V2 / Quoril Pulse.\nCorrect wording: tokenised platform, not crypto-first product. The reward layer is a gamification extension."}
+{"kind":"slide","id":"sl/f9dej1","slide":10,"title":"QUORIL PULSE","textShapes":12}
+{"kind":"shape","id":"sh/fil0rqd4","slide":10,"bbox":[910,-210,520,520]}
+{"kind":"shape","id":"sh/83itgfml","slide":10,"bbox":[-250,430,520,520]}
+{"kind":"shape","id":"sh/xobm58z2","slide":10,"bbox":[72,54,360,30]}
+{"kind":"textbox","id":"sh/m94fu18j","slide":10,"text":"QUORIL PULSE","textPreview":"QUORIL PULSE","textChars":12,"textLines":1,"bbox":[88,61,328,16]}
+{"kind":"textbox","id":"sh/fu18jqh0","slide":10,"text":"Quoril Pulse is the enterprise wedge.","textPreview":"Quoril Pulse is the enterprise wedge.","textChars":37,"textLines":1,"bbox":[72,104,760,96]}
+{"kind":"textbox","id":"sh/4fu18jqh","slide":10,"text":"A single operating layer for teams to plan, execute, track, and ask what is happening anywhere in the hierarchy.","textPreview":"A single operating layer for teams to plan, execute, track, and ask what is happening anywhere in the hierarchy.","textChars":112,"textLines":1,"bbox":[72,202,800,56]}
+{"kind":"shape","id":"sh/x0nuxc3y","slide":10,"bbox":[64,674,1152,1]}
+{"kind":"textbox","id":"sh/mlkjm1cf","slide":10,"text":"Quoril Pulse","textPreview":"Quoril Pulse","textChars":12,"textLines":1,"bbox":[64,684,260,18]}
+{"kind":"textbox","id":"sh/f6dcbulw","slide":10,"text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1168,684,48,18]}
+{"kind":"shape","id":"sh/vixczed8","slide":10,"bbox":[74,298,360,250]}
+{"kind":"textbox","id":"sh/2x4nap4r","slide":10,"text":"For teams","textPreview":"For teams","textChars":9,"textLines":1,"bbox":[106,330,250,30]}
+{"kind":"textbox","id":"sh/donyd0z6","slide":10,"text":"Plan work on boards, execute with owners, connect meeting decisions, and keep live status clean.","textPreview":"Plan work on boards, execute with owners, connect meeting decisions, and keep live status clean.","textChars":96,"textLines":1,"bbox":[108,384,284,78]}
+{"kind":"shape","id":"sh/k3q5o7qp","slide":10,"bbox":[460,298,360,250]}
+{"kind":"textbox","id":"sh/val87ed8","slide":10,"text":"For managers","textPreview":"For managers","textChars":12,"textLines":1,"bbox":[492,330,250,30]}
+{"kind":"textbox","id":"sh/6psfil0r","slide":10,"text":"Find unassigned tasks, blockers, overdue work, team load, and department-level execution risk.","textPreview":"Find unassigned tasks, blockers, overdue work, team load, and department-level execution risk.","textChars":94,"textLines":1,"bbox":[494,384,284,78]}
+{"kind":"shape","id":"sh/dcbulwva","slide":10,"bbox":[846,298,360,250]}
+{"kind":"textbox","id":"sh/kre1w7mp","slide":10,"text":"For leadership","textPreview":"For leadership","textChars":14,"textLines":1,"bbox":[878,330,250,30]}
+{"kind":"textbox","id":"sh/v6psfil0","slide":10,"text":"Ask Pulse AI for the truth: what's active, stuck, ownerless, high-risk, or ready to accelerate.","textPreview":"Ask Pulse AI for the truth: what's active, stuck, ownerless, high-risk, or ready to accelerate.","textChars":95,"textLines":1,"bbox":[880,384,284,78]}
+{"kind":"shape","id":"sh/2lszqtcj","slide":10,"bbox":[266,570,748,54]}
+{"kind":"textbox","id":"sh/ap4r65wj","slide":10,"text":"One hierarchy. One productivity graph. One AI interface to ask and act.","textPreview":"One hierarchy. One productivity graph. One AI interface to ask and act.","textChars":71,"textLines":1,"bbox":[290,586,700,22]}
+{"kind":"notes","id":"nt/f9dej1","slide":10,"text":"Animation cue: reveal Teams, Managers, Leadership, then the final one-line wedge.\nThis slide is the business pivot: personal daily habit becomes organization software."}
+{"kind":"slide","id":"sl/6zt3jd","slide":11,"title":"QUORIL PULSE","textShapes":14}
+{"kind":"shape","id":"sh/judg7ads","slide":11,"bbox":[910,-210,520,520]}
+{"kind":"shape","id":"sh/cfa9w3m9","slide":11,"bbox":[-250,430,520,520]}
+{"kind":"shape","id":"sh/1032lszq","slide":11,"bbox":[72,54,360,30]}
+{"kind":"textbox","id":"sh/u18jqh0f","slide":11,"text":"QUORIL PULSE","textPreview":"QUORIL PULSE","textChars":12,"textLines":1,"bbox":[88,61,328,16]}
+{"kind":"textbox","id":"sh/jm1cfa9w","slide":11,"text":"Marketing plan: premium, organic, demo-led.","textPreview":"Marketing plan: premium, organic, demo-led.","textChars":43,"textLines":1,"bbox":[72,104,760,96]}
+{"kind":"textbox","id":"sh/c7u54zid","slide":11,"text":"Win the deep-work community first, then convert personal adoption into team demand for Pulse.","textPreview":"Win the deep-work community first, then convert personal adoption into team demand for Pulse.","textChars":93,"textLines":1,"bbox":[72,202,800,56]}
+{"kind":"shape","id":"sh/1orytsvu","slide":11,"bbox":[64,674,1152,1]}
+{"kind":"textbox","id":"sh/upwb2hwf","slide":11,"text":"Quoril Pulse","textPreview":"Quoril Pulse","textChars":12,"textLines":1,"bbox":[64,684,260,18]}
+{"kind":"textbox","id":"sh/nap4r65w","slide":11,"text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1168,684,48,18]}
+{"kind":"shape","id":"sh/7u54zido","slide":11,"bbox":[96,302,500,112]}
+{"kind":"shape","id":"sh/ed8bat47","slide":11,"bbox":[120,326,150,28]}
+{"kind":"textbox","id":"sh/l0rqd4vm","slide":11,"text":"Reddit","textPreview":"Reddit","textChars":6,"textLines":1,"bbox":[132,333,126,15]}
+{"kind":"textbox","id":"sh/wfyxobm5","slide":11,"text":"Highest intent productivity and dev communities; value-first posts and feedback loops.","textPreview":"Highest intent productivity and dev communities; value-first posts and feedback loops.","textChars":86,"textLines":1,"bbox":[294,326,260,58]}
+{"kind":"shape","id":"sh/36hcrmhk","slide":11,"bbox":[644,302,500,112]}
+{"kind":"shape","id":"sh/eloj2t83","slide":11,"bbox":[668,326,150,28]}
+{"kind":"textbox","id":"sh/lc7u54zi","slide":11,"text":"X / build in public","textPreview":"X / build in public","textChars":19,"textLines":1,"bbox":[680,333,126,15]}
+{"kind":"textbox","id":"sh/wra5gbq1","slide":11,"text":"Daily product clips, insight threads, waitlist milestones, and founderless brand voice.","textPreview":"Daily product clips, insight threads, waitlist milestones, and founderless brand voice.","textChars":87,"textLines":1,"bbox":[842,326,260,58]}
+{"kind":"shape","id":"sh/7adsji5s","slide":11,"bbox":[96,444,500,112]}
+{"kind":"shape","id":"sh/epkzupwb","slide":11,"bbox":[120,468,150,28]}
+{"kind":"textbox","id":"sh/m1cfa9w3","slide":11,"text":"Product Hunt","textPreview":"Product Hunt","textChars":12,"textLines":1,"bbox":[132,475,126,15]}
+{"kind":"textbox","id":"sh/bm58z25k","slide":11,"text":"Launch-day spike with polished gallery, demos, and active comment support.","textPreview":"Launch-day spike with polished gallery, demos, and active comment support.","textChars":74,"textLines":1,"bbox":[294,468,260,58]}
+{"kind":"shape","id":"sh/47y1kre1","slide":11,"bbox":[644,444,500,112]}
+{"kind":"shape","id":"sh/tsvu9kni","slide":11,"bbox":[668,468,150,28]}
+{"kind":"textbox","id":"sh/mp0bi9s3","slide":11,"text":"LinkedIn + outreach","textPreview":"LinkedIn + outreach","textChars":19,"textLines":1,"bbox":[680,475,126,15]}
+{"kind":"textbox","id":"sh/bat47y1k","slide":11,"text":"Professional proof, team productivity angle, micro-creator/community partnerships.","textPreview":"Professional proof, team productivity angle, micro-creator/community partnerships.","textChars":82,"textLines":1,"bbox":[842,468,260,58]}
+{"kind":"textbox","id":"sh/4vmtwra5","slide":11,"text":"Week 0 asset sprint: product demo video, canvas/report/focus clips, beta testimonials, landing conversion, waitlist nurture.","textPreview":"Week 0 asset sprint: product demo video, canvas/report/focus clips, beta testimonials, landing conversion, waitlist nurture.","textChars":124,"textLines":1,"bbox":[132,596,1016,28]}
+{"kind":"notes","id":"nt/6zt3jd","slide":11,"text":"Animation cue: reveal channels in priority order: Reddit, X, Product Hunt, LinkedIn/outreach.\nTone: premium and global, product-led, no ad budget required for first traction."}
+{"kind":"slide","id":"sl/heg5w1","slide":12,"title":"Build the productivity graph.","textShapes":9}
+{"kind":"shape","id":"sh/rqd4vmtw","slide":12,"bbox":[910,-210,520,520]}
+{"kind":"shape","id":"sh/kb6xkf6d","slide":12,"bbox":[-250,430,520,520]}
+{"kind":"textbox","id":"sh/2t83itgf","slide":12,"text":"Build the productivity graph.","textPreview":"Build the productivity graph.","textChars":29,"textLines":1,"bbox":[164,212,952,66]}
+{"kind":"textbox","id":"sh/re1w7mp0","slide":12,"text":"Launch the personal loop. Scale into Quoril Pulse. Turn organizational work into something leaders can ask, understand, and act on.","textPreview":"Launch the personal loop. Scale into Quoril Pulse. Turn organizational work into something leaders can ask, understand, and act on.","textChars":131,"textLines":1,"bbox":[210,306,860,90]}
+{"kind":"shape","id":"sh/kzupwb2h","slide":12,"bbox":[240,462,220,92]}
+{"kind":"textbox","id":"sh/9knih4by","slide":12,"text":"V1","textPreview":"V1","textChars":2,"textLines":1,"bbox":[240,482,220,32]}
+{"kind":"textbox","id":"sh/2p8nqxs7","slide":12,"text":"Free data loop","textPreview":"Free data loop","textChars":14,"textLines":1,"bbox":[258,522,184,18]}
+{"kind":"shape","id":"sh/ra5gbq1o","slide":12,"bbox":[510,462,220,92]}
+{"kind":"textbox","id":"sh/3m94fu18","slide":12,"text":"V2","textPreview":"V2","textChars":2,"textLines":1,"bbox":[510,482,220,32]}
+{"kind":"textbox","id":"sh/a5gbq1or","slide":12,"text":"Pulse AI + paid integrations","textPreview":"Pulse AI + paid integrations","textChars":28,"textLines":1,"bbox":[528,522,184,18]}
+{"kind":"shape","id":"sh/lszqtcj6","slide":12,"bbox":[780,462,220,92]}
+{"kind":"textbox","id":"sh/s72x4nap","slide":12,"text":"V3","textPreview":"V3","textChars":2,"textLines":1,"bbox":[780,482,220,32]}
+{"kind":"textbox","id":"sh/3ylc7u54","slide":12,"text":"Tokenised productivity rewards","textPreview":"Tokenised productivity rewards","textChars":30,"textLines":1,"bbox":[798,522,184,18]}
+{"kind":"textbox","id":"sh/adsji5sn","slide":12,"text":"Quoril Pulse","textPreview":"Quoril Pulse","textChars":12,"textLines":1,"bbox":[510,622,260,30]}
+{"kind":"image","id":"im/gfmlkjm1","slide":12,"name":"","alt":"Quoril brand mark","bbox":[592,74,96,96]}
+{"kind":"notes","id":"nt/heg5w1","slide":12,"text":"Animation cue: fade brand mark, then headline, then each roadmap card.\nClosing line: Quoril Pulse makes work queryable, assignable, and improvable."}

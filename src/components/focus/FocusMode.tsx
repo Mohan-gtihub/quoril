@@ -18,6 +18,7 @@ import { CompletionCelebration } from '../ui/CompletionCelebration'
 import { HoldButton } from '../ui/HoldButton'
 import { cn } from '@/utils/helpers'
 import { SuperFocusPill } from './SuperFocusPill'
+import { SessionStats } from './SessionStats'
 import type { Task } from '@/types/database'
 import { platform } from '@/services/platform'
 
@@ -334,6 +335,13 @@ export function FocusMode() {
                                     <ArrowRight className="w-5 h-5" />
                                 </button>
                             </div>
+
+                            {/* SESSION STATS — focused vs distracted vs break/away */}
+                            {!isBreak && (
+                                <div className="w-full mt-8 pt-6 border-t border-[var(--border-default)]">
+                                    <SessionStats activeTask={activeTask} variant="full" />
+                                </div>
+                            )}
                         </div>
 
                         {/* RIGHT COLUMN */}

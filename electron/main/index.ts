@@ -907,6 +907,13 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
         return dbOps.getReportsDashboardData(userId, startDate, endDate)
     })
 
+    /* Reports — live distraction for the current focus sitting */
+
+    ipcMain.handle('reports:getSessionDistraction', (_, { startISO, endISO }: { startISO: string, endISO: string }) => {
+        if (!startISO || !endISO) return { distractionSeconds: 0, byCategory: [] }
+        return dbOps.getSessionDistraction(startISO, endISO)
+    })
+
     /* Screen Time — single aggregated call for a specific day */
 
     ipcMain.handle('screenTime:getData', (_, { date }: { date: string }) => {

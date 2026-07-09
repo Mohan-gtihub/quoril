@@ -17,6 +17,9 @@ export interface BuildSummaryInput {
     focusLinkedPercent: number
     distractionDuringFocusSeconds: number
     distractionPercent: number
+    overallDistractionSeconds: number
+    overallDistractionPercent: number
+    distractionByCategory: { category: string; seconds: number }[]
     peakHours: { hour: number; minutes: number; isPeak: boolean }[]
     topCategories: { name: string; seconds: number }[]
     // Only distracting apps are treated as attention leaks.
@@ -79,6 +82,11 @@ export function buildInsightSummary(input: BuildSummaryInput): ReportInsightSumm
         focus_linked_percent: round(input.focusLinkedPercent),
         distraction_during_focus_minutes: round(input.distractionDuringFocusSeconds / 60),
         distraction_percent: round(input.distractionPercent),
+        overall_distraction_minutes: round(input.overallDistractionSeconds / 60),
+        overall_distraction_percent: round(input.overallDistractionPercent),
+        distraction_by_category: input.distractionByCategory
+            .filter(c => c.seconds > 0)
+            .map(c => ({ category: c.category, minutes: round(c.seconds / 60) })),
         best_focus_window: best ? windowLabel(best.hour) : null,
         worst_focus_window: worst ? windowLabel(worst.hour) : null,
         top_categories: input.topCategories

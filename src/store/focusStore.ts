@@ -70,6 +70,8 @@ export interface FocusState {
 
     startTime: number | null // ms
     elapsed: number // seconds (accumulated)
+    sessionStartedAt: number | null // ms — wall-clock when the CURRENT sitting began; survives pause/resume, cleared on end. Anchors live per-session stats.
+    sessionBaseElapsed: number // seconds — `elapsed` at the moment this sitting began, so focused-this-session = elapsed - sessionBaseElapsed
 
     duration: number // seconds (goal)
 
@@ -157,6 +159,8 @@ export const useFocusStore = create<FocusState>()(
 
             startTime: null,
             elapsed: 0,
+            sessionStartedAt: null,
+            sessionBaseElapsed: 0,
 
             duration: 1500, // 25 min default
             sessionType: 'regular',
@@ -332,6 +336,9 @@ export const useFocusStore = create<FocusState>()(
                         isPaused: false,
                         startTime: now,
                         elapsed: previous,
+                        sessionStartedAt: now,
+                        sessionBaseElapsed: previous,
+                        breakElapsed: 0,
                         duration: goal,
                         sessionType: type,
                         showFocusPanel: true,
@@ -794,6 +801,9 @@ export const useFocusStore = create<FocusState>()(
                     isPaused: false,
                     startTime: null,
                     elapsed: 0,
+                    sessionStartedAt: null,
+                    sessionBaseElapsed: 0,
+                    breakElapsed: 0,
                     showFocusPanel: false,
                     isBreak: false,
                     pomodoroRemaining: 0,
