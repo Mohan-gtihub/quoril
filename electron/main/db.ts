@@ -564,6 +564,10 @@ export const dbOps = {
         `, [userId, startDate, endDate]) as any[]) ?? []
 
         // 13. Distracting app sessions in range (desktop only; empty on web)
+        // 'Entertainment' is the only distraction category the collector emits
+        // (see electron/main/core/collector.ts) — YouTube, Netflix, Twitch,
+        // Spotify, Reddit, X all resolve there. Earlier labels ('Social',
+        // 'Gaming', 'News') never existed, so this filter matched nothing.
         const distractingSessions = (exec(`
             SELECT s.start_time AS start, s.end_time AS end,
                    COALESCE(a.category, 'Other') AS category
@@ -571,7 +575,7 @@ export const dbOps = {
             LEFT JOIN apps a ON s.app_id = a.id
             WHERE s.end_time IS NOT NULL
               AND s.start_time >= ? AND s.start_time <= ?
-              AND COALESCE(a.category, 'Other') IN ('Social', 'Entertainment', 'Gaming', 'News')
+              AND COALESCE(a.category, 'Other') IN ('Entertainment')
         `, [startDate, endDate]) as any[]) ?? []
 
         // 14. Planned vs actual — tasks due today vs completed
@@ -734,7 +738,7 @@ export const dbOps = {
             SELECT
                 CASE
                     WHEN COALESCE(a.category, 'Other') IN ('Development', 'Work') THEN 'productive'
-                    WHEN COALESCE(a.category, 'Other') IN ('Entertainment', 'Gaming') THEN 'unproductive'
+                    WHEN COALESCE(a.category, 'Other') IN ('Entertainment') THEN 'unproductive'
                     ELSE 'neutral'
                 END AS bucket,
                 SUM(s.duration_seconds) AS totalSeconds

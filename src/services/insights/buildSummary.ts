@@ -23,7 +23,13 @@ export interface BuildSummaryInput {
     distractingApps: { name: string; seconds: number }[]
 }
 
-const DISTRACTING = ['Social', 'Entertainment', 'Gaming', 'News']
+// Categories the collector actually emits (electron/main/core/collector.ts):
+//   Work | Web | Development | Communication | Entertainment | Other | Idle
+// Of these, Entertainment is the attention-leak bucket (YouTube, Netflix,
+// Twitch, Spotify, Reddit, X all resolve here). The old list used labels
+// ('Social', 'Gaming', 'News') the collector never produces, so distraction
+// stats silently came back empty. Keep this in sync with the collector's map.
+const DISTRACTING = ['Entertainment']
 export { DISTRACTING }
 
 function hourLabel(h: number): string {

@@ -4,17 +4,22 @@ import { supabase } from '@/services/supabase'
 
 interface ProfileState {
     dailyGoalMinutes: number
+    fullName: string
+    avatarUrl: string | null
     streak: number
     isLoading: boolean
 
     // Actions
     fetchProfile: (userId: string) => Promise<void>
     updateDailyGoal: (minutes: number) => Promise<void>
+    updateProfile: (data: { fullName?: string; avatarUrl?: string | null }) => Promise<{ success: boolean; error?: string }>
     fetchStreak: () => Promise<void>
 }
 
 export const useProfileStore = create<ProfileState>((set, get) => ({
     dailyGoalMinutes: 360, // Default 6 hours
+    fullName: '',
+    avatarUrl: null,
     streak: 0,
     isLoading: false,
 
@@ -23,7 +28,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
             set({ isLoading: true })
             const { data, error } = await supabase
                 .from('profiles')
-                .select('daily_goal_minutes')
+                .select('daily_goal_minutes, full_name, avatar_url')
                 .eq('id', userId)
                 .single()
 
@@ -32,7 +37,11 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
             }
 
             if (data) {
-                set({ dailyGoalMinutes: (data as any).daily_goal_minutes ?? 360 })
+                set({
+                    dailyGoalMinutes: (data as any).daily_goal_minutes ?? 360,
+                    fullName: (data as any).full_name ?? '',
+                    avatarUrl: (data as any).avatar_url ?? null,
+                })
             }
         } catch (err) {
             console.error(err)
@@ -41,6 +50,29 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
             // Fetch streak when profile loads
             get().fetchStreak()
         }
+    },
+
+    updateProfile: async ({ fullName, avatarUrl }) => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return { success: false, error: 'Not signed in' }
+
+        const patch: Record<string, unknown> = { id: user.id, updated_at: new Date().toISOString() }
+        if (fullName !== undefined) patch.full_name = fullName.trim()
+        if (avatarUrl !== undefined) patch.avatar_url = avatarUrl
+
+        // Optimistic
+        const prev = { fullName: get().fullName, avatarUrl: get().avatarUrl }
+        set(state => ({
+            fullName: fullName !== undefined ? fullName.trim() : state.fullName,
+            avatarUrl: avatarUrl !== undefined ? avatarUrl : state.avatarUrl,
+        }))
+
+        const { error } = await supabase.from('profiles').upsert(patch as any)
+        if (error) {
+            set(prev) // revert
+            return { success: false, error: error.message }
+        }
+        return { success: true }
     },
 
     updateDailyGoal: async (minutes: number) => {

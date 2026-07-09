@@ -15,6 +15,11 @@ export function PeakHoursChart({ bins }: {
         return <div className="flex items-center justify-center h-48 text-xs text-[var(--text-muted)]">No focus sessions yet for this range</div>
     }
     const rows = bins.map(b => ({ ...b, label: hourLabel(b.hour) }))
+    // Landing "hourly heatmap" recipe: peak hour stands out in amber (BREAK) at
+    // full strength; every other bar is focus-blue with opacity graduated by
+    // height (taller = more opaque), giving the periwinkle fade instead of a
+    // flat wash. color-mix drives the fade so the blue stays theme-token driven.
+    const maxMin = Math.max(1, ...rows.map(r => r.minutes))
     return (
         <ResponsiveContainer width="100%" height={196}>
             <BarChart data={rows} margin={{ top: 10, right: 6, left: 6, bottom: 0 }} barCategoryGap={2}>
@@ -26,9 +31,14 @@ export function PeakHoursChart({ bins }: {
                     formatter={(v: number) => [`${v}m`, 'Focus']}
                 />
                 <Bar dataKey="minutes" radius={[3, 3, 0, 0]} animationDuration={600}>
-                    {rows.map((r, i) => (
-                        <Cell key={i} fill={r.isPeak ? 'var(--focus)' : 'color-mix(in srgb, var(--focus) 45%, transparent)'} />
-                    ))}
+                    {rows.map((r, i) => {
+                        const pctOpacity = Math.round((0.22 + (r.minutes / maxMin) * 0.55) * 100)
+                        return (
+                            <Cell key={i} fill={r.isPeak
+                                ? 'var(--break)'
+                                : `color-mix(in srgb, var(--focus) ${pctOpacity}%, transparent)`} />
+                        )
+                    })}
                 </Bar>
             </BarChart>
         </ResponsiveContainer>

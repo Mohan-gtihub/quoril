@@ -33,6 +33,9 @@ interface AuthState {
     signUp: (email: string, password: string) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean }>
     signInWithGoogle: () => Promise<{ success: boolean; error?: string }>
     signOut: () => Promise<void>
+    updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>
+    updateEmail: (newEmail: string) => Promise<{ success: boolean; error?: string }>
+    sendPasswordReset: () => Promise<{ success: boolean; error?: string }>
     checkSessionValidity: () => boolean
     updateActivity: () => void
     setUser: (user: User | null) => void
@@ -396,6 +399,49 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch (error) {
             console.error('[Auth] Sign out error:', error)
             set({ loading: false })
+        }
+    },
+
+    updatePassword: async (newPassword) => {
+        const check = validatePassword(newPassword)
+        if (!check.valid) {
+            return { success: false, error: check.errors[0] || 'Password is too weak' }
+        }
+        try {
+            const { error } = await supabase.auth.updateUser({ password: newPassword })
+            if (error) return { success: false, error: getSecureErrorMessage(error, 'general') }
+            return { success: true }
+        } catch (error) {
+            return { success: false, error: getSecureErrorMessage(error, 'general') }
+        }
+    },
+
+    updateEmail: async (newEmail) => {
+        const emailCheck = validateEmail(newEmail)
+        if (!emailCheck.valid) {
+            return { success: false, error: emailCheck.error || 'Please enter a valid email address' }
+        }
+        try {
+            const { error } = await supabase.auth.updateUser({ email: newEmail })
+            if (error) return { success: false, error: getSecureErrorMessage(error, 'general') }
+            // Supabase sends a confirmation link to the new address before it takes effect.
+            return { success: true }
+        } catch (error) {
+            return { success: false, error: getSecureErrorMessage(error, 'general') }
+        }
+    },
+
+    sendPasswordReset: async () => {
+        const email = get().user?.email
+        if (!email) return { success: false, error: 'No email on file' }
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/reset-password`,
+            })
+            if (error) return { success: false, error: getSecureErrorMessage(error, 'general') }
+            return { success: true }
+        } catch (error) {
+            return { success: false, error: getSecureErrorMessage(error, 'general') }
         }
     },
 
