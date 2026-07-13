@@ -102,6 +102,28 @@ export function ActivityHeatmap() {
     // The dashboard map adapts to its available width, but the share badge
     // needs a stable, unclipped snapshot. Keep the most recent six months.
     const badgeWeeks = useMemo(() => days.slice(-26), [days])
+    const badgeActiveDays = useMemo(
+        () => badgeWeeks.flat().filter(day => (activityMap[format(day, 'yyyy-MM-dd')] || 0) > 0).length,
+        [badgeWeeks, activityMap],
+    )
+    const badgeMonthTotals = useMemo(() => {
+        const totals = Array.from({ length: 6 }, (_, index) => {
+            const month = subMonths(new Date(), 5 - index)
+            const key = format(month, 'yyyy-MM')
+            const minutes = Object.entries(activityMap).reduce(
+                (sum, [date, value]) => date.startsWith(key) ? sum + value : sum,
+                0,
+            )
+            return {
+                key,
+                label: format(month, 'MMM'),
+                minutes,
+                valueLabel: minutes < 60 ? `${Math.round(minutes)}m` : `${Math.round(minutes / 60)}h`,
+            }
+        })
+        const maxMinutes = Math.max(1, ...totals.map(month => month.minutes))
+        return totals.map(month => ({ ...month, percent: (month.minutes / maxMinutes) * 100 }))
+    }, [activityMap])
 
     // Single green intensity ramp — one coherent scale in every theme.
     // Anchored to --gh-l4 (theme-aware green) with opacity steps so faint→full
@@ -164,6 +186,7 @@ export function ActivityHeatmap() {
         return {
             monthStr: fmtHrs(monthMins),
             monthLabel: format(new Date(), 'MMMM yyyy'),
+            monthActiveDays,
             monthConsistency: Math.round((monthActiveDays / Math.max(1, new Date().getDate())) * 100),
             totalStr: fmtHrs(totalMins),
             activeDays,
@@ -417,7 +440,7 @@ export function ActivityHeatmap() {
                 onClick={() => setShareOpen(false)}
             >
                 <div
-                    className="w-full max-w-[640px] bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] shadow-2xl p-6 animate-in zoom-in-95 duration-200"
+                    className="w-full max-w-[720px] bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] shadow-2xl p-6 animate-in zoom-in-95 duration-200"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="flex items-start justify-between mb-1">
@@ -439,42 +462,74 @@ export function ActivityHeatmap() {
                     </p>
 
                     {/* Image-only share asset — deliberately separate from the dashboard card. */}
-                    <div ref={shareBadgeRef} className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0b0d10] text-white shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
+                    <div ref={shareBadgeRef} className="overflow-hidden rounded-2xl border border-white/10 bg-[#0b0d10] text-white shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
                         <div className="h-1 w-full bg-[#b6f500]" />
-                        <div className="p-7">
-                            <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-5">
-                                <div className="relative h-9 w-[170px] overflow-hidden">
-                                    <img src={quorilLogo} alt="Quoril" className="absolute inset-0 h-full w-full scale-[1.45] object-cover" />
+                        <div className="p-6">
+                            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                                <div className="relative h-12 w-[145px] overflow-hidden">
+                                    <img src={quorilLogo} alt="Quoril" className="absolute left-1/2 top-1/2 w-[230px] max-w-none -translate-x-1/2 -translate-y-1/2" />
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">Monthly focus report</p>
-                                    <p className="mt-1 text-[11px] font-semibold text-white/75">{stats.monthLabel}</p>
-                                </div>
+                                <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-white/45">{stats.monthLabel} · Focus report</p>
                             </div>
 
-                            <div className="py-7">
-                                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">Focused time this month</p>
-                                <p className="mt-2 text-[52px] font-black leading-none tracking-[-0.045em] text-white">{stats.monthStr}</p>
-                            </div>
+                            <div className="grid grid-cols-[0.82fr_1.18fr] gap-7 pt-6">
+                                <div className="flex flex-col">
+                                    <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/45">Focus this month</p>
+                                    <p className="mt-2 text-[46px] font-bold leading-none tracking-[-0.04em] text-white">{stats.monthStr}</p>
+                                    <p className="mt-2 text-[11px] text-white/50">Across {stats.monthActiveDays} active days</p>
 
-                            <div className="grid grid-cols-4 border-y border-white/10">
-                                <div className="py-4 pr-3"><p className="text-[20px] font-bold tabular-nums text-white">{stats.streak}</p><p className="mt-1 text-[8px] font-bold uppercase tracking-[0.12em] text-white/40">Current streak</p></div>
-                                <div className="border-l border-white/10 px-3 py-4"><p className="text-[20px] font-bold tabular-nums text-white">{stats.monthConsistency}%</p><p className="mt-1 text-[8px] font-bold uppercase tracking-[0.12em] text-white/40">Consistency</p></div>
-                                <div className="border-l border-white/10 px-3 py-4"><p className="text-[20px] font-bold tabular-nums text-white">{stats.averageFocusDayStr}</p><p className="mt-1 text-[8px] font-bold uppercase tracking-[0.12em] text-white/40">Avg focus day</p></div>
-                                <div className="border-l border-white/10 pl-3 py-4"><p className="text-[20px] font-bold tabular-nums text-white">{stats.bestMinsStr}</p><p className="mt-1 text-[8px] font-bold uppercase tracking-[0.12em] text-white/40">Personal best</p></div>
-                            </div>
-
-                            <div className="pt-6">
-                                <div className="mb-3 flex items-center justify-between text-[8px] font-bold uppercase tracking-[0.14em] text-white/35"><span>6-month consistency</span><span>Low to high</span></div>
-                                <div className="flex w-full gap-[3px]">
-                                    {badgeWeeks.map((week, weekIndex) => (
-                                        <div key={weekIndex} className="flex min-w-0 flex-1 flex-col gap-[3px]">
-                                            {week.map(day => {
-                                                const mins = activityMap[format(day, 'yyyy-MM-dd')] || 0
-                                                return <span key={day.toISOString()} style={getCellStyle(mins)} className="aspect-square w-full rounded-[2px]" />
-                                            })}
+                                    <div className="mt-6 border-t border-white/10">
+                                        <div className="flex items-center justify-between border-b border-white/10 py-3">
+                                            <span className="text-[10px] text-white/45">Current streak</span><span className="text-[15px] font-semibold tabular-nums">{stats.streak} days</span>
                                         </div>
-                                    ))}
+                                        <div className="flex items-center justify-between border-b border-white/10 py-3">
+                                            <span className="text-[10px] text-white/45">Monthly consistency</span><span className="text-[15px] font-semibold tabular-nums">{stats.monthConsistency}%</span>
+                                        </div>
+                                        <div className="flex items-center justify-between border-b border-white/10 py-3">
+                                            <span className="text-[10px] text-white/45">Average focus day</span><span className="text-[15px] font-semibold tabular-nums">{stats.averageFocusDayStr}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between py-3">
+                                            <span className="text-[10px] text-white/45">Personal best</span><span className="text-[15px] font-semibold tabular-nums">{stats.bestMinsStr}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex h-full flex-col border-l border-white/10 pl-7">
+                                    <div className="flex items-end justify-between gap-4">
+                                        <div><p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/45">Six-month activity</p><p className="mt-1 text-[11px] text-white/55">{badgeActiveDays} active days</p></div>
+                                        <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-white/30">Less · More</p>
+                                    </div>
+                                    <div className="mt-5 flex w-full gap-[3px]">
+                                        {badgeWeeks.map((week, weekIndex) => (
+                                            <div key={weekIndex} className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                                                {week.map(day => {
+                                                    const mins = activityMap[format(day, 'yyyy-MM-dd')] || 0
+                                                    return <span key={day.toISOString()} style={getCellStyle(mins)} className="aspect-square w-full rounded-[2px]" />
+                                                })}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="mt-8 flex flex-1 flex-col border-t border-white/10 pt-5">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/45">Monthly focus trend</p>
+                                            <p className="text-[8px] text-white/30">Focused hours</p>
+                                        </div>
+                                        <div className="mt-4 flex min-h-[170px] flex-1 items-end gap-3">
+                                            {badgeMonthTotals.map(month => (
+                                                <div key={month.key} className="flex h-full min-w-0 flex-1 flex-col justify-end">
+                                                    <p className="mb-2 text-center text-[8px] font-semibold tabular-nums text-white/45">{month.valueLabel}</p>
+                                                    <div className="flex h-[120px] items-end rounded-sm bg-white/[0.04]">
+                                                        <div
+                                                            className="w-full rounded-sm bg-[#b6f500]"
+                                                            style={{ height: `${Math.max(month.minutes > 0 ? 5 : 0, month.percent)}%`, opacity: month.minutes > 0 ? 0.82 : 0 }}
+                                                        />
+                                                    </div>
+                                                    <p className="mt-2 text-center text-[8px] font-semibold uppercase tracking-[0.08em] text-white/35">{month.label}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
