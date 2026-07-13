@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { IconArrow } from "./icons";
 import { siteConfig } from "@/lib/site-config";
@@ -16,13 +17,18 @@ const BAR_HEIGHT = 40; // px — kept in sync with the --banner-h var below
  */
 export default function AnnouncementBar() {
   const { announcement } = siteConfig;
+  const pathname = usePathname();
+  const hiddenOnPage = pathname === announcement.cta.href;
   const storageKey = `quoril:announcement:${announcement.version}`;
 
   // Start hidden to avoid a flash before we've read localStorage.
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!announcement.enabled) return;
+    if (!announcement.enabled || hiddenOnPage) {
+      document.documentElement.style.removeProperty("--banner-h");
+      return;
+    }
     const dismissed =
       typeof window !== "undefined" &&
       window.localStorage.getItem(storageKey) === "1";
@@ -36,7 +42,7 @@ export default function AnnouncementBar() {
     return () => {
       document.documentElement.style.removeProperty("--banner-h");
     };
-  }, [announcement.enabled, storageKey]);
+  }, [announcement.enabled, hiddenOnPage, storageKey]);
 
   function dismiss() {
     setVisible(false);
@@ -48,7 +54,7 @@ export default function AnnouncementBar() {
     }
   }
 
-  if (!announcement.enabled || !visible) return null;
+  if (!announcement.enabled || hiddenOnPage || !visible) return null;
 
   return (
     <div

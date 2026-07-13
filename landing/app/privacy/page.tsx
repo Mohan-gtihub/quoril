@@ -7,7 +7,7 @@ import LegalLayout, {
 } from "@/components/LegalLayout";
 
 export const metadata = {
-  title: "Privacy Policy — Quoril",
+  title: "Privacy Policy",
   description:
     "How Quoril collects, uses, stores and protects your data. Offline-first by design — your productivity data lives on your device and syncs only to your own account.",
 };

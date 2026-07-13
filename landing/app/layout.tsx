@@ -33,11 +33,11 @@ const indie = Indie_Flower({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Quoril — The productivity OS for deep work",
+    default: "Quoril — Plan. Focus. Understand.",
     template: "%s — Quoril",
   },
   description:
-    "Quoril unifies tasks, focus tracking, app analytics, and digital wellbeing into one offline-first desktop command center. Join the waitlist.",
+    "Quoril unifies tasks, focus tracking, app analytics, and digital wellbeing in one offline-first desktop app. Join before launch and get V1 free.",
   applicationName: "Quoril",
   alternates: { canonical: "/" },
   icons: {
@@ -70,9 +70,9 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "Quoril — The productivity OS for deep work",
+    title: "Quoril — Plan. Focus. Understand.",
     description:
-      "Tasks, focus, analytics & digital wellbeing in one native desktop app. Join the waitlist.",
+      "Tasks, focus, analytics and digital wellbeing in one native desktop app. Join before launch and get V1 free.",
     url: SITE_URL,
     type: "website",
     siteName: "Quoril",
@@ -80,7 +80,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Quoril — The productivity OS for deep work",
+    title: "Quoril — Plan. Focus. Understand.",
     description:
       "Tasks, focus, analytics & digital wellbeing in one native desktop app.",
   },

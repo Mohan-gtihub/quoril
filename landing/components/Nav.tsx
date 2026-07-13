@@ -7,11 +7,9 @@ import { useEffect, useState } from "react";
 import ThemeToggle from "./ThemeToggle";
 
 const LINKS = [
-  { href: "/features", label: "Features" },
+  { href: "/features", label: "Product" },
   { href: "/insights", label: "Insights" },
-  { href: "/canvas", label: "Canvas" },
-  { href: "/blog", label: "Blog" },
-  { href: "/security", label: "Security" },
+  { href: "/security", label: "Privacy" },
   { href: "/download", label: "Download" },
 ];
 
@@ -41,6 +39,7 @@ export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const isWaitlist = pathname === "/waitlist";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -66,7 +65,7 @@ export default function Nav() {
       >
         <Logo />
 
-        <div className="hidden items-center gap-1 md:flex">
+        <div className={`${isWaitlist ? "hidden" : "hidden items-center gap-1 md:flex"}`}>
           {LINKS.map((l) => {
             const active = pathname === l.href || pathname.startsWith(l.href + "/");
             return (
@@ -86,35 +85,39 @@ export default function Nav() {
         </div>
 
         <div className="flex items-center gap-2">
-          <ThemeToggle className="hidden md:grid" />
-          <Link
-            href="/waitlist"
-            className="rounded-pill bg-ink px-[17px] py-2.5 text-[14px] font-semibold text-paper transition hover:bg-ink/90"
-          >
-            Join waitlist
-          </Link>
-          <button
-            onClick={() => setOpen((o) => !o)}
-            className="grid h-9 w-9 place-items-center rounded-pill border border-line bg-surface text-ink md:hidden"
-            aria-label="Menu"
-          >
-            <span className="relative block h-3 w-4">
-              <span
-                className={`absolute left-0 h-[1.6px] w-full bg-ink transition ${open ? "top-1.5 rotate-45" : "top-0"}`}
-              />
-              <span
-                className={`absolute left-0 top-1.5 h-[1.6px] w-full bg-ink transition ${open ? "opacity-0" : ""}`}
-              />
-              <span
-                className={`absolute left-0 h-[1.6px] w-full bg-ink transition ${open ? "top-1.5 -rotate-45" : "top-3"}`}
-              />
-            </span>
-          </button>
+          <ThemeToggle className={isWaitlist ? "grid" : "hidden md:grid"} />
+          {!isWaitlist && (
+            <>
+              <Link
+                href="/waitlist"
+                className="rounded-pill bg-ink px-[17px] py-2.5 text-[14px] font-semibold text-paper transition hover:bg-ink/90"
+              >
+                Get V1 free
+              </Link>
+              <button
+                onClick={() => setOpen((o) => !o)}
+                className="grid h-9 w-9 place-items-center rounded-pill border border-line bg-surface text-ink md:hidden"
+                aria-label="Menu"
+              >
+                <span className="relative block h-3 w-4">
+                  <span
+                    className={`absolute left-0 h-[1.6px] w-full bg-ink transition ${open ? "top-1.5 rotate-45" : "top-0"}`}
+                  />
+                  <span
+                    className={`absolute left-0 top-1.5 h-[1.6px] w-full bg-ink transition ${open ? "opacity-0" : ""}`}
+                  />
+                  <span
+                    className={`absolute left-0 h-[1.6px] w-full bg-ink transition ${open ? "top-1.5 -rotate-45" : "top-3"}`}
+                  />
+                </span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* mobile sheet */}
-      {open && (
+      {open && !isWaitlist && (
         <div
           className="mx-auto mt-1 flex max-w-[1140px] flex-col gap-1 rounded-card border border-line bg-surface p-2 shadow-lift md:hidden"
           style={{ width: "calc(100% - 28px)" }}

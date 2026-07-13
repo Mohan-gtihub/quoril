@@ -20,7 +20,7 @@ import {
 } from "@/components/icons";
 
 export const metadata = {
-  title: "Focus Engine — Quoril",
+  title: "Focus Engine",
   description:
     "Three ways to focus, one honest timer: full-screen Deep Focus, a floating always-on-top pill and a quick popup window — with Pomodoro, session types and interval alerts built in.",
 };
@@ -73,7 +73,7 @@ export default function FocusPage() {
               numbers you plan with are the numbers you earned.
             </p>
             <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-              <Button href="/waitlist">Join the waitlist</Button>
+              <Button href="/waitlist">Get V1 free</Button>
               <Button href="/features" variant="secondary">
                 All features
               </Button>
@@ -335,7 +335,7 @@ export default function FocusPage() {
               </p>
               <div className="mt-8">
                 <Button href="/waitlist">
-                  Join the waitlist
+                  Get V1 free
                   <IconArrow className="h-[18px] w-[18px]" />
                 </Button>
               </div>

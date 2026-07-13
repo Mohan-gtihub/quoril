@@ -34,7 +34,7 @@ export default function PageHeader({
         {cta && (
           <Reveal delay={0.15}>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Button href="/waitlist">Join the waitlist</Button>
+              <Button href="/waitlist">Get V1 free</Button>
               <Button href="/features" variant="secondary">
                 Explore features
               </Button>

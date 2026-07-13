@@ -2,7 +2,7 @@ import { Container, Button, Eyebrow } from "@/components/ui";
 import Reveal from "@/components/Reveal";
 
 export const metadata = {
-  title: "Roadmap — Quoril",
+  title: "Roadmap",
   description:
     "Where Quoril is headed: from the offline-first Kanban foundation to focus, reports, canvas, workspaces and public launch.",
 };
@@ -135,11 +135,11 @@ export default function ChangelogPage() {
               Be there at launch.
             </h2>
             <p className="mt-5 text-[17px] leading-relaxed text-ink-muted">
-              Join the waitlist and get one email the day Quoril goes live —
-              plus early-access pricing.
+              Join before launch and get Quoril V1 free. We will send one email
+              when your access is ready.
             </p>
             <div className="mt-8">
-              <Button href="/waitlist">Join the waitlist</Button>
+              <Button href="/waitlist">Get V1 free</Button>
             </div>
           </Reveal>
         </Container>

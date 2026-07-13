@@ -6,7 +6,7 @@ import LegalLayout, {
 } from "@/components/LegalLayout";
 
 export const metadata = {
-  title: "Data & Account Deletion — Quoril",
+  title: "Data & Account Deletion",
   description:
     "How to delete your Quoril account and erase your data — from within the app or by request. Your right to erasure, made simple.",
 };

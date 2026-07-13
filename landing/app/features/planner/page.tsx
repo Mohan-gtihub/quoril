@@ -17,7 +17,7 @@ import {
 } from "@/components/icons";
 
 export const metadata = {
-  title: "Planner — Quoril",
+  title: "Planner",
   description:
     "A Kanban board that thinks in time. Turn intentions into shipped work with auto-parsed estimates, drag & drop, subtasks, and real time tracking.",
 };
@@ -224,7 +224,7 @@ export default function PlannerPage() {
               and move tasks across the board until they&apos;re done.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Button href="/waitlist">Join the waitlist</Button>
+              <Button href="/waitlist">Get V1 free</Button>
               <Button href="/features" variant="secondary">
                 All features
               </Button>
@@ -345,10 +345,10 @@ export default function PlannerPage() {
                 Plan your day in minutes.
               </h2>
               <p className="mx-auto mt-4 max-w-[460px] text-[16px] leading-relaxed text-ink-muted">
-                Join the waitlist and be first to plan in time, not just lists.
+                Get V1 free before launch and start planning in time, not just lists.
               </p>
               <div className="mt-8 flex justify-center">
-                <Button href="/waitlist">Join the waitlist</Button>
+                <Button href="/waitlist">Get V1 free</Button>
               </div>
             </div>
           </Reveal>
