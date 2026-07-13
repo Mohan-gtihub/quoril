@@ -45,7 +45,8 @@ export function ActivityHeatmap() {
         ro.observe(el)
         return () => ro.disconnect()
     }, [])
-    const [isSharing, setIsSharing] = useState(false)
+    const shareBadgeRef = useRef<HTMLDivElement>(null)
+    const [isExporting, setIsExporting] = useState(false)
     const [shareOpen, setShareOpen] = useState(false)
 
     // 1. Process all historical focus sessions into a map: { "YYYY-MM-DD": minutes }
@@ -446,32 +447,26 @@ export function ActivityHeatmap() {
                                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#f97316] shadow-[0_8px_22px_rgba(249,115,22,0.35)]"><Flame size={24} className="fill-white text-white" /></div>
                             </div>
 
-                    <div className="flex flex-col gap-2">
-                        <button
-                            onClick={handleCopyLink}
-                            disabled={!shareLink}
-                            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-[10px] border border-[var(--border-default)] text-[var(--text-primary)] text-[13px] font-semibold transition-all hover:bg-[var(--bg-secondary)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {copied ? <Check size={15} className="text-[var(--accent-primary)]" /> : <Link2 size={15} />}
-                            {copied ? 'Copied!' : 'Copy link'}
-                        </button>
+                            <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10">
+                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><Clock3 size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">This month</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.monthStr}</p></div>
+                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><Award size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">Best day</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.bestMinsStr}</p></div>
+                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><CalendarDays size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">Active days</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.activeDays}</p></div>
+                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><Flame size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">Total focus</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.totalStr}</p></div>
+                            </div>
 
-                        <div className="flex gap-2">
-                            <button
-                                onClick={handleWhatsApp}
-                                disabled={!shareLink}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[10px] bg-[#25D366] text-white text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <Share2 size={15} />
-                                WhatsApp
-                            </button>
-                            <button
-                                onClick={handleShareImage}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[10px] bg-[var(--bg-secondary)] border border-[var(--border-default)] text-[var(--text-primary)] text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
-                            >
-                                <ImageDown size={15} />
-                                Image
-                            </button>
+                            <div className="mt-5 border-t border-white/10 pt-4">
+                                <div className="mb-2 flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.12em] text-white/45"><span>Last 4 months</span><span>Focus map</span></div>
+                                <div className="flex gap-[2px]">
+                                    {days.map((week, weekIndex) => (
+                                        <div key={weekIndex} className="flex flex-col gap-[2px]">
+                                            {week.map(day => {
+                                                const mins = activityMap[format(day, 'yyyy-MM-dd')] || 0
+                                                return <span key={day.toISOString()} style={getCellStyle(mins)} className="h-[7px] w-[7px] rounded-[2px]" />
+                                            })}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
