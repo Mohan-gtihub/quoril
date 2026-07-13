@@ -14,8 +14,9 @@ import {
 import { Tooltip } from 'react-tooltip'
 import { useFocusStore } from '@/store/focusStore'
 import { cn } from '@/utils/helpers'
-import { Award, CalendarDays, Flame, Share2, ImageDown, X, Sparkles, Trophy, Clock3 } from 'lucide-react'
+import { Award, CalendarDays, Flame, X } from 'lucide-react'
 import { isFocusType } from '@/utils/timeCalculations'
+import quorilLogo from '../../../logo-quoril.png'
 
 export function ActivityHeatmap() {
     const { sessions, isActive, startTime, sessionType } = useFocusStore()
@@ -98,6 +99,10 @@ export function ActivityHeatmap() {
         return { days: weeks, monthLabels: labels }
     }, [monthsToShow])
 
+    // The dashboard map adapts to its available width, but the share badge
+    // needs a stable, unclipped snapshot. Keep the most recent six months.
+    const badgeWeeks = useMemo(() => days.slice(-26), [days])
+
     // Single green intensity ramp — one coherent scale in every theme.
     // Anchored to --gh-l4 (theme-aware green) with opacity steps so faint→full
     // reads cleanly on both dark and light cards. Empty cells use neutral track.
@@ -113,6 +118,7 @@ export function ActivityHeatmap() {
     // 3. Contextual Stats (This Month, Best Day, Current Streak)
     const stats = useMemo(() => {
         let monthMins = 0
+        let monthActiveDays = 0
         let totalMins = 0
         let activeDays = 0
         let bestDay = { date: '', mins: 0 }
@@ -128,6 +134,7 @@ export function ActivityHeatmap() {
             // This month total
             if (isAfter(d, thisMonthStart) || d.getTime() === thisMonthStart.getTime()) {
                 monthMins += mins
+                if (mins > 0) monthActiveDays += 1
             }
             // Best day
             if (mins > bestDay.mins) {
@@ -156,11 +163,14 @@ export function ActivityHeatmap() {
 
         return {
             monthStr: fmtHrs(monthMins),
+            monthLabel: format(new Date(), 'MMMM yyyy'),
+            monthConsistency: Math.round((monthActiveDays / Math.max(1, new Date().getDate())) * 100),
             totalStr: fmtHrs(totalMins),
             activeDays,
             streak,
             bestStr: bestDay.date ? `${format(new Date(bestDay.date), 'EEEE')} (${fmtHrs(bestDay.mins)})` : 'None yet',
             bestMinsStr: bestDay.date ? fmtHrs(bestDay.mins) : '—',
+            averageFocusDayStr: activeDays > 0 ? fmtHrs(totalMins / activeDays) : '—',
         }
     }, [activityMap])
 
@@ -396,7 +406,6 @@ export function ActivityHeatmap() {
                 onClick={openShare}
                 className="relative mt-4 flex items-center justify-center gap-2 w-full py-3 rounded-[14px] bg-[var(--accent-primary)] text-[var(--bg-card)] text-[12px] font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98]"
             >
-                <Share2 size={14} />
                 Share focus badge
             </button>
         </div>
@@ -408,7 +417,7 @@ export function ActivityHeatmap() {
                 onClick={() => setShareOpen(false)}
             >
                 <div
-                    className="w-full max-w-[420px] bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] shadow-2xl p-6 animate-in zoom-in-95 duration-200"
+                    className="w-full max-w-[640px] bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] shadow-2xl p-6 animate-in zoom-in-95 duration-200"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="flex items-start justify-between mb-1">
@@ -430,38 +439,39 @@ export function ActivityHeatmap() {
                     </p>
 
                     {/* Image-only share asset — deliberately separate from the dashboard card. */}
-                    <div ref={shareBadgeRef} className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0d1117] p-5 text-white shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
-                        <div className="absolute -right-10 -top-12 h-44 w-44 rounded-full bg-[#7c3aed]/35 blur-3xl" />
-                        <div className="absolute -left-14 -bottom-20 h-44 w-44 rounded-full bg-[#22c55e]/20 blur-3xl" />
-                        <div className="relative">
-                            <div className="flex items-center justify-between gap-3">
-                                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/60"><Sparkles size={12} className="text-[#a78bfa]" /> Quoril focus badge</span>
-                                <Trophy size={18} className="text-[#fbbf24]" />
-                            </div>
-
-                            <div className="mt-5 flex items-end justify-between gap-4">
-                                <div>
-                                    <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#fbbf24]">Deep work, on repeat</p>
-                                    <p className="mt-1 text-[34px] font-black leading-none tracking-tight">{stats.streak}<span className="ml-1 text-[15px] text-white/65">day streak</span></p>
+                    <div ref={shareBadgeRef} className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0b0d10] text-white shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
+                        <div className="h-1 w-full bg-[#b6f500]" />
+                        <div className="p-7">
+                            <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-5">
+                                <div className="relative h-9 w-[170px] overflow-hidden">
+                                    <img src={quorilLogo} alt="Quoril" className="absolute inset-0 h-full w-full scale-[1.45] object-cover" />
                                 </div>
-                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#f97316] shadow-[0_8px_22px_rgba(249,115,22,0.35)]"><Flame size={24} className="fill-white text-white" /></div>
+                                <div className="text-right">
+                                    <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">Monthly focus report</p>
+                                    <p className="mt-1 text-[11px] font-semibold text-white/75">{stats.monthLabel}</p>
+                                </div>
                             </div>
 
-                            <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10">
-                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><Clock3 size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">This month</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.monthStr}</p></div>
-                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><Award size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">Best day</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.bestMinsStr}</p></div>
-                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><CalendarDays size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">Active days</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.activeDays}</p></div>
-                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><Flame size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">Total focus</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.totalStr}</p></div>
+                            <div className="py-7">
+                                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">Focused time this month</p>
+                                <p className="mt-2 text-[52px] font-black leading-none tracking-[-0.045em] text-white">{stats.monthStr}</p>
                             </div>
 
-                            <div className="mt-5 border-t border-white/10 pt-4">
-                                <div className="mb-2 flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.12em] text-white/45"><span>Last 4 months</span><span>Focus map</span></div>
-                                <div className="flex gap-[2px]">
-                                    {days.map((week, weekIndex) => (
-                                        <div key={weekIndex} className="flex flex-col gap-[2px]">
+                            <div className="grid grid-cols-4 border-y border-white/10">
+                                <div className="py-4 pr-3"><p className="text-[20px] font-bold tabular-nums text-white">{stats.streak}</p><p className="mt-1 text-[8px] font-bold uppercase tracking-[0.12em] text-white/40">Current streak</p></div>
+                                <div className="border-l border-white/10 px-3 py-4"><p className="text-[20px] font-bold tabular-nums text-white">{stats.monthConsistency}%</p><p className="mt-1 text-[8px] font-bold uppercase tracking-[0.12em] text-white/40">Consistency</p></div>
+                                <div className="border-l border-white/10 px-3 py-4"><p className="text-[20px] font-bold tabular-nums text-white">{stats.averageFocusDayStr}</p><p className="mt-1 text-[8px] font-bold uppercase tracking-[0.12em] text-white/40">Avg focus day</p></div>
+                                <div className="border-l border-white/10 pl-3 py-4"><p className="text-[20px] font-bold tabular-nums text-white">{stats.bestMinsStr}</p><p className="mt-1 text-[8px] font-bold uppercase tracking-[0.12em] text-white/40">Personal best</p></div>
+                            </div>
+
+                            <div className="pt-6">
+                                <div className="mb-3 flex items-center justify-between text-[8px] font-bold uppercase tracking-[0.14em] text-white/35"><span>6-month consistency</span><span>Low to high</span></div>
+                                <div className="flex w-full gap-[3px]">
+                                    {badgeWeeks.map((week, weekIndex) => (
+                                        <div key={weekIndex} className="flex min-w-0 flex-1 flex-col gap-[3px]">
                                             {week.map(day => {
                                                 const mins = activityMap[format(day, 'yyyy-MM-dd')] || 0
-                                                return <span key={day.toISOString()} style={getCellStyle(mins)} className="h-[7px] w-[7px] rounded-[2px]" />
+                                                return <span key={day.toISOString()} style={getCellStyle(mins)} className="aspect-square w-full rounded-[2px]" />
                                             })}
                                         </div>
                                     ))}
@@ -471,7 +481,6 @@ export function ActivityHeatmap() {
                     </div>
 
                     <button onClick={handleShareBadge} disabled={isExporting} className="mt-4 flex items-center justify-center gap-2 w-full py-2.5 rounded-[10px] bg-[var(--accent-primary)] text-[var(--bg-card)] text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60">
-                        {isExporting ? <ImageDown size={15} className="animate-pulse" /> : <Share2 size={15} />}
                         {isExporting ? 'Preparing badge…' : 'Share badge'}
                     </button>
                 </div>
