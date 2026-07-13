@@ -47,7 +47,9 @@ function exec(sql: string, params: any[] = []) {
         }
         return db.prepare(sql).run(...clean)
     } catch (e) {
-        console.error('[DB ERROR]', sql, params, e)
+        // SQL parameters can contain task titles, notes, and user identifiers.
+        // Keep the statement type for debugging without exposing user content.
+        console.error('[DB ERROR]', sql, { parameterCount: params.length, error: e })
         throw e
     }
 }
@@ -212,6 +214,11 @@ export const dbOps = {
 
     getPending(table: string, limit = 100) {
         return exec(`SELECT * FROM ${table} WHERE synced = 0 LIMIT ?`, [limit])
+    },
+
+    countPending(table: string) {
+        const rows = exec(`SELECT COUNT(*) AS count FROM ${table} WHERE synced = 0`) as { count: number }[]
+        return rows[0]?.count ?? 0
     },
 
     markSynced(table: string, id: string) {

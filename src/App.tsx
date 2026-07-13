@@ -30,6 +30,7 @@ const CanvasApp = lazy(() => import('@/components/canvas/CanvasApp').then((m) =>
 import { cn } from '@/utils/helpers'
 import { platform } from '@/services/platform'
 import { NavHistoryTracker } from '@/hooks/useNavHistory'
+import { logger } from '@/services/logger'
 
 
 import { dataSyncService } from '@/services/dataSyncService'
@@ -209,11 +210,18 @@ function App() {
     // DEEP LINK HANDLING (Email Verification + Password Reset + OAuth callback)
     useEffect(() => {
         const handleDeepLink = async (url: string) => {
-            console.log('[DeepLink] Received:', url)
-
             try {
+                const parsed = new URL(url)
+                if (parsed.protocol !== 'quoril:' || !['auth', 'resume', 'focus'].includes(parsed.hostname)) {
+                    logger.warn('auth.deep_link_rejected')
+                    return
+                }
+                // Never log the raw link: OAuth codes and legacy callback tokens
+                // can appear in its query string or hash fragment.
+                logger.info('auth.deep_link_received', { action: parsed.hostname })
+
                 // RESUME LOGIC — quoril://resume or quoril://focus
-                if (url.includes('resume') || url.includes('focus')) {
+                if (parsed.hostname === 'resume' || parsed.hostname === 'focus') {
                     const store = useFocusStore.getState()
                     if (store.isActive && store.isPaused) {
                         toast("Resuming Mission...")
@@ -223,10 +231,6 @@ function App() {
                 }
 
                 // AUTH LOGIC
-                // Re-parse as a proper URL so URL() can parse query params correctly
-                const parsableUrl = url.replace(/^quoril:\/\//, 'https://quoril.in/')
-                const parsed = new URL(parsableUrl)
-
                 // --- PKCE flow: ?code=xxxx (Supabase default) ---
                 const code = parsed.searchParams.get('code')
                 if (code) {
@@ -264,7 +268,7 @@ function App() {
                     }
                 }
             } catch (e) {
-                console.error('[DeepLink] Error parsing URL:', e)
+                logger.error('auth.deep_link_processing_failed', { name: e instanceof Error ? e.name : undefined })
             }
         }
 

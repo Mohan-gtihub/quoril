@@ -2,6 +2,7 @@
 
 import { supabase } from './supabase'
 import { useSyncStore } from '@/store/syncStore'
+import { logger } from './logger'
 
 const SYNC_INTERVAL = 10000
 
@@ -36,14 +37,16 @@ const PULL_ORDER_COLUMN: Partial<Record<SyncTable, string>> = {
     focus_sessions: 'created_at',
 }
 
-class DataSyncService {
+export class DataSyncService {
 
     private syncing = false
+    private pulling = false
     private timer: number | null = null
     private schemaCacheWarned = false
     private lastCacheErrorTime = 0
     private cacheRecoveryAttempts = 0
     private aborted = false
+    private lastPendingCount: number | null = null
 
     // Rows the server rejected this session (RLS/check violation). Tracked in
     // memory — NOT marked synced — so we stop retrying them this session (no
@@ -55,31 +58,46 @@ class DataSyncService {
 
     private pulledOnce = false
 
+    private readonly handleOnline = () => {
+        if (this.aborted) return
+
+        // A reconnect needs both directions: pull remote changes that happened
+        // while offline, then drain the durable local SQLite queue immediately.
+        void this.pull(true)
+            .catch(err => logger.error('sync.reconnect_pull_failed', { name: err?.name, code: err?.code }))
+            .finally(() => this.syncPendings())
+    }
+
     start() {
         if (this.timer) return
         this.aborted = false
         // Fresh session (or re-login): give previously rejected rows another go.
         this.rejected.clear()
+        logger.info('sync.started', { intervalSeconds: SYNC_INTERVAL / 1000 })
 
         this.timer = window.setInterval(
             () => this.syncPendings(),
             SYNC_INTERVAL
         )
+        window.addEventListener('online', this.handleOnline)
 
         // First: restore the user's past cloud data DOWN into local SQLite,
         // then run the normal push loop. pull() guards itself to run once per session.
         this.pull()
-            .catch(err => console.error('[Sync] Initial cloud pull failed:', err))
+            .catch(err => logger.error('sync.initial_pull_failed', { name: err?.name, code: err?.code }))
             .finally(() => this.syncPendings())
     }
 
     stop() {
         this.aborted = true
         this.pulledOnce = false
+        this.lastPendingCount = null
+        window.removeEventListener('online', this.handleOnline)
         if (this.timer) {
             clearInterval(this.timer)
             this.timer = null
         }
+        logger.info('sync.stopped')
     }
 
     /* ================= PULL (cloud → local restore) ================= */
@@ -93,18 +111,20 @@ class DataSyncService {
      * in the main process (upsertFromCloud), so locally-newer edits aren't clobbered.
      */
     async pull(force = false) {
-        if (this.pulledOnce && !force) return
+        if (this.pulling || (this.pulledOnce && !force)) return
         if (!navigator.onLine) return
         if (!window.electronAPI?.db?.upsertFromCloud) return
 
-        const { data: { session } } = await supabase.auth.getSession()
-        const user = session?.user
-        if (!user) return
-
-        const sync = useSyncStore.getState()
-        sync.setSyncing(true)
+        this.pulling = true
 
         try {
+            const { data: { session } } = await supabase.auth.getSession()
+            const user = session?.user
+            if (!user) return
+
+            const sync = useSyncStore.getState()
+            sync.setSyncing(true)
+
             for (const table of SYNC_ORDER) {
                 if (this.aborted) return
 
@@ -113,7 +133,8 @@ class DataSyncService {
                 let from = 0
 
                 // Page through every cloud row for this user (Supabase caps at 1000/req)
-                while (true) {
+                let hasMore = true
+                while (hasMore) {
                     const { data, error } = await (supabase.from(table) as any)
                         .select('*')
                         .eq('user_id', user.id)
@@ -121,19 +142,26 @@ class DataSyncService {
                         .range(from, from + PAGE - 1)
 
                     if (error) {
-                        console.error(`[Sync] Pull failed for ${table}:`, error.message)
-                        break
+                        logger.error('sync.pull_table_failed', { table, code: error.code })
+                        hasMore = false
+                        continue
                     }
-                    if (!data?.length) break
+                    if (!data?.length) {
+                        hasMore = false
+                        continue
+                    }
 
                     restored += await window.electronAPI.db.upsertFromCloud(table, data)
 
-                    if (data.length < PAGE) break
-                    from += PAGE
+                    if (data.length < PAGE) {
+                        hasMore = false
+                    } else {
+                        from += PAGE
+                    }
                 }
 
                 if (restored > 0) {
-                    console.log(`[Sync] Restored ${restored} ${table} row(s) from cloud`)
+                    logger.info('sync.pull_table_completed', { table, restored })
                 }
             }
 
@@ -151,12 +179,13 @@ class DataSyncService {
                 await useListStore.getState().fetchLists().catch(() => { })
                 await useTaskStore.getState().fetchTasks().catch(() => { })
             } catch (e) {
-                console.warn('[Sync] Post-pull store refresh failed:', e)
+                logger.warn('sync.post_pull_refresh_failed', { name: e instanceof Error ? e.name : undefined })
             }
         } catch (err: any) {
-            console.error('[Sync] Pull error:', err)
+            logger.error('sync.pull_failed', { code: err?.code, name: err?.name })
             useSyncStore.getState().setError(err?.message ?? 'Cloud restore failed')
         } finally {
+            this.pulling = false
             useSyncStore.getState().setSyncing(false)
         }
     }
@@ -174,14 +203,14 @@ class DataSyncService {
     retryRejected() {
         const n = this.rejected.size
         this.rejected.clear()
-        if (n) console.log(`[Sync] Retrying ${n} previously rejected row(s)`)
+        if (n) logger.info('sync.rejected_rows_retrying', { count: n })
         this.syncPendings()
     }
 
     /* ================= MAIN LOOP ================= */
 
     private async syncPendings() {
-        if (this.syncing || !navigator.onLine) return
+        if (this.syncing || this.pulling || !navigator.onLine) return
 
         // Check Auth First
         const { data: { session } } = await supabase.auth.getSession()
@@ -193,52 +222,73 @@ class DataSyncService {
         const sync = useSyncStore.getState()
         sync.setSyncing(true)
 
-        // Count total pending across all tables
-        if (window.electronAPI?.db) {
-            let total = 0
-            for (const table of SYNC_ORDER) {
-                const rows = await window.electronAPI.db.getPending(table).catch(() => [])
-                total += rows?.length ?? 0
-            }
-            sync.setPending(total)
-        }
+        sync.setPending(await this.countPending())
 
         try {
+            let syncedRows = 0
             for (const table of SYNC_ORDER) {
                 // Abort mid-loop if user signed out
                 if (this.aborted) break
-                await this.syncTable(table, user.id)
+                syncedRows += await this.syncTable(table, user.id)
             }
-            useSyncStore.getState().setLastSync(Date.now())
-            useSyncStore.getState().setPending(0)
+            const pending = await this.countPending()
+            sync.setPending(pending)
+            if (pending === 0) {
+                sync.setLastSync(Date.now())
+                if (syncedRows > 0) logger.info('sync.completed', { syncedRows })
+            } else {
+                sync.setError(`${pending} change${pending === 1 ? '' : 's'} pending sync`)
+                if (pending !== this.lastPendingCount) {
+                    logger.warn('sync.pending_changes', { pending, rejected: this.rejected.size })
+                }
+            }
+            this.lastPendingCount = pending
         } catch (err: any) {
             useSyncStore.getState().setError(err?.message ?? 'Sync failed')
+            logger.error('sync.failed', { code: err?.code, name: err?.name })
         } finally {
             this.syncing = false
             useSyncStore.getState().setSyncing(false)
         }
     }
 
+    private async countPending() {
+        if (!window.electronAPI?.db?.countPending) return 0
+
+        const counts = await Promise.all(
+            SYNC_ORDER.map((table) => window.electronAPI.db.countPending(table).catch(() => 0))
+        )
+        return counts.reduce((total, count) => total + count, 0)
+    }
+
     /* ================= PER TABLE ================= */
 
-    private async syncTable(table: SyncTable, userId: string) {
+    private async syncTable(table: SyncTable, userId: string): Promise<number> {
 
-        if (!window.electronAPI?.db) return
+        if (!window.electronAPI?.db) return 0
 
         const BATCH_SIZE = 100
+        let syncedRows = 0
 
         // Loop until the table is fully drained — avoids the old silent LIMIT 50 ceiling
-        while (true) {
-            if (this.aborted) return
+        let hasMore = true
+        while (hasMore) {
+            if (this.aborted) return syncedRows
 
             const allPendings = await window.electronAPI.db.getPending(table, BATCH_SIZE)
-            if (!allPendings?.length) break
+            if (!allPendings?.length) {
+                hasMore = false
+                continue
+            }
 
             // Skip rows the server already rejected this session. If every row in
             // the batch is rejected, we'd otherwise spin forever (getPending keeps
             // returning them since they're never marked synced) — so break out.
             const pendings = allPendings.filter((r: any) => !this.rejected.has(`${table}:${r.id}`))
-            if (!pendings.length) break
+            if (!pendings.length) {
+                hasMore = false
+                continue
+            }
 
             for (const row of pendings) {
 
@@ -258,7 +308,7 @@ class DataSyncService {
                         // session — that permanently loses focus-time history. Null
                         // the FK and still push so the time survives in cloud reports,
                         // mirroring how lists/tasks degrade on a missing parent.
-                        console.warn('[Sync] Orphan focus session, syncing without task_id:', row.id)
+                        logger.warn('sync.orphan_focus_session', { table })
                         row.task_id = null
                     }
                 }
@@ -279,6 +329,7 @@ class DataSyncService {
                     row.user_id !== userId
                 ) {
                     await window.electronAPI.db.markSynced(table, row.id)
+                    syncedRows += 1
                     continue
                 }
 
@@ -302,14 +353,9 @@ class DataSyncService {
 
                 if (!payload) {
                     await window.electronAPI.db.markSynced(table, row.id)
+                    syncedRows += 1
                     continue
                 }
-
-                // Log workspace uploads for easier debugging
-                if (table === 'workspaces') {
-                    console.log(`[Sync] Pushing workspace ${row.id} (${row.name}) to Supabase...`)
-                }
-
 
                 /* ---------- Push to Supabase ---------- */
 
@@ -328,38 +374,31 @@ class DataSyncService {
                     table,
                     row.id
                 )
+                syncedRows += 1
 
                 // Detect successful recovery from cache errors
                 if (this.cacheRecoveryAttempts > 0 && !this.schemaCacheWarned) {
-                    console.log(`✅ [Sync] Schema cache recovered! Full sync restored after ${this.cacheRecoveryAttempts} attempts.`)
+                    logger.info('sync.schema_cache_recovered', { attempts: this.cacheRecoveryAttempts })
                     this.cacheRecoveryAttempts = 0
                 }
 
-            } catch (err: any) {
+            } catch (error: any) {
+                let syncError = error
 
                 /* Schema Cache Error - Supabase needs manual refresh */
-                if (err?.code === 'PGRST204') {
+                if (syncError?.code === 'PGRST204') {
                     this.lastCacheErrorTime = Date.now()
 
                     if (!this.schemaCacheWarned) {
                         this.schemaCacheWarned = true
-                        console.warn(`\n⚠️  SUPABASE SCHEMA CACHE ISSUE DETECTED\n` +
-                            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-                            `The Supabase PostgREST schema cache is outdated.\n\n` +
-                            `To fix:\n` +
-                            `1. Go to your Supabase Dashboard\n` +
-                            `2. Navigate to: Settings → API\n` +
-                            `3. Click "Reload Schema"\n\n` +
-                            `Meanwhile, sync continues with reduced fields.\n` +
-                            `Full sync resumes automatically once cache updates.\n` +
-                            `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`)
+                        logger.warn('sync.schema_cache_stale', { code: syncError.code })
                     }
 
                     // Try full schema recovery every 2 minutes
                     const timeSinceError = Date.now() - this.lastCacheErrorTime
                     if (timeSinceError > 120000) { // 2 minutes
                         this.cacheRecoveryAttempts++
-                        console.log(`[Sync] Attempting cache recovery (attempt ${this.cacheRecoveryAttempts})...`)
+                        logger.info('sync.schema_cache_recovery_attempt', { attempt: this.cacheRecoveryAttempts })
                         this.schemaCacheWarned = false // Re-enable full fields for next sync
                         this.lastCacheErrorTime = Date.now()
                     }
@@ -369,88 +408,89 @@ class DataSyncService {
                 }
 
                 /* Handle Foreign Key Violations gracefully */
-                if (err?.code === '23503') {
+                if (syncError?.code === '23503') {
                     if (table === 'lists' && payload.workspace_id) {
                         const wsRows = await window.electronAPI.db.getWorkspaceForList(payload.workspace_id).catch(() => [])
 
                         if (wsRows?.length) {
-                            console.warn(`[Sync] Workspace ${payload.workspace_id} not yet in Supabase. Re-queuing workspace & will retry list next cycle.`)
+                            logger.warn('sync.workspace_parent_pending', { table })
                             await window.electronAPI.db.requeueWorkspace(payload.workspace_id).catch(() => { })
                             // Also force a fresh sync pass after a short delay
                             setTimeout(() => this.syncPendings(), 3000)
                         } else {
                             // Workspace does NOT exist locally (deleted or orphaned).
                             // Sync the list without workspace_id to avoid infinite loop.
-                            console.warn(`[Sync] Workspace ${payload.workspace_id} not found locally for list ${row.id}. Syncing without workspace_id.`)
+                            logger.warn('sync.workspace_parent_missing', { table })
                             delete payload.workspace_id
                             const { error: retryErr } = await (supabase.from(table) as any)
                                 .upsert(payload, { onConflict: 'id' })
                             if (!retryErr) {
                                 await window.electronAPI.db.markSynced(table, row.id)
+                                syncedRows += 1
                             }
                         }
                         continue
                     } else if (table === 'tasks' && payload.list_id) {
-                        console.warn(`[Sync] List missing in cloud for task ${row.id}. Retrying without list_id...`)
+                        logger.warn('sync.list_parent_missing', { table })
                         payload.list_id = null
                         const { error: retryErr } = await (supabase.from(table) as any)
                             .upsert(payload, { onConflict: 'id' })
 
                         if (!retryErr) {
                             await window.electronAPI.db.markSynced(table, row.id)
+                            syncedRows += 1
                             continue
                         } else {
-                            err = retryErr
+                            syncError = retryErr
                         }
                     } else if (table === 'focus_sessions' && payload.task_id) {
                         // Parent task not in cloud yet. Push without the FK so the
                         // focus time is never lost; the task_id will reconcile on a
                         // later full sync once the task lands.
-                        console.warn(`[Sync] Task missing in cloud for focus session ${row.id}. Retrying without task_id...`)
+                        logger.warn('sync.task_parent_missing', { table })
                         payload.task_id = null
                         const { error: retryErr } = await (supabase.from(table) as any)
                             .upsert(payload, { onConflict: 'id' })
 
                         if (!retryErr) {
                             await window.electronAPI.db.markSynced(table, row.id)
+                            syncedRows += 1
                             continue
                         } else {
-                            err = retryErr
+                            syncError = retryErr
                         }
                     }
                 }
 
                 /* Prevent infinite retry on truly unrecoverable rows */
                 if (
-                    err?.code === '23514' ||
-                    err?.code === '42501' || // RLS Policy Violation (Permission/Auth)
-                    String(err).includes('violates check') ||
-                    String(err).includes('policy')
+                    syncError?.code === '23514' ||
+                    syncError?.code === '42501' || // RLS Policy Violation (Permission/Auth)
+                    String(syncError).includes('violates check') ||
+                    String(syncError).includes('policy')
                 ) {
-                    console.error(`❌ [Sync] ${table}/${row.id} REJECTED:`, {
-                        code: err?.code,
-                        message: err?.message,
-                        hint: err?.hint,
-                        details: err?.details,
-                        payload: payload
+                    logger.error('sync.row_rejected', {
+                        table,
+                        code: syncError?.code,
+                        // Deliberately omit row IDs and payloads: they can include
+                        // task names, descriptions, and user-owned canvas content.
                     })
                     // Park it in-memory (NOT marked synced) so it stops retrying
                     // this session but is re-attempted next launch — e.g. after an
                     // RLS policy fix — instead of being permanently dropped.
-                    console.warn(`[Sync] Parking rejected row; will retry next session`)
+                    logger.warn('sync.row_parked', { table })
                     this.rejected.add(`${table}:${row.id}`)
                 } else {
                     // Log unexpected errors for debugging
-                    console.error(`[Sync] Unexpected error for ${table}/${row.id}:`, {
-                        code: err?.code,
-                        message: err?.message,
-                        hint: err?.hint,
-                        details: err?.details
+                    logger.error('sync.row_failed', {
+                        table,
+                        code: syncError?.code,
                     })
                 }
             }
         }
         } // end while
+        return syncedRows
     }
 
     /* ================= PAYLOAD BUILDER ================= */

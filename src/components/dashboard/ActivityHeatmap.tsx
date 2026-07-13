@@ -14,18 +14,15 @@ import {
 import { Tooltip } from 'react-tooltip'
 import { useFocusStore } from '@/store/focusStore'
 import { cn } from '@/utils/helpers'
-import { Award, CalendarDays, Flame, Share2, Link2, Check, ImageDown, X, Loader2 } from 'lucide-react'
+import { Award, CalendarDays, Flame, Share2, ImageDown, X, Sparkles, Trophy, Clock3 } from 'lucide-react'
 import { isFocusType } from '@/utils/timeCalculations'
-import { createFocusMapShareLink } from '@/services/shareFocusMap'
 
 export function ActivityHeatmap() {
     const { sessions, isActive, startTime, sessionType } = useFocusStore()
     const heatmapCardRef = useRef<HTMLDivElement>(null)
-    const [isSharing, setIsSharing] = useState(false)
+    const shareBadgeRef = useRef<HTMLDivElement>(null)
+    const [isExporting, setIsExporting] = useState(false)
     const [shareOpen, setShareOpen] = useState(false)
-    const [shareLink, setShareLink] = useState<string | null>(null)
-    const [linkError, setLinkError] = useState<string | null>(null)
-    const [copied, setCopied] = useState(false)
 
     // 1. Process all historical focus sessions into a map: { "YYYY-MM-DD": minutes }
     const activityMap = useMemo(() => {
@@ -145,85 +142,39 @@ export function ActivityHeatmap() {
 
     const weekActiveCount = weekDays.filter(d => d.active).length
 
-    // Open the share dialog and mint a public link (uploads a snapshot to Supabase).
-    const openShare = async () => {
-        if (isSharing) return
-        setShareOpen(true)
-        setCopied(false)
+    // The share flow is deliberately image-only: no public profile page, no
+    // snapshot upload, and no link that exposes a user's activity history.
+    const openShare = () => setShareOpen(true)
 
-        // Reuse an already-minted link for this dashboard view.
-        if (shareLink || isSharing) return
-
-        setLinkError(null)
-        setIsSharing(true)
-        try {
-            const link = await createFocusMapShareLink({
-                activity: Object.fromEntries(
-                    Object.entries(activityMap).map(([d, m]) => [d, Math.round(m)])
-                ),
-                stats: {
-                    monthStr: stats.monthStr,
-                    totalStr: stats.totalStr,
-                    activeDays: stats.activeDays,
-                    streak: stats.streak,
-                    bestStr: stats.bestStr,
-                },
-                generatedAt: new Date().toISOString(),
-            })
-            setShareLink(link)
-        } catch (err) {
-            console.error('Failed to create share link', err)
-            setLinkError('Could not create a share link. Please try again.')
-        } finally {
-            setIsSharing(false)
-        }
-    }
-
-    const handleCopyLink = async () => {
-        if (!shareLink) return
-        try {
-            await navigator.clipboard.writeText(shareLink)
-            setCopied(true)
-            setTimeout(() => setCopied(false), 2000)
-        } catch (err) {
-            console.error('Failed to copy link', err)
-        }
-    }
-
-    const handleWhatsApp = () => {
-        if (!shareLink) return
-        const text = `My Quoril focus map — ${stats.streak}-day focus streak 🔥\n${shareLink}`
-        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
-    }
-
-    // Export the card as a PNG (download / native share sheet).
-    const handleShareImage = async () => {
-        const node = heatmapCardRef.current
+    const handleShareBadge = async () => {
+        const node = shareBadgeRef.current
         if (!node) return
+        setIsExporting(true)
         try {
-            const bg = getComputedStyle(node).backgroundColor || '#0b0d12'
-            const dataUrl = await toPng(node, { pixelRatio: 2, backgroundColor: bg, cacheBust: true })
+            const dataUrl = await toPng(node, { pixelRatio: 3, backgroundColor: '#0d1117', cacheBust: true })
 
             const res = await fetch(dataUrl)
             const blob = await res.blob()
-            const file = new File([blob], 'quoril-focus-map.png', { type: 'image/png' })
+            const file = new File([blob], 'quoril-focus-badge.png', { type: 'image/png' })
 
             if (navigator.canShare?.({ files: [file] })) {
                 await navigator.share({
                     files: [file],
-                    title: 'My Quoril focus map',
-                    text: `${stats.streak}-day focus streak 🔥`,
+                    title: 'My Quoril focus badge',
+                    text: `${stats.streak}-day focus streak • ${stats.monthStr} deep work this month — Quoril`,
                 })
             } else {
                 const a = document.createElement('a')
                 a.href = dataUrl
-                a.download = 'quoril-focus-map.png'
+                a.download = 'quoril-focus-badge.png'
                 a.click()
             }
         } catch (err) {
             if ((err as Error)?.name !== 'AbortError') {
-                console.error('Failed to share focus map image', err)
+                console.error('Failed to share focus badge', err)
             }
+        } finally {
+            setIsExporting(false)
         }
     }
 
@@ -393,7 +344,7 @@ export function ActivityHeatmap() {
                 className="relative mt-4 flex items-center justify-center gap-2 w-full py-3 rounded-[14px] bg-[var(--accent-primary)] text-[var(--bg-card)] text-[12px] font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98]"
             >
                 <Share2 size={14} />
-                Share focus map
+                Share focus badge
             </button>
         </div>
 
@@ -409,8 +360,8 @@ export function ActivityHeatmap() {
                 >
                     <div className="flex items-start justify-between mb-1">
                         <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Share focus map</p>
-                            <h3 className="mt-1 text-[16px] font-semibold text-[var(--text-primary)]">Your {stats.streak}-day streak 🔥</h3>
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Share focus badge</p>
+                            <h3 className="mt-1 text-[16px] font-semibold text-[var(--text-primary)]">A little proof of the grind.</h3>
                         </div>
                         <button
                             onClick={() => setShareOpen(false)}
@@ -422,46 +373,54 @@ export function ActivityHeatmap() {
                     </div>
 
                     <p className="text-[13px] text-[var(--text-tertiary)] mb-4">
-                        Anyone with this link can view your focus map. {stats.totalStr} total · {stats.activeDays} active days.
+                        A polished image badge with your biggest focus wins. Nothing is uploaded or made public.
                     </p>
 
-                    {/* Public link */}
-                    <div className="flex items-center gap-2 px-3 py-2.5 mb-3 rounded-[10px] bg-[var(--bg-secondary)] border border-[var(--border-default)]">
-                        <Link2 size={14} className="shrink-0 text-[var(--text-muted)]" />
-                        <span className="flex-1 min-w-0 truncate text-[12px] text-[var(--text-secondary)]">
-                            {isSharing ? 'Creating link…' : linkError ? linkError : shareLink}
-                        </span>
-                        {isSharing && <Loader2 size={14} className="shrink-0 animate-spin text-[var(--text-muted)]" />}
-                    </div>
+                    {/* Image-only share asset — deliberately separate from the dashboard card. */}
+                    <div ref={shareBadgeRef} className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0d1117] p-5 text-white shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
+                        <div className="absolute -right-10 -top-12 h-44 w-44 rounded-full bg-[#7c3aed]/35 blur-3xl" />
+                        <div className="absolute -left-14 -bottom-20 h-44 w-44 rounded-full bg-[#22c55e]/20 blur-3xl" />
+                        <div className="relative">
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/60"><Sparkles size={12} className="text-[#a78bfa]" /> Quoril focus badge</span>
+                                <Trophy size={18} className="text-[#fbbf24]" />
+                            </div>
 
-                    <div className="flex flex-col gap-2">
-                        <button
-                            onClick={handleCopyLink}
-                            disabled={!shareLink}
-                            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-[10px] border border-[var(--border-default)] text-[var(--text-primary)] text-[13px] font-semibold transition-all hover:bg-[var(--bg-secondary)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {copied ? <Check size={15} className="text-[var(--gh-l4)]" /> : <Link2 size={15} />}
-                            {copied ? 'Copied!' : 'Copy link'}
-                        </button>
+                            <div className="mt-5 flex items-end justify-between gap-4">
+                                <div>
+                                    <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#fbbf24]">Deep work, on repeat</p>
+                                    <p className="mt-1 text-[34px] font-black leading-none tracking-tight">{stats.streak}<span className="ml-1 text-[15px] text-white/65">day streak</span></p>
+                                </div>
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#f97316] shadow-[0_8px_22px_rgba(249,115,22,0.35)]"><Flame size={24} className="fill-white text-white" /></div>
+                            </div>
 
-                        <div className="flex gap-2">
-                            <button
-                                onClick={handleWhatsApp}
-                                disabled={!shareLink}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[10px] bg-[#25D366] text-white text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <Share2 size={15} />
-                                WhatsApp
-                            </button>
-                            <button
-                                onClick={handleShareImage}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[10px] bg-[var(--bg-secondary)] border border-[var(--border-default)] text-[var(--text-primary)] text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
-                            >
-                                <ImageDown size={15} />
-                                Image
-                            </button>
+                            <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10">
+                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><Clock3 size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">This month</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.monthStr}</p></div>
+                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><Award size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">Best day</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.bestMinsStr}</p></div>
+                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><CalendarDays size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">Active days</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.activeDays}</p></div>
+                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><Flame size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">Total focus</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.totalStr}</p></div>
+                            </div>
+
+                            <div className="mt-5 border-t border-white/10 pt-4">
+                                <div className="mb-2 flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.12em] text-white/45"><span>Last 4 months</span><span>Focus map</span></div>
+                                <div className="flex gap-[2px]">
+                                    {days.map((week, weekIndex) => (
+                                        <div key={weekIndex} className="flex flex-col gap-[2px]">
+                                            {week.map(day => {
+                                                const mins = activityMap[format(day, 'yyyy-MM-dd')] || 0
+                                                return <span key={day.toISOString()} className={cn('h-[7px] w-[7px] rounded-[2px]', getColorClass(mins))} />
+                                            })}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <button onClick={handleShareBadge} disabled={isExporting} className="mt-4 flex items-center justify-center gap-2 w-full py-2.5 rounded-[10px] bg-[var(--accent-primary)] text-[var(--bg-card)] text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60">
+                        {isExporting ? <ImageDown size={15} className="animate-pulse" /> : <Share2 size={15} />}
+                        {isExporting ? 'Preparing badge…' : 'Share badge'}
+                    </button>
                 </div>
             </div>
         )}

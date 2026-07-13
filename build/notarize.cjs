@@ -5,8 +5,12 @@ exports.default = async function notarizing(context) {
     const { electronPlatformName, appOutDir } = context
     if (electronPlatformName !== 'darwin') return
 
-    // Skip if credentials aren't provided (e.g. local dev builds)
+    // Local package builds remain useful without Apple credentials. A release
+    // build must never silently ship without notarization evidence.
     if (!process.env.APPLE_ID || !process.env.APPLE_APP_SPECIFIC_PASSWORD || !process.env.APPLE_TEAM_ID) {
+        if (process.env.QUORIL_RELEASE_BUILD === 'true') {
+            throw new Error('Release notarization requires APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, and APPLE_TEAM_ID')
+        }
         console.warn('Skipping notarization: APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID not set')
         return
     }

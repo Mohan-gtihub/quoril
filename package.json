@@ -10,16 +10,24 @@
     "dev": "vite",
     "dev:web": "VITE_TARGET=web vite",
     "dev:electron": "vite",
+    "build:app": "tsc && vite build",
     "build": "tsc && vite build && electron-builder",
     "build:web": "VITE_TARGET=web tsc && VITE_TARGET=web vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:rls": "node scripts/verify-rls.mjs",
+    "test:sync-recovery": "node scripts/verify-sync-recovery.mjs",
     "dist": "npm run build",
-    "dist:win": "npm run build -- --win",
+    "dist:win": "npm run build:app && npm run package:win",
     "dist:mac": "npm run build -- --mac",
-    "dist:linux": "npm run build -- --linux",
+    "dist:linux": "npm run build:app && npm run package:linux",
+    "package:win": "node scripts/package-cross-platform.mjs win",
+    "package:linux": "node scripts/package-cross-platform.mjs linux",
+    "release:preflight": "node scripts/release-preflight.mjs",
+    "release:mac": "npm run build:app && node scripts/release-preflight.mjs mac && electron-builder --mac --arm64 --publish never",
+    "release:win": "npm run build:app && node scripts/release-preflight.mjs win && npm run package:win",
     "postinstall": "electron-builder install-app-deps",
     "check:web": "node scripts/check-web-bundle.mjs"
   },
@@ -154,9 +162,7 @@
       "target": [
         "nsis"
       ],
-      "artifactName": "${productName}-Setup-${version}.${ext}",
-      "certificateFile": "build/quoril-selfsigned.pfx",
-      "certificatePassword": "quoril-dev"
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,

@@ -1,0 +1,62 @@
+name: Release Verify
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-14
+    env:
+      QUORIL_RELEASE_BUILD: "true"
+      CSC_LINK: ${{ secrets.MACOS_CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run release:mac
+      - run: codesign --verify --deep --strict --verbose=2 release/mac-arm64/Quoril.app
+      - run: xcrun stapler validate release/mac-arm64/Quoril.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quoril-macos-arm64
+          path: |
+            release/*.dmg
+            release/*.zip
+
+  windows:
+    runs-on: windows-2022
+    env:
+      QUORIL_RELEASE_BUILD: "true"
+      CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run release:win
+      - shell: pwsh
+        run: |
+          $installer = Get-ChildItem "release/Quoril-Setup-*.exe" | Select-Object -First 1
+          if ($null -eq $installer) { throw "Windows installer was not generated" }
+          $signature = Get-AuthenticodeSignature $installer.FullName
+          if ($signature.Status -ne 'Valid') { throw "Authenticode verification failed: $($signature.Status)" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quoril-windows-x64
+          path: release/*.exe

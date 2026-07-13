@@ -20,6 +20,34 @@ import { trackingEngine } from './core/core'
 import { registerCanvasIpc } from './canvas/ipc'
 import { generateInsights } from './insights'
 import { initAutoUpdate } from './updater'
+import {
+    assertBoolean,
+    assertNonNegativeInteger,
+    assertOptionalString,
+    assertString,
+    validateCloudRows,
+    validateExternalUrl,
+    validateFocusSessionRow,
+    validateFocusSessionUpdate,
+    validateId,
+    validateListRow,
+    validateListUpdate,
+    validateLocallyDeletedTable,
+    validateNullableId,
+    validateNotification,
+    validateReportsRange,
+    validateScreenTimeArgs,
+    validateSessionDistractionRange,
+    validateStoreKey,
+    validateSubtaskRow,
+    validateSubtaskUpdate,
+    validateSyncLimit,
+    validateSyncTable,
+    validateTaskRow,
+    validateTaskUpdate,
+    validateWindowBounds,
+    validateWorkspaceRow,
+} from './ipcValidation'
 
 /* ---------------- PATH ---------------- */
 
@@ -80,8 +108,29 @@ let quitting = false
 // The renderer pulls this on mount via the 'auth:getPendingDeepLink' IPC.
 let pendingDeepLink: string | null = null
 
+function parseDeepLink(raw: string): URL | null {
+    try {
+        const url = new URL(raw)
+        return url.protocol === 'quoril:' && ['auth', 'resume', 'focus'].includes(url.hostname)
+            ? url
+            : null
+    } catch {
+        return null
+    }
+}
+
 function isAuthDeepLink(url: string) {
-    return url.includes('auth') || url.includes('code=') || url.includes('access_token')
+    return parseDeepLink(url)?.hostname === 'auth'
+}
+
+function isTrustedRendererUrl(raw: string): boolean {
+    try {
+        const url = new URL(raw)
+        if (isDev && VITE_DEV_SERVER_URL) return url.origin === new URL(VITE_DEV_SERVER_URL).origin
+        return url.protocol === 'file:' && fileURLToPath(url) === path.join(__dirname, '../dist/index.html')
+    } catch {
+        return false
+    }
 }
 
 function closeSecondaryWindows() {
@@ -93,9 +142,16 @@ function closeSecondaryWindows() {
 }
 
 function forwardDeepLink(url: string) {
+    const parsed = parseDeepLink(url)
+    if (!parsed) {
+        console.warn('[Security] Ignored an invalid deep link')
+        return
+    }
+    const safeUrl = parsed.toString()
+
     // Always buffer the latest link so the renderer can recover it even if the
     // window/webContents is not ready to receive the IPC yet.
-    pendingDeepLink = url
+    pendingDeepLink = safeUrl
 
     if (!mainWindow || mainWindow.isDestroyed()) {
         // No window yet (cold start). It will be drained once the renderer mounts.
@@ -108,7 +164,7 @@ function forwardDeepLink(url: string) {
 
     const deliver = () => {
         if (!mainWindow || mainWindow.isDestroyed()) return
-        mainWindow.webContents.send('deep-link', url)
+        mainWindow.webContents.send('deep-link', safeUrl)
     }
 
     // If the page is still loading, wait until it finishes so the listener exists.
@@ -120,7 +176,7 @@ function forwardDeepLink(url: string) {
 
     // Only auth callbacks should tear down secondary windows; resume/focus deep
     // links must NOT close the focus pill they are meant to act on.
-    if (isAuthDeepLink(url)) {
+    if (isAuthDeepLink(safeUrl)) {
         closeSecondaryWindows()
     }
 }
@@ -170,18 +226,37 @@ app.on('open-url', (event, url) => {
 // argument when the OS launches the app fresh. macOS uses 'open-url' instead.
 if (process.platform !== 'darwin') {
     const startupDeepLink = process.argv.find(arg => arg.startsWith('quoril://'))
-    if (startupDeepLink) {
+    const parsedStartupDeepLink = startupDeepLink ? parseDeepLink(startupDeepLink) : null
+    if (parsedStartupDeepLink) {
         // Buffer it; it will be delivered once the renderer mounts and drains it.
-        pendingDeepLink = startupDeepLink
+        pendingDeepLink = parsedStartupDeepLink.toString()
     }
 }
 
 app.on('web-contents-created', (_event, contents) => {
+    // The app does not need renderer-granted browser permissions. Keeping this
+    // deny-by-default prevents a navigated or compromised renderer from asking
+    // for camera, microphone, notifications, or geolocation access.
+    contents.session.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
+    contents.session.setPermissionCheckHandler(() => false)
+
     contents.on('will-navigate', (event, url) => {
-        if (url.startsWith('quoril://')) {
+        if (parseDeepLink(url)) {
             event.preventDefault()
             forwardDeepLink(url)
+            return
         }
+        if (!isTrustedRendererUrl(url)) {
+            event.preventDefault()
+            try {
+                void shell.openExternal(validateExternalUrl(url))
+            } catch {
+                console.warn('[Security] Blocked an untrusted renderer navigation')
+            }
+        }
+    })
+    contents.on('will-redirect', (event, url) => {
+        if (!isTrustedRendererUrl(url)) event.preventDefault()
     })
 })
 
@@ -259,13 +334,13 @@ function createWindow() {
     }
 
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-        if (url.startsWith('quoril://')) {
+        if (parseDeepLink(url)) {
             forwardDeepLink(url)
             return { action: 'deny' }
         }
 
         // Keep internal routes inside the app (e.g. popups)
-        if ((VITE_DEV_SERVER_URL && url.startsWith(VITE_DEV_SERVER_URL)) || url.startsWith('file://')) {
+        if (isTrustedRendererUrl(url)) {
             return {
                 action: 'allow',
                 overrideBrowserWindowOptions: {
@@ -282,13 +357,18 @@ function createWindow() {
                         preload: path.join(__dirname, 'index.mjs'),
                         contextIsolation: true,
                         nodeIntegration: false,
+                        sandbox: true,
                     }
                 }
             }
         }
 
         // Open truly external URLs in the default browser
-        shell.openExternal(url)
+        try {
+            void shell.openExternal(validateExternalUrl(url))
+        } catch {
+            console.warn('[Security] Blocked an invalid external window request')
+        }
         return { action: 'deny' }
     })
 
@@ -539,11 +619,13 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
     // Act on the window that sent the request (the pill window when called from
     // the pill) so the pill — not the main window — becomes the floating overlay.
     ipcMain.handle('window:setAlwaysOnTop', (event, flag: boolean) => {
+        assertBoolean(flag, 'always-on-top flag')
         const win = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
         win?.setAlwaysOnTop(flag, 'screen-saver')
     })
 
     ipcMain.handle('window:setResizable', (event, flag: boolean) => {
+        assertBoolean(flag, 'resizable flag')
         const win = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
         win?.setResizable(flag)
     })
@@ -553,7 +635,8 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
     ipcMain.handle('pill:enter', () => enterPill())
     ipcMain.handle('pill:exit', () => exitPill())
 
-    ipcMain.on('resize-window', (event, { width, height, x, y }) => {
+    ipcMain.on('resize-window', (event, payload) => {
+        const { width, height, x, y } = validateWindowBounds(payload)
         const win = BrowserWindow.fromWebContents(event.sender)
         if (win) {
             // Capture the display the window is currently on BEFORE unmaximizing,
@@ -612,7 +695,8 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
 
     /* Notifications */
 
-    ipcMain.handle('notification:show', (_, { title, body }: { title: string; body: string }) => {
+    ipcMain.handle('notification:show', (_, payload: unknown) => {
+        const { title, body } = validateNotification(payload)
         if (Notification.isSupported()) {
             new Notification({ title, body }).show()
         }
@@ -642,7 +726,9 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
             if (fs.existsSync(storePath)) {
                 return JSON.parse(fs.readFileSync(storePath, 'utf-8'))
             }
-        } catch (_) {}
+        } catch {
+            // Corrupt or unreadable store data should not block app startup.
+        }
         return {}
     }
 
@@ -655,11 +741,13 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
     }
 
     ipcMain.handle('store:get', (_, key: string) => {
+        validateStoreKey(key)
         const data = readStore()
         return data[key] ?? null
     })
 
     ipcMain.handle('store:set', (_, key: string, value: any) => {
+        validateStoreKey(key)
         const data = readStore()
         data[key] = value
         writeStore(data)
@@ -669,190 +757,189 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
     /* Tasks */
 
     ipcMain.handle('db:getTasks', (_, uid, listId) =>
-        dbOps.getTasks(uid, listId)
+        dbOps.getTasks(validateId(uid, 'user id'), assertOptionalString(listId, 'list id') ?? undefined)
     )
 
     ipcMain.handle('db:saveTask', (_, task) =>
-        safe(() => dbOps.saveTask(task))
+        safe(() => dbOps.saveTask(validateTaskRow(task)))
     )
 
     ipcMain.handle('db:startTask', (_, id) =>
-        safe(() => dbOps.startTask(id))
+        safe(() => dbOps.startTask(validateId(id, 'task id')))
     )
 
     ipcMain.handle('db:pauseTask', (_, id) =>
-        safe(() => dbOps.pauseTask(id))
+        safe(() => dbOps.pauseTask(validateId(id, 'task id')))
     )
 
     ipcMain.handle('db:deleteTask', (_, id) =>
-        safe(() => dbOps.deleteTask(id))
+        safe(() => dbOps.deleteTask(validateId(id, 'task id')))
     )
 
     ipcMain.handle('db:hardDeleteTask', (_, id) =>
-        safe(() => dbOps.hardDeleteTask(id))
+        safe(() => dbOps.hardDeleteTask(validateId(id, 'task id')))
     )
 
     /* Lists */
 
     ipcMain.handle('db:getLists', (_, uid, archived) =>
-        dbOps.getLists(uid, archived)
+        dbOps.getLists(validateId(uid, 'user id'), archived === undefined ? false : assertBoolean(archived, 'archived flag'))
     )
 
     ipcMain.handle('db:saveList', (_, list) =>
-        safe(() => dbOps.saveList(list))
+        safe(() => dbOps.saveList(validateListRow(list)))
     )
 
     ipcMain.handle('db:deleteList', (_, id) =>
-        safe(() => dbOps.deleteList(id))
+        safe(() => dbOps.deleteList(validateId(id, 'list id')))
     )
 
     ipcMain.handle('db:hardDeleteList', (_, id) =>
-        safe(() => dbOps.hardDeleteList(id))
+        safe(() => dbOps.hardDeleteList(validateId(id, 'list id')))
     )
 
     ipcMain.handle('db:restoreList', (_, id) =>
-        safe(() => dbOps.restoreList(id))
+        safe(() => dbOps.restoreList(validateId(id, 'list id')))
     )
 
     ipcMain.handle('db:archiveList', (_, id) =>
-        safe(() => dbOps.archiveList(id))
+        safe(() => dbOps.archiveList(validateId(id, 'list id')))
     )
 
     /* Workspaces */
 
     ipcMain.handle('db:getWorkspaces', (_, uid) =>
-        safe(() => dbOps.getWorkspaces(uid))
+        safe(() => dbOps.getWorkspaces(validateId(uid, 'user id')))
     )
 
     ipcMain.handle('db:saveWorkspace', (_, ws) =>
-        safe(() => dbOps.saveWorkspace(ws))
+        safe(() => dbOps.saveWorkspace(validateWorkspaceRow(ws)))
     )
 
     ipcMain.handle('db:deleteWorkspace', (_, id) =>
-        safe(() => dbOps.deleteWorkspace(id))
+        safe(() => dbOps.deleteWorkspace(validateId(id, 'workspace id')))
     )
 
     ipcMain.handle('db:moveListToWorkspace', (_, listId, workspaceId) =>
-        safe(() => dbOps.moveListToWorkspace(listId, workspaceId))
+        safe(() => dbOps.moveListToWorkspace(validateId(listId, 'list id'), validateNullableId(workspaceId, 'workspace id')))
     )
 
     /* Subtasks */
 
     ipcMain.handle('db:getSubtasks', (_, taskId) =>
-        dbOps.getSubtasks(taskId)
+        dbOps.getSubtasks(validateId(taskId, 'task id'))
     )
 
     ipcMain.handle('db:saveSubtask', (_, sub) =>
-        safe(() => dbOps.saveSubtask(sub))
+        safe(() => dbOps.saveSubtask(validateSubtaskRow(sub)))
     )
 
     /* Focus */
 
     ipcMain.handle('db:getSessions', (_, uid) =>
-        dbOps.getSessions(uid)
+        dbOps.getSessions(validateId(uid, 'user id'))
     )
 
     ipcMain.handle('db:getAppUsage', (_, start, end) =>
-        dbOps.getAppUsage(start, end)
+        dbOps.getAppUsage(assertString(start, 'start date'), assertString(end, 'end date'))
     )
 
     ipcMain.handle('db:getDailyActivity', (_, start, end) =>
-        dbOps.getDailyActivity(start, end)
+        dbOps.getDailyActivity(assertString(start, 'start date'), assertString(end, 'end date'))
     )
 
     ipcMain.handle('db:getAppUsageByTask', (_, taskId) =>
-        dbOps.getAppUsageByTask(taskId)
+        dbOps.getAppUsageByTask(validateId(taskId, 'task id'))
     )
 
     ipcMain.handle('db:getDailyAppUsage', (_, date) =>
-        dbOps.getDailyAppUsage(date)
+        dbOps.getDailyAppUsage(assertString(date, 'date'))
     )
 
     ipcMain.handle('db:getDailyDomainUsage', (_, date) =>
-        dbOps.getDailyDomainUsage(date)
+        dbOps.getDailyDomainUsage(assertString(date, 'date'))
     )
 
     ipcMain.handle('db:saveSession', (_, s) =>
-        safe(() => dbOps.saveSession(s))
+        safe(() => dbOps.saveSession(validateFocusSessionRow(s)))
     )
 
     /* Sync */
 
-    const SYNC_TABLES = new Set(['workspaces', 'lists', 'tasks', 'subtasks', 'focus_sessions', 'canvases', 'blocks'])
-
     ipcMain.handle('db:getPending', (_, table, limit?: number) => {
-        if (!SYNC_TABLES.has(table)) throw new Error(`Invalid sync table: ${table}`)
-        return dbOps.getPending(table, limit)
+        return dbOps.getPending(validateSyncTable(table), validateSyncLimit(limit))
+    })
+
+    ipcMain.handle('db:countPending', (_, table) => {
+        return dbOps.countPending(validateSyncTable(table))
     })
 
     ipcMain.handle('db:markSynced', (_, table, id) => {
-        if (!SYNC_TABLES.has(table)) throw new Error(`Invalid sync table: ${table}`)
-        return safe(() => dbOps.markSynced(table, id))
+        return safe(() => dbOps.markSynced(validateSyncTable(table), validateId(id, 'row id')))
     })
 
     ipcMain.handle('db:upsertFromCloud', (_, table, rows) => {
-        if (!SYNC_TABLES.has(table)) throw new Error(`Invalid sync table: ${table}`)
-        return safe(() => dbOps.upsertFromCloud(table, rows))
+        return safe(() => dbOps.upsertFromCloud(validateSyncTable(table), validateCloudRows(rows)))
     })
 
     /* Named update handlers (db:exec removed — no raw SQL from renderer) */
 
     ipcMain.handle('db:updateTask', (_, id, updates) =>
-        safe(() => dbOps.updateTask(id, updates))
+        safe(() => dbOps.updateTask(validateId(id, 'task id'), validateTaskUpdate(updates)))
     )
 
     ipcMain.handle('db:updateTaskSortOrder', (_, id, sortOrder) =>
-        safe(() => dbOps.updateTaskSortOrder(id, sortOrder))
+        safe(() => dbOps.updateTaskSortOrder(validateId(id, 'task id'), assertNonNegativeInteger(sortOrder, 'sort order')))
     )
 
     ipcMain.handle('db:softDeleteTasksByListId', (_, listId) =>
-        safe(() => dbOps.softDeleteTasksByListId(listId))
+        safe(() => dbOps.softDeleteTasksByListId(validateId(listId, 'list id')))
     )
 
     ipcMain.handle('db:resetAllTaskTimes', (_, userId) =>
-        safe(() => dbOps.resetAllTaskTimes(userId))
+        safe(() => dbOps.resetAllTaskTimes(validateId(userId, 'user id')))
     )
 
     ipcMain.handle('db:updateList', (_, id, updates) =>
-        safe(() => dbOps.updateList(id, updates))
+        safe(() => dbOps.updateList(validateId(id, 'list id'), validateListUpdate(updates)))
     )
 
     ipcMain.handle('db:updateSubtask', (_, id, updates) =>
-        safe(() => dbOps.updateSubtask(id, updates))
+        safe(() => dbOps.updateSubtask(validateId(id, 'subtask id'), validateSubtaskUpdate(updates)))
     )
 
     ipcMain.handle('db:softDeleteSubtask', (_, id) =>
-        safe(() => dbOps.softDeleteSubtask(id))
+        safe(() => dbOps.softDeleteSubtask(validateId(id, 'subtask id')))
     )
 
     ipcMain.handle('db:updateFocusSession', (_, id, updates) =>
-        safe(() => dbOps.updateFocusSession(id, updates))
+        safe(() => dbOps.updateFocusSession(validateId(id, 'focus session id'), validateFocusSessionUpdate(updates)))
     )
 
     ipcMain.handle('db:softDeleteAllSessions', (_, userId) =>
-        safe(() => dbOps.softDeleteAllSessions(userId))
+        safe(() => dbOps.softDeleteAllSessions(validateId(userId, 'user id')))
     )
 
     ipcMain.handle('db:taskExists', (_, taskId) =>
-        safe(() => dbOps.taskExists(taskId))
+        safe(() => dbOps.taskExists(validateId(taskId, 'task id')))
     )
 
     ipcMain.handle('db:getLocallyDeletedIds', (_, table) =>
-        safe(() => dbOps.getLocallyDeletedIds(table))
+        safe(() => dbOps.getLocallyDeletedIds(validateLocallyDeletedTable(table)))
     )
 
     ipcMain.handle('db:requeueWorkspace', (_, workspaceId) =>
-        safe(() => dbOps.requeueWorkspace(workspaceId))
+        safe(() => dbOps.requeueWorkspace(validateId(workspaceId, 'workspace id')))
     )
 
     ipcMain.handle('db:getWorkspaceForList', (_, workspaceId) =>
-        safe(() => dbOps.getWorkspaceForList(workspaceId))
+        safe(() => dbOps.getWorkspaceForList(validateId(workspaceId, 'workspace id')))
     )
 
     /* Tracker */
 
     ipcMain.handle('tracker:setContext', (_, taskId: string | null) => {
-        trackingEngine.setTaskContext(taskId)
+        trackingEngine.setTaskContext(validateNullableId(taskId, 'task id'))
     })
 
     ipcMain.handle('tracker:getLiveSession', () => {
@@ -860,7 +947,7 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
     })
 
     ipcMain.handle('auth:setUser', (_, userId: string | null, accessToken?: string | null) => {
-        trackingEngine.setUserId(userId, accessToken)
+        trackingEngine.setUserId(validateNullableId(userId, 'user id'), accessToken == null ? null : assertString(accessToken, 'access token'))
     })
 
     // Renderer drains any deep link that arrived before its listener was ready
@@ -895,28 +982,29 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
     /* External URLs (Google OAuth, etc.) */
 
     ipcMain.handle('file:openExternal', (_, url: string) => {
-        if (url && (url.startsWith('https://') || url.startsWith('http://'))) {
-            shell.openExternal(url)
-        }
+        shell.openExternal(validateExternalUrl(url))
     })
 
     /* Reports — single aggregated call */
 
-    ipcMain.handle('reports:getDashboardData', (_, { userId, startDate, endDate }: { userId: string, startDate: string, endDate: string }) => {
+    ipcMain.handle('reports:getDashboardData', (_, args: unknown) => {
+        const { userId, startDate, endDate } = validateReportsRange(args)
         if (!userId) return null
         return dbOps.getReportsDashboardData(userId, startDate, endDate)
     })
 
     /* Reports — live distraction for the current focus sitting */
 
-    ipcMain.handle('reports:getSessionDistraction', (_, { startISO, endISO }: { startISO: string, endISO: string }) => {
+    ipcMain.handle('reports:getSessionDistraction', (_, args: unknown) => {
+        const { startISO, endISO } = validateSessionDistractionRange(args)
         if (!startISO || !endISO) return { distractionSeconds: 0, byCategory: [] }
         return dbOps.getSessionDistraction(startISO, endISO)
     })
 
     /* Screen Time — single aggregated call for a specific day */
 
-    ipcMain.handle('screenTime:getData', (_, { date }: { date: string }) => {
+    ipcMain.handle('screenTime:getData', (_, args: unknown) => {
+        const { date } = validateScreenTimeArgs(args)
         return dbOps.getScreenTimeData(date)
     })
 
@@ -1002,7 +1090,9 @@ const logCrash = (type: string, error: any) => {
         const desktopPath = path.join(app.getPath('desktop'), 'quoril-crash.log')
         const errorMessage = `\n\n[${new Date().toISOString()}] ${type}\n${error?.stack || error}`
         fs.appendFileSync(desktopPath, errorMessage)
-    } catch (_) { }
+    } catch {
+        // Best effort only; crash handling must never throw recursively.
+    }
 }
 
 process.on('uncaughtException', e => {
