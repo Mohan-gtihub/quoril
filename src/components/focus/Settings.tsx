@@ -3,12 +3,17 @@ import { useNavigate } from 'react-router-dom'
 import {
     ArrowLeft, Play, Check, Palette, Timer, Target,
     Maximize2, Bell, Send, ShieldCheck, CheckCircle2, Plus, Minus,
-    RefreshCw, Download, RotateCw
+    RefreshCw, Download, RotateCw, User as UserIcon, Mail, Lock,
+    LogOut, Flame, Crown, Sparkles
 } from 'lucide-react'
 import { useAppUpdate } from '@/hooks/useAppUpdate'
 import { motion, AnimatePresence } from 'framer-motion'
+import toast from 'react-hot-toast'
 import { useSettingsStore } from '@/store/settingsStore'
 import { useFocusStore } from '@/store/focusStore'
+import { useAuthStore } from '@/store/authStore'
+import { useProfileStore } from '@/store/profileStore'
+import type { SubscriptionTier, AppRole } from '@/utils/permissions'
 import { soundService } from '@/services/soundService'
 import { cn } from '@/utils/helpers'
 
@@ -186,6 +191,7 @@ function Group({ title, children, className }: any) {
 // ── Section navigation config ────────────────────────────────
 
 const SECTIONS = [
+    { id: 'account', label: 'Account', icon: UserIcon, desc: 'Your profile, plan, and sign-in security.' },
     { id: 'appearance', label: 'Appearance', icon: Palette, desc: 'Theme and how much detail shows on task cards.' },
     { id: 'focus', label: 'Focus & Breaks', icon: Timer, desc: 'Tune the length of your focus sprints and breaks.' },
     { id: 'goals', label: 'Daily Goal', icon: Target, desc: 'Set your daily focus target and how it’s celebrated.' },
@@ -197,6 +203,213 @@ const SECTIONS = [
 ] as const
 
 type SectionId = typeof SECTIONS[number]['id']
+
+// ── Account section ──────────────────────────────────────────
+
+const TIER_META: Record<SubscriptionTier, { label: string; icon: any; className: string }> = {
+    free: { label: 'Free', icon: Sparkles, className: 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]' },
+    monthly: { label: 'Pro · Monthly', icon: Crown, className: 'bg-[var(--accent-primary)] text-[var(--accent-contrast)]' },
+    annual: { label: 'Pro · Annual', icon: Crown, className: 'bg-[var(--accent-primary)] text-[var(--accent-contrast)]' },
+    lifetime: { label: 'Lifetime', icon: Crown, className: 'bg-[var(--accent-primary)] text-[var(--accent-contrast)]' },
+}
+
+const ROLE_LABEL: Partial<Record<AppRole, string>> = {
+    admin: 'Admin',
+    alpha_tester: 'Alpha Tester',
+    beta_tester: 'Beta Tester',
+    blog_publisher: 'Blog Publisher',
+}
+
+function initialsFrom(name: string, email: string) {
+    const src = name.trim() || email.split('@')[0] || '?'
+    const parts = src.split(/[\s._-]+/).filter(Boolean)
+    const chars = parts.length >= 2 ? parts[0][0] + parts[1][0] : src.slice(0, 2)
+    return chars.toUpperCase()
+}
+
+function AccountSection() {
+    const { user, roles, tier, signOut, updatePassword } = useAuthStore()
+    const { fullName, streak, updateProfile } = useProfileStore()
+
+    const email = user?.email ?? ''
+    const provider = (user?.app_metadata as any)?.provider as string | undefined
+    const isPasswordAccount = !provider || provider === 'email'
+
+    const [name, setName] = useState(fullName)
+    const [savingName, setSavingName] = useState(false)
+    const [pw, setPw] = useState('')
+    const [pw2, setPw2] = useState('')
+    const [savingPw, setSavingPw] = useState(false)
+    const [signingOut, setSigningOut] = useState(false)
+
+    // Keep the local field in sync when the profile finishes loading.
+    useEffect(() => { setName(fullName) }, [fullName])
+
+    const nameDirty = name.trim() !== (fullName || '').trim()
+
+    const saveName = async () => {
+        if (!nameDirty) return
+        setSavingName(true)
+        const res = await updateProfile({ fullName: name })
+        setSavingName(false)
+        if (res.success) toast.success('Name updated')
+        else toast.error(res.error || 'Could not save name')
+    }
+
+    const savePassword = async () => {
+        if (pw.length < 8) { toast.error('Use at least 8 characters'); return }
+        if (pw !== pw2) { toast.error('Passwords do not match'); return }
+        setSavingPw(true)
+        const res = await updatePassword(pw)
+        setSavingPw(false)
+        if (res.success) { toast.success('Password changed'); setPw(''); setPw2('') }
+        else toast.error(res.error || 'Could not change password')
+    }
+
+    const handleSignOut = async () => {
+        setSigningOut(true)
+        try { await signOut() } catch { setSigningOut(false) }
+    }
+
+    const tierMeta = TIER_META[tier]
+    const namedRoles = roles.filter(r => r !== 'end_user' && ROLE_LABEL[r])
+
+    return (
+        <>
+            {/* Identity card */}
+            <Group title="Profile">
+                <div className="flex items-center gap-4 py-5 border-b border-[var(--border-default)]">
+                    <div className="w-16 h-16 rounded-full bg-[var(--accent-primary)] text-[var(--accent-contrast)] flex items-center justify-center text-xl font-semibold shrink-0 select-none">
+                        {initialsFrom(fullName, email)}
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-base font-semibold text-[var(--text-primary)] truncate">
+                            {fullName.trim() || email.split('@')[0] || 'Your account'}
+                        </p>
+                        <p className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">{email}</p>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                            <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold', tierMeta.className)}>
+                                <tierMeta.icon className="w-3 h-3" />
+                                {tierMeta.label}
+                            </span>
+                            {namedRoles.map(r => (
+                                <span key={r} className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--bg-tertiary)] text-[var(--text-secondary)]">
+                                    {ROLE_LABEL[r]}
+                                </span>
+                            ))}
+                            {streak > 0 && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--bg-tertiary)] text-[var(--text-secondary)]">
+                                    <Flame className="w-3 h-3 text-[var(--accent-primary)]" />
+                                    {streak} day streak
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <Field label="Display name" description="Shown to teammates on shared workspaces.">
+                    <div className="flex gap-2">
+                        <div className="flex-1 flex items-center gap-2 px-3.5 py-2.5 rounded-[var(--radius-card)] bg-[var(--bg-secondary)] border border-[var(--border-default)] focus-within:border-[var(--border-hover)] transition-colors">
+                            <UserIcon className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+                            <input
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') saveName() }}
+                                placeholder="Add your name"
+                                maxLength={60}
+                                className="flex-1 bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
+                            />
+                        </div>
+                        <button
+                            onClick={saveName}
+                            disabled={!nameDirty || savingName}
+                            className="px-4 rounded-[var(--radius-card)] text-sm font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        >
+                            {savingName ? 'Saving…' : 'Save'}
+                        </button>
+                    </div>
+                </Field>
+
+                <Field label="Email" description="Your sign-in address.">
+                    <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-[var(--radius-card)] bg-[var(--bg-tertiary)] border border-[var(--border-default)]">
+                        <Mail className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+                        <span className="flex-1 text-sm text-[var(--text-secondary)] truncate">{email}</span>
+                        {provider === 'google' && (
+                            <span className="text-[11px] font-semibold text-[var(--text-muted)]">via Google</span>
+                        )}
+                    </div>
+                </Field>
+            </Group>
+
+            {/* Security */}
+            <Group title="Security">
+                {isPasswordAccount ? (
+                    <Field label="Change password" description="Use at least 8 characters. You’ll stay signed in on this device.">
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-[var(--radius-card)] bg-[var(--bg-secondary)] border border-[var(--border-default)] focus-within:border-[var(--border-hover)] transition-colors">
+                                <Lock className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+                                <input
+                                    type="password"
+                                    value={pw}
+                                    onChange={(e) => setPw(e.target.value)}
+                                    placeholder="New password"
+                                    className="flex-1 bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <div className="flex-1 flex items-center gap-2 px-3.5 py-2.5 rounded-[var(--radius-card)] bg-[var(--bg-secondary)] border border-[var(--border-default)] focus-within:border-[var(--border-hover)] transition-colors">
+                                    <Lock className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+                                    <input
+                                        type="password"
+                                        value={pw2}
+                                        onChange={(e) => setPw2(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') savePassword() }}
+                                        placeholder="Confirm new password"
+                                        className="flex-1 bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
+                                    />
+                                </div>
+                                <button
+                                    onClick={savePassword}
+                                    disabled={!pw || !pw2 || savingPw}
+                                    className="px-4 rounded-[var(--radius-card)] text-sm font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                                >
+                                    {savingPw ? 'Updating…' : 'Update'}
+                                </button>
+                            </div>
+                        </div>
+                    </Field>
+                ) : (
+                    <Field label="Sign-in method" description="You signed in with a connected account, so there’s no password to manage.">
+                        <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-[var(--radius-card)] bg-[var(--bg-tertiary)] border border-[var(--border-default)]">
+                            <ShieldCheck className="w-4 h-4 text-[var(--accent-primary)] shrink-0" />
+                            <span className="text-sm text-[var(--text-secondary)] capitalize">{provider ?? 'Connected account'}</span>
+                        </div>
+                    </Field>
+                )}
+            </Group>
+
+            {/* Sign out */}
+            <Group title="Session">
+                <div className="flex items-center justify-between gap-6 py-5">
+                    <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">Sign out</p>
+                        <p className="text-xs text-[var(--text-tertiary)] mt-0.5 leading-relaxed max-w-md">
+                            Sign out of Quoril on this device. Your data stays safe in the cloud.
+                        </p>
+                    </div>
+                    <button
+                        onClick={handleSignOut}
+                        disabled={signingOut}
+                        className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-card)] text-sm font-semibold text-[var(--error)] bg-[var(--error)]/10 hover:bg-[var(--error)]/15 active:scale-95 disabled:opacity-50 transition-all"
+                    >
+                        <LogOut className="w-4 h-4" />
+                        {signingOut ? 'Signing out…' : 'Sign out'}
+                    </button>
+                </div>
+            </Group>
+        </>
+    )
+}
 
 // ── Main Page ────────────────────────────────────────────────
 
@@ -212,6 +425,12 @@ export function Settings() {
     useEffect(() => {
         window.electronAPI?.app?.getPlatform?.().then(setPlatform)
     }, [])
+
+    // Load the profile (name/avatar/streak) so the Account section is populated.
+    const userId = useAuthStore(s => s.user?.id)
+    useEffect(() => {
+        if (userId) useProfileStore.getState().fetchProfile(userId)
+    }, [userId])
 
     const handlePomodoroLengthChange = (valStr: string) => {
         const newLength = parseInt(valStr)
@@ -303,6 +522,8 @@ export function Settings() {
                                 transition={{ duration: 0.2, ease: 'easeOut' }}
                                 className="flex flex-col gap-7"
                             >
+                                {activeSection.id === 'account' && <AccountSection />}
+
                                 {activeSection.id === 'appearance' && (
                                     <>
                                         <Group title="Theme">

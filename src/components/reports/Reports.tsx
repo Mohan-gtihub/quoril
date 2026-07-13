@@ -37,8 +37,20 @@ const C = {
     ink: 'var(--text-tertiary)',
 }
 
-// Categorical palette for donut slices (distinct hues, not semantic).
-const CAT_PALETTE = ['var(--focus)', 'var(--wellbeing)', 'var(--break)', '#8b5cf6', 'var(--error)', 'var(--text-tertiary)']
+// Categorical palette for donut slices, matched 1:1 to the landing site's
+// "By category" donut (Dev → Work → Comms → Other): focus blue, wellbeing teal,
+// break amber, then the landing's neutral SLATE (#8a8a82, tuned to read on light
+// *and* dark). Tail slots reuse muted slate tints so extra categories stay calm
+// instead of the loud purple/red used before.
+const CAT_SLATE = '#8a8a82'
+const CAT_PALETTE = ['var(--focus)', 'var(--wellbeing)', 'var(--break)', CAT_SLATE, '#a8a8a0', 'var(--text-tertiary)']
+
+// Thresholds that flip a metric from "fine" to "needs attention" (drives colour).
+// Kept here so the numbers are named and consistent, not scattered magic values.
+const THRESHOLDS = {
+    distractionPct: 20, // >20% of focus time lost to distraction reads as red
+    idlePct: 40,        // >40% idle reads as red
+}
 
 /* ─── Primitives ────────────────────────────────────────────── */
 
@@ -50,6 +62,25 @@ function EmptyState({ msg }: { msg: string }) {
     return (
         <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
             <p className="text-xs text-[var(--text-muted)] max-w-[220px] leading-relaxed">{msg}</p>
+        </div>
+    )
+}
+
+// A "good outcome" empty state — icon + headline + sub, tinted with an accent.
+// Reads as an achievement (e.g. distraction-free) rather than missing data.
+function EmptyWin({ icon: Icon, title, sub, accent }: {
+    icon: any; title: string; sub: string; accent: string
+}) {
+    return (
+        <div className="flex items-center gap-4">
+            <span className="w-12 h-12 rounded-[var(--radius-card)] flex items-center justify-center shrink-0"
+                style={{ background: `color-mix(in srgb, ${accent} 14%, transparent)`, color: accent }}>
+                <Icon className="w-5 h-5" />
+            </span>
+            <div className="min-w-0">
+                <p className="text-base font-semibold text-[var(--text-primary)]">{title}</p>
+                <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">{sub}</p>
+            </div>
         </div>
     )
 }
@@ -69,17 +100,19 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 // Bento card with icon + title header, gentle mount animation.
+// `center` vertically centers light content so a stretched (equal-height) card
+// reads as intentional instead of leaving whitespace at the bottom.
 function Card({
-    title, icon: Icon, accent = 'var(--text-secondary)', hint, className, children,
+    title, icon: Icon, accent = 'var(--text-secondary)', hint, className, center, children,
 }: {
-    title: string; icon: any; accent?: string; hint?: string; className?: string; children: React.ReactNode
+    title: string; icon: any; accent?: string; hint?: string; className?: string; center?: boolean; children: React.ReactNode
 }) {
     return (
         <motion.section
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
-            className={`group relative flex flex-col rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-[var(--shadow-soft)] p-6 transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_36px_-16px_rgba(15,23,42,0.35)] ${className || ''}`}
+            className={`group relative flex flex-col h-full rounded-[var(--radius-tile)] bg-[var(--bg-card)] border border-[var(--border-default)] shadow-[var(--shadow-soft)] p-6 transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_36px_-16px_rgba(15,23,42,0.35)] ${className || ''}`}
             style={{ ['--card-accent' as any]: accent }}
         >
             <div className="flex items-center gap-2.5 mb-5">
@@ -92,50 +125,68 @@ function Card({
                 <h2 className="text-[14px] font-semibold tracking-tight text-[var(--text-primary)] flex-1">{title}</h2>
                 {hint && <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">{hint}</span>}
             </div>
-            <div className="flex-1">{children}</div>
+            <div className={`flex-1 ${center ? 'flex flex-col justify-center' : ''}`}>{children}</div>
         </motion.section>
     )
 }
 
-// Compact stat in the hero rail.
+// Compact stat in the hero rail. Numbers stay neutral ink — matching the rest of
+// the app and the landing KPI cards — while colour rides on a small accent dot by
+// the label. Keeps the rail calm instead of three loud saturated numbers.
 function HeroStat({ label, value, sub, accent }: {
     label: string; value: string; sub?: string; accent: string
 }) {
     return (
-        <div className="p-5 flex flex-col justify-center min-w-0">
-            <Eyebrow>{label}</Eyebrow>
-            <p className="text-[24px] font-semibold tabular-nums leading-none mt-2.5 tracking-tight" style={{ color: accent }}>{value}</p>
-            {sub && <p className="text-[11px] text-[var(--text-tertiary)] mt-1.5 truncate">{sub}</p>}
+        <div className="px-3 flex flex-col justify-center min-w-0">
+            <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: accent }} />
+                <Eyebrow>{label}</Eyebrow>
+            </div>
+            <p className="text-[28px] font-semibold tabular-nums leading-none mt-3 tracking-[-0.02em] text-[var(--text-primary)]">{value}</p>
+            {sub && <p className="text-[11px] text-[var(--text-tertiary)] mt-2 truncate">{sub}</p>}
         </div>
     )
 }
 
-// Tiny inline area sparkline for the hero.
-function Sparkline({ points, color = 'var(--focus)', height = 46 }: { points: number[]; color?: string; height?: number }) {
+// Hero mini-bars — one slim column per day, mirroring the landing "Insights"
+// 7-day trend: fixed-width columns (never stretched to fill), top-rounded only,
+// most-recent day at full opacity while the rest fade back. Reads cleanly with
+// sparse data instead of blowing one tall day into a fat block.
+function Sparkline({ points, color = 'var(--focus)', height = 56 }: { points: number[]; color?: string; height?: number }) {
     if (points.length === 0 || points.every(p => p === 0)) {
         return <div style={{ height }} className="flex items-center text-[11px] text-[var(--text-muted)]">No focus sessions in this range</div>
     }
     const max = Math.max(1, ...points)
-    const n = points.length
-    const w = 100
-    const step = n > 1 ? w / (n - 1) : 0
-    const y = (v: number) => height - (v / max) * (height - 6) - 3
-    const coords = points.map((v, i) => [n > 1 ? i * step : 0, y(v)] as const)
-    const line = coords.map(([x, yy], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${yy.toFixed(1)}`).join(' ')
-    const area = `${line} L${w},${height} L0,${height} Z`
+    const last = points.length - 1
     return (
-        <svg viewBox={`0 0 ${w} ${height}`} preserveAspectRatio="none" className="w-full block" style={{ height }}>
-            <defs>
-                <linearGradient id="heroSpark" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={color} stopOpacity={0.28} />
-                    <stop offset="100%" stopColor={color} stopOpacity={0} />
-                </linearGradient>
-            </defs>
-            <path d={area} fill="url(#heroSpark)" />
-            <motion.path d={line} fill="none" stroke={color} strokeWidth={2}
-                vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round"
-                initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.9, ease: 'easeOut' }} />
-        </svg>
+        // A grounded strip: bars sit on a hairline baseline so empty days read as
+        // "no work that day" rather than floating dashes, and columns align on one
+        // line — the same visual language as the Focus & Deep Work chart below.
+        <div className="relative" style={{ height: height + 1 }}>
+            <div className="flex items-end gap-2.5" style={{ height }}>
+                {points.map((v, i) => {
+                    const h = Math.max(3, (v / max) * height)
+                    const isLast = i === last
+                    // Landing heatmap fade: today at full strength, other days blue
+                    // with opacity graduated by height so busier days read stronger.
+                    const opacity = v === 0 ? 0.16 : isLast ? 1 : 0.22 + (v / max) * 0.5
+                    return (
+                        // flex-1 column keeps spacing even; the bar inside stays slim
+                        // (max-w) so a single tall day reads as a column, not a block.
+                        <div key={i} className="flex flex-1 items-end justify-center">
+                            <motion.div
+                                className="w-full max-w-[18px] rounded-t-[4px]"
+                                style={{ background: color, opacity }}
+                                initial={{ height: 3 }}
+                                animate={{ height: h }}
+                                transition={{ duration: 0.6, ease: 'easeOut', delay: i * 0.03 }}
+                            />
+                        </div>
+                    )
+                })}
+            </div>
+            <div className="absolute inset-x-0 bottom-0 h-px bg-[var(--border-default)]" />
+        </div>
     )
 }
 
@@ -235,7 +286,7 @@ export function Reports() {
 
     /* derived */
     const sessions = focusSummary?.sessionCount ?? 0
-    const topDistract = topApps.find(a => ['Social', 'Entertainment', 'Gaming', 'News'].includes(a.category))
+    const topDistract = topApps.find(a => DISTRACTING.includes(a.category))
     const maxWsFocus = useMemo(() => Math.max(1, ...workspaceStats.map((w: any) => w.focusSeconds ?? 0)), [workspaceStats])
     const avg7 = movingAvg[movingAvg.length - 1] ?? 0
 
@@ -277,7 +328,7 @@ export function Reports() {
                         </button>
                         <div>
                             <Eyebrow>Performance</Eyebrow>
-                            <h1 className="text-[32px] leading-none font-semibold tracking-tight text-[var(--text-primary)] mt-1.5">Analytics</h1>
+                            <h1 className="text-[32px] leading-none font-semibold tracking-tight text-[var(--text-primary)] mt-1.5">Reports</h1>
                             <p className="text-[12.5px] text-[var(--text-muted)] mt-2">Understand your focus, distractions, and work patterns.</p>
                         </div>
                     </div>
@@ -341,15 +392,16 @@ export function Reports() {
                                         </div>
                                     </div>
                                 </div>
-                                {/* Stat rail */}
-                                <div className="grid grid-cols-3 border-t lg:border-t-0 lg:border-l border-[var(--border-default)] bg-[var(--bg-secondary)] divide-x divide-[var(--border-default)]">
+                                {/* Stat rail — same card surface as the headline, separated by a
+                                    single hairline; stats are spaced, not boxed into a segmented control. */}
+                                <div className="grid grid-cols-3 items-center gap-x-2 px-3 py-7 md:py-8 border-t lg:border-t-0 lg:border-l border-[var(--border-default)]">
                                     <HeroStat label="Focus quality" accent={C.well}
                                         value={`${productivityScore.score}%`} sub="focus + work apps" />
                                     <HeroStat label="Tasks done" accent={C.focus}
                                         value={`${completed}/${total}`} sub={`${completionRate}% completed`} />
                                     {hasAppData ? (
-                                        <HeroStat label="Distraction" accent={distractionOverall.pct > 20 ? C.error : C.break}
-                                            value={`${distractionOverall.pct}%`} sub={`${fmt(distractionOverall.distractingSeconds)} of active time`} />
+                                        <HeroStat label="Distraction" accent={distractionDuringFocus.pct > THRESHOLDS.distractionPct ? C.error : C.break}
+                                            value={`${distractionDuringFocus.pct}%`} sub="during focus" />
                                     ) : (
                                         <HeroStat label="Avg session" accent={C.break}
                                             value={fmt(focusSummary?.avgSeconds ?? 0)} sub={sessions > 0 ? `${sessions} sessions` : 'No sessions'} />
@@ -368,12 +420,14 @@ export function Reports() {
                             </div>
                         </Card>
 
-                        {/* ══ BENTO — masonry so uneven-height cards pack tight ═ */}
-                        <div className="columns-1 lg:columns-2 gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
+                        {/* ══ BENTO — 2-col grid; cards stretch to equal height per row
+                            (items-stretch + h-full). If the card count is odd the final
+                            card spans both columns so the last row never half-empties. ══ */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch [&>*:last-child:nth-child(odd)]:lg:col-span-2">
 
                             {/* Peak productivity hours */}
                             <Card title="Peak Productivity Hours" icon={Activity} accent={C.focus}
-                                hint="by focus time">
+                                hint="by focus time" center>
                                 <PeakHoursChart bins={peakHourBins} />
                             </Card>
 
@@ -401,7 +455,7 @@ export function Reports() {
 
                             {/* Task breakdown — single stacked bar */}
                             <Card title="Task Breakdown" icon={CheckCircle2} accent={C.focus}
-                                hint={`${completionRate}% done`}>
+                                hint={`${completionRate}% done`} center>
                                 <SegBar segments={[
                                     { label: 'Completed', value: completed, color: C.well },
                                     { label: 'In progress', value: taskReport.inProgress, color: C.break },
@@ -410,7 +464,7 @@ export function Reports() {
                             </Card>
 
                             {/* Productivity score */}
-                            <Card title="Productivity Score" icon={GaugeIcon} accent={C.focus}>
+                            <Card title="Productivity Score" icon={GaugeIcon} accent={C.focus} center>
                                 <div className="flex items-center gap-5">
                                     <Gauge score={productivityScore.score} color={C.focus} />
                                     <div className="flex-1 space-y-3 min-w-0">
@@ -424,7 +478,7 @@ export function Reports() {
                             </Card>
 
                             {/* Estimation accuracy */}
-                            <Card title="Estimation Accuracy" icon={GaugeIcon} accent={C.focus}>
+                            <Card title="Estimation Accuracy" icon={GaugeIcon} accent={C.break}>
                                 {overallAccuracy === null ? (
                                     <EmptyState msg="Complete tasks with time estimates to see how accurate they were" />
                                 ) : (
@@ -436,7 +490,7 @@ export function Reports() {
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-5">
-                                            <Gauge score={Math.min(100, overallAccuracy)} size={84} color={C.focus} />
+                                            <Gauge score={Math.min(100, overallAccuracy)} size={84} color={C.break} />
                                             <div>
                                                 <p className="text-2xl font-semibold text-[var(--text-primary)] tabular-nums leading-none">{overallAccuracy}%</p>
                                                 <p className="text-[11px] text-[var(--text-muted)] mt-1.5">100% = perfect estimate</p>
@@ -444,7 +498,7 @@ export function Reports() {
                                         </div>
                                         {mostUnderestimated.length > 0 && (
                                             <div>
-                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1.5">Most underestimated</p>
+                                                <div className="mb-1.5"><Eyebrow>Most underestimated</Eyebrow></div>
                                                 {mostUnderestimated.slice(0, 3).map(t => (
                                                     <div key={t.id} className="flex justify-between gap-2 text-[11px] py-1.5 border-b border-[var(--border-default)] last:border-0">
                                                         <span className="text-[var(--text-secondary)] truncate">{t.title}</span>
@@ -455,7 +509,7 @@ export function Reports() {
                                         )}
                                         {mostOverestimated.length > 0 && (
                                             <div>
-                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1.5">Most overestimated</p>
+                                                <div className="mb-1.5"><Eyebrow>Most overestimated</Eyebrow></div>
                                                 {mostOverestimated.slice(0, 3).map(t => (
                                                     <div key={t.id} className="flex justify-between gap-2 text-[11px] py-1.5 border-b border-[var(--border-default)] last:border-0">
                                                         <span className="text-[var(--text-secondary)] truncate">{t.title}</span>
@@ -513,14 +567,14 @@ export function Reports() {
                         {hasAppData && (
                             <>
                                 <SectionLabel>Screen activity</SectionLabel>
-                                <div className="columns-1 lg:columns-2 gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch [&>*:last-child:nth-child(odd)]:lg:col-span-2">
                                     {/* Top apps — ranked, iconographic */}
                                     <Card title="Top Apps" icon={AppWindow} accent={C.focus} hint="active time">
                                         {topApps.length === 0
                                             ? <EmptyState msg="Screen time is tracked while the app is running" />
                                             : <div className="space-y-3.5">
                                                 {topApps.slice(0, 6).map((app, i) => (
-                                                    <div key={i} className="flex items-center gap-3">
+                                                    <div key={app.appName} className="flex items-center gap-3">
                                                         <span className="w-4 text-[11px] font-semibold tabular-nums text-[var(--text-muted)] text-right shrink-0">{i + 1}</span>
                                                         <span className="w-7 h-7 rounded-lg flex items-center justify-center text-[12px] font-semibold shrink-0"
                                                             style={{ background: `color-mix(in srgb, ${C.focus} 12%, transparent)`, color: C.focus }}>
@@ -569,13 +623,13 @@ export function Reports() {
                                             </div>
                                             <div className="rounded-[var(--radius-card)] border border-[var(--border-default)] bg-[var(--bg-secondary)] p-3.5">
                                                 <p className="text-[11px] text-[var(--text-muted)] mb-1">Idle</p>
-                                                <p className="text-xl font-semibold tabular-nums" style={{ color: idleRatio > 40 ? C.error : 'var(--text-primary)' }}>{idleRatio}%</p>
+                                                <p className="text-xl font-semibold tabular-nums" style={{ color: idleRatio > THRESHOLDS.idlePct ? C.error : 'var(--text-primary)' }}>{idleRatio}%</p>
                                             </div>
                                         </div>
                                         {contextByDay.length === 0
                                             ? <EmptyState msg="App tracking records context switches automatically" />
                                             : <div className="space-y-2">
-                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1">Context switches / day</p>
+                                                <div className="mb-1"><Eyebrow>Context switches / day</Eyebrow></div>
                                                 {contextByDay.map(d => {
                                                     const col = d.label === 'Deep Work' ? C.well : d.label === 'Balanced' ? C.break : C.error
                                                     return (
@@ -594,7 +648,13 @@ export function Reports() {
                                     </Card>
 
                                     {/* Top distraction */}
-                                    <Card title="Top Distraction" icon={Zap} accent={C.error}>
+                                    <Card
+                                        title="Top Distraction"
+                                        icon={Zap}
+                                        accent={C.error}
+                                        hint={distractionDuringFocus.pct > 0 ? `${distractionDuringFocus.pct}% during focus` : undefined}
+                                        center
+                                    >
                                         {topDistract ? (
                                             <div className="flex items-center gap-4">
                                                 <span className="w-12 h-12 rounded-[var(--radius-card)] flex items-center justify-center text-lg font-semibold shrink-0"
@@ -607,7 +667,9 @@ export function Reports() {
                                                 </div>
                                             </div>
                                         ) : (
-                                            <EmptyState msg="No distracting app usage found in this range" />
+                                            <EmptyWin icon={CheckCircle2} accent={C.well}
+                                                title="Distraction-free"
+                                                sub="No entertainment usage this range" />
                                         )}
                                     </Card>
                                 </div>

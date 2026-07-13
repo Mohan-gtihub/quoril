@@ -1,4 +1,4 @@
-﻿import { useMemo, useRef, useState } from 'react'
+﻿import { useMemo, useRef, useState, useEffect, type CSSProperties } from 'react'
 import { toPng } from 'html-to-image'
 import {
     subMonths,
@@ -20,8 +20,32 @@ import { isFocusType } from '@/utils/timeCalculations'
 export function ActivityHeatmap() {
     const { sessions, isActive, startTime, sessionType } = useFocusStore()
     const heatmapCardRef = useRef<HTMLDivElement>(null)
-    const shareBadgeRef = useRef<HTMLDivElement>(null)
-    const [isExporting, setIsExporting] = useState(false)
+    const gridAreaRef = useRef<HTMLDivElement>(null)
+    // How many months of history to render — derived from the available width so
+    // the map always fills the card edge-to-edge with comfortably-sized cells.
+    const [monthsToShow, setMonthsToShow] = useState(6)
+
+    useEffect(() => {
+        const el = gridAreaRef.current
+        if (!el || typeof ResizeObserver === 'undefined') return
+
+        const PX_PER_WEEK = 16 // target column width incl. gap → keeps cells legible
+        const WEEKS_PER_MONTH = 4.345
+        const compute = (width: number) => {
+            const weeks = Math.max(8, Math.floor(width / PX_PER_WEEK))
+            const months = Math.round(weeks / WEEKS_PER_MONTH)
+            // Clamp to a sane window: at least a quarter, at most ~14 months.
+            setMonthsToShow(Math.min(14, Math.max(3, months)))
+        }
+
+        compute(el.clientWidth)
+        const ro = new ResizeObserver(entries => {
+            for (const entry of entries) compute(entry.contentRect.width)
+        })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
+    const [isSharing, setIsSharing] = useState(false)
     const [shareOpen, setShareOpen] = useState(false)
 
     // 1. Process all historical focus sessions into a map: { "YYYY-MM-DD": minutes }
@@ -44,10 +68,10 @@ export function ActivityHeatmap() {
         return map
     }, [sessions, isActive, startTime, sessionType])
 
-    // 2. Generate date grid for the last 4 months (aligned to week start/end)
-    const { days } = useMemo(() => {
+    // 2. Generate date grid for the last N months (width-driven; week-aligned)
+    const { days, monthLabels } = useMemo(() => {
         const endDate = endOfWeek(new Date())
-        const startDate = startOfWeek(subMonths(endDate, 4))
+        const startDate = startOfWeek(subMonths(endDate, monthsToShow))
 
         const allDays = eachDayOfInterval({ start: startDate, end: endDate })
 
@@ -56,16 +80,33 @@ export function ActivityHeatmap() {
             weeks.push(allDays.slice(i, i + 7))
         }
 
-        return { days: weeks }
-    }, [])
+        // Month tick per column — labelled only when a new month first appears
+        // in that week's top row, so the axis reads left→right without crowding.
+        let lastMonth = -1
+        const labels = weeks.map(week => {
+            const first = week[0]
+            const m = first.getMonth()
+            if (m !== lastMonth) {
+                lastMonth = m
+                // Suppress a label sitting in the first two columns (no room to render).
+                return format(first, 'MMM')
+            }
+            return ''
+        })
 
-    // GitHub's exact contribution-graph palette (light: L0–L4, dark: L0–L4)
-    const getColorClass = (minutes: number) => {
-        if (minutes === 0) return 'bg-[var(--gh-l0)]'
-        if (minutes < 30) return 'bg-[var(--gh-l1)]'
-        if (minutes < 60) return 'bg-[var(--gh-l2)]'
-        if (minutes < 120) return 'bg-[var(--gh-l3)]'
-        return 'bg-[var(--gh-l4)]'
+        return { days: weeks, monthLabels: labels }
+    }, [monthsToShow])
+
+    // Single green intensity ramp — one coherent scale in every theme.
+    // Anchored to --gh-l4 (theme-aware green) with opacity steps so faint→full
+    // reads cleanly on both dark and light cards. Empty cells use neutral track.
+    const getCellStyle = (minutes: number): CSSProperties => {
+        if (minutes === 0) return { background: 'var(--track)' }
+        const green = 'var(--gh-l4)'
+        if (minutes < 30) return { background: green, opacity: 0.3 }
+        if (minutes < 60) return { background: green, opacity: 0.52 }
+        if (minutes < 120) return { background: green, opacity: 0.76 }
+        return { background: green, opacity: 1 }
     }
 
     // 3. Contextual Stats (This Month, Best Day, Current Streak)
@@ -183,8 +224,8 @@ export function ActivityHeatmap() {
         <div ref={heatmapCardRef} className="bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-tile)] shadow-[var(--shadow-soft)] p-5 flex-1 min-w-0 flex flex-col relative overflow-hidden">
             <div className="flex items-start justify-between mb-5 gap-4">
                 <div>
-                    <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">Focus map</h2>
-                    <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Daily deep work</p>
+                    <h2 className="text-[15px] font-semibold tracking-tight text-[var(--text-primary)]">Focus map</h2>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-tertiary)]">Daily deep work</p>
                 </div>
 
                 {/* Contextual meta */}
@@ -204,40 +245,53 @@ export function ActivityHeatmap() {
 
             {/* Heatmap Grid */}
             <div className="flex-1 flex flex-col w-full">
-                <div className="flex items-start mb-4 overflow-x-auto custom-scrollbar pb-1">
-                    {/* Day Labels (Y-axis) */}
-                    <div className="flex flex-col gap-[3px] pr-2 shrink-0 text-[9px] font-bold text-[var(--text-muted)] text-right opacity-60">
-                        {['', 'Mon', '', 'Wed', '', 'Fri', ''].map((label, i) => (
-                            <div key={i} className="h-[13px] flex items-center justify-end leading-none">{label}</div>
-                        ))}
+                <div className="mb-4">
+                    {/* Month axis — aligned to the flexing columns below via matching gutter */}
+                    <div className="flex pl-[34px]">
+                        <div className="flex gap-[3px] flex-1">
+                            {monthLabels.map((label, i) => (
+                                <div key={i} className="flex-1 min-w-0 text-[9px] font-semibold text-[var(--text-muted)] leading-none whitespace-nowrap">
+                                    {label}
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
-                    {/* Grid — compact fixed-size cells (GitHub style), scrolls if narrow */}
-                    <div className="flex gap-[3px] mx-auto">
-                        {days.map((week, wIdx) => (
-                            <div key={wIdx} className="flex flex-col gap-[3px]">
-                                {week.map((day, dIdx) => {
-                                    const dateStr = format(day, 'yyyy-MM-dd')
-                                    const mins = activityMap[dateStr] || 0
-                                    const isFuture = day > new Date()
-                                    const today = isToday(day)
+                    <div className="flex items-stretch mt-1.5">
+                        {/* Day Labels (Y-axis) */}
+                        <div className="flex flex-col gap-[3px] pr-2 shrink-0 w-[34px] text-[9px] font-semibold text-[var(--text-muted)] text-right">
+                            {['', 'Mon', '', 'Wed', '', 'Fri', ''].map((label, i) => (
+                                <div key={i} className="flex-1 flex items-center justify-end leading-none">{label}</div>
+                            ))}
+                        </div>
 
-                                    return (
-                                        <div
-                                            key={dIdx}
-                                            data-tooltip-id="heatmap-tooltip"
-                                            data-tooltip-content={isFuture ? undefined : `${format(day, 'MMM do, yyyy')}: ${Math.round(mins)} mins`}
-                                            className={cn(
-                                                "w-[13px] h-[13px] rounded-[3px] transition-all duration-300",
-                                                isFuture ? "opacity-10 bg-[var(--text-muted)]" : "cursor-crosshair hover:scale-125 z-0 hover:z-10",
-                                                !isFuture && getColorClass(mins),
-                                                today && "ring-1 ring-[var(--text-primary)] ring-offset-1 ring-offset-[var(--bg-card)] !opacity-100"
-                                            )}
-                                        />
-                                    )
-                                })}
-                            </div>
-                        ))}
+                        {/* Grid — columns flex to fill the full card width, cells stay square */}
+                        <div ref={gridAreaRef} className="flex gap-[3px] flex-1 min-w-0">
+                            {days.map((week, wIdx) => (
+                                <div key={wIdx} className="flex flex-col gap-[3px] flex-1 min-w-0">
+                                    {week.map((day, dIdx) => {
+                                        const dateStr = format(day, 'yyyy-MM-dd')
+                                        const mins = activityMap[dateStr] || 0
+                                        const isFuture = day > new Date()
+                                        const today = isToday(day)
+
+                                        return (
+                                            <div
+                                                key={dIdx}
+                                                data-tooltip-id="heatmap-tooltip"
+                                                data-tooltip-content={isFuture ? undefined : `${format(day, 'MMM do, yyyy')}: ${Math.round(mins)} mins`}
+                                                style={isFuture ? undefined : getCellStyle(mins)}
+                                                className={cn(
+                                                    "aspect-square rounded-[3px] transition-all duration-300",
+                                                    isFuture ? "opacity-[0.06] bg-[var(--text-muted)]" : "cursor-crosshair hover:scale-125 z-0 hover:z-10",
+                                                    today && "ring-1 ring-[var(--gh-l4)] ring-offset-1 ring-offset-[var(--bg-card)] !opacity-100"
+                                                )}
+                                            />
+                                        )
+                                    })}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
@@ -287,11 +341,9 @@ export function ActivityHeatmap() {
 
                 <div className="flex items-center justify-end gap-1.5 mt-auto text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider pt-3 border-t border-[var(--border-default)]">
                     <span className="mr-1">Less</span>
-                    <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--gh-l0)]" />
-                    <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--gh-l1)]" />
-                    <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--gh-l2)]" />
-                    <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--gh-l3)]" />
-                    <div className="w-[10px] h-[10px] rounded-[2px] bg-[var(--gh-l4)]" />
+                    {[0, 15, 45, 90, 150].map(m => (
+                        <div key={m} style={getCellStyle(m)} className="w-[10px] h-[10px] rounded-[2px]" />
+                    ))}
                     <span className="ml-1">More</span>
                 </div>
             </div>
@@ -394,26 +446,32 @@ export function ActivityHeatmap() {
                                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#f97316] shadow-[0_8px_22px_rgba(249,115,22,0.35)]"><Flame size={24} className="fill-white text-white" /></div>
                             </div>
 
-                            <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10">
-                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><Clock3 size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">This month</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.monthStr}</p></div>
-                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><Award size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">Best day</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.bestMinsStr}</p></div>
-                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><CalendarDays size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">Active days</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.activeDays}</p></div>
-                                <div className="bg-[#151b2b]/90 px-3 py-2.5"><div className="flex items-center gap-1 text-white/45"><Flame size={13} /><span className="text-[8px] font-bold uppercase tracking-[0.1em]">Total focus</span></div><p className="mt-1 text-[15px] font-bold leading-none tabular-nums text-white">{stats.totalStr}</p></div>
-                            </div>
+                    <div className="flex flex-col gap-2">
+                        <button
+                            onClick={handleCopyLink}
+                            disabled={!shareLink}
+                            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-[10px] border border-[var(--border-default)] text-[var(--text-primary)] text-[13px] font-semibold transition-all hover:bg-[var(--bg-secondary)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {copied ? <Check size={15} className="text-[var(--accent-primary)]" /> : <Link2 size={15} />}
+                            {copied ? 'Copied!' : 'Copy link'}
+                        </button>
 
-                            <div className="mt-5 border-t border-white/10 pt-4">
-                                <div className="mb-2 flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.12em] text-white/45"><span>Last 4 months</span><span>Focus map</span></div>
-                                <div className="flex gap-[2px]">
-                                    {days.map((week, weekIndex) => (
-                                        <div key={weekIndex} className="flex flex-col gap-[2px]">
-                                            {week.map(day => {
-                                                const mins = activityMap[format(day, 'yyyy-MM-dd')] || 0
-                                                return <span key={day.toISOString()} className={cn('h-[7px] w-[7px] rounded-[2px]', getColorClass(mins))} />
-                                            })}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleWhatsApp}
+                                disabled={!shareLink}
+                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[10px] bg-[#25D366] text-white text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Share2 size={15} />
+                                WhatsApp
+                            </button>
+                            <button
+                                onClick={handleShareImage}
+                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[10px] bg-[var(--bg-secondary)] border border-[var(--border-default)] text-[var(--text-primary)] text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+                            >
+                                <ImageDown size={15} />
+                                Image
+                            </button>
                         </div>
                     </div>
 
