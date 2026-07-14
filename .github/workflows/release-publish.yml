@@ -1,0 +1,60 @@
+name: Release Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-macos:
+    runs-on: macos-14
+    env:
+      QUORIL_RELEASE_BUILD: "true"
+      CSC_LINK: ${{ secrets.MACOS_CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: node scripts/release-preflight.mjs mac
+      - run: npm run build:app
+      - run: npx electron-builder --mac --arm64 --publish always
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quoril-macos-arm64
+          path: |
+            release/*.dmg
+            release/*.zip
+
+  publish-windows:
+    runs-on: windows-2022
+    env:
+      QUORIL_RELEASE_BUILD: "true"
+      CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: node scripts/release-preflight.mjs win
+      - run: npm run build:app
+      - run: npx electron-builder --win --x64 --publish always
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quoril-windows-x64
+          path: release/*.exe

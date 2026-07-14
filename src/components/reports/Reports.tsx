@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import {
     ArrowLeft, RefreshCw, AlertCircle, CheckCircle2,
-    Gauge as GaugeIcon, Activity, Layers, AppWindow, Repeat, Zap, Clock
+    Gauge as GaugeIcon, Activity, Layers, AppWindow, Repeat, Zap, Clock, Download
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
@@ -284,6 +284,18 @@ export function Reports() {
     const { topApps, categoryBreakdown, productivityScore, contextByDay, avgDailySwitches, idleRatio, distractionDuringFocus, distractionOverall } = appReport
     const { total, completed, completionRate, overallAccuracy, mostUnderestimated, mostOverestimated, recurringData, recurringCompletedCount, focusLinkage, plannedToday } = taskReport
 
+    // Export the report as a PDF via the browser's native print → "Save as PDF".
+    // No heavy html→canvas library: a dedicated @media print stylesheet (index.css)
+    // isolates the report body, forces a clean light layout, and lets charts render
+    // as real vectors. `data-report-date` feeds the printed header/footer label.
+    const handleExport = () => {
+        const prevTitle = document.title
+        document.title = `Quoril Report · ${range.label}`
+        window.print()
+        // Restore the tab/window title after the print dialog closes.
+        setTimeout(() => { document.title = prevTitle }, 500)
+    }
+
     /* derived */
     const sessions = focusSummary?.sessionCount ?? 0
     const topDistract = topApps.find(a => DISTRACTING.includes(a.category))
@@ -316,7 +328,7 @@ export function Reports() {
     }), [range.label, productivityScore, deepWorkTotals, focusSummary, avgDailySwitches, idleRatio, completed, total, completionRate, focusLinkage, distractionDuringFocus, distractionOverall, peakHourBins, categoryBreakdown, topApps])
 
     return (
-        <div className="flex-1 overflow-y-auto w-full h-full custom-scrollbar select-none pb-24">
+        <div data-report-root className="flex-1 overflow-y-auto w-full h-full custom-scrollbar select-none pb-24">
             <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-10 space-y-6">
 
                 {/* ── Header ── */}
@@ -332,7 +344,7 @@ export function Reports() {
                             <p className="text-[12.5px] text-[var(--text-muted)] mt-2">Understand your focus, distractions, and work patterns.</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 print:hidden">
                         {aiAvailable && (
                             <button
                                 onClick={() => setInsightsOpen(true)}
@@ -343,9 +355,25 @@ export function Reports() {
                                 Generate Insights
                             </button>
                         )}
+                        <button
+                            onClick={handleExport}
+                            disabled={loading}
+                            title="Export this report as a PDF"
+                            className="h-9 px-3.5 rounded-[var(--radius-card)] text-[12.5px] font-semibold text-[var(--text-secondary)] flex items-center gap-1.5 border border-[var(--border-default)] bg-[var(--bg-card)] transition-[background,border-color,transform] duration-150 hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] hover:text-[var(--text-primary)] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+                        >
+                            <Download className="w-3.5 h-3.5" />
+                            Export PDF
+                        </button>
                         <DateRangePicker value={range} onChange={setRange} />
                     </div>
                 </header>
+
+                {/* Print-only report title — hidden on screen, becomes the PDF's
+                    header so an exported/shared file is self-labelling. */}
+                <div className="hidden print:block mb-6">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-black/50">Quoril · Performance report</p>
+                    <h1 className="text-[26px] font-semibold text-black tracking-tight mt-1">Reports — {range.label}</h1>
+                </div>
 
                 {/* Error banner */}
                 {error && (

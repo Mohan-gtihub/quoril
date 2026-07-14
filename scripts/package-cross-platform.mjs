@@ -8,20 +8,36 @@ const configs = {
 }
 const args = configs[target]
 
+function runElectronBuilder(commandArgs) {
+    if (process.platform === 'win32') {
+        const psCommand = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', `npm exec -- electron-builder ${commandArgs.join(' ')}`]
+        execFileSync('powershell.exe', psCommand, {
+            cwd: process.cwd(),
+            stdio: 'inherit',
+            env: process.env,
+        })
+    } else {
+        execFileSync('npm', ['exec', '--', 'electron-builder', ...commandArgs], {
+            cwd: process.cwd(),
+            stdio: 'inherit',
+            env: process.env,
+        })
+    }
+}
+
 if (!args) {
     console.error('Usage: node scripts/package-cross-platform.mjs <win|linux>')
     process.exitCode = 1
 } else {
-    const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx'
     let packageError = null
 
     try {
-        execFileSync(npx, ['electron-builder', ...args], { cwd: process.cwd(), stdio: 'inherit' })
+        runElectronBuilder(args)
     } catch (error) {
         packageError = error
     } finally {
         console.log(`Restoring Electron native dependencies for ${process.platform}/${process.arch}...`)
-        execFileSync(npx, ['electron-builder', 'install-app-deps'], { cwd: process.cwd(), stdio: 'inherit' })
+        runElectronBuilder(['install-app-deps'])
     }
 
     if (packageError) {

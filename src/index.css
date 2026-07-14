@@ -742,3 +742,57 @@ body.super-focus,
   white-space: nowrap;
   text-align: center;
 }
+/* ────────────────────────────────────────────────────────────────
+   PRINT — "Export PDF" from the Reports page.
+   The Export button calls window.print(); these rules isolate the
+   report body, drop the app chrome, and force a clean light layout so
+   the saved PDF reads like a document, not a screenshot of a dark UI.
+   ──────────────────────────────────────────────────────────────── */
+@media print {
+  /* Only the report prints. Everything else in the app tree is removed
+     from layout so the PDF starts at the report, page 1. */
+  body * { visibility: hidden !important; }
+  [data-report-root], [data-report-root] * { visibility: visible !important; }
+  [data-report-root] {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  /* Force a light document regardless of the active app theme. Cards keep
+     a hairline border so structure survives without background fills. */
+  [data-report-root] * {
+    color: #111827 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  [data-report-root] .bg-\[var\(--bg-card\)\],
+  [data-report-root] section {
+    background: #ffffff !important;
+    border-color: #e5e7eb !important;
+  }
+
+  /* Keep each bento card whole — never split a card across a page break. */
+  [data-report-root] section {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Neutralize the app's tinted radial glow so it doesn't print as a smudge. */
+  [data-report-root] [style*="blur"] { display: none !important; }
+
+  @page {
+    margin: 14mm;
+    size: A4 portrait;
+  }
+
+  /* Ensure background bars/donuts (colour-carrying marks) actually print. */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

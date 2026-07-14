@@ -187,7 +187,7 @@ export function HomeOverview() {
                                     <p className="text-[20px] font-semibold tabular-nums text-[var(--text-primary)]">
                                         {stats.doneToday}<span className="text-[var(--text-muted)] text-[14px]">/{totalToday || 0}</span>
                                     </p>
-                                    <p className="text-[11px] font-medium text-[var(--text-tertiary)]">today's progress</p>
+                                    <p className="text-[11px] font-medium text-[var(--text-tertiary)]">Today's progress</p>
                                 </div>
                             </div>
                             <button

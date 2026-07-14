@@ -12,6 +12,7 @@ type ExcalidrawAPI = {
     getSceneElements: () => readonly unknown[]
     getAppState: () => Record<string, unknown>
     getFiles: () => Record<string, unknown>
+    updateScene: (sceneData: any) => void
 }
 
 // The whole Excalidraw scene is stored as a single "block" row per canvas, so we
@@ -46,6 +47,50 @@ function sanitizeAppState(appState: Record<string, unknown> = {}): Record<string
     return rest
 }
 
+function mergeElements(local: readonly any[], remote: readonly any[]): { merged: any[], changed: boolean } {
+    const localMap = new Map(local.map((el) => [el.id, el]))
+    const remoteMap = new Map(remote.map((el) => [el.id, el]))
+    const allIds = new Set([...localMap.keys(), ...remoteMap.keys()])
+    const merged: any[] = []
+    let changed = false
+
+    for (const id of allIds) {
+        const localEl = localMap.get(id)
+        const remoteEl = remoteMap.get(id)
+
+        if (localEl && remoteEl) {
+            const localVersion = localEl.version ?? 0
+            const remoteVersion = remoteEl.version ?? 0
+            if (remoteVersion > localVersion) {
+                merged.push(remoteEl)
+                changed = true
+            } else if (localVersion > remoteVersion) {
+                merged.push(localEl)
+            } else {
+                const localUpdated = localEl.updated ?? 0
+                const remoteUpdated = remoteEl.updated ?? 0
+                if (remoteUpdated > localUpdated) {
+                    merged.push(remoteEl)
+                    changed = true
+                } else {
+                    merged.push(localEl)
+                }
+            }
+        } else if (localEl) {
+            merged.push(localEl)
+        } else if (remoteEl) {
+            merged.push(remoteEl)
+            changed = true
+        }
+    }
+
+    if (merged.length !== local.length) {
+        changed = true
+    }
+
+    return { merged, changed }
+}
+
 export function Whiteboard({
     canvasId,
     userId,
@@ -61,11 +106,11 @@ export function Whiteboard({
     const theme = LIGHT_THEMES.has(themeName) ? 'light' : 'dark'
 
     const [initialData, setInitialData] = useState<SceneData | null>(null)
-    const [reloadKey, setReloadKey] = useState(0)
     const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
     const pending = useRef<SceneData | null>(null)
     const selfEchoUntil = useRef(0)
     const apiRef = useRef<ExcalidrawAPI | null>(null)
+    const isRemoteUpdate = useRef(false)
 
     // Export the entire board — elements, appState and embedded files — as a
     // portable JSON file the user can re-import or archive. Uses Excalidraw's
@@ -128,7 +173,7 @@ export function Whiteboard({
         return () => {
             cancelled = true
         }
-    }, [canvasId, reloadKey])
+    }, [canvasId])
 
     // Flush any pending save when switching canvases or unmounting.
     const flush = useRef<() => void>(() => {})
@@ -165,8 +210,7 @@ export function Whiteboard({
     }, [canvasId])
 
     // Realtime: when another device changes this whiteboard's scene in the cloud,
-    // pull it down and reload. Guards avoid clobbering in-progress local edits and
-    // ignore echoes of our own recent writes (which arrive via the 10s push).
+    // pull it down, merge it with the current local state, and update the Excalidraw scene.
     useEffect(() => {
         const blockId = sceneBlockId(canvasId)
         const channel = supabase
@@ -175,31 +219,50 @@ export function Whiteboard({
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'blocks', filter: `canvas_id=eq.${canvasId}` },
                 async () => {
-                    // Don't interrupt active local editing or echo our own push.
-                    if (pending.current) return
-                    if (Date.now() < selfEchoUntil.current) return
-
-                    // Re-fetch the full row (realtime payloads are size-capped; a
-                    // scene with inline base64 images can exceed that) and apply.
-                    const { data } = await supabase
+                    // Fetch the full remote row (realtime payloads are size-capped)
+                    const { data: rawFull } = await supabase
                         .from('blocks')
-                        .select('id')
+                        .select('*')
                         .eq('id', blockId)
                         .is('deleted_at', null)
                         .maybeSingle()
-                    if (!data) return
+                    if (!rawFull) return
+
+                    const full = rawFull as any
+                    const remoteContent = typeof full.content_json === 'string'
+                        ? JSON.parse(full.content_json)
+                        : (full.content_json || {})
+                    const remoteScene = remoteContent.data || {}
+                    const remoteElements = remoteScene.elements || []
+                    const remoteFiles = remoteScene.files || {}
 
                     // On desktop, mirror the cloud row into local SQLite first so the
-                    // reload (which reads local) sees it. dataSyncService's pull does
-                    // the same via upsertFromCloud; here we just need this one row.
+                    // reload/save (which reads local) is in sync.
                     const db = (window as any).electronAPI?.db
                     if (db?.upsertFromCloud) {
-                        const { data: full } = await supabase.from('blocks').select('*').eq('id', blockId).maybeSingle()
-                        if (full) {
-                            try { await db.upsertFromCloud('blocks', [full]) } catch { /* best-effort */ }
+                        try { await db.upsertFromCloud('blocks', [full]) } catch { /* best-effort */ }
+                    }
+
+                    if (apiRef.current) {
+                        const localElements = apiRef.current.getSceneElements() || []
+                        const localFiles = (apiRef.current as any).getFiles?.() || {}
+
+                        const { merged: mergedElements, changed: elementsChanged } = mergeElements(localElements, remoteElements)
+                        const mergedFiles = { ...localFiles, ...remoteFiles }
+                        const filesChanged = Object.keys(mergedFiles).length !== Object.keys(localFiles).length
+
+                        if (elementsChanged || filesChanged) {
+                            isRemoteUpdate.current = true
+                            try {
+                                apiRef.current.updateScene({
+                                    elements: mergedElements,
+                                    files: mergedFiles,
+                                })
+                            } finally {
+                                setTimeout(() => { isRemoteUpdate.current = false }, 0)
+                            }
                         }
                     }
-                    setReloadKey((k) => k + 1)
                 },
             )
             .subscribe()
@@ -215,6 +278,10 @@ export function Whiteboard({
         appState: Record<string, unknown>,
         files: Record<string, unknown>,
     ) => {
+        if (isRemoteUpdate.current) {
+            isRemoteUpdate.current = false
+            return
+        }
         pending.current = { elements, appState: sanitizeAppState(appState), files }
         if (saveTimer.current) clearTimeout(saveTimer.current)
         saveTimer.current = setTimeout(() => flush.current(), 1500)
@@ -241,7 +308,7 @@ export function Whiteboard({
                 }
             `}</style>
             <Excalidraw
-                key={`${canvasId}:${reloadKey}`}
+                key={canvasId}
                 theme={theme}
                 initialData={initialData as any}
                 onChange={onChange as any}
