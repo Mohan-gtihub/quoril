@@ -1,9 +1,14 @@
-const { notarize } = require('@electron/notarize')
 const path = require('path')
 
 exports.default = async function notarizing(context) {
     const { electronPlatformName, appOutDir } = context
+    // Notarization is macOS-only. Return before touching @electron/notarize so
+    // non-mac builds (Linux/Windows) never load it — it ships as an ES Module and
+    // a top-level require() of it throws ERR_REQUIRE_ESM under CommonJS.
     if (electronPlatformName !== 'darwin') return
+
+    // Loaded lazily (dynamic import) because the package is ESM-only.
+    const { notarize } = await import('@electron/notarize')
 
     // Local package builds remain useful without Apple credentials. A release
     // build must never silently ship without notarization evidence.

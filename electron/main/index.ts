@@ -8,7 +8,8 @@ import {
     shell,
     globalShortcut,
     Notification,
-    screen
+    screen,
+    dialog
 } from 'electron'
 
 import path from 'path'
@@ -1029,10 +1030,24 @@ function safe(fn: () => any) {
 /* ---------------- APP ---------------- */
 
 app.whenReady().then(async () => {
+    // Every feature reads through the local SQLite database, so continuing past a
+    // failed init just turns one startup fault into a cascade of confusing
+    // "Database not initialized" IPC errors in the renderer. Surface the real
+    // cause and stop instead.
     try {
         await initDatabase()
     } catch (e) {
-        console.error('Failed to initialize database:', e)
+        const detail = e instanceof Error ? (e.stack || e.message) : String(e)
+        console.error('Failed to initialize database:', detail)
+        dialog.showErrorBox(
+            'Quoril could not start',
+            'The local database failed to initialize, so Quoril cannot run.\n\n' +
+            `${detail}\n\n` +
+            'If this mentions a Node.js/NODE_MODULE_VERSION mismatch, rebuild the ' +
+            'native modules with:\n\n    npx electron-builder install-app-deps'
+        )
+        app.exit(1)
+        return
     }
 
     // macOS: set the Dock icon explicitly (window `icon` option is ignored on macOS,
