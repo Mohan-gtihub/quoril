@@ -4,6 +4,7 @@ import { ArrowLeft, Share2, Users } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { useCanvasStore } from '@/store/canvas/canvasStore'
 import { useAuthStore } from '@/store/authStore'
+import { useProfileStore } from '@/store/profileStore'
 import { Whiteboard } from './Whiteboard'
 import { MetaCanvas } from './MetaCanvas'
 import { ShareCanvasModal } from './ShareCanvasModal'
@@ -25,7 +26,7 @@ async function ensureCanvas(userId: string): Promise<string> {
         const created = await platform.canvas.create({
             id: uuid(),
             userId,
-            title: 'My Whiteboard',
+            title: 'My canvas',
             createdAt: new Date().toISOString(),
             ...NEW_CANVAS_DEFAULTS,
         })
@@ -39,7 +40,10 @@ export function CanvasApp() {
     const user = useAuthStore((s) => s.user)
     const activeId = useCanvasStore((s) => s.activeCanvasId)
     const canvases = useCanvasStore((s) => s.canvases)
+    const rolesByCanvas = useCanvasStore((s) => s.rolesByCanvas)
     const setActive = useCanvasStore((s) => s.setActiveCanvas)
+    const fullName = useProfileStore((s) => s.fullName)
+    const avatarUrl = useProfileStore((s) => s.avatarUrl)
     const [showMeta, setShowMeta] = useState(false)
     const [shareOpen, setShareOpen] = useState(false)
     const navigate = useNavigate()
@@ -67,28 +71,53 @@ export function CanvasApp() {
         return () => { cancelled = true }
     }, [user, setActive])
 
-    // Realtime: keep the whiteboard list in sync when canvases are created,
-    // renamed, or deleted on another device.
+    // Realtime: keep both owned and shared whiteboards in sync. RLS limits the
+    // unfiltered canvases subscription to rows this user may actually access.
     useEffect(() => {
         if (!user) return
-        const channel = supabase
+        const refresh = () => { void useCanvasStore.getState().loadCanvases(user.id) }
+        const canvasChannel = supabase
             .channel(`canvases:${user.id}`)
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'canvases', filter: `user_id=eq.${user.id}` },
-                async () => {
-                    const db = (window as any).electronAPI?.db
-                    if (db?.upsertFromCloud) {
-                        const { data } = await supabase.from('canvases').select('*').eq('user_id', user.id)
-                        if (data?.length) { try { await db.upsertFromCloud('canvases', data) } catch { /* best-effort */ } }
-                    }
-                    const list = (await platform.canvas.list(user.id)) as Canvas[]
-                    useCanvasStore.getState().setCanvases(list)
-                },
+                { event: '*', schema: 'public', table: 'canvases' },
+                refresh,
             )
             .subscribe()
-        return () => { supabase.removeChannel(channel) }
+
+        // Sharing and role changes do not touch the canvases row, so listen for
+        // the signed-in email's membership rows as a separate source of truth.
+        const membershipChannel = user.email
+            ? supabase
+                .channel(`canvas-memberships:${user.id}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'canvas_members',
+                        filter: `email=eq.${user.email.trim().toLowerCase()}`,
+                    },
+                    refresh,
+                )
+                .subscribe()
+            : null
+
+        return () => {
+            void supabase.removeChannel(canvasChannel)
+            if (membershipChannel) void supabase.removeChannel(membershipChannel)
+        }
     }, [user])
+
+    useEffect(() => {
+        if (!user || !active) return
+        void useCanvasStore.getState().loadMyCanvasRole(
+            active.id,
+            active.userId,
+            user.id,
+            user.email,
+        )
+    }, [active, user])
 
     // ⌘K toggles the whiteboard switcher
     useEffect(() => {
@@ -154,7 +183,7 @@ export function CanvasApp() {
                     type="button"
                     onClick={() => (activeId ? setShowMeta(false) : navigate(-1))}
                     className="absolute top-3 right-3 z-20 flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-[var(--bg-card)] border border-[var(--border-default)] hover:bg-[var(--bg-hover)]"
-                    title={activeId ? 'Back to whiteboard' : 'Back'}
+                    title={activeId ? 'Back to canvas' : 'Back'}
                 >
                     <ArrowLeft size={14} />
                     Back
@@ -162,6 +191,7 @@ export function CanvasApp() {
                 <MetaCanvas
                     canvases={canvases}
                     currentUserId={user.id}
+                    rolesByCanvas={rolesByCanvas}
                     onPick={(id) => { setActive(id); setShowMeta(false) }}
                     onNew={createCanvas}
                     onRename={renameCanvas}
@@ -173,18 +203,27 @@ export function CanvasApp() {
 
     /* ---------------- Board ---------------- */
 
-    // Rendered inside Excalidraw's top-right grid cell (via renderTopRightUI) so the
-    // centered shape toolbar reserves space for it instead of sliding underneath.
+    const activeRole = active
+        ? (active.userId === user.id ? 'owner' : (rolesByCanvas[active.id] ?? 'viewer'))
+        : 'viewer'
+    const canEdit = activeRole === 'owner' || activeRole === 'editor'
+    const userName = fullName.trim()
+        || String(user.user_metadata?.full_name || user.user_metadata?.name || '').trim()
+        || user.email?.split('@')[0]
+        || 'Teammate'
+
+    // Rendered inside the drawing surface's top-right slot so the centered shape
+    // toolbar reserves space for Quoril's canvas controls.
     const renderTopRight = () => (
         <div className="flex items-center gap-2">
                 <button
                     type="button"
                     onClick={() => setShowMeta(true)}
                     className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-[var(--bg-card)] border border-[var(--border-default)] hover:bg-[var(--bg-hover)]"
-                    title="All whiteboards (⌘K)"
+                    title="All canvases (⌘K)"
                 >
                     <ArrowLeft size={14} />
-                    Whiteboards
+                    Canvases
                 </button>
 
                 {active && (() => {
@@ -195,7 +234,7 @@ export function CanvasApp() {
                             <span className="flex items-center gap-1.5 px-2 py-1 text-xs rounded-md bg-[var(--bg-card)] border border-[var(--border-default)] text-[var(--text-primary)] max-w-[240px]">
                                 <span className="truncate">{active.title}</span>
                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-[var(--accent-primary)]/15 text-[var(--accent-primary)]">
-                                    <Users size={10} /> Shared
+                                    <Users size={10} /> {activeRole === 'editor' ? 'Can edit' : 'View only'}
                                 </span>
                             </span>
                         )
@@ -219,7 +258,7 @@ export function CanvasApp() {
                                 type="button"
                                 onClick={() => { setTitleDraft(active.title); setEditingTitle(true) }}
                                 className="px-2 py-1 text-xs rounded-md bg-[var(--bg-card)] border border-[var(--border-default)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] max-w-[200px] truncate"
-                                title="Rename whiteboard"
+                                title="Rename canvas"
                             >
                                 {active.title}
                             </button>
@@ -227,7 +266,7 @@ export function CanvasApp() {
                                 type="button"
                                 onClick={() => setShareOpen(true)}
                                 className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-[var(--bg-card)] border border-[var(--border-default)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)]"
-                                title="Share whiteboard"
+                                title="Share canvas"
                             >
                                 <Share2 size={14} /> Share
                             </button>
@@ -240,7 +279,16 @@ export function CanvasApp() {
     return (
         <div className="w-full h-full relative">
             <CanvasErrorBoundary>
-                <Whiteboard canvasId={activeId} userId={user.id} renderTopRight={renderTopRight} />
+                <Whiteboard
+                    canvasId={activeId}
+                    canvasTitle={active?.title ?? 'Untitled'}
+                    canvasOwnerId={active?.userId ?? user.id}
+                    userId={user.id}
+                    userName={userName}
+                    userAvatarUrl={avatarUrl}
+                    canEdit={canEdit}
+                    renderTopRight={renderTopRight}
+                />
             </CanvasErrorBoundary>
 
             {shareOpen && active && (

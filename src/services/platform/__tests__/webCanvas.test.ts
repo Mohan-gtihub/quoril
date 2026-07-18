@@ -119,4 +119,21 @@ describe('webCanvas', () => {
     await webCanvas.softDeleteBlocksBatch([])
     expect(supabase.from).not.toHaveBeenCalled()
   })
+
+  it('surfaces a failed scene write instead of reporting a false save', async () => {
+    const mockChain = {
+      upsert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: { message: 'permission denied' } }),
+    }
+    ;(supabase.from as any).mockReturnValueOnce(mockChain)
+
+    await expect(webCanvas.upsertBlock({
+      id: 'scene-1',
+      canvasId: 'canvas-1',
+      userId: 'owner-1',
+      kind: 'scene',
+      content: { kind: 'scene', data: {} },
+    } as any)).rejects.toThrow('permission denied')
+  })
 })

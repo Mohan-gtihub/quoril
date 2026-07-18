@@ -135,9 +135,15 @@ export class DataSyncService {
                 // Page through every cloud row for this user (Supabase caps at 1000/req)
                 let hasMore = true
                 while (hasMore) {
-                    const { data, error } = await (supabase.from(table) as any)
-                        .select('*')
-                        .eq('user_id', user.id)
+                    // Canvas ownership stays with the creator even when an editor
+                    // saves a shared scene. For canvases/blocks, rely on RLS to
+                    // return every row this user can access instead of filtering
+                    // out shared rows by their owner's user_id.
+                    let query = (supabase.from(table) as any).select('*')
+                    if (table !== 'canvases' && table !== 'blocks') {
+                        query = query.eq('user_id', user.id)
+                    }
+                    const { data, error } = await query
                         .order(PULL_ORDER_COLUMN[table] ?? 'updated_at', { ascending: true })
                         .range(from, from + PAGE - 1)
 

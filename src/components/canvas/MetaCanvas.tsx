@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import type { Canvas } from '@/types/canvas'
 import { Plus, Pencil, Trash2, Check, X, Share2, Users } from 'lucide-react'
 import { ShareCanvasModal } from './ShareCanvasModal'
+import type { CanvasMemberRole } from '@/store/canvas/canvasStore'
 
 export function MetaCanvas({
     canvases,
     currentUserId,
+    rolesByCanvas,
     onPick,
     onNew,
     onRename,
@@ -13,6 +15,7 @@ export function MetaCanvas({
 }: {
     canvases: Canvas[]
     currentUserId: string | null
+    rolesByCanvas: Record<string, CanvasMemberRole>
     onPick: (id: string) => void
     onNew: () => Promise<string | null>
     onRename: (id: string, title: string) => void
@@ -51,7 +54,7 @@ export function MetaCanvas({
     return (
         <div className="w-full h-full bg-[var(--bg-primary)] overflow-auto p-8">
             <div className="max-w-5xl mx-auto">
-                <h1 className="text-xl font-semibold mb-6 text-[var(--text-primary)]">Whiteboards</h1>
+                <h1 className="text-xl font-semibold mb-6 text-[var(--text-primary)]">Canvases</h1>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     <button
                         onClick={async () => {
@@ -62,7 +65,7 @@ export function MetaCanvas({
                         className="aspect-video rounded-lg border-2 border-dashed border-[var(--border-default)] flex flex-col items-center justify-center gap-2 hover:border-[var(--accent-primary)] hover:bg-[var(--bg-hover)] transition-colors text-[var(--text-muted)]"
                     >
                         <Plus size={20} />
-                        <span className="text-sm">New whiteboard</span>
+                        <span className="text-sm">New canvas</span>
                     </button>
 
                     {canvases.map((c) => {
@@ -111,7 +114,7 @@ export function MetaCanvas({
                                         {new Date(c.updatedAt).toLocaleDateString()}
                                         {!isOwner && (
                                             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-[var(--accent-primary)]/15 text-[var(--accent-primary)]">
-                                                <Users size={10} /> Shared
+                                                <Users size={10} /> {rolesByCanvas[c.id] === 'editor' ? 'Can edit' : 'View only'}
                                             </span>
                                         )}
                                     </div>

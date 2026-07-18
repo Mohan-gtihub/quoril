@@ -38,6 +38,8 @@ function cloudToCanvas(r: any): Canvas {
     }
 }
 
+export type CanvasMemberRole = 'owner' | 'editor' | 'viewer'
+
 /** A person a canvas has been shared with (mirrors WorkspaceMember). */
 export interface CanvasMember {
     id: string
@@ -60,6 +62,8 @@ interface CanvasState {
     loaded: boolean
     /** canvasId -> members it has been shared with */
     membersByCanvas: Record<string, CanvasMember[]>
+    /** canvasId -> current user's effective access */
+    rolesByCanvas: Record<string, CanvasMemberRole>
 
     setCanvases: (cs: Canvas[]) => void
     upsertCanvas: (c: Canvas) => void
@@ -75,7 +79,9 @@ interface CanvasState {
     /* Loading + sharing */
     loadCanvases: (userId: string) => Promise<Canvas[]>
     loadCanvasMembers: (canvasId: string) => Promise<void>
-    inviteToCanvas: (canvasId: string, email: string) => Promise<boolean>
+    loadMyCanvasRole: (canvasId: string, ownerId: string, userId: string, email?: string | null) => Promise<CanvasMemberRole>
+    inviteToCanvas: (canvasId: string, email: string, role: 'editor' | 'viewer') => Promise<boolean>
+    updateCanvasMemberRole: (canvasId: string, memberId: string, role: 'editor' | 'viewer') => Promise<void>
     revokeCanvasMember: (canvasId: string, memberId: string) => Promise<void>
 }
 
@@ -87,6 +93,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     mode: 'select',
     loaded: false,
     membersByCanvas: {},
+    rolesByCanvas: {},
 
     setCanvases: (cs) => set({ canvases: cs }),
     upsertCanvas: (c) => set((s) => {
@@ -144,15 +151,14 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
                     try { await db.upsertFromCloud('canvases', data) } catch { /* best-effort */ }
                 }
 
-                // Pull the scene blocks for canvases shared WITH us so opening them
-                // shows content (owned canvases' blocks already sync normally).
-                const sharedIds = (data as any[])
-                    .filter((r) => r.user_id && r.user_id !== userId)
-                    .map((r) => r.id)
-                if (sharedIds.length) {
+                // Pull scenes for every accessible canvas, not only rows whose
+                // user_id matches the current user. Canvas snapshots retain the
+                // owner's id, so collaborators and returning owners both need this.
+                const accessibleIds = (data as any[]).map((row) => row.id)
+                if (accessibleIds.length) {
                     const { data: blocks } = await (supabase.from('blocks') as any)
                         .select('*')
-                        .in('canvas_id', sharedIds)
+                        .in('canvas_id', accessibleIds)
                     if (hasElectron() && db?.upsertFromCloud && blocks?.length) {
                         try { await db.upsertFromCloud('blocks', blocks) } catch { /* best-effort */ }
                     }
@@ -193,7 +199,28 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         }))
     },
 
-    inviteToCanvas: async (canvasId, email) => {
+    loadMyCanvasRole: async (canvasId, ownerId, userId, email) => {
+        if (ownerId === userId) {
+            set((state) => ({ rolesByCanvas: { ...state.rolesByCanvas, [canvasId]: 'owner' } }))
+            return 'owner'
+        }
+        if (!email) {
+            set((state) => ({ rolesByCanvas: { ...state.rolesByCanvas, [canvasId]: 'viewer' } }))
+            return 'viewer'
+        }
+
+        const { data, error } = await (supabase.from('canvas_members') as any)
+            .select('role')
+            .eq('canvas_id', canvasId)
+            .eq('email', email.trim().toLowerCase())
+            .is('deleted_at', null)
+            .maybeSingle()
+        const role: CanvasMemberRole = !error && data?.role === 'editor' ? 'editor' : 'viewer'
+        set((state) => ({ rolesByCanvas: { ...state.rolesByCanvas, [canvasId]: role } }))
+        return role
+    },
+
+    inviteToCanvas: async (canvasId, email, role) => {
         const userId = useAuthStore.getState().user?.id
         const canvas = get().canvases.find((c) => c.id === canvasId)
         const normalizedEmail = email.trim().toLowerCase()
@@ -227,7 +254,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
             id: crypto.randomUUID(),
             canvas_id: canvasId,
             email: normalizedEmail,
-            role: 'editor',
+            role,
             invited_by: userId,
             accepted_at: now,
             created_at: now,
@@ -253,6 +280,26 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
         toast.success('Canvas access granted')
         return true
+    },
+
+    updateCanvasMemberRole: async (canvasId, memberId, role) => {
+        const previousMembers = get().membersByCanvas[canvasId] || []
+        set((state) => ({
+            membersByCanvas: {
+                ...state.membersByCanvas,
+                [canvasId]: previousMembers.map((member) => member.id === memberId ? { ...member, role } : member),
+            },
+        }))
+
+        const { error } = await (supabase.from('canvas_members') as any)
+            .update({ role, updated_at: new Date().toISOString() })
+            .eq('id', memberId)
+        if (error) {
+            set((state) => ({ membersByCanvas: { ...state.membersByCanvas, [canvasId]: previousMembers } }))
+            toast.error(error.message || 'Failed to update access')
+            return
+        }
+        toast.success(role === 'editor' ? 'Editor access granted' : 'Changed to view only')
     },
 
     revokeCanvasMember: async (canvasId, memberId) => {
