@@ -8,6 +8,7 @@ import { backupService } from '@/services/backupService'
 import { soundService } from '@/services/soundService'
 import { useSettingsStore } from './settingsStore'
 import { parseTitleForTime } from '@/utils/timeParser'
+import { analytics } from '@/services/analytics'
 
 import {
     COLUMN_STATUS,
@@ -184,6 +185,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                 loading: false,
             }))
 
+            // Shape only — never the task title.
+            analytics.track('task.created', {
+                hasDueDate: Boolean(data.due_date),
+                priority: data.priority ?? null,
+                isRecurring: Boolean(data.is_recurring),
+            })
+
             return data
         } catch (e) {
             set({
@@ -343,6 +351,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                     soundService.playSuccess(successSound)
                 }
             }
+
+            // Only on a real done-transition — the un-complete path returns above.
+            analytics.track('task.completed', { viaFocusSession: delegatedToFocus })
         } catch (e) {
             console.error('Failed to toggle complete:', e)
             set({ error: 'Failed to complete task' })

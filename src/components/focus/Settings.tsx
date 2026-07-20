@@ -7,6 +7,9 @@ import {
     LogOut, Flame, Crown, Sparkles
 } from 'lucide-react'
 import { useAppUpdate } from '@/hooks/useAppUpdate'
+import { platform as appPlatform } from '@/services/platform'
+import { APP_NAME, APP_VERSION } from '@/constants'
+import { logger } from '@/services/logger'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -16,6 +19,14 @@ import { useProfileStore } from '@/store/profileStore'
 import type { SubscriptionTier, AppRole } from '@/utils/permissions'
 import { soundService } from '@/services/soundService'
 import { cn } from '@/utils/helpers'
+
+// Where to grab a build by hand when auto-update can't deliver one — notably on
+// macOS, where Gatekeeper refuses unsigned auto-updates outright.
+const RELEASES_URL = 'https://github.com/Mohan-gtihub/quoril/releases'
+
+// The updater no-ops when !app.isPackaged, so a dev build always reports
+// 'not-available'. Saying "you're up to date" there would be a lie.
+const isDev = import.meta.env.DEV
 
 // ── Shared UI primitives ─────────────────────────────────────
 
@@ -420,7 +431,29 @@ export function Settings() {
     const [platform, setPlatform] = useState<string>('')
     const { status: updateStatus, check: checkForUpdate, restart: restartToUpdate } = useAppUpdate()
     // Only electron ships an auto-updater; the web build exposes 'not-available'.
-    const isDesktop = !!window.electronAPI
+    const isDesktop = appPlatform.capabilities.localDb
+    // Tracks an *explicit* "Check for updates" click. The passive card suppresses
+    // 'checking', but a user who asked deserves a visible answer — including the
+    // "no update" result, which the ambient UI never shows.
+    const [manualCheck, setManualCheck] = useState<'idle' | 'checking' | 'done'>('idle')
+
+    const runManualCheck = async () => {
+        setManualCheck('checking')
+        logger.info('update.manual_check_started')
+        try {
+            await checkForUpdate()
+        } finally {
+            setManualCheck('done')
+        }
+    }
+
+    // Once the updater moves on to real work, the manual-check chrome is
+    // redundant — the status line below already narrates it.
+    useEffect(() => {
+        if (updateStatus.state === 'downloading' || updateStatus.state === 'downloaded') {
+            setManualCheck('idle')
+        }
+    }, [updateStatus.state])
 
     useEffect(() => {
         window.electronAPI?.app?.getPlatform?.().then(setPlatform)
@@ -751,58 +784,131 @@ export function Settings() {
                                 )}
 
                                 {activeSection.id === 'updates' && (
-                                    <Group title="Automatic updates">
-                                        <div className="py-5 border-b border-[var(--border-default)] last:border-0">
-                                            <div className="flex items-center justify-between gap-4">
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-semibold text-[var(--text-primary)]">
-                                                        {(() => {
-                                                            switch (updateStatus.state) {
-                                                                case 'checking': return 'Checking for updates…'
-                                                                case 'available': return 'Update found — preparing download…'
-                                                                case 'downloading': return `Downloading update… ${updateStatus.percent}%`
-                                                                case 'downloaded': return 'Update ready to install'
-                                                                case 'error': return 'Could not check for updates'
-                                                                default: return 'Quoril is up to date'
-                                                            }
-                                                        })()}
-                                                    </p>
-                                                    <p className="text-xs text-[var(--text-tertiary)] mt-0.5 leading-relaxed max-w-md">
-                                                        Quoril checks for updates automatically and downloads them in the
-                                                        background. You’ll be asked to restart once an update is ready.
-                                                    </p>
+                                    <>
+                                        <Group title="Version">
+                                            <Field label="Current version" description="The build of Quoril running on this device.">
+                                                <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-[var(--radius-card)] bg-[var(--bg-tertiary)] border border-[var(--border-default)]">
+                                                    <Sparkles className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+                                                    <span className="flex-1 text-sm text-[var(--text-secondary)] tabular-nums">
+                                                        {APP_NAME} {APP_VERSION}
+                                                    </span>
                                                 </div>
-                                                {updateStatus.state === 'downloaded' ? (
-                                                    <button
-                                                        onClick={() => restartToUpdate()}
-                                                        className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[var(--radius-card)] text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:opacity-90 transition-opacity"
-                                                    >
-                                                        <RotateCw className="w-3.5 h-3.5" />
-                                                        Restart Now
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => checkForUpdate()}
-                                                        disabled={updateStatus.state === 'checking' || updateStatus.state === 'downloading'}
-                                                        className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[var(--radius-card)] text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-secondary)] border border-[var(--border-default)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                                                    >
-                                                        {updateStatus.state === 'downloading'
-                                                            ? <Download className="w-3.5 h-3.5" />
-                                                            : <RefreshCw className={cn('w-3.5 h-3.5', updateStatus.state === 'checking' && 'animate-spin')} />}
-                                                        Check for updates
-                                                    </button>
+                                            </Field>
+                                        </Group>
+
+                                        <Group title="Automatic updates">
+                                            <div className="py-5 border-b border-[var(--border-default)] last:border-0">
+                                                <div className="flex items-center justify-between gap-4">
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-semibold text-[var(--text-primary)]">
+                                                            {(() => {
+                                                                switch (updateStatus.state) {
+                                                                    case 'checking': return 'Checking for updates…'
+                                                                    case 'available': return 'Update found — preparing download…'
+                                                                    case 'downloading': return `Downloading update… ${updateStatus.percent}%`
+                                                                    case 'downloaded': return 'Update ready to install'
+                                                                    case 'error': return 'Could not check for updates'
+                                                                    default: return 'Quoril is up to date'
+                                                                }
+                                                            })()}
+                                                        </p>
+                                                        <p className="text-xs text-[var(--text-tertiary)] mt-0.5 leading-relaxed max-w-md">
+                                                            Quoril checks for updates automatically and downloads them in the
+                                                            background. You’ll be asked to restart once an update is ready.
+                                                        </p>
+                                                    </div>
+                                                    {updateStatus.state === 'downloaded' ? (
+                                                        <button
+                                                            onClick={() => restartToUpdate()}
+                                                            className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[var(--radius-card)] text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:opacity-90 transition-opacity"
+                                                        >
+                                                            <RotateCw className="w-3.5 h-3.5" />
+                                                            Restart Now
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            onClick={runManualCheck}
+                                                            disabled={
+                                                                manualCheck === 'checking' ||
+                                                                updateStatus.state === 'checking' ||
+                                                                updateStatus.state === 'downloading'
+                                                            }
+                                                            className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[var(--radius-card)] text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-secondary)] border border-[var(--border-default)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                                        >
+                                                            {updateStatus.state === 'downloading'
+                                                                ? <Download className="w-3.5 h-3.5" />
+                                                                : <RefreshCw className={cn(
+                                                                    'w-3.5 h-3.5',
+                                                                    (manualCheck === 'checking' || updateStatus.state === 'checking') && 'animate-spin'
+                                                                )} />}
+                                                            Check for updates
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {(updateStatus.state === 'downloading' || updateStatus.state === 'downloaded') && (
+                                                    <div className="h-1.5 w-full rounded-full bg-[var(--bg-tertiary)] overflow-hidden mt-4">
+                                                        <div
+                                                            className="h-full rounded-full bg-[var(--accent-primary)] transition-[width] duration-300 ease-out"
+                                                            style={{ width: `${updateStatus.state === 'downloading' ? updateStatus.percent : 100}%` }}
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* Explicit-click feedback. The passive card stays quiet during
+                                                    'checking' and never reports "no update", but someone who
+                                                    pressed the button is owed an answer either way. */}
+                                                {manualCheck !== 'idle' && updateStatus.state !== 'downloaded' && (
+                                                    <div className="flex items-start gap-2 mt-4 px-3.5 py-2.5 rounded-[var(--radius-card)] bg-[var(--bg-secondary)] border border-[var(--border-default)]">
+                                                        {manualCheck === 'checking' ? (
+                                                            <>
+                                                                <RefreshCw className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[var(--text-muted)] animate-spin" />
+                                                                <p className="text-xs text-[var(--text-tertiary)] leading-relaxed">Checking for updates…</p>
+                                                            </>
+                                                        ) : updateStatus.state === 'error' ? (
+                                                            <>
+                                                                <RefreshCw className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[var(--text-muted)]" />
+                                                                <p className="text-xs text-[var(--text-tertiary)] leading-relaxed break-words">
+                                                                    Update check failed: {updateStatus.message}. You can download the
+                                                                    latest version manually from{' '}
+                                                                    <button
+                                                                        onClick={() => appPlatform.links.openExternal(RELEASES_URL)}
+                                                                        className="underline underline-offset-2 hover:text-[var(--text-primary)] transition-colors"
+                                                                    >
+                                                                        GitHub Releases
+                                                                    </button>.
+                                                                </p>
+                                                            </>
+                                                        ) : updateStatus.state === 'available' || updateStatus.state === 'downloading' ? (
+                                                            <>
+                                                                <Download className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[var(--accent-primary)]" />
+                                                                <p className="text-xs text-[var(--text-tertiary)] leading-relaxed">
+                                                                    {updateStatus.state === 'downloading'
+                                                                        ? `Downloading update… ${updateStatus.percent}%`
+                                                                        : 'Update found — starting download…'}
+                                                                </p>
+                                                            </>
+                                                        ) : isDev ? (
+                                                            <>
+                                                                <RefreshCw className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[var(--text-muted)]" />
+                                                                <p className="text-xs text-[var(--text-tertiary)] leading-relaxed">
+                                                                    Updates aren’t available in a development build — this only works
+                                                                    in a packaged release.
+                                                                </p>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[var(--accent-primary)]" />
+                                                                <p className="text-xs text-[var(--text-tertiary)] leading-relaxed">
+                                                                    You’re on the latest version.
+                                                                </p>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
-                                            {(updateStatus.state === 'downloading' || updateStatus.state === 'downloaded') && (
-                                                <div className="h-1.5 w-full rounded-full bg-[var(--bg-tertiary)] overflow-hidden mt-4">
-                                                    <div
-                                                        className="h-full rounded-full bg-[var(--accent-primary)] transition-[width] duration-300 ease-out"
-                                                        style={{ width: `${updateStatus.state === 'downloading' ? updateStatus.percent : 100}%` }}
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </Group>
+                                        </Group>
+                                    </>
                                 )}
                             </motion.div>
                         </AnimatePresence>

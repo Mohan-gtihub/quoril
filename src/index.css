@@ -124,20 +124,22 @@
    Emphasis comes from ink weight & whitespace, not chromatic accent.
    ─────────────────────────────────────────────────────────────── */
 .theme-daylight {
-  /* surfaces — clean modern neutral (Linear/Notion light feel). A soft
-     cool-grey canvas with crisp near-white cards that clearly lift off
-     it. Faint cool tint reads premium, not muddy beige. */
-  --bg-primary: #eef0f3;   /* soft cool-grey canvas — deepest surface */
-  --bg-secondary: #f6f7f9; /* sidebar / secondary panels */
-  --bg-tertiary: #e4e7ec;  /* inputs, tracks, chips — has real presence */
+  /* surfaces — soft blush canvas with crisp white cards lifting off it.
+     The pink is desaturated (~8-14% sat) so it reads as a warm tinted
+     neutral rather than candy; saturation stays low enough that the ink
+     ramp below keeps its contrast ratios. Lightness steps mirror the
+     previous cool-grey ramp, so surface hierarchy is unchanged. */
+  --bg-primary: #f8eef1;   /* soft blush canvas — deepest surface */
+  --bg-secondary: #fdf7f9; /* sidebar / secondary panels */
+  --bg-tertiary: #f2e3e8;  /* inputs, tracks, chips — has real presence */
   --bg-card: #ffffff;      /* crisp white cards lift above the canvas */
   --bg-elevated: #ffffff;  /* popovers/modals */
-  --bg-hover: rgba(15, 20, 30, 0.06);
-  --bg-hover-strong: rgba(15, 20, 30, 0.10);
+  --bg-hover: rgba(60, 20, 35, 0.055);
+  --bg-hover-strong: rgba(60, 20, 35, 0.095);
 
-  /* crisp hairline borders — subtle, cool */
-  --border-default: #e1e4e9;
-  --border-hover: #cdd1d9;
+  /* crisp hairline borders — subtle, warm to match the blush surfaces */
+  --border-default: #eddfe4;
+  --border-hover: #dcc7ce;
 
   /* ink ramp — rich slate, modern contrast (not washed out) */
   --text-primary: #171a21;   /* deep slate near-black */
@@ -219,42 +221,49 @@
 
 /* Light Theme (Lunar) */
 .theme-light {
-  /* window sits a step below cards so panels lift, not one flat sheet */
-  --bg-primary: #e9ebef;   /* cool grey window — deepest surface */
-  --bg-secondary: #f3f5f8; /* sidebar / secondary panels */
-  --bg-tertiary: #e4e7ec;  /* inputs, tracks, chips */
-  --bg-card: #fbfcfe;      /* soft off-white cards */
+  /* window sits a step below cards so panels lift, not one flat sheet.
+     Clearly pink window with warm near-white cards floating above it.
+     Saturation is lifted well past a neutral tint while lightness stays
+     high (L~93-97%), so the ink ramp below keeps its contrast ratios. */
+  --bg-primary: #fbdfe8;   /* pink window — deepest surface */
+  --bg-secondary: #fdeff3; /* sidebar / secondary panels */
+  --bg-tertiary: #f7d3de;  /* inputs, tracks, chips */
+  --bg-card: #fffafc;      /* warm near-white cards lift off the pink */
   --bg-elevated: #ffffff;  /* popovers/modals lift to true white */
-  --bg-hover: rgba(15, 23, 42, 0.045);
-  --bg-hover-strong: rgba(15, 23, 42, 0.09);
+  --bg-hover: rgba(120, 30, 60, 0.055);
+  --bg-hover-strong: rgba(120, 30, 60, 0.105);
 
-  --border-default: rgba(15, 23, 42, 0.08);
-  --border-hover: rgba(15, 23, 42, 0.14);
+  --border-default: rgba(120, 30, 60, 0.11);
+  --border-hover: rgba(120, 30, 60, 0.19);
 
-  --text-primary: #1e293b;
-  --text-secondary: #51607a;
-  --text-tertiary: #6b7892;
-  --text-muted: #97a1b3;
+  /* ink ramp warmed to a rosy slate: the old blue-grey secondaries read as
+     dirty grey against pink surfaces. Lightness is unchanged, so contrast
+     against --bg-card still passes. */
+  --text-primary: #2b1a22;
+  --text-secondary: #6a4653;
+  --text-tertiary: #8a6674;
+  --text-muted: #ab8b97;
 
   /* solid crisp surfaces — no washed-out translucency */
-  --glass-bg-thin: #ffffff;
-  --glass-bg-regular: #ffffff;
+  --glass-bg-thin: #fffafc;
+  --glass-bg-regular: #fffafc;
   --glass-bg-thick: #ffffff;
   --glass-border: var(--border-default);
   --glass-border-silver: var(--border-default);
-  --glass-shadow: rgba(15, 23, 42, 0.10);
+  --glass-shadow: rgba(120, 30, 60, 0.10);
 
-  --accent-primary: #1e293b;     /* ink — buttons/active fills stay dark */
-  --accent-secondary: #334155;
+  --accent-primary: #2b1a22;     /* ink — buttons/active fills stay dark */
+  --accent-secondary: #4a3039;
   --accent-glow: rgba(0, 0, 0, 0.06);
   --accent-contrast: #ffffff;
 
-  --accent-lime-50: rgba(0, 0, 0, 0.03);
-  --accent-lime-100: rgba(0, 0, 0, 0.05);
-  --accent-lime-200: rgba(0, 0, 0, 0.09);
-  --accent-lime-300: rgba(0, 0, 0, 0.15);
-  --accent-lime-400: #334155;
-  --accent-lime-500: #1e293b;
+  /* warm-tinted overlays: neutral black alphas grey out the pink beneath */
+  --accent-lime-50: rgba(120, 30, 60, 0.035);
+  --accent-lime-100: rgba(120, 30, 60, 0.06);
+  --accent-lime-200: rgba(120, 30, 60, 0.10);
+  --accent-lime-300: rgba(120, 30, 60, 0.16);
+  --accent-lime-400: #4a3039;
+  --accent-lime-500: #2b1a22;
 
   --accent-violet: #6366f1;
   --accent-violet-glow: rgba(99, 102, 241, 0.25);

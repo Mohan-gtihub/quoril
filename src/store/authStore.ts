@@ -13,6 +13,7 @@ import {
 import { SECURITY_CONFIG } from '@/config/security'
 import { platform } from '@/services/platform'
 import { rolesOf, tierOf, type AppRole, type SubscriptionTier } from '@/utils/permissions'
+import { analytics } from '@/services/analytics'
 
 interface AuthState {
     user: User | null
@@ -41,6 +42,11 @@ interface AuthState {
     setUser: (user: User | null) => void
     setSession: (session: Session | null) => void
 }
+
+// 'app.opened' is a per-app-run launch count, but SIGNED_IN can fire more than
+// once in a run (deep-link exchange, re-auth). Latch it so the count stays 1:1
+// with launches.
+let appOpenedEmitted = false
 
 // Session timeout checker
 let sessionTimeoutInterval: NodeJS.Timeout | null = null
@@ -107,6 +113,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
                 // Start session monitoring
                 startSessionMonitoring()
+
+                // A restored session does not raise SIGNED_IN, so identify here
+                // too — otherwise every returning user's run is unattributed.
+                analytics.identify(session.user.id)
+                if (!appOpenedEmitted) {
+                    appOpenedEmitted = true
+                    analytics.track('app.opened')
+                }
             } else {
                 set({
                     session: null,
@@ -132,8 +146,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     })
                     platform.auth.setUser(session.user.id, session.access_token)
                     startSessionMonitoring()
+
+                    analytics.identify(session.user.id)
+                    if (!appOpenedEmitted) {
+                        appOpenedEmitted = true
+                        analytics.track('app.opened')
+                    }
+
+                    // Hydrate the profile here, not just when Settings mounts:
+                    // the greeting and sidebar read full_name from this store on
+                    // first paint and would otherwise fall back to the email.
+                    void import('@/store/profileStore').then(({ useProfileStore }) => {
+                        void useProfileStore.getState().fetchProfile(session.user.id)
+                    })
                 } else if (event === 'SIGNED_OUT') {
                     stopSessionMonitoring()
+                    analytics.reset()
                     set({
                         session: null,
                         user: null,
@@ -389,9 +417,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const { useTaskStore } = await import('@/store/taskStore')
             const { useListStore } = await import('@/store/listStore')
 
+            const { useProfileStore } = await import('@/store/profileStore')
+
             useFocusStore.getState().reset()
             useTaskStore.setState({ tasks: [], selectedTaskId: null })
             useListStore.setState({ lists: [], selectedListId: null })
+            // Drop the cached name so the next user never sees the previous one.
+            useProfileStore.setState({ fullName: '', avatarUrl: null })
 
             // 6. Clear any sensitive data from localStorage
             localStorage.removeItem('auth_attempts')

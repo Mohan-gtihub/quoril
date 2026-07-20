@@ -11,6 +11,7 @@ import { ShareCanvasModal } from './ShareCanvasModal'
 import { CanvasErrorBoundary } from './CanvasErrorBoundary'
 import { platform } from '@/services/platform'
 import { supabase } from '@/services/supabase'
+import { analytics } from '@/services/analytics'
 import type { Canvas } from '@/types/canvas'
 
 const NEW_CANVAS_DEFAULTS = {
@@ -135,6 +136,13 @@ export function CanvasApp() {
         if (editingTitle) titleRef.current?.select()
     }, [editingTitle])
 
+    // Keyed on the active id so switching boards emits once per board opened,
+    // not once per render. Id only — never the canvas title or its content.
+    useEffect(() => {
+        if (!activeId) return
+        analytics.track('canvas.opened', { canvasId: activeId })
+    }, [activeId])
+
     /* ---------------- CRUD ---------------- */
 
     const createCanvas = async (): Promise<string | null> => {
@@ -145,7 +153,9 @@ export function CanvasApp() {
             createdAt: new Date().toISOString(), ...NEW_CANVAS_DEFAULTS,
         })
         useCanvasStore.getState().upsertCanvas(created as Canvas)
-        return (created as Canvas)?.id ?? id
+        const newId = (created as Canvas)?.id ?? id
+        analytics.track('canvas.created', { canvasId: newId })
+        return newId
     }
 
     const renameCanvas = async (id: string, title: string) => {

@@ -36,6 +36,9 @@ export type UpdateStatus =
 let lastStatus: UpdateStatus = { state: 'idle' }
 let checkTimer: ReturnType<typeof setInterval> | null = null
 let quittingToInstall = false
+// True only while a user-initiated check is running. Lets the 'error' handler
+// tell "the user asked and is waiting" from "a background poll hit no network".
+let manualCheckInFlight = false
 
 function broadcast(status: UpdateStatus) {
     lastStatus = status
@@ -91,6 +94,11 @@ export function initAutoUpdate() {
 
     autoUpdater.on('error', (err) => {
         // Update failures must never crash or block the app — surface quietly.
+        // This fires independently of checkSilently's try/catch (electron-updater
+        // emits here for async download failures too), so the same
+        // offline-noise filter has to apply. manualCheckInFlight lets a
+        // user-initiated check still see the error it caused.
+        if (!manualCheckInFlight && isNetworkError(err)) return
         broadcast({ state: 'error', message: err?.message ?? String(err) })
     })
 
@@ -106,11 +114,36 @@ export function initAutoUpdate() {
     })
 }
 
-async function checkSilently() {
+// Network-class failures: the machine is offline, DNS isn't up yet, or the
+// release feed is briefly unreachable. On the automatic path these are
+// expected and self-correcting — the next poll picks the update up — so
+// surfacing them would train users to ignore a card that mostly cries wolf.
+// The first automatic check fires 8s after launch, which routinely lands
+// before wifi has associated.
+function isNetworkError(err: any): boolean {
+    const code = String(err?.code ?? '')
+    if (/^(ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENETUNREACH|EHOSTUNREACH|EPIPE|ERR_INTERNET_DISCONNECTED)$/.test(code)) {
+        return true
+    }
+    const msg = String(err?.message ?? err ?? '').toLowerCase()
+    return /net::|getaddrinfo|enotfound|econnrefused|econnreset|etimedout|network|socket hang up|unable to (connect|resolve)/.test(msg)
+}
+
+/**
+ * @param surfaceNetworkErrors true when a human explicitly asked (the
+ *   Settings "Check for updates" button). A user who clicked deserves an
+ *   answer even if that answer is "you're offline"; a background poll does
+ *   not get to interrupt them with it.
+ */
+async function checkSilently(surfaceNetworkErrors = false) {
     try {
         await autoUpdater.checkForUpdates()
     } catch (err: any) {
-        // Offline / feed unreachable is expected and harmless — stay silent.
+        if (!surfaceNetworkErrors && isNetworkError(err)) {
+            // Stay silent, as the name promises. Leave lastStatus alone so a
+            // previously-found update isn't clobbered by a transient blip.
+            return
+        }
         broadcast({ state: 'error', message: err?.message ?? String(err) })
     }
 }
@@ -123,7 +156,14 @@ function registerIpc() {
     // Manual "check now" (e.g. a button in settings). No-op in dev.
     ipcMain.handle('update:check', async () => {
         if (!app.isPackaged) return { state: 'not-available' } as UpdateStatus
-        await checkSilently()
+        manualCheckInFlight = true
+        try {
+            // Pass true: an explicit click gets a real answer, including
+            // "you appear to be offline", which the background poll suppresses.
+            await checkSilently(true)
+        } finally {
+            manualCheckInFlight = false
+        }
         return lastStatus
     })
 
