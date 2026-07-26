@@ -14,6 +14,9 @@ jobs:
     runs-on: macos-14
     env:
       QUORIL_RELEASE_BUILD: "true"
+      # CI has no iCloud sync, so build in-tree as the verify steps expect.
+      # Locally this defaults outside ~/Documents — see scripts/release-mac.mjs.
+      QUORIL_RELEASE_OUT: release
       CSC_LINK: ${{ secrets.MACOS_CSC_LINK }}
       CSC_KEY_PASSWORD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
       APPLE_ID: ${{ secrets.APPLE_ID }}

@@ -26,7 +26,7 @@
     "package:win": "node scripts/package-cross-platform.mjs win",
     "package:linux": "node scripts/package-cross-platform.mjs linux",
     "release:preflight": "node scripts/release-preflight.mjs",
-    "release:mac": "npm run build:app && node scripts/release-preflight.mjs mac && electron-builder --mac --arm64 --publish never -c.directories.output=\"${QUORIL_RELEASE_OUT:-$HOME/Library/Caches/quoril-release}\"",
+    "release:mac": "npm run build:app && node scripts/release-mac.mjs",
     "release:win": "npm run build:app && node scripts/release-preflight.mjs win && npm run package:win",
     "postinstall": "electron-builder install-app-deps",
     "check:web": "node scripts/check-web-bundle.mjs"
@@ -188,7 +188,6 @@
         "NSAccessibilityUsageDescription": "Quoril needs Accessibility access to read the active window title for focus tracking."
       }
     },
-    "afterPack": "build/strip-xattrs.cjs",
     "afterSign": "build/notarize.cjs",
     "afterAllArtifactBuild": "build/staple-artifacts.cjs",
     "linux": {
