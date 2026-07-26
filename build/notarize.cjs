@@ -1,4 +1,5 @@
 const path = require('path')
+const { execFileSync } = require('child_process')
 
 exports.default = async function notarizing(context) {
     const { electronPlatformName, appOutDir } = context
@@ -22,12 +23,19 @@ exports.default = async function notarizing(context) {
 
     const appName = context.packager.appInfo.productFilename
 
+    const appPath = path.join(appOutDir, `${appName}.app`)
+
     console.log(`Notarizing ${appName}...`)
     await notarize({
-        appPath: path.join(appOutDir, `${appName}.app`),
+        appPath,
         appleId: process.env.APPLE_ID,
         appleIdPassword: process.env.APPLE_APP_SPECIFIC_PASSWORD,
         teamId: process.env.APPLE_TEAM_ID,
     })
     console.log(`Notarized ${appName}`)
+
+    // Staple the ticket into the .app before the DMG/ZIP are built from it, so
+    // the shipped bundle validates without a round trip to Apple's servers.
+    console.log(`Stapling ticket to ${appName}.app...`)
+    execFileSync('xcrun', ['stapler', 'staple', appPath], { stdio: 'inherit' })
 }

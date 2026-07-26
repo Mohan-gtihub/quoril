@@ -188,6 +188,7 @@
       }
     },
     "afterSign": "build/notarize.cjs",
+    "afterAllArtifactBuild": "build/staple-artifacts.cjs",
     "linux": {
       "icon": "public/icon.png",
       "target": [
