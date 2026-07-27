@@ -70,18 +70,48 @@ try {
     fail('gh is not authenticated.', 'Run: gh auth login')
 }
 
-// The blank-notes check, run up front rather than after a 15-minute build.
 const changelog = readFileSync('CHANGELOG.md', 'utf8')
+const current = JSON.parse(readFileSync('package.json', 'utf8')).version
+
+async function isReleased(v) {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/releases/tags/v${v}`, {
+        headers: { Accept: 'application/vnd.github+json' },
+    }).catch(() => null)
+    return res?.status === 200
+}
+
+/**
+ * Two ways to arrive here:
+ *
+ *   'ship-current' — package.json names a version that was never published and
+ *                    already has its notes written. Someone bumped by hand, or
+ *                    an earlier run failed after the bump. Publish it as-is;
+ *                    bumping again would burn a version number for nothing and
+ *                    strand the notes already written under it.
+ *
+ *   'bump'         — the current version is out in the world, so this is a new
+ *                    release and needs both a new number and new notes.
+ */
+const currentReleased = await isReleased(current)
+const currentNotes = sectionBody(changelog, current)
+const mode = !currentReleased && currentNotes ? 'ship-current' : 'bump'
+
 const unreleased = sectionBody(changelog, 'Unreleased')
-if (!unreleased) {
+if (mode === 'bump' && !unreleased) {
     fail(
         'CHANGELOG.md has nothing under ## [Unreleased].',
-        'Every release needs notes: they become the GitHub release body and the',
-        'in-app "what\'s new" text. Describe the changes, then re-run.',
+        `v${current} is already published, so this would be a new release —`,
+        'and every release needs notes: they become the GitHub release body',
+        'and the in-app "what\'s new" text. Describe the changes, then re-run.',
     )
 }
 
-console.log(`  branch ${branch}, tree clean, gh ok, notes present`)
+console.log(`  branch ${branch}, tree clean, gh ok`)
+console.log(
+    mode === 'ship-current'
+        ? `  v${current} is bumped but unpublished — shipping it as-is (no bump)`
+        : `  v${current} is published — releasing a new ${bump} version`,
+)
 
 /* ── 2. verify ─────────────────────────────────────────────── */
 
@@ -92,49 +122,88 @@ run('npm', ['test', '--', '--run'])
 
 /* ── 3. version ────────────────────────────────────────────── */
 
-step(3, `Bumping version (${bump})`)
-const previous = JSON.parse(readFileSync('package.json', 'utf8')).version
+step(3, mode === 'bump' ? `Bumping version (${bump})` : 'Version')
 
 if (dryRun) {
-    console.log(`  would bump from ${previous}`)
+    console.log(
+        mode === 'bump'
+            ? `  would bump from ${current}`
+            : `  would ship ${current} unchanged`,
+    )
     console.log('\n--dry-run: stopping before any changes are written.')
     console.log('Notes that would be published:\n')
-    console.log(unreleased)
+    console.log(mode === 'bump' ? unreleased : currentNotes)
     process.exit(0)
 }
 
-run('npm', ['version', bump, '--no-git-tag-version'])
-const version = JSON.parse(readFileSync('package.json', 'utf8')).version
-const tag = `v${version}`
+let version = current
+if (mode === 'bump') {
+    run('npm', ['version', bump, '--no-git-tag-version'])
+    version = JSON.parse(readFileSync('package.json', 'utf8')).version
 
-// Re-check now that the number is known: the guard in release-mac.mjs also
-// catches this, but only after preflight.
-const existing = await fetch(`https://api.github.com/repos/${REPO}/releases/tags/${tag}`, {
-    headers: { Accept: 'application/vnd.github+json' },
-}).catch(() => null)
-if (existing?.status === 200) {
-    run('git', ['checkout', '--', 'package.json', 'package-lock.json'])
-    fail(`${tag} is already released.`, 'Republishing would overwrite its assets. Pick a higher version.')
+    if (await isReleased(version)) {
+        run('git', ['checkout', '--', 'package.json', 'package-lock.json'])
+        fail(
+            `v${version} is already released.`,
+            'Republishing would overwrite its assets. Pick a higher version.',
+        )
+    }
+    console.log(`  ${current} → ${version}`)
+} else {
+    console.log(`  keeping ${version}`)
 }
-
-console.log(`  ${previous} → ${version}`)
+const tag = `v${version}`
 
 /* ── 4. changelog ──────────────────────────────────────────── */
 
-step(4, 'Promoting [Unreleased] to ' + version)
-writeFileSync('CHANGELOG.md', promote(changelog, version))
+if (mode === 'bump') {
+    step(4, `Promoting [Unreleased] to ${version}`)
+    writeFileSync('CHANGELOG.md', promote(changelog, version))
+} else {
+    step(4, 'Changelog')
+    console.log(`  notes for ${version} already written`)
+}
 run(process.execPath, ['scripts/release-notes.mjs'])
 
 /* ── 5. commit ─────────────────────────────────────────────── */
 
 step(5, 'Committing')
-run('git', ['add', 'package.json', 'package-lock.json', 'CHANGELOG.md'])
-run('git', ['commit', '-m', `chore: release ${tag}`])
+// In ship-current mode the bump was already committed, so there is nothing to
+// record — the tree was verified clean in step 1.
+if (capture('git', ['status', '--porcelain'])) {
+    run('git', ['add', 'package.json', 'package-lock.json', 'CHANGELOG.md'])
+    run('git', ['commit', '-m', `chore: release ${tag}`])
+} else {
+    console.log('  nothing to commit')
+}
 
 /* ── 6. tag + push ─────────────────────────────────────────── */
 
 step(6, 'Tagging and pushing')
-run('git', ['tag', '-a', tag, '-m', `Quoril ${version}`])
+
+// A previous run may have tagged and then failed during the build. Reuse the
+// tag if it already points at this commit; refuse if it points elsewhere,
+// because moving a tag would silently change what a published release refers to.
+const existingTag = (() => {
+    try {
+        return capture('git', ['rev-list', '-n', '1', tag])
+    } catch {
+        return null
+    }
+})()
+
+if (!existingTag) {
+    run('git', ['tag', '-a', tag, '-m', `Quoril ${version}`])
+} else if (existingTag === capture('git', ['rev-parse', 'HEAD'])) {
+    console.log(`  ${tag} already exists at this commit`)
+} else {
+    fail(
+        `${tag} already exists but points at a different commit.`,
+        'Moving it would change what the release refers to. Either delete it',
+        `(git tag -d ${tag}) or release a new version.`,
+    )
+}
+
 run('git', ['push', 'origin', branch])
 run('git', ['push', 'origin', tag])
 
