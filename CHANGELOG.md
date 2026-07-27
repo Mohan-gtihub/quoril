@@ -11,6 +11,8 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-07-27
+
 ### Added
 
 - Linux builds are published automatically with every release. Quoril for Linux
@@ -94,7 +96,8 @@ Version 1.0.8 was prepared but never published, so its changes ship here.
 - macOS builds are signed and notarized correctly, so auto-update is no longer
   blocked by Gatekeeper.
 
-[Unreleased]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.3...HEAD
+[1.1.3]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/Mohan-gtihub/quoril/compare/v1.0.7...v1.1.0
