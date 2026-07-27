@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Quoril — The productivity OS for deep work",
+    name: "Quoril — Plan. Focus. Understand.",
     short_name: "Quoril",
     description:
-      "Tasks, focus tracking, analytics and digital wellbeing in one offline-first native desktop app.",
+      "Plan your day, protect your focus and understand your time in one offline-first desktop app.",
     start_url: "/",
     display: "standalone",
     background_color: "#FBFBFA",

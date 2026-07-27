@@ -12,9 +12,9 @@ import Waitlist from "@/components/Waitlist";
 import { IconCheck } from "@/components/icons";
 
 export const metadata: Metadata = {
-  title: "Download — Quoril for desktop",
+  title: "Download for desktop",
   description:
-    "Native Quoril apps for macOS, Windows and Linux. Join the waitlist to get your download link at launch.",
+    "Native Quoril apps for macOS, Windows and Linux. Get V1 free before launch and receive your download link when it is ready.",
 };
 
 /* ── monochrome OS glyphs ─────────────────────────────────── */
@@ -107,8 +107,8 @@ export default function DownloadPage() {
               Quoril for desktop.
             </h1>
             <p className="mt-5 max-w-[560px] text-[18px] leading-relaxed text-ink-muted">
-              Native apps for macOS, Windows and Linux. Join the waitlist to get
-              your download link at launch.
+              Native apps for macOS, Windows and Linux. Get V1 free before
+              launch and receive your download link when it is ready.
             </p>
           </Reveal>
         </Container>

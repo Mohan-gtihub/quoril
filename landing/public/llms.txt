@@ -1,8 +1,8 @@
 # Quoril
 
-> Quoril is an offline-first, native desktop productivity OS for deep work. It unifies a Kanban task planner, a focus engine (Pomodoro + always-on-top focus pill), productivity insights and screen-time analytics, and an infinite visual canvas into one app. Your data is written to a local SQLite database first and syncs to your own account over an encrypted, authenticated connection with Row-Level Security — it is never sold, rented, or mined.
+> Quoril helps you plan your day, protect your focus and understand your time in one offline-first desktop app. It unifies a Kanban task planner, a focus engine (Pomodoro + always-on-top focus pill), productivity insights and screen-time analytics, and an infinite visual canvas. Your data is written to a local SQLite database first and syncs to your own account over an encrypted, authenticated connection with Row-Level Security — it is never sold, rented, or mined.
 
-Quoril runs as a real native application for macOS, Windows, and Linux (not a browser tab), which lets it do native window/app tracking, always-on-top timers, system-tray presence, and OS-level notifications. It is currently in early access; users can join the waitlist to get an early-access download link and pricing.
+Quoril runs as a real native application for macOS, Windows, and Linux (not a browser tab), which lets it do native window/app tracking, always-on-top timers, system-tray presence, and OS-level notifications. It is currently in early access; users who join before launch get V1 free.
 
 ## Key facts
 
@@ -13,7 +13,7 @@ Quoril runs as a real native application for macOS, Windows, and Linux (not a br
 
 ## Core pages
 
-- [Home](https://quoril.in/): Product overview — the productivity OS for deep work.
+- [Home](https://quoril.in/): Product overview — plan, focus and understand your time.
 - [Features](https://quoril.in/features): Full feature overview (planner, focus, insights, canvas).
 - [Planner](https://quoril.in/features/planner): Local-first Kanban boards and task management.
 - [Focus Engine](https://quoril.in/features/focus): Deep Focus mode, the Super Focus pill, and a built-in Pomodoro.
@@ -21,7 +21,7 @@ Quoril runs as a real native application for macOS, Windows, and Linux (not a br
 - [Canvas](https://quoril.in/canvas): An infinite board of blocks and pipelines for visual thinking.
 - [Security & Privacy](https://quoril.in/security): How offline-first storage and encrypted sync protect your data.
 - [Download](https://quoril.in/download): Native builds for macOS, Windows, and Linux.
-- [Waitlist](https://quoril.in/waitlist): Join for early access and early-access pricing.
+- [Waitlist](https://quoril.in/waitlist): Join before launch to get V1 free.
 
 ## Company & legal
 

@@ -17,7 +17,7 @@ import {
 } from "@/components/icons";
 
 export const metadata = {
-  title: "Canvas — Quoril",
+  title: "Canvas",
   description:
     "An infinite visual workspace wired to your tasks. Drop text, ideas, checklists, links and media on a board — then wire blocks into pipelines with edges and conditions.",
 };
@@ -112,7 +112,7 @@ export default function CanvasPage() {
               straight to the real tasks you&apos;re shipping.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Button href="/waitlist">Join the waitlist</Button>
+              <Button href="/waitlist">Get V1 free</Button>
               <Button href="/features" variant="secondary">
                 All features
               </Button>
@@ -238,11 +238,11 @@ export default function CanvasPage() {
                 Think it. Wire it. Ship it.
               </h2>
               <p className="mx-auto mt-4 max-w-[460px] text-[16px] leading-relaxed text-ink-muted">
-                Join the waitlist and be first on the infinite canvas that
-                connects straight to your work.
+                Get V1 free before launch and start thinking visually in one
+                connected workspace.
               </p>
               <div className="mt-8 flex justify-center">
-                <Button href="/waitlist">Join the waitlist</Button>
+                <Button href="/waitlist">Get V1 free</Button>
               </div>
             </div>
           </Reveal>

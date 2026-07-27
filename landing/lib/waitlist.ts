@@ -30,9 +30,6 @@ export interface AddResult {
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-// Seed count so the social-proof number never looks empty in early days.
-const SEED_COUNT = 1284;
-
 const SUPABASE_URL =
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -70,10 +67,10 @@ async function rawCount(): Promise<number> {
 
 export async function countSignups(): Promise<number> {
   try {
-    return SEED_COUNT + (await rawCount());
+    return await rawCount();
   } catch {
-    // Never let the social-proof number break the page.
-    return SEED_COUNT;
+    // Social proof must be genuine. Hide it when the count is unavailable.
+    return 0;
   }
 }
 

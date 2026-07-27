@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "Quoril — The productivity OS for deep work";
+export const alt = "Quoril — Plan. Focus. Understand.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -53,7 +53,7 @@ export default function OgImage() {
               letterSpacing: "0.04em",
             }}
           >
-            Early access
+            V1 free
           </div>
         </div>
 
@@ -69,7 +69,7 @@ export default function OgImage() {
               maxWidth: 920,
             }}
           >
-            The productivity OS for deep work.
+            Plan. Focus. Understand.
           </div>
           <div
             style={{
@@ -80,8 +80,8 @@ export default function OgImage() {
               maxWidth: 880,
             }}
           >
-            Tasks, focus tracking, analytics & digital wellbeing — in one
-            offline-first native app.
+            Plan your day, stay focused and see where your time went — in one
+            offline-first desktop app.
           </div>
         </div>
 

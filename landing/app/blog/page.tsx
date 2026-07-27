@@ -8,9 +8,9 @@ import Link from "next/link";
 export const revalidate = 60;
 
 export const metadata = {
-  title: "Blog · Quoril",
+  title: "Blog",
   description:
-    "Field notes on deep work, focus, productivity systems and building Quoril — the productivity OS for people who ship.",
+    "Field notes on planning, focus, understanding your time and building Quoril.",
 };
 
 export default async function BlogPage() {
@@ -50,14 +50,14 @@ export default async function BlogPage() {
               <div className="flex max-w-[420px] flex-col items-center">
                 <Eyebrow>Field notes</Eyebrow>
                 <p className="mt-4 text-[15.5px] leading-relaxed text-ink-muted">
-                  The first dispatches are being written. Join the waitlist and
-                  we&apos;ll send them straight to your inbox.
+                  The first dispatches are being written. Get V1 free and follow
+                  what we build next.
                 </p>
                 <Link
-                  href="/#waitlist"
+                  href="/waitlist"
                   className="mt-6 inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink transition hover:gap-2.5"
                 >
-                  Join the waitlist <IconArrow className="h-3.5 w-3.5" />
+                  Get V1 free <IconArrow className="h-3.5 w-3.5" />
                 </Link>
               </div>
             </div>
