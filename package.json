@@ -30,6 +30,7 @@
     "publish:linux": "npm run build:app && node scripts/publish-release.mjs linux",
     "release:preflight": "node scripts/release-preflight.mjs",
     "release:mac": "npm run build:app && node scripts/release-mac.mjs",
+    "ship:mac": "node scripts/ship-mac.mjs",
     "release:win": "npm run build:app && node scripts/release-preflight.mjs win && npm run package:win",
     "postinstall": "electron-builder install-app-deps",
     "check:web": "node scripts/check-web-bundle.mjs"

@@ -271,8 +271,8 @@ export function ActivityDashboard() {
                     {!detailAvailable ? (
                         <div className="h-[300px] flex flex-col items-center justify-center text-center text-[var(--text-muted)] px-6">
                             <Globe size={48} className="mb-4 opacity-20" />
-                            <p className="text-[var(--text-secondary)]">Website detail isn’t available on macOS</p>
-                            <p className="text-xs mt-2 max-w-xs leading-relaxed">App usage is tracked automatically. Per-website breakdowns aren’t available on macOS.</p>
+                            <p className="text-[var(--text-secondary)]">Website breakdown is off</p>
+                            <p className="text-xs mt-2 max-w-xs leading-relaxed">App usage is tracked automatically. Turn on website addresses in Settings to split browser time into individual sites — it stays on this device.</p>
                         </div>
                     ) : topDomains.length > 0 ? (
                         <div className="h-[300px] w-full">

@@ -2,12 +2,15 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, parseISO, subDays, addDays, isToday } from 'date-fns'
 import {
-    ArrowLeft, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus
+    ArrowLeft, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus,
+    Settings as SettingsIcon
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useScreenTimeData, type CategoryEntry, type ProductivityBucket } from './useScreenTimeData'
 import { cn } from '@/utils/helpers'
 import { platform } from '@/services/platform'
+import { useTrackingDetail } from '@/hooks/useTrackingDetail'
+import { ROUTES } from '@/constants'
 import { TrackingUnavailable } from '@/components/reports/components/TrackingUnavailable'
 
 /* ═══════════════════════════════════════════════════════════════
@@ -442,7 +445,13 @@ export function ScreenTime() {
     // Hook must always run — capability is a module-level constant so conditional
     // rendering is safe: the hook result is simply unused on web.
     const data = useScreenTimeData()
-    const { loading, trackingAvailable, detailAvailable, date, setDate, hourly, apps, categories, domains, weekly, timeline, totals, productivity, peakHour, avgDailySeconds, todayVsAvg } = data
+    // Per-capability state: the Websites panel depends on `urls` alone.
+    // `urlsPending` is opted-in-but-not-yet-granted, which deserves different
+    // copy from "you haven't turned this on".
+    const { detail: trackingDetail } = useTrackingDetail()
+    const urlsLive = Boolean(trackingDetail?.urls.enabled && trackingDetail.urls.granted)
+    const urlsPending = Boolean(trackingDetail?.urls.enabled && !trackingDetail.urls.granted)
+    const { loading, trackingAvailable, date, setDate, hourly, apps, categories, domains, weekly, timeline, totals, productivity, peakHour, avgDailySeconds, todayVsAvg } = data
 
     const isViewingToday = isToday(parseISO(date))
     const displayDate = isViewingToday ? 'Today' : format(parseISO(date), 'EEE, MMM d')
@@ -598,16 +607,32 @@ export function ScreenTime() {
                                 </div>
                             </Tile>
                             <Tile>
-                                <TileHead title="Websites" hint={detailAvailable ? `${domains.length} total` : undefined} />
+                                {/* This panel needs the `urls` capability specifically —
+                                    the combined detailAvailable flag would also be true
+                                    with only window titles on, and show an empty list. */}
+                                <TileHead title="Websites" hint={urlsLive ? `${domains.length} total` : undefined} />
                                 <div className="mt-5">
-                                    {detailAvailable ? (
+                                    {urlsLive ? (
                                         <DomainList domains={domains} />
                                     ) : (
                                         <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
-                                            <p className="text-sm text-[var(--text-secondary)] font-medium">Website detail isn’t available on macOS</p>
-                                            <p className="text-xs text-[var(--text-tertiary)] mt-1.5 max-w-xs leading-relaxed">
-                                                Quoril tracks your app usage automatically. Per-website breakdowns aren’t available on macOS.
+                                            <p className="text-sm text-[var(--text-secondary)] font-medium">
+                                                {urlsPending
+                                                    ? 'Waiting on permission'
+                                                    : 'Website breakdown is off'}
                                             </p>
+                                            <p className="text-xs text-[var(--text-tertiary)] mt-1.5 max-w-xs leading-relaxed">
+                                                {urlsPending
+                                                    ? 'Grant Quoril Accessibility access in System Settings and this fills in automatically.'
+                                                    : 'Turn on website addresses to split browser time into the sites you actually visited. It stays on this device.'}
+                                            </p>
+                                            <button
+                                                onClick={() => navigate(ROUTES.SETTINGS)}
+                                                className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-card)] text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-secondary)] border border-[var(--border-default)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] transition-colors"
+                                            >
+                                                <SettingsIcon className="w-3.5 h-3.5" />
+                                                Open settings
+                                            </button>
                                         </div>
                                     )}
                                 </div>

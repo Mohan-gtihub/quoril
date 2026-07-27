@@ -35,6 +35,9 @@ Version 1.0.8 was prepared but never published, so its changes ship here.
 
 ### Fixed
 
+- The Websites panel no longer claims per-site breakdowns are unavailable on
+  macOS. It now says whether the setting is off or waiting on permission, and
+  links straight to it.
 - Restarting to install an update no longer leaves the app running in the tray,
   which previously caused the installer to skip the relaunch and, on some
   machines, apply the update silently or not at all.
