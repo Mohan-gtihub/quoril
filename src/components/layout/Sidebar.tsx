@@ -2,6 +2,7 @@
 import { LayoutGrid, Settings, LogOut, BarChart3, Plus, Edit2, Trash2, Check, MoreHorizontal, FolderKanban, Archive, ChevronDown, Folders, Kanban, Smartphone, Map, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { confirm as confirmDialog } from '@/components/ui/ConfirmDialog'
 import { useAuthStore } from '@/store/authStore'
+import { useDisplayName } from '@/hooks/useDisplayName'
 import { useListStore } from '@/store/listStore'
 import { useWorkspaceStore, Workspace } from '@/store/workspaceStore'
 import { cn } from '@/utils/helpers'
@@ -211,6 +212,7 @@ function CreateWsInline({ onDone }: { onDone: () => void }) {
 export function Sidebar() {
     const { fetchLists } = useListStore()
     const { signOut, user } = useAuthStore()
+    const displayName = useDisplayName()
     const { workspaces, activeWorkspaceId, setActiveWorkspace, loadWorkspaces } = useWorkspaceStore()
     const navigate = useNavigate()
     const location = useLocation()
@@ -293,7 +295,7 @@ export function Sidebar() {
             <div ref={userMenuRef} className={cn("relative pt-3 pb-2", collapsed ? "px-0" : "px-2")}>
                 <button
                     onClick={() => collapsed ? navigate('/settings') : setShowUserMenu(v => !v)}
-                    title={collapsed ? user?.email?.split('@')[0] : undefined}
+                    title={collapsed ? displayName : undefined}
                     style={{ borderRadius: 'var(--radius-card)' }}
                     className={cn(
                         "w-full flex items-center hover:bg-[var(--bg-hover)] transition-colors text-left outline-none",
@@ -301,12 +303,12 @@ export function Sidebar() {
                     )}
                 >
                     <div className="w-5 h-5 bg-[var(--accent-primary)] flex items-center justify-center text-[var(--accent-contrast)] text-[11px] font-semibold shrink-0" style={{ borderRadius: 'var(--radius-card)' }}>
-                        {user?.email?.charAt(0).toUpperCase()}
+                        {displayName.charAt(0).toUpperCase()}
                     </div>
                     {!collapsed && (
                         <>
                             <div className="flex-1 min-w-0">
-                                <p className="text-[13px] font-semibold text-[var(--text-primary)] truncate">{user?.email?.split('@')[0]}</p>
+                                <p className="text-[13px] font-semibold text-[var(--text-primary)] truncate">{displayName}</p>
                             </div>
                             <ChevronDown size={12} className="text-[var(--text-muted)] shrink-0" />
                         </>

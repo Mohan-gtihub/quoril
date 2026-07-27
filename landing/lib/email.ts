@@ -36,7 +36,7 @@ export async function sendWaitlistConfirmation(to: string): Promise<void> {
   const { error } = await getResend().emails.send({
     from: FROM,
     to: [to],
-    subject: "You're on the Quoril waitlist 🎉",
+    subject: "Your free Quoril V1 is reserved",
     html: confirmationHtml(),
     text: confirmationText(),
   });
@@ -88,7 +88,7 @@ function confirmationHtml(): string {
 <body style="margin:0;padding:0;background:${paper};font-family:${sans};">
   <!-- preheader (hidden) -->
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">
-    You're on the list — one launch email, early-access pricing, and a say in the roadmap.
+    Your free Quoril V1 is reserved. We will email you when it is ready.
   </div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${paper};">
@@ -123,13 +123,13 @@ function confirmationHtml(): string {
 
               <p style="margin:18px 0 0;font-size:16px;line-height:1.65;color:${inkMuted};">
                 Thanks for joining the Quoril waitlist. You're now first in line to
-                turn your desktop into a focus machine.
+                plan, focus, and understand where your time went.
               </p>
 
               <!-- What you get -->
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px;">
                 ${benefitRow(ink, inkMuted, line, "One launch email", "We'll reach out the moment your invite is ready — no spam in between.")}
-                ${benefitRow(ink, inkMuted, line, "Early-access pricing", "Lock in founder pricing when we go live.")}
+                ${benefitRow(ink, inkMuted, line, "V1 is free", "Your V1 access is reserved at no cost — no card or trial.")}
                 ${benefitRow(ink, inkMuted, line, "A say in the roadmap", "Your feedback shapes what we build next.", true)}
               </table>
 
@@ -189,11 +189,11 @@ function confirmationText(): string {
   return [
     "You're on the list.",
     "",
-    "Thanks for joining the Quoril waitlist. You're now first in line to turn your desktop into a focus machine.",
+    "Thanks for joining Quoril. Your free V1 access is reserved so you can plan, focus, and understand where your time went.",
     "",
     "What you get:",
     "• One launch email — we'll reach out the moment your invite is ready, no spam in between.",
-    "• Early-access pricing — lock in founder pricing when we go live.",
+    "• V1 is free — your access is reserved at no cost, with no card or trial.",
     "• A say in the roadmap — your feedback shapes what we build next.",
     "",
     `Explore Quoril: ${SITE_URL}`,

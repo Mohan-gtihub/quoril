@@ -17,7 +17,7 @@ export default function JsonLd() {
       logo: `${SITE_URL}/icon.png`,
       email: CONTACT_EMAIL,
       description:
-        "Quoril builds an offline-first desktop productivity OS for deep work — unifying tasks, focus tracking, analytics and digital wellbeing.",
+        "Quoril helps you plan your day, protect your focus and understand your time in one offline-first desktop app.",
     },
     {
       "@type": "WebSite",
@@ -36,7 +36,7 @@ export default function JsonLd() {
       url: SITE_URL,
       downloadUrl: `${SITE_URL}/download`,
       description:
-        "A native, offline-first command center for deep work: a Kanban planner, a focus engine with a Pomodoro timer and always-on-top focus pill, productivity insights and screen-time analytics, and an infinite visual canvas — all syncing to your own account with Row-Level Security.",
+        "Plan your day, protect your focus and understand your time with a Kanban planner, always-on-top focus tools, productivity insights and screen-time analytics in one offline-first desktop app.",
       featureList: [
         "Kanban planner (local-first boards)",
         "Focus engine with Pomodoro and always-on-top focus pill",

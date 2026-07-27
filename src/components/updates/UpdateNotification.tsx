@@ -1,13 +1,22 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Download, RotateCw, X } from 'lucide-react'
+import { Download, RotateCw, X, AlertTriangle } from 'lucide-react'
 import { useAppUpdate } from '@/hooks/useAppUpdate'
+import { platform } from '@/services/platform'
+import { logger } from '@/services/logger'
+
+const RELEASES_URL = 'https://github.com/Mohan-gtihub/quoril/releases'
 
 /**
- * Non-intrusive bottom-corner update surface. Two states:
+ * Non-intrusive bottom-corner update surface:
+ *   • available   → "Update available" with Download / Not now (autoDownload is off).
  *   • downloading → "Downloading update… 42%" with a thin progress bar.
  *   • downloaded  → "Update ready" with Restart Now / Later.
- * Everything else renders nothing. Mounted once at the app root.
+ *   • error       → dismissible, informational "couldn't check for updates".
+ * 'checking' and 'idle' render nothing — too transient to be worth a card. A
+ * user who explicitly clicks "Check for updates" gets feedback in Settings
+ * instead; that surface is where an intentional action deserves a response.
+ * Mounted once at the app root.
  */
 export function UpdateNotification() {
     const { status, restart, download } = useAppUpdate()
@@ -15,17 +24,31 @@ export function UpdateNotification() {
     // installs on next quit (autoInstallOnAppQuit); an offered one is simply
     // re-offered on the next check.
     const [dismissed, setDismissed] = useState(false)
+    // Errors dismiss independently: hiding a failed check must not also hide a
+    // subsequent "update ready" prompt (and vice-versa).
+    const [errorDismissed, setErrorDismissed] = useState(false)
 
     // Each new stage re-shows the card even after a prior dismiss.
     useEffect(() => {
         if (status.state === 'available' || status.state === 'downloaded') setDismissed(false)
     }, [status.state])
 
+    // Each new failure is worth surfacing once — reset the error dismissal when
+    // the message changes so a *different* problem isn't silently swallowed.
+    const errorMessage = status.state === 'error' ? status.message : null
+    useEffect(() => {
+        if (errorMessage) {
+            setErrorDismissed(false)
+            logger.warn('update.error_surfaced', { message: errorMessage })
+        }
+    }, [errorMessage])
+
     const show =
-        !dismissed &&
-        (status.state === 'available' ||
-            status.state === 'downloading' ||
-            status.state === 'downloaded')
+        (!dismissed &&
+            (status.state === 'available' ||
+                status.state === 'downloading' ||
+                status.state === 'downloaded')) ||
+        (!errorDismissed && status.state === 'error')
 
     return (
         <AnimatePresence>
@@ -37,7 +60,41 @@ export function UpdateNotification() {
                     transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                     className="fixed bottom-5 right-5 z-[9999] w-[320px] rounded-[var(--radius-tile)] border border-[var(--border-default)] bg-[var(--bg-card)] shadow-[0_16px_40px_rgba(0,0,0,0.32)] overflow-hidden"
                 >
-                    {status.state === 'available' ? (
+                    {status.state === 'error' ? (
+                        <div className="p-4">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-start gap-2.5 min-w-0">
+                                    <AlertTriangle className="w-4 h-4 mt-0.5 text-[var(--text-tertiary)] shrink-0" />
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-[var(--text-primary)]">
+                                            Couldn’t check for updates
+                                        </p>
+                                        <p className="text-xs text-[var(--text-tertiary)] mt-0.5 leading-relaxed break-words">
+                                            {status.message}
+                                        </p>
+                                        <p className="text-xs text-[var(--text-tertiary)] mt-1.5 leading-relaxed">
+                                            Quoril keeps working normally and will try again later. If this
+                                            keeps happening, you can{' '}
+                                            <button
+                                                onClick={() => platform.links.openExternal(RELEASES_URL)}
+                                                className="underline underline-offset-2 hover:text-[var(--text-primary)] transition-colors"
+                                            >
+                                                download the latest version
+                                            </button>{' '}
+                                            manually.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setErrorDismissed(true)}
+                                    className="shrink-0 w-6 h-6 -mt-0.5 -mr-1 rounded-full flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                                    aria-label="Dismiss"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        </div>
+                    ) : status.state === 'available' ? (
                         <div className="p-4">
                             <div className="flex items-start justify-between gap-3 mb-3">
                                 <div className="min-w-0">
@@ -45,7 +102,9 @@ export function UpdateNotification() {
                                         Update available
                                     </p>
                                     <p className="text-xs text-[var(--text-tertiary)] mt-0.5 leading-relaxed">
-                                        Version {status.version} is ready to download.
+                                        {status.version
+                                            ? `Version ${status.version} is ready to download.`
+                                            : 'A new version is ready to download.'}{' '}
                                         Download it now?
                                     </p>
                                 </div>

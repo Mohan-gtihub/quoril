@@ -263,9 +263,11 @@ export function Planner() {
     // Initial fetch on mount or list change
     useEffect(() => {
         if (!selectedListId) {
-            // If no list is selected, default to 'all' or redirect?
-            // Existing logic redirected to /dashboard (which is this page).
-            // Let's safe guard.
+            // Nothing selected (fresh install, or the selected list was deleted):
+            // fall back to the cross-workspace "all" view rather than leaving the
+            // planner with no selection, which used to strand it on a permanent
+            // "Loading workspace..." screen.
+            useListStore.setState({ selectedListId: 'all' })
             return
         }
         fetchTasks(selectedListId === 'all' ? undefined : selectedListId)
@@ -417,7 +419,11 @@ export function Planner() {
         toast.success("Focus Mode Started")
     }
 
-    if (!selectedList && selectedListId !== 'all') {
+    // Only "all" needs no backing list. A selected id that no longer resolves to a
+    // list (deleted, or still being fetched) renders the cross-workspace view via
+    // the effect above instead of stranding the page on a loading message that
+    // nothing ever clears.
+    if (!selectedList && selectedListId !== 'all' && selectedListId) {
         return <div className="p-8 text-[var(--text-muted)]">Loading workspace...</div>
     }
 
@@ -477,7 +483,9 @@ export function Planner() {
                 </DragOverlay>
             </DndContext>
 
-            {showCreateModal && selectedListId && (
+            {/* createListId is '' when no real list exists yet (fresh install in
+                the "all" view); opening the modal then would fail on save. */}
+            {showCreateModal && selectedListId && createListId && (
                 <CreateTaskModal
                     isOpen={true}
                     onClose={() => setShowCreateModal(null)}

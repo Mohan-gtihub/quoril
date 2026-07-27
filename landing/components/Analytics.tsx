@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { siteConfig } from "@/lib/site-config";
 
 /**
  * First-party visitor analytics ("pixel").
@@ -43,6 +44,8 @@ function sourceFromReferrer(): string | null {
     const params = new URLSearchParams(window.location.search);
     const utm = params.get("utm_source");
     if (utm) return utm.slice(0, 256);
+    const referral = params.get("ref");
+    if (referral) return `ref:${referral.slice(0, 252)}`;
     const ref = document.referrer;
     if (!ref) return "direct";
     const host = new URL(ref).hostname.replace(/^www\./, "");
@@ -54,6 +57,7 @@ function sourceFromReferrer(): string | null {
 }
 
 function send(payload: Record<string, unknown>, beacon = false) {
+  if (!siteConfig.analyticsEnabled) return;
   const body = JSON.stringify(payload);
   try {
     if (beacon && navigator.sendBeacon) {
@@ -74,6 +78,20 @@ function send(payload: Record<string, unknown>, beacon = false) {
   }).catch(() => {});
 }
 
+export function trackEvent(
+  name: string,
+  meta: Record<string, string | number | boolean | null> = {},
+) {
+  if (!siteConfig.analyticsEnabled || typeof window === "undefined") return;
+  send({
+    type: "event",
+    visitorId: getId(window.localStorage, VISITOR_KEY),
+    sessionId: getId(window.sessionStorage, SESSION_KEY),
+    path: window.location.pathname,
+    meta: { name: name.slice(0, 64), ...meta },
+  });
+}
+
 export default function Analytics() {
   const pathname = usePathname();
   const ids = useRef<{ visitorId: string; sessionId: string } | null>(null);
@@ -89,7 +107,7 @@ export default function Analytics() {
   }
 
   useEffect(() => {
-    if (!ids.current || !pathname) return;
+    if (!siteConfig.analyticsEnabled || !ids.current || !pathname) return;
     const { visitorId, sessionId } = ids.current;
 
     // Flush the previous page's dwell time before recording the new view.
@@ -124,11 +142,33 @@ export default function Analytics() {
     const onHide = () => {
       if (document.visibilityState === "hidden") flushExit(true);
     };
+    const onPageHide = () => flushExit(true);
+    const onClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const anchor = target.closest("a");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href") ?? "";
+      if (!href.startsWith("/waitlist")) return;
+      send({
+        type: "event",
+        visitorId,
+        sessionId,
+        path: pathname,
+        meta: {
+          name: "waitlist_cta_clicked",
+          label: (anchor.textContent ?? "Get V1 free").trim().slice(0, 64),
+        },
+      });
+    };
     document.addEventListener("visibilitychange", onHide);
-    window.addEventListener("pagehide", () => flushExit(true));
+    window.addEventListener("pagehide", onPageHide);
+    document.addEventListener("click", onClick);
 
     return () => {
       document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", onPageHide);
+      document.removeEventListener("click", onClick);
     };
   }, [pathname]);
 

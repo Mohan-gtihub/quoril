@@ -47,8 +47,8 @@ export default function Footer() {
         <div className="col-span-2 max-w-[300px] md:col-span-1">
           <Logo />
           <p className="mt-4 text-[14px] leading-relaxed text-ink-muted">
-            A desktop productivity operating system for deep work — tasks,
-            focus, analytics and digital wellbeing in one native app.
+            Plan your day, protect your focus and understand your time in one
+            private, offline-first desktop app.
           </p>
           <p className="mt-4 text-[13px] text-ink-faint">
             Built by Erik Vale.
@@ -86,7 +86,7 @@ export default function Footer() {
       <div className="border-t border-line">
         <div className="mx-auto flex max-w-[1180px] flex-col gap-2 px-5 py-6 text-[13px] text-ink-faint sm:flex-row sm:flex-wrap sm:justify-between sm:gap-3 sm:px-6">
           <span>© 2026 Quoril. All rights reserved.</span>
-          <span>Offline-first · Local SQLite + cloud sync · Crafted for people who ship.</span>
+          <span>Plan · Focus · Understand · Offline-first by design.</span>
         </div>
       </div>
     </footer>

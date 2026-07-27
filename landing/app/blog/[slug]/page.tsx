@@ -19,9 +19,9 @@ export async function generateMetadata({
   params: { slug: string };
 }) {
   const post = await getPostBySlug(params.slug);
-  if (!post) return { title: "Post not found · Quoril" };
+  if (!post) return { title: "Post not found" };
   return {
-    title: `${post.title} · Quoril Blog`,
+    title: `${post.title} · Blog`,
     description: post.excerpt ?? undefined,
     openGraph: {
       title: post.title,
@@ -119,11 +119,11 @@ export default async function BlogPostPage({
               Build your most focused workday.
             </h3>
             <p className="mx-auto mt-2 max-w-[420px] text-[15px] text-ink-muted">
-              Join the Quoril waitlist and turn your desktop into a focus machine.
+              Get Quoril V1 free and plan, focus and understand your time in one app.
             </p>
             <div className="mt-6 flex justify-center">
               <Button href="/waitlist">
-                Join the waitlist <IconArrow className="h-4 w-4" />
+                Get V1 free <IconArrow className="h-4 w-4" />
               </Button>
             </div>
           </div>

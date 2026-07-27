@@ -19,6 +19,7 @@ import { sanitizeSessionData, mapSessionTypeToDB } from '@/utils/dataValidation'
 import { useTaskStore } from './taskStore'
 import { useSettingsStore } from './settingsStore'
 import { platform } from '@/services/platform'
+import { analytics } from '@/services/analytics'
 
 /* ---------------------------------------------
    CONSTANTS
@@ -356,6 +357,13 @@ export const useFocusStore = create<FocusState>()(
                         celebratedDuration: 0
                     })
 
+                    // Emitted after the double-start / missing-task guards above,
+                    // so this counts real starts only.
+                    analytics.track('focus.started', {
+                        durationMinutes: Math.round(goal / 60),
+                        type,
+                    })
+
                     // Then Background DB Sync
                     try {
                         const user = (await localService.auth.getUser()).data?.user
@@ -611,6 +619,20 @@ export const useFocusStore = create<FocusState>()(
                         pomodoroRemaining: 0,
                         breakRemaining: 0,
                         lastTickTime: null
+                    })
+
+                    // ACTIVATION EVENT. `total` is the task's cumulative time
+                    // across all sittings; the time focused in THIS session is
+                    // measured from sessionBaseElapsed (the value of `elapsed`
+                    // when this sitting began). Falls back to `total` if the
+                    // session was rehydrated without that anchor.
+                    const sessionSeconds = s.sessionStartedAt !== null
+                        ? Math.max(0, total - s.sessionBaseElapsed)
+                        : total
+                    analytics.track('focus.completed', {
+                        seconds: sessionSeconds,
+                        type: s.sessionType,
+                        markedTaskCompleted: markCompleted,
                     })
 
                     platform.tracker.setContext(null)

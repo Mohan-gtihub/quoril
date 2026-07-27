@@ -6,7 +6,7 @@ import LegalLayout, {
 } from "@/components/LegalLayout";
 
 export const metadata = {
-  title: "Terms of Service — Quoril",
+  title: "Terms of Service",
   description:
     "The terms that govern your use of Quoril — your account, acceptable use, AI features, intellectual property, disclaimers and liability.",
 };

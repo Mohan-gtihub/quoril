@@ -1,6 +1,18 @@
 // App metadata
 export const APP_NAME = 'Quoril'
-export const APP_VERSION = '1.0.0'
+// Sourced from package.json at build time via the __APP_VERSION__ define in
+// vite.config.ts. Do NOT hardcode a literal here — this used to read '1.0.0'
+// while package.json said 1.0.1, giving the app two disagreeing versions.
+// That is actively misleading once auto-update is in play, since the version
+// a user reports is how you tell whether an update actually landed.
+declare const __APP_VERSION__: string
+export const APP_VERSION: string = (() => {
+    try {
+        return __APP_VERSION__
+    } catch {
+        return '0.0.0'
+    }
+})()
 export const APP_DESCRIPTION = 'Desktop Productivity & Focus Tracking Application'
 
 // API & Storage

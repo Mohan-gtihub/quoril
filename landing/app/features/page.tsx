@@ -23,7 +23,7 @@ import {
 } from "@/components/icons";
 
 export const metadata = {
-  title: "Features — Quoril",
+  title: "Features",
   description:
     "Everything Quoril does: a Kanban planner, a focus engine, native app & website tracking, screen-time insights, a visual canvas, offline-first sync and more — in one window.",
 };
@@ -146,7 +146,7 @@ export default function FeaturesPage() {
               managing tools and more time doing the work that matters.
             </p>
             <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-              <Button href="/waitlist">Join the waitlist</Button>
+              <Button href="/waitlist">Get V1 free</Button>
               <Button href="/download" variant="secondary">
                 See platforms
               </Button>
@@ -202,7 +202,7 @@ export default function FeaturesPage() {
                 Quoril does the lot — and stays out of your way.
               </p>
               <div className="mt-8">
-                <Button href="/waitlist">Join the waitlist</Button>
+                <Button href="/waitlist">Get V1 free</Button>
               </div>
             </div>
           </Reveal>

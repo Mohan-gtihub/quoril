@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import ThemeToggle from "@/components/ThemeToggle";
+import MetricsTab from "./_components/MetricsTab";
+import AccessTab from "./_components/AccessTab";
 
 type Row = {
   id: string;
@@ -48,7 +50,16 @@ type AuditRow = {
   created_at: string;
 };
 
-type Tab = "overview" | "waitlist" | "users" | "feedback" | "visitors" | "blog" | "audit";
+type Tab =
+  | "overview"
+  | "metrics"
+  | "waitlist"
+  | "users"
+  | "feedback"
+  | "visitors"
+  | "blog"
+  | "access"
+  | "audit";
 
 type Post = {
   id: string;
@@ -153,6 +164,23 @@ function IconChat({ className = ic }: IconProps) {
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <path d="M4 5h16v11H8l-4 4V5z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
       <path d="M8 9h8M8 12h5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+function IconChart({ className = ic }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M4 20V4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M4 20h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M8 16v-4M12.5 16V8M17 16v-6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+function IconKey({ className = ic }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <circle cx="8" cy="12" r="4" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M12 12h9M18 12v3.5M15.5 12v2.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }
@@ -284,11 +312,13 @@ function initials(email: string | null): string {
 
 const NAV: { id: Tab; label: string; icon: (p: IconProps) => JSX.Element }[] = [
   { id: "overview", label: "Overview", icon: IconOverview },
+  { id: "metrics", label: "Metrics", icon: IconChart },
   { id: "waitlist", label: "Waitlist", icon: IconList },
   { id: "users", label: "Users", icon: IconUsers },
   { id: "feedback", label: "Feedback", icon: IconChat },
   { id: "visitors", label: "Visitors", icon: IconUsers },
   { id: "blog", label: "Blog", icon: IconDoc },
+  { id: "access", label: "Access", icon: IconKey },
   { id: "audit", label: "Audit log", icon: IconShield },
 ];
 
@@ -318,7 +348,7 @@ function Dashboard({
           </div>
         </div>
 
-        <nav className="ml-auto flex gap-1 lg:ml-0 lg:flex-col lg:gap-1">
+        <nav className="ml-auto flex gap-1 lg:ml-0 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pl-4 lg:-ml-4">
           {NAV.map((n) => {
             const Icon = n.icon;
             const on = tab === n.id;
@@ -326,12 +356,18 @@ function Dashboard({
               <button
                 key={n.id}
                 onClick={() => setTab(n.id)}
-                className={`flex items-center gap-2.5 rounded-pill px-3 py-2 text-[14px] font-medium transition lg:rounded-card lg:px-3 lg:py-2.5 ${
+                aria-current={on ? "page" : undefined}
+                className={`relative flex items-center gap-2.5 rounded-pill px-3 py-2 text-[14px] transition lg:rounded-card lg:px-3 lg:py-2.5 ${
                   on
-                    ? "bg-ink text-paper lg:bg-sunken lg:text-ink"
-                    : "text-ink-faint hover:bg-sunken hover:text-ink"
+                    ? "bg-ink font-semibold text-paper lg:bg-sunken lg:text-ink"
+                    : "font-medium text-ink-faint hover:bg-sunken/70 hover:text-ink"
                 }`}
               >
+                {/* active rail — only reads on the lg sidebar, where the pill
+                    treatment is replaced by the sunken card */}
+                {on && (
+                  <span className="absolute inset-y-1.5 -left-4 hidden w-[3px] rounded-r-pill bg-ink lg:block" />
+                )}
                 <Icon className="h-[18px] w-[18px]" />
                 <span className="hidden sm:inline">{n.label}</span>
               </button>
@@ -359,7 +395,7 @@ function Dashboard({
 
       {/* ── Main ── */}
       <div className="flex min-h-screen flex-col">
-        <header className="flex items-center gap-3 border-b border-line px-5 py-4 sm:px-8">
+        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-paper/85 px-5 py-4 backdrop-blur sm:px-8">
           <h1 className="font-heading text-[20px] font-semibold tracking-[-0.02em]">
             {active.label}
           </h1>
@@ -374,13 +410,17 @@ function Dashboard({
           </div>
         </header>
 
-        <main className="flex-1 px-5 py-6 sm:px-8">
+        <main className="flex-1 px-5 py-7 sm:px-8 sm:py-8">
           {tab === "overview" && <OverviewTab token={token} />}
+          {tab === "metrics" && <MetricsTab token={token} />}
           {tab === "waitlist" && <WaitlistTab token={token} />}
           {tab === "users" && <UsersTab token={token} />}
           {tab === "feedback" && <FeedbackTab token={token} />}
           {tab === "visitors" && <VisitorsTab token={token} />}
           {tab === "blog" && <BlogTab token={token} />}
+          {tab === "access" && (
+            <AccessTab token={token} adminEmail={adminEmail} />
+          )}
           {tab === "audit" && <AuditTab token={token} />}
         </main>
       </div>

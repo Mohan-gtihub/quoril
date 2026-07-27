@@ -5,6 +5,7 @@ import { useNavigationStore, type NavSnapshot } from '@/store/navigationStore'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import { useListStore } from '@/store/listStore'
 import { useTaskStore } from '@/store/taskStore'
+import { analytics } from '@/services/analytics'
 
 /**
  * Records the current drill-down location (route + active workspace/list/task)
@@ -20,6 +21,8 @@ export function useNavHistoryTracker() {
 
     useEffect(() => {
         record({ path: location.pathname, workspaceId, listId, taskId })
+        // Route path only — never the workspace/list/task names behind these ids.
+        analytics.track('screen.viewed', { path: location.pathname })
     }, [location.pathname, workspaceId, listId, taskId, record])
 }
 

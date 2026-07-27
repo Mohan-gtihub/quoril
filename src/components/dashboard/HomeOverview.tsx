@@ -4,6 +4,7 @@ import { useTaskStore } from '@/store/taskStore'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import { useFocusStore } from '@/store/focusStore'
 import { useAuthStore } from '@/store/authStore'
+import { useDisplayName } from '@/hooks/useDisplayName'
 import { useListStore } from '@/store/listStore'
 import { isToday, format } from 'date-fns'
 import { ArrowUpRight, Flame, CheckCircle2, Circle, Play } from 'lucide-react'
@@ -95,7 +96,7 @@ export function HomeOverview() {
         return priorityTasks.slice(0, 6)
     }, [visibleTasks, lists, activeTaskId])
 
-    const name = user?.email?.split('@')[0] || 'there'
+    const name = useDisplayName()
 
     const openTask = (t: any) => {
         setSelectedTask(t.id)
@@ -157,9 +158,12 @@ export function HomeOverview() {
                             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
                                 {format(new Date(), 'EEEE, MMMM d')}
                             </p>
-                            <h1 className="text-[26px] sm:text-[30px] leading-none font-semibold tracking-tight text-[var(--text-primary)] flex items-center gap-2.5">
-                                <span className="truncate">{getGreeting()}, {name}</span>
-                                <span className="text-[24px] sm:text-[26px] leading-none shrink-0" aria-hidden>{getGreetingEmoji()}</span>
+                            {/* leading-[1.25] + py-px, not leading-none: `truncate` clips
+                                overflow, so a 1.0 line box cut the descenders in
+                                "Good morning" / names with g, y, or p. */}
+                            <h1 className="text-[26px] sm:text-[30px] leading-[1.25] font-semibold tracking-tight text-[var(--text-primary)] flex items-center gap-2.5">
+                                <span className="truncate py-px">{getGreeting()}, {name}</span>
+                                <span className="text-[24px] sm:text-[26px] leading-[1.25] shrink-0" aria-hidden>{getGreetingEmoji()}</span>
                             </h1>
                             <div className="mt-4 flex flex-wrap items-center gap-3 sm:gap-4 text-[13px]">
                                 <span className="flex items-baseline gap-1.5">

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTaskStore } from '@/store/taskStore'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import { useFocusStore } from '@/store/focusStore'
-import { useAuthStore } from '@/store/authStore'
+import { useDisplayName } from '@/hooks/useDisplayName'
 import { useListStore } from '@/store/listStore'
 import { format, subDays } from 'date-fns'
 import {
@@ -33,14 +33,13 @@ function currentStreak(days: boolean[]) {
 }
 
 export function HabitOverview() {
-    const { user } = useAuthStore()
     const { tasks, toggleComplete, setSelectedTask } = useTaskStore()
     const { lists, setSelectedList } = useListStore()
     const { workspaces, setActiveWorkspace } = useWorkspaceStore()
     const { sessions } = useFocusStore()
     const navigate = useNavigate()
 
-    const name = user?.email?.split('@')[0] || 'there'
+    const name = useDisplayName()
     const today = new Date()
     const todayKey = format(today, 'yyyy-MM-dd')
 

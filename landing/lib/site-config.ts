@@ -18,16 +18,16 @@ export const siteConfig = {
   announcement: {
     enabled: true,
     /** Short label shown as a pill on the left. */
-    tag: "Early access",
+    tag: "V1 free",
     /** Main message. Keep it tight — this is a single-line bar. */
-    message: "Quoril is live — be first in line for early-access pricing.",
+    message: "Join from this site and get Quoril V1 free at launch.",
     /** Call-to-action link. */
-    cta: { label: "Join the waitlist", href: "/waitlist" },
+    cta: { label: "Get V1 free", href: "/waitlist" },
     /**
      * Bump this when you change the copy and want previously-dismissed
      * visitors to see the bar again (the dismissal is keyed on it).
      */
-    version: "2026-06-launch",
+    version: "2026-07-free-v1",
   },
 
   /**

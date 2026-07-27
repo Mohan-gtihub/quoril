@@ -1,6 +1,7 @@
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import Analytics from "@/components/Analytics";
+import { siteConfig } from "@/lib/site-config";
 
 /**
  * Renders the marketing nav/footer around the page — except on the
@@ -26,7 +27,7 @@ export default function SiteChrome({
       <Nav />
       <main>{children}</main>
       <Footer />
-      <Analytics />
+      {siteConfig.analyticsEnabled && <Analytics />}
     </>
   );
 }
