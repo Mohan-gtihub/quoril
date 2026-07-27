@@ -5,6 +5,9 @@
   "type": "module",
   "description": "Desktop productivity and focus tracking application",
   "author": "Erik Vale",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "main": "dist-electron/index.cjs",
   "scripts": {
     "dev": "vite",

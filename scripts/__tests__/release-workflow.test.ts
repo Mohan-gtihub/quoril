@@ -65,6 +65,47 @@ describe('attach-to-existing-release escape', () => {
     })
 })
 
+/**
+ * Every workflow starts with `npm ci`, which refuses to run when
+ * package-lock.json disagrees with package.json — so a lockfile written by a
+ * different Node/npm than CI uses fails the whole pipeline before it builds
+ * anything. That happened: a lock generated on Node 24 dropped nested entries
+ * that Node 20's npm then demanded.
+ */
+describe('Node version is consistent across workflows', () => {
+    const workflows = [
+        '.github/workflows/release.yml',
+        '.github/workflows/release-verify.yml',
+        '.github/workflows/ci.yml',
+    ]
+
+    it('pins every job to the same major', () => {
+        const versions = new Set<string>()
+        for (const f of workflows) {
+            for (const m of readFileSync(f, 'utf8').matchAll(/node-version:\s*(\S+)/g)) {
+                versions.add(m[1])
+            }
+        }
+        expect(versions.size, `mixed Node versions: ${[...versions]}`).toBe(1)
+    })
+
+    // @electron/notarize@3 requires >= 22.12, and notarization is the step that
+    // would fail — after a full signed build has already run.
+    it('is new enough for @electron/notarize', () => {
+        for (const f of workflows) {
+            for (const m of readFileSync(f, 'utf8').matchAll(/node-version:\s*(\d+)/g)) {
+                expect(Number(m[1]), `${f} pins Node ${m[1]}`).toBeGreaterThanOrEqual(22)
+            }
+        }
+    })
+
+    it('declares the floor in package.json so local installs match', () => {
+        expect(PKG.engines?.node).toBeTruthy()
+        const floor = Number(String(PKG.engines.node).replace(/[^\d.]/g, '').split('.')[0])
+        expect(floor).toBeGreaterThanOrEqual(22)
+    })
+})
+
 describe('linux is actually shippable', () => {
     it('has a configured target', () => {
         expect(PKG.build.linux.target).toContain('AppImage')
