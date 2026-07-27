@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     updates: {
         getStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:getStatus'),
         check: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:check'),
+        download: (): Promise<boolean> => ipcRenderer.invoke('update:download'),
         restartAndInstall: (): Promise<boolean> => ipcRenderer.invoke('update:restartAndInstall'),
         onStatus: (callback: (status: UpdateStatus) => void) => {
             const subscription = (_: any, status: UpdateStatus) => callback(status)

@@ -66,6 +66,7 @@ export const webPlatform: Platform = {
   updates: {
     async getStatus() { return { state: 'not-available' as const } },
     async check() { return { state: 'not-available' as const } },
+    async download() { return false },
     async restartAndInstall() { return false },
     onStatus() { return UNAVAILABLE },
   },

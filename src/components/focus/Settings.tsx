@@ -418,7 +418,7 @@ export function Settings() {
     const settings = useSettingsStore()
     const [active, setActive] = useState<SectionId>('appearance')
     const [platform, setPlatform] = useState<string>('')
-    const { status: updateStatus, check: checkForUpdate, restart: restartToUpdate } = useAppUpdate()
+    const { status: updateStatus, check: checkForUpdate, restart: restartToUpdate, download: downloadUpdate } = useAppUpdate()
     // Only electron ships an auto-updater; the web build exposes 'not-available'.
     const isDesktop = !!window.electronAPI
 
@@ -772,7 +772,15 @@ export function Settings() {
                                                         background. You’ll be asked to restart once an update is ready.
                                                     </p>
                                                 </div>
-                                                {updateStatus.state === 'downloaded' ? (
+                                                {updateStatus.state === 'available' ? (
+                                                    <button
+                                                        onClick={() => downloadUpdate()}
+                                                        className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[var(--radius-card)] text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:opacity-90 transition-opacity"
+                                                    >
+                                                        <Download className="w-3.5 h-3.5" />
+                                                        Download update
+                                                    </button>
+                                                ) : updateStatus.state === 'downloaded' ? (
                                                     <button
                                                         onClick={() => restartToUpdate()}
                                                         className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[var(--radius-card)] text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:opacity-90 transition-opacity"

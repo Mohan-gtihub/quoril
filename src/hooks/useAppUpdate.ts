@@ -27,6 +27,8 @@ export function useAppUpdate() {
 
     const restart = () => platform.updates.restartAndInstall().catch(() => false)
     const check = () => platform.updates.check().catch(() => {})
+    // Downloads are opt-in: nothing is fetched until the user asks for it.
+    const download = () => platform.updates.download().catch(() => false)
 
-    return { status, restart, check }
+    return { status, restart, check, download }
 }

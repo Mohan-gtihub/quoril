@@ -94,6 +94,7 @@ export const electronPlatform: Platform = {
   updates: {
     async getStatus() { return api().updates?.getStatus?.() ?? { state: 'idle' } },
     async check() { return api().updates?.check?.() ?? { state: 'not-available' } },
+    async download() { return Boolean(await api().updates?.download?.()) },
     async restartAndInstall() { return Boolean(await api().updates?.restartAndInstall?.()) },
     onStatus(cb) { return api().updates?.onStatus?.(cb) ?? { available: false as const } },
   },

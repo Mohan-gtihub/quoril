@@ -96,6 +96,8 @@ export interface UpdatesPort {
   getStatus(): Promise<UpdateStatus>
   /** Trigger a manual check. */
   check(): Promise<UpdateStatus>
+  /** Start downloading an available update, once the user has consented. */
+  download(): Promise<boolean>
   /** Quit and install a downloaded update ("Restart Now"). Resolves false if none ready. */
   restartAndInstall(): Promise<boolean>
   /** Subscribe to status changes. Returns an unsubscribe fn, or Unavailable on web. */

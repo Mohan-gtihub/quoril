@@ -13,6 +13,8 @@
  * The renderer talks to this via the `updates` IPC surface (see preload).
  */
 
+import fs from 'node:fs'
+import path from 'node:path'
 import { app, ipcMain, BrowserWindow } from 'electron'
 import pkg from 'electron-updater'
 
@@ -58,9 +60,14 @@ export function initAutoUpdate() {
         return
     }
 
-    // We drive downloading and installing manually so we can show progress and
-    // ask the user before restarting.
-    autoUpdater.autoDownload = true            // start the download as soon as an update is found
+    // A packaged app has no visible console, so update failures were previously
+    // invisible — including installs that silently never applied. Log to
+    // ~/Library/Logs/Quoril/updater.log (and the OS equivalent elsewhere).
+    autoUpdater.logger = createUpdateLogger()
+
+    // We drive downloading and installing manually so the user consents before
+    // we spend their bandwidth, and before we restart their app.
+    autoUpdater.autoDownload = false           // wait for an explicit "Download"
     autoUpdater.autoInstallOnAppQuit = true    // "Later" → install on next quit
     autoUpdater.allowDowngrade = false
 
@@ -106,6 +113,34 @@ export function initAutoUpdate() {
     })
 }
 
+/**
+ * Minimal file logger for electron-updater. Deliberately dependency-free — it
+ * only needs to answer "did the download finish, and did the install apply?"
+ * after the fact, which the packaged app otherwise gives no way to see.
+ */
+function createUpdateLogger() {
+    const logFile = path.join(app.getPath('logs'), 'updater.log')
+
+    const write = (level: string, ...args: unknown[]) => {
+        const line = `[${new Date().toISOString()}] ${level} ${args
+            .map((a) => (a instanceof Error ? (a.stack ?? a.message) : typeof a === 'string' ? a : JSON.stringify(a)))
+            .join(' ')}\n`
+        try {
+            fs.mkdirSync(path.dirname(logFile), { recursive: true })
+            fs.appendFileSync(logFile, line)
+        } catch {
+            // Logging must never break the updater.
+        }
+    }
+
+    return {
+        info: (...a: unknown[]) => write('INFO', ...a),
+        warn: (...a: unknown[]) => write('WARN', ...a),
+        error: (...a: unknown[]) => write('ERROR', ...a),
+        debug: (...a: unknown[]) => write('DEBUG', ...a),
+    }
+}
+
 async function checkSilently() {
     try {
         await autoUpdater.checkForUpdates()
@@ -127,12 +162,36 @@ function registerIpc() {
         return lastStatus
     })
 
+    // User consented to the download.
+    ipcMain.handle('update:download', async () => {
+        if (lastStatus.state !== 'available') return false
+        try {
+            await autoUpdater.downloadUpdate()
+            return true
+        } catch (err: any) {
+            broadcast({ state: 'error', message: err?.message ?? String(err) })
+            return false
+        }
+    })
+
     // User clicked "Restart Now" — quit and install immediately.
     ipcMain.handle('update:restartAndInstall', () => {
         if (lastStatus.state !== 'downloaded') return false
         quittingToInstall = true
-        // isSilent=false shows the installer UI briefly; isForceRunAfter=true
-        // relaunches the app after installing.
+
+        // The main window's 'close' handler calls preventDefault() and hides the
+        // window so the app lives on in the tray. During an update install that
+        // keeps the process alive past the point Squirrel's ShipIt helper waits
+        // for it to exit — the app quits late and never gets relaunched. Drop
+        // those listeners so the quit actually goes through.
+        for (const win of BrowserWindow.getAllWindows()) {
+            if (!win.isDestroyed()) win.removeAllListeners('close')
+        }
+
+        // On macOS both arguments are ignored (MacUpdater delegates to Electron's
+        // native autoUpdater, which relaunches via ShipIt). They apply to the
+        // Windows NSIS installer: isSilent=false shows its UI,
+        // isForceRunAfter=true relaunches afterwards.
         setImmediate(() => autoUpdater.quitAndInstall(false, true))
         return true
     })
