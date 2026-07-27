@@ -11,6 +11,10 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-27
+
+Version 1.0.8 was prepared but never published, so its changes ship here.
+
 ### Added
 
 - Detailed screen-time tracking on macOS, as two independent opt-ins. **Website
@@ -21,17 +25,6 @@ extracts it — so this file is the single source of truth for "what changed".
 - Sites are now identified from the browser's real address rather than guessed
   from the window title, so every site is recognised instead of the 28 that were
   hardcoded.
-
-### Changed
-
-- App-name tracking is unchanged and still needs no permission. With neither
-  opt-in enabled, macOS behaves exactly as before and no permission prompt is
-  ever shown.
-
-## [1.0.8] - 2026-07-27
-
-### Added
-
 - Update prompts now show what's actually in a release. The "Update available"
   card and the Settings updater panel both list the release notes, so you can
   see what you're getting before spending the bandwidth.
@@ -51,6 +44,9 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ### Changed
 
+- App-name tracking is unchanged and still needs no permission. With neither
+  opt-in enabled, macOS behaves exactly as before and no permission prompt is
+  ever shown.
 - Update activity is now written to `~/Library/Logs/Quoril/updater.log`
   (and the OS equivalent elsewhere), so a failed update can be diagnosed after
   the fact instead of vanishing into a packaged app with no console.
@@ -62,6 +58,6 @@ extracts it — so this file is the single source of truth for "what changed".
 - macOS builds are signed and notarized correctly, so auto-update is no longer
   blocked by Gatekeeper.
 
-[Unreleased]: https://github.com/Mohan-gtihub/quoril/compare/v1.0.8...HEAD
-[1.0.8]: https://github.com/Mohan-gtihub/quoril/compare/v1.0.7...v1.0.8
+[Unreleased]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Mohan-gtihub/quoril/compare/v1.0.7...v1.1.0
 [1.0.7]: https://github.com/Mohan-gtihub/quoril/releases/tag/v1.0.7
