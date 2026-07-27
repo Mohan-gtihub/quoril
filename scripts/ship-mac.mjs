@@ -115,7 +115,11 @@ console.log(
 
 /* ── 2. verify ─────────────────────────────────────────────── */
 
-step(2, 'Verifying (typecheck, lint, tests)')
+step(2, 'Verifying (lockfile, typecheck, lint, tests)')
+// First, because it is what CI runs first: a lock the CI npm cannot install
+// fails every workflow before anything is built, and the local npm does not
+// necessarily agree with it.
+run('npm', ['run', 'check:lockfile'])
 run('npm', ['run', 'typecheck'])
 run('npm', ['run', 'lint'])
 run('npm', ['test', '--', '--run'])

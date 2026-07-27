@@ -106,6 +106,35 @@ describe('Node version is consistent across workflows', () => {
     })
 })
 
+/* The lockfile broke CI twice because the local npm and CI's npm disagree on
+   which nested entries a lock must contain. The pinned version in
+   check-lockfile.mjs has to keep matching the Node the workflows install. */
+describe('lockfile check is pinned to the npm CI actually runs', () => {
+    const CHECK = readFileSync('scripts/check-lockfile.mjs', 'utf8')
+
+    it('pins a specific npm major', () => {
+        expect(CHECK).toMatch(/CI_NPM = '(\d+)'/)
+    })
+
+    it('pins the npm that the workflows\' Node ships', () => {
+        const npmMajor = Number(CHECK.match(/CI_NPM = '(\d+)'/)![1])
+        const nodeMajor = Number(
+            readFileSync('.github/workflows/ci.yml', 'utf8').match(/node-version:\s*(\d+)/)![1],
+        )
+        // Node 22 -> npm 10, Node 24 -> npm 11. Bumping one without the other
+        // reintroduces exactly the skew that caused this.
+        const expected: Record<number, number> = { 22: 10, 24: 11 }
+        expect(npmMajor, `Node ${nodeMajor} does not ship npm ${npmMajor}`)
+            .toBe(expected[nodeMajor] ?? npmMajor)
+    })
+
+    it('runs before anything expensive in the release', () => {
+        const ship = readFileSync('scripts/ship-mac.mjs', 'utf8')
+        expect(ship).toContain('check:lockfile')
+        expect(ship.indexOf('check:lockfile')).toBeLessThan(ship.indexOf("'release:mac'"))
+    })
+})
+
 describe('linux is actually shippable', () => {
     it('has a configured target', () => {
         expect(PKG.build.linux.target).toContain('AppImage')
