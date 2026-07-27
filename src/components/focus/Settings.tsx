@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
     ArrowLeft, Play, Check, Palette, Timer, Target,
     Maximize2, Bell, Send, ShieldCheck, CheckCircle2, Plus, Minus,
@@ -429,7 +429,14 @@ function AccountSection() {
 export function Settings() {
     const navigate = useNavigate()
     const settings = useSettingsStore()
-    const [active, setActive] = useState<SectionId>('appearance')
+    // Deep-linkable: /settings?section=about lands on App Tracking, so surfaces
+    // that point at a specific setting (the Screen Time "Open settings" button)
+    // arrive at it rather than dumping the user on Appearance to go hunting.
+    const [searchParams] = useSearchParams()
+    const requested = searchParams.get('section')
+    const [active, setActive] = useState<SectionId>(() =>
+        SECTIONS.some(s => s.id === requested) ? (requested as SectionId) : 'appearance',
+    )
     const [platform, setPlatform] = useState<string>('')
     const { status: updateStatus, check: checkForUpdate, restart: restartToUpdate, download: downloadUpdate } = useAppUpdate()
     // Only electron ships an auto-updater; the web build exposes 'not-available'.

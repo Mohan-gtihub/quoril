@@ -623,11 +623,11 @@ export function ScreenTime() {
                                             </p>
                                             <p className="text-xs text-[var(--text-tertiary)] mt-1.5 max-w-xs leading-relaxed">
                                                 {urlsPending
-                                                    ? 'Grant Quoril Accessibility access in System Settings and this fills in automatically.'
+                                                    ? 'Grant Quoril Accessibility access in System Settings. If you already have, Quoril needs a restart to see it.'
                                                     : 'Turn on website addresses to split browser time into the sites you actually visited. It stays on this device.'}
                                             </p>
                                             <button
-                                                onClick={() => navigate(ROUTES.SETTINGS)}
+                                                onClick={() => navigate(`${ROUTES.SETTINGS}?section=about`)}
                                                 className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-card)] text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-secondary)] border border-[var(--border-default)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] transition-colors"
                                             >
                                                 <SettingsIcon className="w-3.5 h-3.5" />

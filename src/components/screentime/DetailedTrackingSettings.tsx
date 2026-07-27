@@ -84,13 +84,27 @@ export function DetailedTrackingSettings() {
                                         reads "on" while nothing is being collected, so
                                         say so rather than letting it look like it works. */}
                                     {state.enabled && !state.granted && (
-                                        <button
-                                            onClick={() => onToggle(capability, true)}
-                                            className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-primary)] hover:underline underline-offset-2"
-                                        >
-                                            <ExternalLink className="w-3 h-3" />
-                                            Waiting on {copy.permission} permission — open System Settings
-                                        </button>
+                                        <div className="mt-2 flex flex-col items-start gap-1.5">
+                                            <button
+                                                onClick={() => onToggle(capability, true)}
+                                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-primary)] hover:underline underline-offset-2"
+                                            >
+                                                <ExternalLink className="w-3 h-3" />
+                                                Waiting on {copy.permission} permission — open System Settings
+                                            </button>
+                                            {/* macOS caches a process's Accessibility trust, so a grant made
+                                                while Quoril is running is sometimes invisible until it
+                                                restarts. Screen Recording always needs one. Rather than
+                                                leave someone staring at "waiting" after they have already
+                                                granted it, offer the restart directly. */}
+                                            <button
+                                                onClick={() => relaunch()}
+                                                className="inline-flex items-center gap-1.5 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                                            >
+                                                <RotateCw className="w-3 h-3" />
+                                                Already granted it? Restart Quoril to pick it up
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             </div>

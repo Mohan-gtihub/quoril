@@ -17,6 +17,9 @@ import type { DetailCapability, TrackingDetail } from '@/services/platform/types
  *            'needs-relaunch' outcome the caller has to surface.
  */
 
+/** How often to re-check the OS grant while a consumer is mounted. */
+const POLL_MS = 2000
+
 export type EnableOutcome =
     | { status: 'enabled' }
     | { status: 'disabled' }
@@ -38,12 +41,25 @@ export function useTrackingDetail() {
 
     useEffect(() => { void refresh() }, [refresh])
 
-    // A grant made in System Settings produces no event in our process, so
-    // re-check whenever the user comes back to the window.
+    // A grant made in System Settings produces no event in our process, so we
+    // have to go looking for it.
+    //
+    // Window 'focus' alone proved unreliable: it does not fire if the window
+    // never lost focus (System Settings opening on another Space, or the user
+    // toggling the switch without clicking back into Quoril first), which left
+    // the card stuck on "waiting on permission" after the permission was
+    // actually granted. So poll as well — a cheap main-process call, and only
+    // while something is mounted that cares.
     useEffect(() => {
         const onFocus = () => { void refresh() }
         window.addEventListener('focus', onFocus)
-        return () => window.removeEventListener('focus', onFocus)
+        document.addEventListener('visibilitychange', onFocus)
+        const timer = setInterval(onFocus, POLL_MS)
+        return () => {
+            window.removeEventListener('focus', onFocus)
+            document.removeEventListener('visibilitychange', onFocus)
+            clearInterval(timer)
+        }
     }, [refresh])
 
     const setEnabled = useCallback(

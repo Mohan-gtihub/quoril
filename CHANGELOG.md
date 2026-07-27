@@ -11,6 +11,15 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ## [Unreleased]
 
+### Fixed
+
+- "Open settings" from the Screen Time cards now lands on App Tracking instead
+  of the Appearance tab.
+- A permission granted in System Settings is now noticed while Quoril is
+  running, rather than only when the window happens to regain focus. Where
+  macOS refuses to report it until the app restarts, the card offers to
+  restart rather than leaving you waiting on something already granted.
+
 ## [1.1.1] - 2026-07-27
 
 ### Fixed
