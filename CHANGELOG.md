@@ -11,6 +11,19 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-07-28
+
+### Added
+
+- Windows builds are now published with every release, so Quoril for Windows
+  updates itself automatically like macOS and Linux.
+
+### Fixed
+
+- The update checker no longer shows a technical error when the release feed is
+  briefly unavailable. Transient problems are handled quietly in the background;
+  only an explicit "Check for updates" reports them.
+
 ## [1.1.3] - 2026-07-27
 
 ### Added
