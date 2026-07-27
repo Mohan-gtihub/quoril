@@ -1,7 +1,7 @@
 import activeWin from 'active-win'
 import { powerMonitor } from 'electron'
 import { execFile } from 'node:child_process'
-import { resolveDetail } from './trackingDetail'
+import { resolveDetail, recordObservation } from './trackingDetail'
 
 const IDLE_THRESHOLD_S = 180 // 3 minutes
 
@@ -182,6 +182,12 @@ function hostnameOf(url: string): string | null {
     }
 }
 
+/** Is this app one whose frontmost window can have a URL at all? */
+function isBrowser(rawApp: string): boolean {
+    const n = normalize(rawApp)
+    return CATEGORY_MAP[n] === "Web" || n.includes("browser") || n.includes("chrome")
+}
+
 function detectSite(title: string) {
     for (const s of SITE_PATTERNS) {
         if (s.match.test(title)) return s.name
@@ -325,6 +331,18 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
         const title = win.title || ""
         // `url` exists only on the macOS browser path; absent elsewhere.
         const url = (win as { url?: string }).url
+
+        // Report what we actually got. This is the authoritative answer to "is
+        // the permission working" — more so than systemPreferences, which
+        // describes this process rather than active-win's helper binary.
+        if (process.platform === "darwin") {
+            if (detail.titles) recordObservation("titles", title !== "")
+            // A url only exists when a browser is frontmost, so its absence
+            // elsewhere proves nothing and must not be recorded as a failure.
+            if (detail.urls && isBrowser(rawApp)) {
+                recordObservation("urls", typeof url === "string" && url !== "")
+            }
+        }
 
         if (isIdle) return idleWindow(rawApp, rawPath)
 

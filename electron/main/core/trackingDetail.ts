@@ -100,26 +100,63 @@ export function requestAccessibility(): boolean {
     }
 }
 
+/* ---------------- OBSERVED CAPABILITY ---------------- */
+
+/**
+ * Whether we have actually seen this capability produce data.
+ *
+ * systemPreferences answers a question about *this* process, but the process
+ * that needs the permission is active-win's helper binary — a separate
+ * executable with its own code signature, spawned per pulse. The two answers
+ * can disagree, and when they do the permission API is the one that's wrong:
+ * the helper has been observed returning window titles while
+ * isTrustedAccessibilityClient() reported false for the main process.
+ *
+ * So the collector reports what it actually got, and that observation wins.
+ * null means "no evidence yet" — we fall back to the permission API, which is
+ * still the best guess before the first pulse.
+ */
+const observed: Record<DetailCapability, boolean | null> = { titles: null, urls: null }
+
+export function recordObservation(capability: DetailCapability, succeeded: boolean) {
+    observed[capability] = succeeded
+}
+
+/** Forget observations — used when an opt-in is toggled, so stale evidence
+ *  from a previous state does not linger. */
+export function clearObservations() {
+    observed.titles = null
+    observed.urls = null
+}
+
+function isCapabilityLive(capability: DetailCapability): boolean {
+    return observed[capability] ?? isGranted(capability)
+}
+
 /* ---------------- QUERIES ---------------- */
 
 export function getTrackingDetail(): TrackingDetail {
     return {
-        titles: { enabled: readFlag('titles'), granted: isGranted('titles') },
-        urls: { enabled: readFlag('urls'), granted: isGranted('urls') },
+        titles: { enabled: readFlag('titles'), granted: isCapabilityLive('titles') },
+        urls: { enabled: readFlag('urls'), granted: isCapabilityLive('urls') },
     }
 }
 
 /**
- * What the collector is actually allowed to ask for right now.
+ * What the collector should ask active-win for.
  *
- * A capability is live only when the user opted in AND the OS granted it.
- * If the user revokes the permission in System Settings, the flag stays on but
- * this returns false, so we silently degrade instead of re-prompting.
+ * This is the user's opt-in ALONE — deliberately not AND-ed with the permission
+ * check. Gating the request on the permission API made the failure
+ * self-fulfilling: a false reading meant active-win was never called, so the
+ * permission was never exercised, so nothing could ever change the reading.
+ *
+ * Asking is also what lets macOS prompt in the first place, and asking without
+ * permission is harmless — the field simply comes back empty, which is exactly
+ * the signal recordObservation() needs.
  */
 export function resolveDetail(): Record<DetailCapability, boolean> {
-    const detail = getTrackingDetail()
     return {
-        titles: detail.titles.enabled && detail.titles.granted,
-        urls: detail.urls.enabled && detail.urls.granted,
+        titles: readFlag('titles'),
+        urls: readFlag('urls'),
     }
 }

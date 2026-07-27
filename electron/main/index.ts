@@ -21,6 +21,7 @@ import { trackingEngine } from './core/core'
 import {
     getTrackingDetail,
     setFlag,
+    clearObservations,
     requestAccessibility,
     type DetailCapability,
 } from './core/trackingDetail'
@@ -978,6 +979,9 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
                 throw new Error(`Unknown tracking capability: ${capability}`)
             }
             setFlag(capability, enabled)
+            // Evidence gathered under the previous setting says nothing about
+            // the new one — drop it so the UI reports from a clean slate.
+            clearObservations()
             // Pick up the new capability set on the next pulse.
             trackingEngine.start()
             return getTrackingDetail()

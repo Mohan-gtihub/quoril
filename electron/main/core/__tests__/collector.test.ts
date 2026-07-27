@@ -11,6 +11,8 @@ const state = vi.hoisted(() => ({
   // What the user has opted into AND been granted. Both off is the default
   // install state, which must stay entirely permission-free.
   detail: { titles: false, urls: false },
+  /** What the collector reported back about each capability actually working. */
+  observations: [] as Array<[string, boolean]>,
 }));
 
 vi.mock("electron", () => ({
@@ -22,6 +24,9 @@ vi.mock("electron", () => ({
 // its resolved answer, so stub that rather than standing up a database.
 vi.mock("../trackingDetail", () => ({
   resolveDetail: () => state.detail,
+  recordObservation: (capability: string, ok: boolean) => {
+    state.observations.push([capability, ok]);
+  },
 }));
 
 vi.mock("active-win", () => ({
@@ -54,6 +59,7 @@ beforeEach(() => {
   state.lsName = '"LSDisplayName"="Code"';
   state.execCalls = [];
   state.detail = { titles: false, urls: false };
+  state.observations = [];
   vi.clearAllMocks();
 });
 

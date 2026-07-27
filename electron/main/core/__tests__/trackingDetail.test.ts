@@ -40,6 +40,8 @@ import {
   isGranted,
   requestAccessibility,
   resolveDetail,
+  recordObservation,
+  clearObservations,
 } from "../trackingDetail";
 
 const origPlatform = process.platform;
@@ -54,6 +56,7 @@ beforeEach(() => {
   state.screenStatus = "denied";
   state.throwOnRead = false;
   state.promptArgs = [];
+  clearObservations();
   setPlatform("darwin");
 });
 
@@ -123,33 +126,85 @@ describe("requestAccessibility", () => {
   });
 });
 
+/* resolveDetail is what the collector asks active-win for. It is the opt-in
+   ALONE, deliberately not AND-ed with the permission check.
+
+   Gating the request on systemPreferences made the failure self-fulfilling: a
+   false reading meant active-win was never called, so the permission was never
+   exercised, so nothing could ever change the reading. That shipped, and left
+   users staring at "waiting on permission" they had already granted. */
 describe("resolveDetail", () => {
-  it("requires both the opt-in and the OS grant", () => {
+  it("follows the opt-in alone, so the capability is actually exercised", () => {
     expect(resolveDetail()).toEqual({ titles: false, urls: false });
 
     setFlag("urls", true);
-    // Opted in, not granted → still off.
-    expect(resolveDetail().urls).toBe(false);
-
-    state.accessibilityTrusted = true;
+    // Not granted according to systemPreferences — we ask anyway.
+    expect(state.accessibilityTrusted).toBe(false);
     expect(resolveDetail().urls).toBe(true);
   });
 
-  it("degrades silently when a permission is revoked in System Settings", () => {
-    setFlag("urls", true);
+  it("asks for nothing that was not opted into", () => {
     state.accessibilityTrusted = true;
-    expect(resolveDetail().urls).toBe(true);
-
-    // User revokes it; the stored opt-in is untouched but collection stops.
-    state.accessibilityTrusted = false;
-    expect(resolveDetail().urls).toBe(false);
-    expect(getTrackingDetail().urls.enabled).toBe(true);
+    state.screenStatus = "granted";
+    expect(resolveDetail()).toEqual({ titles: false, urls: false });
   });
 
-  it("is granted-by-default off macOS, so the flag alone decides", () => {
+  it("keeps the two capabilities independent", () => {
+    setFlag("titles", true);
+    expect(resolveDetail()).toEqual({ titles: true, urls: false });
+  });
+
+  it("behaves the same off macOS", () => {
     setPlatform("win32");
     expect(resolveDetail().titles).toBe(false);
     setFlag("titles", true);
     expect(resolveDetail().titles).toBe(true);
+  });
+});
+
+/* What the UI reports as "granted". An observation from the collector beats
+   systemPreferences, because systemPreferences describes THIS process while the
+   permission is actually exercised by active-win's separate helper binary, and
+   the two have been observed disagreeing on a real machine. */
+describe("observed capability", () => {
+  beforeEach(() => clearObservations());
+
+  it("falls back to the permission API before any evidence exists", () => {
+    state.accessibilityTrusted = true;
+    expect(getTrackingDetail().urls.granted).toBe(true);
+
+    state.accessibilityTrusted = false;
+    expect(getTrackingDetail().urls.granted).toBe(false);
+  });
+
+  it("lets a successful observation override a false permission reading", () => {
+    state.accessibilityTrusted = false;
+    expect(getTrackingDetail().urls.granted).toBe(false);
+
+    recordObservation("urls", true);
+    expect(getTrackingDetail().urls.granted).toBe(true);
+  });
+
+  it("lets a failed observation override a true permission reading", () => {
+    state.accessibilityTrusted = true;
+    recordObservation("urls", false);
+    expect(getTrackingDetail().urls.granted).toBe(false);
+  });
+
+  it("keeps observations per capability", () => {
+    state.accessibilityTrusted = false;
+    state.screenStatus = "denied";
+    recordObservation("titles", true);
+    expect(getTrackingDetail().titles.granted).toBe(true);
+    expect(getTrackingDetail().urls.granted).toBe(false);
+  });
+
+  it("clears back to the permission API, so stale evidence cannot linger", () => {
+    recordObservation("urls", true);
+    state.accessibilityTrusted = false;
+    expect(getTrackingDetail().urls.granted).toBe(true);
+
+    clearObservations();
+    expect(getTrackingDetail().urls.granted).toBe(false);
   });
 });

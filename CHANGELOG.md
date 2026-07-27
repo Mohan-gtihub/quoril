@@ -11,6 +11,15 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ## [Unreleased]
 
+### Fixed
+
+- Detailed tracking no longer reports "waiting on permission" for a permission
+  you have already granted. Quoril was asking whether its own process had
+  Accessibility, but the permission is exercised by a separate helper program,
+  and the two answers can disagree. Worse, that check gated the request itself,
+  so the capability was never attempted and the reading could never change.
+  Quoril now simply asks for what you enabled and reports what it actually got.
+
 ## [1.1.2] - 2026-07-27
 
 ### Fixed
