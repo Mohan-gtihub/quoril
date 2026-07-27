@@ -26,6 +26,12 @@ export const webPlatform: Platform = {
     async getData() { return UNAVAILABLE },
     isTrackingAvailable() { return false },
     isDetailTrackingAvailable() { return false },
+    // The browser cannot observe other apps at all, so there is nothing to opt into.
+    async getTrackingDetail() { return null },
+    async setTrackingDetail() { return null },
+    async requestAccessibility() { return null },
+    async openPrivacySettings() { return false },
+    async relaunch() { },
   },
   focusWindow: {
     setAlwaysOnTop() { return UNAVAILABLE },

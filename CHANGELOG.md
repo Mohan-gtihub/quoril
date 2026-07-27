@@ -11,6 +11,23 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ## [Unreleased]
 
+### Added
+
+- Detailed screen-time tracking on macOS, as two independent opt-ins. **Website
+  addresses** breaks browser time into the sites you actually visited instead of
+  one block per browser; **window titles** records the active window's title.
+  Both are off by default, and everything they collect stays in the local
+  database on this device — none of it is uploaded.
+- Sites are now identified from the browser's real address rather than guessed
+  from the window title, so every site is recognised instead of the 28 that were
+  hardcoded.
+
+### Changed
+
+- App-name tracking is unchanged and still needs no permission. With neither
+  opt-in enabled, macOS behaves exactly as before and no permission prompt is
+  ever shown.
+
 ## [1.0.8] - 2026-07-27
 
 ### Added

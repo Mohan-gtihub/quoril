@@ -8,11 +8,20 @@ const state = vi.hoisted(() => ({
   lsFront: "ASN:0x0-0x1:",
   lsName: '"LSDisplayName"="Code"',
   execCalls: [] as string[][],
+  // What the user has opted into AND been granted. Both off is the default
+  // install state, which must stay entirely permission-free.
+  detail: { titles: false, urls: false },
 }));
 
 vi.mock("electron", () => ({
   powerMonitor: { getSystemIdleTime: () => state.idle },
   systemPreferences: { isTrustedAccessibilityClient: () => state.trusted },
+}));
+
+// trackingDetail reads the SQLite db_meta table; the collector only cares about
+// its resolved answer, so stub that rather than standing up a database.
+vi.mock("../trackingDetail", () => ({
+  resolveDetail: () => state.detail,
 }));
 
 vi.mock("active-win", () => ({
@@ -44,6 +53,8 @@ beforeEach(() => {
   state.lsFront = "ASN:0x0-0x1:";
   state.lsName = '"LSDisplayName"="Code"';
   state.execCalls = [];
+  state.detail = { titles: false, urls: false };
+  vi.clearAllMocks();
 });
 
 /* ── pure helpers ────────────────────────────────────────── */
@@ -78,6 +89,37 @@ describe("categorize", () => {
   it("returns Other for unknown app with no title", () => {
     expect(categorize("TotallyUnknownApp").category).toBe("Other");
     expect(categorize("TotallyUnknownApp").domain).toBeUndefined();
+  });
+
+  /* A real url beats guessing from the title. The title heuristic only knows
+     SITE_PATTERNS; a url covers every site on the web. */
+  it("prefers the url over the title when both are present", () => {
+    const r = categorize("Google Chrome", "Some Misleading YouTube Title", "https://github.com/a/b");
+    expect(r.domain).toBe("GitHub");
+    expect(r.category).toBe("Development");
+  });
+
+  it("keeps the friendly name and category for a known host", () => {
+    const r = categorize("Google Chrome", "", "https://www.youtube.com/feed");
+    expect(r.domain).toBe("YouTube");
+    expect(r.category).toBe("Entertainment");
+  });
+
+  it("records an unknown host by bare hostname, minus www.", () => {
+    const r = categorize("Google Chrome", "", "https://www.some-intranet.example.org/x");
+    expect(r.domain).toBe("some-intranet.example.org");
+    expect(r.category).toBe("Web");
+  });
+
+  it("ignores non-web schemes rather than recording them as sites", () => {
+    expect(categorize("Google Chrome", "", "about:blank").domain).toBeUndefined();
+    expect(categorize("Google Chrome", "", "file:///Users/x/a.html").domain).toBeUndefined();
+    expect(categorize("Google Chrome", "", "chrome://settings").domain).toBeUndefined();
+  });
+
+  it("falls back to the title when the url is unparseable", () => {
+    const r = categorize("Google Chrome", "rick astley - YouTube", "not a url");
+    expect(r.domain).toBe("YouTube");
   });
 });
 
@@ -130,15 +172,17 @@ describe("getActiveWindow — macOS without permission", () => {
   });
 });
 
-/* ── macOS always uses lsappinfo, never active-win ───────────
-   active-win is never called on darwin — its native helper triggers the
-   Accessibility prompt, which can't persist on unsigned builds. App tracking
-   stays permission-free via lsappinfo even when Accessibility is "granted". */
+/* ── macOS with detail off never calls active-win ────────────
+   This is the prompt-avoidance guarantee and the most important property in
+   this file. Asking active-win for a title or url is what triggers the macOS
+   permission dialog, so with neither capability opted into we must not call it
+   at all — not even when the OS happens to trust us already. */
 
-describe("getActiveWindow — macOS never calls active-win", () => {
+describe("getActiveWindow — macOS never calls active-win when detail is off", () => {
   beforeEach(() => {
     setPlatform("darwin");
-    state.trusted = true; // even when trusted, we still use lsappinfo
+    state.trusted = true; // even when trusted, detail is off → lsappinfo only
+    state.detail = { titles: false, urls: false };
   });
 
   it("uses lsappinfo and never invokes active-win", async () => {
@@ -165,6 +209,64 @@ describe("getActiveWindow — macOS never calls active-win", () => {
   it("returns null when lsappinfo yields no app", async () => {
     state.lsFront = "";
     expect(await getActiveWindow()).toBeNull();
+  });
+});
+
+/* ── macOS with detail opted into ────────────────────────── */
+
+describe("getActiveWindow — macOS with detail enabled", () => {
+  beforeEach(() => {
+    setPlatform("darwin");
+    state.activeWinResult = {
+      owner: { name: "Google Chrome", path: "/Applications/Chrome.app" },
+      title: "rick astley - YouTube",
+      url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    };
+  });
+
+  it("asks active-win only for the capabilities that are live", async () => {
+    state.detail = { titles: false, urls: true };
+    await getActiveWindow();
+
+    const activeWin = (await import("active-win")).default as any;
+    // Requesting a title is what prompts for Screen Recording — it must stay off.
+    expect(activeWin).toHaveBeenCalledWith({
+      screenRecordingPermission: false,
+      accessibilityPermission: true,
+    });
+  });
+
+  it("derives the domain from the real url, not the title", async () => {
+    state.detail = { titles: false, urls: true };
+    const r = await getActiveWindow();
+    expect(r?.domain).toBe("YouTube");
+    expect(r?.category).toBe("Entertainment");
+  });
+
+  it("uses lsappinfo no more once active-win is driving", async () => {
+    state.detail = { titles: true, urls: true };
+    await getActiveWindow();
+    expect(state.execCalls.length).toBe(0);
+  });
+
+  it("passes both options through when both are live", async () => {
+    state.detail = { titles: true, urls: true };
+    const r = await getActiveWindow();
+
+    const activeWin = (await import("active-win")).default as any;
+    expect(activeWin).toHaveBeenCalledWith({
+      screenRecordingPermission: true,
+      accessibilityPermission: true,
+    });
+    expect(r?.title).toBe("rick astley - YouTube");
+  });
+
+  it("still returns Idle when the system is idle", async () => {
+    state.detail = { titles: true, urls: true };
+    state.idle = 600;
+    const r = await getActiveWindow();
+    expect(r?.isIdle).toBe(true);
+    expect(r?.category).toBe("Idle");
   });
 });
 

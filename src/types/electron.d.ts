@@ -1,3 +1,5 @@
+import type { DetailCapability, TrackingDetail } from '@/services/platform/types'
+
 export interface ElectronAPI {
     reports: any
     window: {
@@ -80,8 +82,11 @@ export interface ElectronAPI {
         getLiveSession: () => Promise<any>
     }
     permissions: {
-        checkAccessibility: () => Promise<boolean>
-        requestAccessibility: () => Promise<boolean>
+        getTrackingDetail: () => Promise<TrackingDetail>
+        setTrackingDetail: (capability: DetailCapability, enabled: boolean) => Promise<TrackingDetail>
+        requestAccessibility: () => Promise<{ granted: boolean; detail: TrackingDetail }>
+        openPrivacySettings: (capability: DetailCapability) => Promise<boolean>
+        relaunch: () => Promise<void>
         startTracking: () => Promise<boolean>
     }
     screenTime: {

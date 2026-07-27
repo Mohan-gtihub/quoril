@@ -27,12 +27,39 @@ export interface ScreenTimePort {
   /** App-level tracking — which apps are used. Works on all desktop platforms. */
   isTrackingAvailable(): boolean | Promise<boolean>
   /**
-   * Detailed tracking — window titles + in-browser website/domain detection.
-   * Available on Windows/Linux and on macOS once Accessibility is granted; not
-   * available on the permission-free macOS (lsappinfo) path or on web.
+   * True when at least one detail capability is both opted into and granted.
+   * Use getTrackingDetail() when you need to distinguish the two.
    */
   isDetailTrackingAvailable(): boolean | Promise<boolean>
+
+  // These are uniformly async and use null/false rather than the Unavailable
+  // sentinel: they are driven by a user toggling a switch, and a caller in that
+  // position wants "no, and here's the state" rather than a branch on a marker.
+
+  /** Per-capability opt-in and OS-grant state. Null where unsupported (web). */
+  getTrackingDetail(): Promise<TrackingDetail | null>
+  /** Persist an opt-in and restart the tracking engine. Returns the new state. */
+  setTrackingDetail(
+    capability: DetailCapability,
+    enabled: boolean,
+  ): Promise<TrackingDetail | null>
+  /** Surface the macOS Accessibility prompt. Explicit user action only. */
+  requestAccessibility(): Promise<{ granted: boolean; detail: TrackingDetail } | null>
+  /** Deep-link to the relevant macOS Privacy pane (Screen Recording has no prompt API). */
+  openPrivacySettings(capability: DetailCapability): Promise<boolean>
+  /** Restart the app — required before a Screen Recording grant takes effect. */
+  relaunch(): Promise<void>
 }
+
+/**
+ * Detailed tracking capabilities. Each maps to a different macOS permission:
+ *   titles → Screen Recording (window titles)
+ *   urls   → Accessibility    (browser website addresses)
+ * `enabled` is the user's opt-in; `granted` is the OS. Detail is collected only
+ * when both are true.
+ */
+export type DetailCapability = 'titles' | 'urls'
+export type TrackingDetail = Record<DetailCapability, { enabled: boolean; granted: boolean }>
 
 export interface FocusWindowPort {
   setAlwaysOnTop(flag: boolean): void | Unavailable

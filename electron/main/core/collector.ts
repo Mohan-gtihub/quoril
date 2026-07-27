@@ -1,6 +1,7 @@
 import activeWin from 'active-win'
 import { powerMonitor } from 'electron'
 import { execFile } from 'node:child_process'
+import { resolveDetail } from './trackingDetail'
 
 const IDLE_THRESHOLD_S = 180 // 3 minutes
 
@@ -165,6 +166,22 @@ function normalize(name: string) {
         .trim()
 }
 
+/**
+ * Hostname of a browser URL, without the "www." prefix. Returns null for
+ * anything unparseable and for non-web schemes (about:blank, file://, the
+ * chrome:// pages), which would otherwise be recorded as if they were sites.
+ */
+function hostnameOf(url: string): string | null {
+    try {
+        const parsed = new URL(url)
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
+        const host = parsed.hostname.replace(/^www\./i, '').toLowerCase()
+        return host || null
+    } catch {
+        return null
+    }
+}
+
 function detectSite(title: string) {
     for (const s of SITE_PATTERNS) {
         if (s.match.test(title)) return s.name
@@ -180,6 +197,7 @@ function detectSite(title: string) {
 export function categorize(
     rawApp: string,
     title: string = "",
+    url?: string,
 ): { category: ActiveWindow["category"]; domain?: string } {
     const normalizedApp = normalize(rawApp)
 
@@ -187,9 +205,19 @@ export function categorize(
     let category: ActiveWindow["category"] = CATEGORY_MAP[normalizedApp] || "Other"
     let domain: string | undefined
 
-    // 2. Browser → detect the site from the title (needs a title).
+    // 2. Browser → identify the site.
     if (category === "Web" || normalizedApp.includes("browser") || normalizedApp.includes("chrome")) {
-        const site = detectSite(title)
+        // A real URL is exact and covers every site; detectSite() only recognises
+        // SITE_PATTERNS and guesses from the window title. So the url wins when we
+        // have one — Windows/Linux never do, and macOS doesn't until the user opts
+        // into Accessibility.
+        //
+        // The hostname is still run through detectSite() first: SITE_PATTERNS are
+        // substring regexes that match hostnames ("youtube.com" → "YouTube"), which
+        // preserves the friendly name and its SITE_TO_CATEGORY entry. Only genuinely
+        // unknown hosts fall back to the bare hostname, categorised as plain Web.
+        const host = url ? hostnameOf(url) : null
+        const site = (host ? detectSite(host) ?? host : null) ?? detectSite(title)
         if (site) {
             domain = site
             category = SITE_TO_CATEGORY[site] || "Web"
@@ -257,14 +285,18 @@ async function macFrontmostAppName(): Promise<string | null> {
 export async function getActiveWindow(): Promise<ActiveWindow | null> {
     try {
         const isIdle = powerMonitor.getSystemIdleTime() > IDLE_THRESHOLD_S
+        const detail = resolveDetail()
 
-        // macOS: always use the permission-free app-name source (lsappinfo) and
-        // never call active-win. active-win's native helper invokes Accessibility
-        // APIs, which repeatedly surfaces the system permission prompt on unsigned
-        // builds (the grant can't persist without Developer ID notarization). We
-        // trade window titles / website detection for a prompt-free experience;
-        // app-level screen time still records fully.
-        if (process.platform === "darwin") {
+        // macOS with neither capability live: use the permission-free app-name
+        // source (lsappinfo) and never call active-win at all. active-win's native
+        // helper reaches for Screen Recording / Accessibility as a side effect of
+        // being asked for a title or url, which surfaces a system prompt. Staying
+        // out of it entirely is what keeps default tracking prompt-free.
+        //
+        // resolveDetail() is already AND-ed with the live OS grant, so a user who
+        // opted in and later revoked the permission lands back here rather than
+        // being re-prompted on a background pulse.
+        if (process.platform === "darwin" && !detail.titles && !detail.urls) {
             const appName = await macFrontmostAppName()
             if (!appName) return null
             if (isIdle) return idleWindow(appName)
@@ -278,17 +310,25 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
             }
         }
 
-        // Full path: active-win gives app name + window title (+ site detection).
-        const win = await activeWin()
+        // Detailed path. The two options map to two different macOS permissions:
+        // screenRecordingPermission gates `title`, accessibilityPermission gates
+        // `url`. Passing false leaves the corresponding field empty rather than
+        // prompting. On Windows/Linux both resolve true and the options are inert.
+        const win = await activeWin({
+            screenRecordingPermission: detail.titles,
+            accessibilityPermission: detail.urls,
+        })
         if (!win) return null
 
         const rawApp = win.owner.name
         const rawPath = win.owner.path
         const title = win.title || ""
+        // `url` exists only on the macOS browser path; absent elsewhere.
+        const url = (win as { url?: string }).url
 
         if (isIdle) return idleWindow(rawApp, rawPath)
 
-        const { category, domain } = categorize(rawApp, title)
+        const { category, domain } = categorize(rawApp, title, url)
         return {
             appName: rawApp.replace(".exe", ""),
             title,

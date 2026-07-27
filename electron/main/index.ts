@@ -18,6 +18,12 @@ import { fileURLToPath } from 'url'
 
 import { initDatabase, dbOps } from './db'
 import { trackingEngine } from './core/core'
+import {
+    getTrackingDetail,
+    setFlag,
+    requestAccessibility,
+    type DetailCapability,
+} from './core/trackingDetail'
 import { registerCanvasIpc } from './canvas/ipc'
 import { generateInsights } from './insights'
 import { initAutoUpdate } from './updater'
@@ -959,19 +965,48 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
         return url
     })
 
-    /* App-tracking permission. macOS uses the permission-free lsappinfo path, so we
-       intentionally never request Accessibility there — the prompt can't persist on
-       unsigned builds and detailed (title/website) tracking is disabled on mac. */
+    /* App-tracking permissions. Baseline tracking (app names) needs no permission
+       on any platform. The two *detail* capabilities are opt-in and each maps to a
+       different macOS permission — see electron/main/core/trackingDetail.ts. */
 
-    ipcMain.handle('permissions:checkAccessibility', () => {
-        // On macOS we never use Accessibility, so detailed tracking is unavailable.
-        if (process.platform === 'darwin') return false
+    ipcMain.handle('permissions:getTrackingDetail', () => getTrackingDetail())
+
+    ipcMain.handle(
+        'permissions:setTrackingDetail',
+        (_, capability: DetailCapability, enabled: boolean) => {
+            if (capability !== 'titles' && capability !== 'urls') {
+                throw new Error(`Unknown tracking capability: ${capability}`)
+            }
+            setFlag(capability, enabled)
+            // Pick up the new capability set on the next pulse.
+            trackingEngine.start()
+            return getTrackingDetail()
+        },
+    )
+
+    /* Surfaces the macOS Accessibility prompt. Only ever called from an explicit
+       user action; every status read elsewhere is prompt-free. */
+    ipcMain.handle('permissions:requestAccessibility', () => {
+        const granted = requestAccessibility()
+        return { granted, detail: getTrackingDetail() }
+    })
+
+    /* Screen Recording has no request API — the user grants it in System Settings.
+       Deep-link straight to the right pane instead of making them hunt for it. */
+    ipcMain.handle('permissions:openPrivacySettings', (_, capability: DetailCapability) => {
+        if (process.platform !== 'darwin') return false
+        const pane =
+            capability === 'titles' ? 'Privacy_ScreenCapture' : 'Privacy_Accessibility'
+        shell.openExternal(
+            `x-apple.systempreferences:com.apple.preference.security?${pane}`,
+        )
         return true
     })
 
-    ipcMain.handle('permissions:requestAccessibility', () => {
-        // No-op: never surface the macOS Accessibility prompt.
-        return false
+    /* Screen Recording only takes effect after a restart. */
+    ipcMain.handle('permissions:relaunch', () => {
+        app.relaunch()
+        app.exit(0)
     })
 
     ipcMain.handle('permissions:startTracking', () => {

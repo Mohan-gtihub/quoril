@@ -11,6 +11,7 @@ import { platform as appPlatform } from '@/services/platform'
 import { APP_NAME, APP_VERSION } from '@/constants'
 import { logger } from '@/services/logger'
 import { ReleaseNotes } from '@/components/updates/ReleaseNotes'
+import { DetailedTrackingSettings } from '@/components/screentime/DetailedTrackingSettings'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -770,18 +771,25 @@ export function Settings() {
                                 )}
 
                                 {activeSection.id === 'about' && (
-                                    <Group title="App tracking">
-                                        <div className="flex items-center gap-3 py-4">
-                                            <CheckCircle2 className="w-5 h-5 text-[var(--accent-primary)] shrink-0" />
-                                            <div>
-                                                <p className="text-sm font-semibold text-[var(--text-primary)]">App tracking active</p>
-                                                <p className="text-xs text-[var(--text-tertiary)] mt-0.5 leading-relaxed">
-                                                    App usage is captured automatically and stays local on this device — no permission needed.
-                                                    Window titles and website detection aren’t available on macOS.
-                                                </p>
+                                    <>
+                                        <Group title="App tracking">
+                                            <div className="flex items-center gap-3 py-4">
+                                                <CheckCircle2 className="w-5 h-5 text-[var(--accent-primary)] shrink-0" />
+                                                <div>
+                                                    <p className="text-sm font-semibold text-[var(--text-primary)]">App tracking active</p>
+                                                    <p className="text-xs text-[var(--text-tertiary)] mt-0.5 leading-relaxed">
+                                                        App usage is captured automatically and stays local on this device — no permission needed.
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </Group>
+                                        </Group>
+
+                                        {isDesktop && (
+                                            <Group title="Detailed tracking">
+                                                <DetailedTrackingSettings />
+                                            </Group>
+                                        )}
+                                    </>
                                 )}
 
                                 {activeSection.id === 'updates' && (

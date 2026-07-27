@@ -136,10 +136,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
         getLiveSession: () => ipcRenderer.invoke('tracker:getLiveSession'),
     },
 
-    // Permissions (macOS accessibility for app tracking)
+    // Permissions. Baseline app tracking needs none; the two detail capabilities
+    // (window titles, website addresses) are opt-in and macOS-gated.
     permissions: {
-        checkAccessibility: () => ipcRenderer.invoke('permissions:checkAccessibility'),
-        requestAccessibility: () => ipcRenderer.invoke('permissions:requestAccessibility'),
+        getTrackingDetail: (): Promise<TrackingDetail> =>
+            ipcRenderer.invoke('permissions:getTrackingDetail'),
+        setTrackingDetail: (capability: DetailCapability, enabled: boolean): Promise<TrackingDetail> =>
+            ipcRenderer.invoke('permissions:setTrackingDetail', capability, enabled),
+        requestAccessibility: (): Promise<{ granted: boolean; detail: TrackingDetail }> =>
+            ipcRenderer.invoke('permissions:requestAccessibility'),
+        openPrivacySettings: (capability: DetailCapability): Promise<boolean> =>
+            ipcRenderer.invoke('permissions:openPrivacySettings', capability),
+        relaunch: (): Promise<void> => ipcRenderer.invoke('permissions:relaunch'),
         startTracking: () => ipcRenderer.invoke('permissions:startTracking'),
     },
 
@@ -214,6 +222,10 @@ contextBridge.exposeInMainWorld('electron', {
 })
 
 // Type definitions for TypeScript
+
+// Mirrors TrackingDetail in electron/main/core/trackingDetail.ts.
+export type DetailCapability = 'titles' | 'urls'
+export type TrackingDetail = Record<DetailCapability, { enabled: boolean; granted: boolean }>
 
 // Mirrors UpdateStatus in electron/main/updater.ts.
 export type UpdateStatus =
@@ -312,8 +324,11 @@ export interface ElectronAPI {
         getLiveSession: () => Promise<any>
     }
     permissions: {
-        checkAccessibility: () => Promise<boolean>
-        requestAccessibility: () => Promise<boolean>
+        getTrackingDetail: () => Promise<TrackingDetail>
+        setTrackingDetail: (capability: DetailCapability, enabled: boolean) => Promise<TrackingDetail>
+        requestAccessibility: () => Promise<{ granted: boolean; detail: TrackingDetail }>
+        openPrivacySettings: (capability: DetailCapability) => Promise<boolean>
+        relaunch: () => Promise<void>
         startTracking: () => Promise<boolean>
     }
     auth: {

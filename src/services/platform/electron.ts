@@ -28,13 +28,32 @@ export const electronPlatform: Platform = {
     // App-level tracking works on every desktop platform — on macOS the
     // permission-free lsappinfo path records app usage even without Accessibility.
     async isTrackingAvailable() { return true },
-    // Window titles + website detection need active-win, which on macOS requires
-    // Accessibility. Windows/Linux always have it; web never does.
+    // Window titles and website addresses are two separate opt-ins, each gated by
+    // a different macOS permission. "Detail available" means at least one is live
+    // — the Screen Time view uses it to decide whether any detail panel can show
+    // data at all. Callers needing per-capability state use getTrackingDetail().
     async isDetailTrackingAvailable() {
-      const current = api()
-      const platformName = await current.app?.getPlatform?.()
-      if (platformName !== 'darwin') return true
-      return Boolean(await current.permissions?.checkAccessibility?.())
+      const detail = await api().permissions?.getTrackingDetail?.()
+      if (!detail) return false
+      return (
+        (detail.titles.enabled && detail.titles.granted) ||
+        (detail.urls.enabled && detail.urls.granted)
+      )
+    },
+    async getTrackingDetail() {
+      return api().permissions?.getTrackingDetail?.() ?? null
+    },
+    async setTrackingDetail(capability, enabled) {
+      return api().permissions?.setTrackingDetail?.(capability, enabled) ?? null
+    },
+    async requestAccessibility() {
+      return api().permissions?.requestAccessibility?.() ?? null
+    },
+    async openPrivacySettings(capability) {
+      return Boolean(await api().permissions?.openPrivacySettings?.(capability))
+    },
+    async relaunch() {
+      await api().permissions?.relaunch?.()
     },
   },
   focusWindow: {
