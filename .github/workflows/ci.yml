@@ -1,0 +1,32 @@
+name: CI
+
+# release-verify.yml only runs on v* tags, so until now nothing checked a
+# branch before it was tagged — a broken merge stayed green until release day.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Typecheck (renderer + electron main/preload)
+        run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - name: Release notes exist for this version
+        run: node scripts/release-notes.mjs

@@ -30,9 +30,9 @@ export type UpdateStatus =
     | { state: 'idle' }
     | { state: 'checking' }
     | { state: 'not-available' }
-    | { state: 'available'; version: string }
+    | { state: 'available'; version: string; notes: string | null; releaseDate: string | null }
     | { state: 'downloading'; version: string; percent: number; bytesPerSecond: number; transferred: number; total: number }
-    | { state: 'downloaded'; version: string }
+    | { state: 'downloaded'; version: string; notes: string | null; releaseDate: string | null }
     | { state: 'error'; message: string }
 
 let lastStatus: UpdateStatus = { state: 'idle' }
@@ -79,7 +79,12 @@ export function initAutoUpdate() {
     autoUpdater.on('update-not-available', () => broadcast({ state: 'not-available' }))
 
     autoUpdater.on('update-available', (info) => {
-        broadcast({ state: 'available', version: info.version })
+        broadcast({
+            state: 'available',
+            version: info.version,
+            notes: normalizeNotes(info.releaseNotes),
+            releaseDate: info.releaseDate ?? null,
+        })
     })
 
     autoUpdater.on('download-progress', (p) => {
@@ -96,7 +101,12 @@ export function initAutoUpdate() {
     })
 
     autoUpdater.on('update-downloaded', (info) => {
-        broadcast({ state: 'downloaded', version: info.version })
+        broadcast({
+            state: 'downloaded',
+            version: info.version,
+            notes: normalizeNotes(info.releaseNotes),
+            releaseDate: info.releaseDate ?? null,
+        })
     })
 
     autoUpdater.on('error', (err) => {
@@ -119,6 +129,41 @@ export function initAutoUpdate() {
     app.on('before-quit', () => {
         if (checkTimer) clearInterval(checkTimer)
     })
+}
+
+// A release body is remote, attacker-influenceable content, so it is treated as
+// untrusted text end to end: normalized to a plain string here and rendered as
+// text (never as HTML) in the renderer.
+const MAX_NOTES_LENGTH = 4000
+
+/**
+ * electron-updater types `releaseNotes` as `string | ReleaseNoteInfo[] | null`:
+ * a plain string is the GitHub release body, the array form appears only when
+ * `fullChangelog` is on. Collapse both to one trimmed, length-capped string so
+ * the renderer has a single shape to deal with.
+ */
+function normalizeNotes(notes: unknown): string | null {
+    let text: string
+    if (typeof notes === 'string') {
+        text = notes
+    } else if (Array.isArray(notes)) {
+        text = notes
+            .map((n: any) => {
+                const body = typeof n?.note === 'string' ? n.note.trim() : ''
+                return n?.version ? `## ${n.version}\n${body}` : body
+            })
+            .filter(Boolean)
+            .join('\n\n')
+    } else {
+        return null
+    }
+
+    // GitHub sends CRLF; normalize so line-splitting in the UI is predictable.
+    text = text.replace(/\r\n/g, '\n').trim()
+    if (!text) return null
+    return text.length > MAX_NOTES_LENGTH
+        ? `${text.slice(0, MAX_NOTES_LENGTH).trimEnd()}…`
+        : text
 }
 
 /**

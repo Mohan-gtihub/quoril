@@ -10,6 +10,7 @@ import { useAppUpdate } from '@/hooks/useAppUpdate'
 import { platform as appPlatform } from '@/services/platform'
 import { APP_NAME, APP_VERSION } from '@/constants'
 import { logger } from '@/services/logger'
+import { ReleaseNotes } from '@/components/updates/ReleaseNotes'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -862,6 +863,19 @@ export function Settings() {
                                                         />
                                                     </div>
                                                 )}
+
+                                                {/* What's actually in the update. Shown from the moment it's
+                                                    offered so "Download update" is an informed choice, and kept
+                                                    up through 'downloaded' so it's still there at restart time. */}
+                                                {(updateStatus.state === 'available' || updateStatus.state === 'downloaded') &&
+                                                    updateStatus.notes && (
+                                                        <div className="mt-4">
+                                                            <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1.5">
+                                                                What’s new in {updateStatus.version}
+                                                            </p>
+                                                            <ReleaseNotes notes={updateStatus.notes} />
+                                                        </div>
+                                                    )}
 
                                                 {/* Explicit-click feedback. The passive card stays quiet during
                                                     'checking' and never reports "no update", but someone who

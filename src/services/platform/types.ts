@@ -86,9 +86,9 @@ export type UpdateStatus =
   | { state: 'idle' }
   | { state: 'checking' }
   | { state: 'not-available' }
-  | { state: 'available'; version: string }
+  | { state: 'available'; version: string; notes: string | null; releaseDate: string | null }
   | { state: 'downloading'; version: string; percent: number; bytesPerSecond: number; transferred: number; total: number }
-  | { state: 'downloaded'; version: string }
+  | { state: 'downloaded'; version: string; notes: string | null; releaseDate: string | null }
   | { state: 'error'; message: string }
 
 export interface UpdatesPort {

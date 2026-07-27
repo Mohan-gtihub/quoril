@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
@@ -43,8 +44,33 @@ if (publish && !process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
     }
 }
 
+// Refuse to republish a version that already has a release. electron-builder
+// would overwrite its assets, leaving two different binaries under one version
+// number — clients with allowDowngrade:false then never update. Mirrors the
+// same guard in scripts/publish-release.mjs.
+if (publish) {
+    const { version } = JSON.parse(readFileSync('package.json', 'utf8'))
+    const existing = await fetch(
+        `https://api.github.com/repos/Mohan-gtihub/quoril/releases/tags/v${version}`,
+        { headers: { Accept: 'application/vnd.github+json' } },
+    ).catch(() => null)
+
+    if (existing?.status === 200) {
+        console.error(`\nv${version} is already released on GitHub.`)
+        console.error('Publishing again would overwrite its assets with a different')
+        console.error('build under the same version number. Bump first:')
+        console.error('  npm version patch    # 1.0.8 -> 1.0.9')
+        process.exit(1)
+    }
+}
+
 try {
     run(process.execPath, ['scripts/release-preflight.mjs', 'mac'])
+    // Regenerate build/release-notes.md from CHANGELOG.md. electron-builder reads
+    // it via build.releaseInfo.releaseNotesFile and publishes it as the release
+    // body, which is what the in-app update prompt later shows. Exits non-zero if
+    // this version has no changelog entry, so a release can't ship blank notes.
+    run(process.execPath, ['scripts/release-notes.mjs'])
     run(process.platform === 'win32' ? 'npx.cmd' : 'npx', [
         'electron-builder',
         '--mac',

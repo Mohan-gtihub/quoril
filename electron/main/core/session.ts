@@ -214,7 +214,9 @@ class SessionManager {
                 if (this.currentSession.domainId) {
                     await dbOps.exec('DELETE FROM domain_sessions WHERE id = ?', [this.currentSession.domainId])
                 }
-            } catch (e) { }
+            } catch {
+                // Best-effort bookkeeping; a failure here must not break the session.
+            }
             this.currentSession = null
             return
         }
@@ -268,7 +270,9 @@ class SessionManager {
                     category = excluded.category,
                     name = excluded.name
             `, [appName, appName, category, new Date().toISOString()])
-        } catch (e) { }
+        } catch {
+                // Best-effort bookkeeping; a failure here must not break the session.
+            }
     }
 
     private async ensureDomainCategoryExists(domain: string, category: string = 'Web') {
@@ -279,7 +283,9 @@ class SessionManager {
                 ON CONFLICT(id) DO UPDATE SET
                     category = excluded.category
             `, [domain, domain, category, new Date().toISOString()])
-        } catch (e) { }
+        } catch {
+                // Best-effort bookkeeping; a failure here must not break the session.
+            }
     }
 }
 

@@ -1,8 +1,11 @@
 /**
- * Custom hook to access Electron API safely
- * Returns undefined if not running in Electron environment
+ * Safe accessor for the Electron API bridge; undefined outside Electron.
+ *
+ * Deliberately NOT named `use*`: it calls no React hooks and is invoked from
+ * plain async functions below. The old `useElectron` name made eslint's
+ * rules-of-hooks treat every one of those call sites as a hook violation.
  */
-export function useElectron() {
+export function getElectronAPI() {
     if (typeof window !== 'undefined' && window.electronAPI) {
         return window.electronAPI
     }
@@ -20,7 +23,7 @@ export function isElectron(): boolean {
  * Get app version
  */
 export async function getAppVersion(): Promise<string> {
-    const electron = useElectron()
+    const electron = getElectronAPI()
     if (electron) {
         return await electron.app.getVersion()
     }
@@ -31,7 +34,7 @@ export async function getAppVersion(): Promise<string> {
  * Get platform
  */
 export async function getPlatform(): Promise<string> {
-    const electron = useElectron()
+    const electron = getElectronAPI()
     if (electron) {
         return await electron.app.getPlatform()
     }
@@ -42,7 +45,7 @@ export async function getPlatform(): Promise<string> {
  * Show native notification
  */
 export async function showNotification(title: string, body: string): Promise<void> {
-    const electron = useElectron()
+    const electron = getElectronAPI()
     if (electron) {
         await electron.notification.show(title, body)
     } else {
@@ -57,7 +60,7 @@ export async function showNotification(title: string, body: string): Promise<voi
  * Open URL in external browser
  */
 export async function openExternal(url: string): Promise<void> {
-    const electron = useElectron()
+    const electron = getElectronAPI()
     if (electron) {
         await electron.file.openExternal(url)
     } else {
@@ -69,7 +72,7 @@ export async function openExternal(url: string): Promise<void> {
  * Minimize window
  */
 export async function minimizeWindow(): Promise<void> {
-    const electron = useElectron()
+    const electron = getElectronAPI()
     if (electron) {
         await electron.window.minimize()
     }
@@ -79,7 +82,7 @@ export async function minimizeWindow(): Promise<void> {
  * Maximize/restore window
  */
 export async function toggleMaximizeWindow(): Promise<void> {
-    const electron = useElectron()
+    const electron = getElectronAPI()
     if (electron) {
         await electron.window.maximize()
     }
@@ -89,7 +92,7 @@ export async function toggleMaximizeWindow(): Promise<void> {
  * Close window
  */
 export async function closeWindow(): Promise<void> {
-    const electron = useElectron()
+    const electron = getElectronAPI()
     if (electron) {
         await electron.window.close()
     }
@@ -99,7 +102,7 @@ export async function closeWindow(): Promise<void> {
  * Notify Electron about focus session start
  */
 export function notifyFocusStarted(duration: number, taskId: string): void {
-    const electron = useElectron()
+    const electron = getElectronAPI()
     if (electron) {
         electron.focus.started({ duration, taskId })
     }
@@ -109,7 +112,7 @@ export function notifyFocusStarted(duration: number, taskId: string): void {
  * Notify Electron about focus session end
  */
 export function notifyFocusEnded(): void {
-    const electron = useElectron()
+    const electron = getElectronAPI()
     if (electron) {
         electron.focus.ended()
     }
@@ -119,7 +122,7 @@ export function notifyFocusEnded(): void {
  * Listen for focus session start requests from tray
  */
 export function onFocusStartRequest(callback: () => void): (() => void) | undefined {
-    const electron = useElectron()
+    const electron = getElectronAPI()
     if (electron) {
         return electron.focus.onStartRequest(callback)
     }

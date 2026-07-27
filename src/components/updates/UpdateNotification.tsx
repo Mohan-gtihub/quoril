@@ -4,6 +4,7 @@ import { Download, RotateCw, X, AlertTriangle } from 'lucide-react'
 import { useAppUpdate } from '@/hooks/useAppUpdate'
 import { platform } from '@/services/platform'
 import { logger } from '@/services/logger'
+import { ReleaseNotes } from './ReleaseNotes'
 
 const RELEASES_URL = 'https://github.com/Mohan-gtihub/quoril/releases'
 
@@ -116,6 +117,7 @@ export function UpdateNotification() {
                                     <X className="w-3.5 h-3.5" />
                                 </button>
                             </div>
+                            {status.notes && <ReleaseNotes notes={status.notes} className="mb-3" />}
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => download()}
@@ -169,6 +171,9 @@ export function UpdateNotification() {
                                     <X className="w-3.5 h-3.5" />
                                 </button>
                             </div>
+                            {status.state === 'downloaded' && status.notes && (
+                                <ReleaseNotes notes={status.notes} className="mb-3" />
+                            )}
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => restart()}

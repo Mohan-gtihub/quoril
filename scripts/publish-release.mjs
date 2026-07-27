@@ -82,6 +82,13 @@ if (!args) {
         process.exit(1)
     }
 
+    // Regenerate build/release-notes.md from CHANGELOG.md before packaging.
+    // electron-builder reads it via build.releaseInfo.releaseNotesFile and uses
+    // it as the release body, which electron-updater then serves back to the app
+    // as the "what's new" text. Exits non-zero if this version has no changelog
+    // entry, so a release cannot ship with blank notes.
+    execFileSync(process.execPath, ['scripts/release-notes.mjs'], { stdio: 'inherit' })
+
     console.log(`\nPublishing Quoril v${version} (${target}, UNSIGNED) to GitHub Releases.`)
     console.log('Users will see a SmartScreen warning on first install.\n')
 

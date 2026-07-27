@@ -32,7 +32,7 @@ exports.default = async function notarizing(context) {
         teamId: process.env.APPLE_TEAM_ID,
     })
     // @electron/notarize staples the .app itself once Apple accepts, so there is
-    // nothing to do here. The DMG is a separate container with its own ticket —
-    // that one is stapled in build/staple-artifacts.cjs.
+    // nothing to do here. The ZIP that electron-updater consumes contains that
+    // stapled .app, which is what makes auto-update pass Gatekeeper.
     console.log(`Notarized and stapled ${appName}`)
 }
