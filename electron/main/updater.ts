@@ -206,7 +206,18 @@ function isNetworkError(err: any): boolean {
         return true
     }
     const msg = String(err?.message ?? err ?? '').toLowerCase()
-    return /net::|getaddrinfo|enotfound|econnrefused|econnreset|etimedout|network|socket hang up|unable to (connect|resolve)/.test(msg)
+    if (/net::|getaddrinfo|enotfound|econnrefused|econnreset|etimedout|network|socket hang up|unable to (connect|resolve)/.test(msg)) {
+        return true
+    }
+    // HTTP-level failures from the release feed are equally non-actionable on a
+    // background poll: GitHub returned an HTML page / 4xx / 5xx instead of the
+    // update descriptor (no matching release yet, latest.yml missing, a private
+    // repo, or a transient GitHub error). electron-updater surfaces these via
+    // createHttpError with a numeric statusCode and a message containing the raw
+    // response headers — never something a user can act on. Suppress on the
+    // background path; a manual "Check for updates" still reports it.
+    if (typeof err?.statusCode === 'number') return true
+    return /createhttperror|http error|cannot find|unable to find|status code|latest\.yml|latest-mac\.yml/.test(msg)
 }
 
 /**
