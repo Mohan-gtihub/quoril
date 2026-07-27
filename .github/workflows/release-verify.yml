@@ -30,14 +30,32 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run release:mac
-      - run: codesign --verify --deep --strict --verbose=2 release/mac-arm64/Quoril.app
-      - run: xcrun stapler validate release/mac-arm64/Quoril.app
+      # Both architectures are built, so both must be verified — checking only
+      # arm64 would stay green while a broken x64 build shipped to Intel Macs.
+      # electron-builder names the x64 output dir "mac", arm64 "mac-arm64".
+      - name: Verify signature and notarization (arm64 + x64)
+        run: |
+          for app in release/mac-arm64/Quoril.app release/mac/Quoril.app; do
+            echo "== $app"
+            test -d "$app" || { echo "missing: $app"; exit 1; }
+            codesign --verify --deep --strict --verbose=2 "$app"
+            xcrun stapler validate "$app"
+          done
+      # The update feed must offer something to Intel Macs. electron-updater
+      # selects by the "arm64" substring, so an entry without it has to exist.
+      - name: Verify the update feed covers both architectures
+        run: |
+          test -f release/latest-mac.yml || { echo "no latest-mac.yml"; exit 1; }
+          grep -q 'arm64.*\.zip' release/latest-mac.yml || { echo "no arm64 zip in feed"; exit 1; }
+          grep -E 'url: .*\.zip' release/latest-mac.yml | grep -qv arm64 \
+            || { echo "no x64 zip in feed — Intel Macs would get no update"; exit 1; }
       - uses: actions/upload-artifact@v4
         with:
-          name: quoril-macos-arm64
+          name: quoril-macos
           path: |
             release/*.dmg
             release/*.zip
+            release/latest-mac.yml
 
   windows:
     runs-on: windows-2022

@@ -71,10 +71,25 @@ try {
     // body, which is what the in-app update prompt later shows. Exits non-zero if
     // this version has no changelog entry, so a release can't ship blank notes.
     run(process.execPath, ['scripts/release-notes.mjs'])
+    // Both architectures. Until now only arm64 shipped, which left every Intel
+    // Mac with no download and no update path at all.
+    //
+    // Two separate builds rather than one universal binary: @electron/universal
+    // merges two app bundles, and that is fragile with native modules
+    // (better-sqlite3, active-win's helper). Separate builds keep each arch's
+    // natives exactly as compiled.
+    //
+    // One latest-mac.yml covers both. electron-updater's
+    // MacUpdater.filterFilesForArch picks by looking for "arm64" in the file
+    // name: arm64 Macs prefer those files, x64 Macs exclude them. Nothing else
+    // is needed, but it does mean the x64 artifacts must NOT have "arm64" in
+    // their names — electron-builder's default naming omits the suffix for x64,
+    // so leave artifactName alone for mac.
     run(process.platform === 'win32' ? 'npx.cmd' : 'npx', [
         'electron-builder',
         '--mac',
         '--arm64',
+        '--x64',
         '--publish',
         publish ? 'always' : 'never',
         `-c.directories.output=${outDir}`,

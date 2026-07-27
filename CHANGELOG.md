@@ -13,6 +13,9 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ### Fixed
 
+- Intel Macs are supported again. Releases were built for Apple Silicon only,
+  so Macs with Intel processors had no download and no update path at all.
+  Both architectures now ship, and the updater serves each Mac the right one.
 - Detailed tracking no longer reports "waiting on permission" for a permission
   you have already granted. Quoril was asking whether its own process had
   Accessibility, but the permission is exercised by a separate helper program,
