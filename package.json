@@ -77,7 +77,7 @@
     "@types/rbush": "^4.0.0",
     "@xyflow/react": "^12.10.2",
     "active-win": "^8.2.1",
-    "better-sqlite3": "^9.4.3",
+    "better-sqlite3": "^11.10.0",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.0",
     "date-fns": "^3.6.0",
