@@ -11,6 +11,8 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-07-27
+
 ### Fixed
 
 - The Websites panel no longer claims per-site breakdowns are unavailable on
@@ -64,6 +66,7 @@ Version 1.0.8 was prepared but never published, so its changes ship here.
 - macOS builds are signed and notarized correctly, so auto-update is no longer
   blocked by Gatekeeper.
 
-[Unreleased]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/Mohan-gtihub/quoril/compare/v1.0.7...v1.1.0
 [1.0.7]: https://github.com/Mohan-gtihub/quoril/releases/tag/v1.0.7
