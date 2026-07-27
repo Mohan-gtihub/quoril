@@ -210,7 +210,14 @@ run('git', ['push', 'origin', tag])
 /* ── 7. publish ────────────────────────────────────────────── */
 
 step(7, 'Building, signing, notarizing, publishing')
-console.log('  Notarization usually takes 5-15 minutes.\n')
+console.log('  Notarization usually takes 5-15 minutes.')
+// Pushing the tag above also started .github/workflows/release.yml, which
+// publishes the Linux AppImage to this same release. Its macOS job stays
+// skipped while the signing secrets are absent, so the two do not collide.
+// ONCE THOSE SECRETS EXIST, CI will publish macOS too and this local step
+// becomes a duplicate — at that point this script should stop at step 6 and
+// let CI finish the job.
+console.log('  Linux is published in parallel by the release workflow.\n')
 
 try {
     run('npm', ['run', 'release:mac', '--', '--publish'])

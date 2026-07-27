@@ -1,0 +1,96 @@
+name: Release
+
+# Publishes artifacts to the GitHub release for a v* tag.
+#
+# Each platform builds on its own runner because this app has native modules
+# (better-sqlite3, active-win's helper binary). They are compiled for the host,
+# so a macOS machine cannot produce a working Linux or Windows build — it would
+# package Mach-O binaries into a Linux AppImage and fail at runtime, not at
+# build time.
+#
+# The jobs are independent: each attaches its own artifacts to the one release
+# the tag created (QUORIL_CI_ATTACH tells publish-release.mjs that an existing
+# release is expected here, unlike a manual run).
+#
+# Relationship to release-verify.yml: that one proves a build is signed and
+# notarized correctly and uploads artifacts for inspection. This one publishes.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # Signing secrets may not be configured. Rather than let the mac job fail on
+  # every release and train everyone to ignore a red X, decide up front whether
+  # it can run. The secrets context is not available in a job-level `if`, so it
+  # has to be resolved into an output here.
+  capabilities:
+    runs-on: ubuntu-latest
+    outputs:
+      mac: ${{ steps.check.outputs.mac }}
+    steps:
+      - id: check
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_LINK: ${{ secrets.MACOS_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
+        run: |
+          if [ -n "$APPLE_ID" ] && [ -n "$APPLE_APP_SPECIFIC_PASSWORD" ] \
+             && [ -n "$APPLE_TEAM_ID" ] && [ -n "$CSC_LINK" ] && [ -n "$CSC_KEY_PASSWORD" ]; then
+            echo "mac=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "mac=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::macOS release skipped — signing secrets not configured." \
+                 "Publish macOS locally with 'npm run ship:mac', or add the secrets."
+          fi
+
+  # AppImage needs no signing, so this works today with nothing configured.
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Publish Linux AppImage
+        env:
+          # electron-builder authenticates with GH_TOKEN; the workflow token has
+          # contents:write, which is all it needs to attach release assets.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          QUORIL_CI_ATTACH: "true"
+        run: npm run publish:linux
+
+  macos:
+    needs: capabilities
+    if: needs.capabilities.outputs.mac == 'true'
+    runs-on: macos-14
+    env:
+      QUORIL_RELEASE_BUILD: "true"
+      # CI has no iCloud, so build in-tree. Locally this defaults outside
+      # ~/Documents — see scripts/release-mac.mjs.
+      QUORIL_RELEASE_OUT: release
+      CSC_LINK: ${{ secrets.MACOS_CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Build, sign, notarize and publish (arm64 + x64)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run release:mac -- --publish

@@ -72,7 +72,14 @@ if (!args) {
         { headers: { Accept: 'application/vnd.github+json' } },
     ).catch(() => null)
 
-    if (existing?.status === 200) {
+    // QUORIL_CI_ATTACH is set only by the tag-triggered release workflow, where
+    // an existing release is expected rather than a mistake: each platform job
+    // attaches its own artifacts to the one release the tag created. The guard
+    // still applies to every manual run, where a pre-existing release really
+    // does mean "you forgot to bump".
+    const attaching = process.env.QUORIL_CI_ATTACH === 'true'
+
+    if (existing?.status === 200 && !attaching) {
         console.error(`\nv${version} is already released on GitHub.`)
         console.error('Publishing again would overwrite its assets with a different')
         console.error('build under the same version number. Bump first:')
@@ -80,6 +87,10 @@ if (!args) {
         console.error(`\nExisting release: https://github.com/${REPO}/releases/tag/v${version}`)
         process.exitCode = 1
         process.exit(1)
+    }
+
+    if (existing?.status === 200 && attaching) {
+        console.log(`Attaching ${target} artifacts to the existing v${version} release.`)
     }
 
     // Regenerate build/release-notes.md from CHANGELOG.md before packaging.

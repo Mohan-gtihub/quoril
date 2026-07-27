@@ -11,6 +11,11 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ## [Unreleased]
 
+### Added
+
+- Linux builds are published automatically with every release. Quoril for Linux
+  ships as an AppImage and updates itself like the other platforms.
+
 ### Fixed
 
 - Intel Macs are supported again. Releases were built for Apple Silicon only,
