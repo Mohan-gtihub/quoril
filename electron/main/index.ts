@@ -104,6 +104,32 @@ try {
     // Non-fatal: fall back to Chromium's default cache path.
 }
 
+/* GPU black-screen recovery. A frameless, transparent window can render fully
+ * black when Chromium's GPU compositor fails on a given machine/driver. Rather
+ * than disable hardware acceleration for everyone (a perf hit), we persist a
+ * flag when the GPU process crashes and fall back to software rendering only on
+ * the *next* launch — self-healing without penalising healthy installs. */
+const gpuFallbackFlag = path.join(
+    app.getPath('userData'),
+    'disable-hardware-acceleration'
+)
+try {
+    if (fs.existsSync(gpuFallbackFlag)) {
+        app.disableHardwareAcceleration()
+    }
+} catch {
+    // Non-fatal: userData may be unavailable this early on some setups.
+}
+app.on('child-process-gone', (_e, details) => {
+    if (details.type === 'GPU' && details.reason !== 'clean-exit') {
+        try {
+            fs.writeFileSync(gpuFallbackFlag, new Date().toISOString())
+        } catch {
+            // Best effort; a failed write just means no fallback next launch.
+        }
+    }
+})
+
 /* ---------------- STATE ---------------- */
 
 let mainWindow: BrowserWindow | null = null

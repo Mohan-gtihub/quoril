@@ -83,10 +83,10 @@ export class ErrorBoundary extends Component<Props, State> {
                             </p>
                         </div>
 
-                        {import.meta.env.DEV && this.state.error && (
+                        {this.state.error && (
                             <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200 dark:border-red-800">
                                 <h3 className="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">
-                                    Error Details (Development Only)
+                                    Error Details
                                 </h3>
                                 <pre className="text-xs text-red-700 dark:text-red-400 overflow-auto max-h-40">
                                     {this.state.error.toString()}
