@@ -209,7 +209,7 @@ function createUpdateLogger() {
 // surfacing them would train users to ignore a card that mostly cries wolf.
 // The first automatic check fires 8s after launch, which routinely lands
 // before wifi has associated.
-function isNetworkError(err: any): boolean {
+export function isNetworkError(err: any): boolean {
     const code = String(err?.code ?? '')
     if (/^(ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENETUNREACH|EHOSTUNREACH|EPIPE|ERR_INTERNET_DISCONNECTED)$/.test(code)) {
         return true
@@ -227,7 +227,7 @@ const NO_BUILD_MESSAGE =
 // this platform just has nothing in it. Nothing for the user to fix, and the
 // raw error is a full dump of GitHub's response headers, so it must not reach
 // the UI as a scary red card.
-function isFeedMissingError(err: any): boolean {
+export function isFeedMissingError(err: any): boolean {
     if (Number(err?.statusCode) === 404) return true
     const msg = String(err?.message ?? err ?? '')
     return /HttpError:\s*404|404 Not Found|"?status(Code)?"?\s*[:=]\s*404/i.test(msg)
@@ -238,7 +238,7 @@ function isFeedMissingError(err: any): boolean {
 // into `message`. Keep the first line and cap the length so the renderer shows
 // something a human can read.
 const MAX_ERROR_LENGTH = 300
-function describeError(err: any): string {
+export function describeError(err: any): string {
     const raw = String(err?.message ?? err ?? 'Unknown error')
     const firstLine = raw.split('\n')[0].trim() || raw.trim()
     return firstLine.length > MAX_ERROR_LENGTH
