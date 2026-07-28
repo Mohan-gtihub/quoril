@@ -10,10 +10,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
+    "@xyflow/react": "^12.11.1",
     "framer-motion": "^11.5.4",
     "next": "14.2.33",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "recharts": "^3.9.2",
+    "resend": "^6.16.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

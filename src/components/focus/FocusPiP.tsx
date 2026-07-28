@@ -91,7 +91,6 @@ export function FocusPiP({ children }: FocusPiPProps) {
     return () => {
       close()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const isPopped = pipBody !== null

@@ -11,19 +11,21 @@ import { Play, Pause, ArrowLeft, CheckCircle2, Plus, ArrowRight, Settings as Set
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { useTimerDisplay } from '@/hooks/useTimerDisplay'
+import { format, isSameDay } from 'date-fns'
 import { CreateTaskModal } from '../planner/CreateTaskModal'
 import { TaskCard } from '../planner/TaskCard'
 import { CompletionCelebration } from '../ui/CompletionCelebration'
 import { HoldButton } from '../ui/HoldButton'
 import { cn } from '@/utils/helpers'
 import { SuperFocusPill } from './SuperFocusPill'
+import { SessionStats } from './SessionStats'
 import type { Task } from '@/types/database'
 import { platform } from '@/services/platform'
 
 export function FocusMode() {
     const navigate = useNavigate()
     const { fetchTasksByColumn, moveTaskToColumn, reorderTasks, fetchTasks, tasks: allStoreTasks } = useTaskStore()
-    const { selectedListId, lists } = useListStore()
+    const { selectedListId } = useListStore()
     const settings = useSettingsStore()
 
     const {
@@ -39,7 +41,7 @@ export function FocusMode() {
         stopBreak
     } = useFocusStore()
 
-    const { isOvertime, progress, breakRemaining, pomodoroRemaining, pomodoroTotal, displayTime } = useTimerDisplay()
+    const { isOvertime, progress, breakRemaining, breakRemainingAtStart, pomodoroRemaining, pomodoroTotal, displayTime } = useTimerDisplay()
     const { syncing, pendingCount, error: syncError } = useSyncStore()
 
 
@@ -126,9 +128,12 @@ export function FocusMode() {
             if (isActiveTask) {
                 await endSession()
                 if (settings.showSuccessScreen) {
+                    // Read the freshly-persisted time AFTER endSession, not the
+                    // pre-session snapshot captured in taskToMove (which is stale/0).
+                    const updated = useTaskStore.getState().tasks.find(t => t.id === taskId)
                     setCelebrationTask({
                         title: taskToMove.title,
-                        timeSpent: taskToMove.actual_seconds || 0
+                        timeSpent: updated?.actual_seconds ?? taskToMove.actual_seconds ?? 0
                     })
                 }
             }
@@ -185,7 +190,9 @@ export function FocusMode() {
 
     const ringCirc = 2 * Math.PI * 52
     const ringPct = Math.min(100, isBreak
-        ? (breakRemaining / (settings.defaultBreakLength * 60)) * 100
+        // Use the break's actual planned length (which is longBreakLength during a
+        // long break) so the ring scales correctly instead of overshooting.
+        ? (breakRemainingAtStart > 0 ? (breakRemaining / breakRemainingAtStart) * 100 : 0)
         : (settings.pomodorosEnabled ? (pomodoroRemaining / pomodoroTotal) * 100 : progress))
     const isOver = isOvertime && !isBreak && !settings.pomodorosEnabled
     const ringStroke = isBreak ? 'var(--break)' : (isOver ? 'var(--break)' : 'var(--focus)')
@@ -220,21 +227,21 @@ export function FocusMode() {
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => settings.updateSettings({ superFocusMode: true })}
-                            className="w-9 h-9 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                            className="w-9 h-9 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                             title="Super Focus"
                         >
                             <Maximize2 className="w-4 h-4" />
                         </button>
                         <button
                             onClick={() => navigate('/settings')}
-                            className="w-9 h-9 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                            className="w-9 h-9 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                             title="Settings"
                         >
                             <SettingsIcon className="w-4 h-4" />
                         </button>
                         <button
                             onClick={handleBack}
-                            className="flex items-center gap-2 px-4 h-9 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all group"
+                            className="flex items-center gap-2 px-4 h-9 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all group"
                         >
                             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
                             <span className="text-sm font-semibold">Exit</span>
@@ -290,7 +297,7 @@ export function FocusMode() {
                                         "flex items-center gap-2 px-6 h-12 rounded-full font-semibold transition-all active:scale-95",
                                         isPaused
                                             ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105 shadow-sm"
-                                            : "bg-[var(--bg-hover)] text-[var(--text-primary)] hover:bg-[var(--border-hover)]"
+                                            : "bg-[var(--bg-hover)] text-[var(--text-primary)] hover:bg-[var(--bg-hover-strong)]"
                                     )}
                                 >
                                     {isPaused ? <Play className="w-5 h-5 fill-current" /> : <Pause className="w-5 h-5 fill-current" />}
@@ -313,7 +320,7 @@ export function FocusMode() {
                                         "w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-95",
                                         isBreak
                                             ? "bg-[var(--accent-primary)] text-[var(--accent-contrast)] shadow-sm"
-                                            : "bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)]"
+                                            : "bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover-strong)] hover:text-[var(--text-primary)]"
                                     )}
                                     title={isBreak ? 'End Break' : 'Take Break'}
                                 >
@@ -322,12 +329,19 @@ export function FocusMode() {
 
                                 <button
                                     onClick={() => endSession()}
-                                    className="w-12 h-12 rounded-full bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)] flex items-center justify-center transition-all active:scale-95"
+                                    className="w-12 h-12 rounded-full bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover-strong)] hover:text-[var(--text-primary)] flex items-center justify-center transition-all active:scale-95"
                                     title="Skip"
                                 >
                                     <ArrowRight className="w-5 h-5" />
                                 </button>
                             </div>
+
+                            {/* SESSION STATS — focused vs distracted vs break/away */}
+                            {!isBreak && (
+                                <div className="w-full mt-8 pt-6 border-t border-[var(--border-default)]">
+                                    <SessionStats activeTask={activeTask} variant="full" />
+                                </div>
+                            )}
                         </div>
 
                         {/* RIGHT COLUMN */}
@@ -430,14 +444,14 @@ export function FocusMode() {
                                         </div>
                                     ) : (
                                         <div className="-mx-2">
-                                            {allStoreTasks.filter(t => t.status === 'done' && t.completed_at?.startsWith(new Date().toISOString().split('T')[0])).length === 0 && (
+                                            {allStoreTasks.filter(t => t.status === 'done' && t.completed_at && isSameDay(new Date(t.completed_at), new Date())).length === 0 && (
                                                 <div className="py-12 flex flex-col items-center justify-center text-center gap-2">
                                                     <CheckCircle2 className="w-7 h-7 text-[var(--text-muted)]" />
                                                     <p className="text-sm text-[var(--text-tertiary)]">No tasks completed yet today</p>
                                                 </div>
                                             )}
                                             {allStoreTasks
-                                                .filter(t => t.status === 'done' && t.completed_at?.startsWith(new Date().toISOString().split('T')[0]))
+                                                .filter(t => t.status === 'done' && t.completed_at && isSameDay(new Date(t.completed_at), new Date()))
                                                 .sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || ''))
                                                 .map(t => (
                                                     <div key={t.id} className="rounded-[var(--radius-card)] px-2 py-2.5 flex items-center justify-between gap-3 hover:bg-[var(--bg-hover)] transition-colors">
@@ -445,7 +459,7 @@ export function FocusMode() {
                                                             <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)] shrink-0" />
                                                             <div className="min-w-0">
                                                                 <p className="text-sm font-medium text-[var(--text-secondary)] truncate">{t.title}</p>
-                                                                <p className="text-[11px] text-[var(--text-muted)] tabular-nums">{t.completed_at ? t.completed_at.split('T')[1].slice(0, 5) : 'Done'}</p>
+                                                                <p className="text-[11px] text-[var(--text-muted)] tabular-nums">{t.completed_at ? format(new Date(t.completed_at), 'HH:mm') : 'Done'}</p>
                                                             </div>
                                                         </div>
                                                         <span className="text-sm font-semibold text-[var(--text-tertiary)] tabular-nums shrink-0">{Math.round((t.actual_seconds || 0) / 60)}m</span>
@@ -463,7 +477,7 @@ export function FocusMode() {
                     <CreateTaskModal
                         isOpen={true}
                         onClose={() => setShowCreateModal(false)}
-                        listId={selectedListId && selectedListId !== 'all' ? selectedListId : (lists.find(l => l.id !== 'all')?.id || '')}
+                        listId={selectedListId && selectedListId !== 'all' ? selectedListId : undefined}
                         onCreated={(task) => {
                             if (selectedListId !== 'all' && task.list_id !== selectedListId) return
                             setTasks(prev => {

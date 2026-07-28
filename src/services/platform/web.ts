@@ -6,7 +6,7 @@ import { webCanvas } from './webCanvas'
 const hasPiP = typeof window !== 'undefined' && 'documentPictureInPicture' in window
 
 export const webPlatform: Platform = {
-  capabilities: { appTracking: false, nativeOverlay: false, pictureInPicture: hasPiP, localDb: false },
+  capabilities: { appTracking: false, nativeOverlay: false, pictureInPicture: hasPiP, localDb: false, aiInsights: false },
   data: {
     async listTasks() { const { data } = await supabase.from('tasks').select('*'); return data ?? [] },
     async saveTask(t) { const { data } = await supabase.from('tasks').upsert(t).select().single(); return data },
@@ -25,6 +25,13 @@ export const webPlatform: Platform = {
   screenTime: {
     async getData() { return UNAVAILABLE },
     isTrackingAvailable() { return false },
+    isDetailTrackingAvailable() { return false },
+    // The browser cannot observe other apps at all, so there is nothing to opt into.
+    async getTrackingDetail() { return null },
+    async setTrackingDetail() { return null },
+    async requestAccessibility() { return null },
+    async openPrivacySettings() { return false },
+    async relaunch() { },
   },
   focusWindow: {
     setAlwaysOnTop() { return UNAVAILABLE },
@@ -32,6 +39,9 @@ export const webPlatform: Platform = {
     restore() { return UNAVAILABLE },
     setResizable() { return UNAVAILABLE },
     closeDevTools() { return UNAVAILABLE },
+    enterPill() { return UNAVAILABLE },
+    exitPill() { return UNAVAILABLE },
+    onRehydrate() { return UNAVAILABLE },
   },
   store: {
     async get(key) { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null },
@@ -42,6 +52,7 @@ export const webPlatform: Platform = {
     async signInWithPassword(email, password) { return supabase.auth.signInWithPassword({ email, password }) },
     async signOut() { await supabase.auth.signOut() },
     onDeepLink() { return UNAVAILABLE },
+    async getPendingDeepLink() { return null },
     setUser() { return UNAVAILABLE },
   },
   windowControls: {
@@ -55,5 +66,25 @@ export const webPlatform: Platform = {
   links: {
     openExternal() { return UNAVAILABLE },
   },
+  notifications: {
+    show() { return UNAVAILABLE },
+  },
+  updates: {
+    async getStatus() { return { state: 'not-available' as const } },
+    async check() { return { state: 'not-available' as const } },
+    async download() { return false },
+    async restartAndInstall() { return false },
+    onStatus() { return UNAVAILABLE },
+  },
+  feedback: {
+    async captureScreen() { return UNAVAILABLE },
+  },
   canvas: webCanvas,
+  insights: {
+    // Web/mobile without a proxy can't hold the key; a future target implements
+    // this against an HTTPS endpoint. Until then it degrades gracefully.
+    async generate() {
+      return { ok: false as const, error: 'AI insights are only available in the Quoril desktop app.' }
+    },
+  },
 }

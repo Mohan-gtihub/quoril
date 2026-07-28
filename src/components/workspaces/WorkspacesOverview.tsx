@@ -22,6 +22,7 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
         <div className="flex flex-wrap gap-2.5">
             {PALETTE.map(c => (
                 <button key={c} onClick={() => onChange(c)}
+                    aria-label={`Color ${c}`} aria-pressed={value === c} title={c}
                     className="w-7 h-7 rounded-full relative transition-transform hover:scale-110 active:scale-95"
                     style={{
                         backgroundColor: c,
@@ -107,7 +108,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                 layout
                 initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-[var(--bg-card)] rounded-[var(--radius-card)] border border-[var(--border-default)] p-5 flex flex-col justify-between"
+                className="bg-[var(--bg-card)] rounded-[var(--radius-tile)] border border-[var(--border-default)] shadow-[var(--shadow-soft)] p-5 flex flex-col justify-between"
             >
                 <div className="space-y-5">
                     <div>
@@ -128,7 +129,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                 </div>
                 <div className="flex gap-2 mt-6">
                     <button onClick={handleSave} className="flex-1 py-2.5 text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full hover:brightness-105 active:scale-95 transition-all shadow-sm">Save Changes</button>
-                    <button onClick={() => setIsEditing(false)} className="py-2.5 px-4 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)] transition-all rounded-full">Cancel</button>
+                    <button onClick={() => setIsEditing(false)} className="py-2.5 px-4 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] hover:text-[var(--text-primary)] transition-all rounded-full">Cancel</button>
                 </div>
             </motion.div>
         )
@@ -140,7 +141,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                 layout
                 initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-[var(--bg-card)] rounded-[var(--radius-card)] border border-[var(--border-default)] p-5 flex flex-col justify-between"
+                className="bg-[var(--bg-card)] rounded-[var(--radius-tile)] border border-[var(--border-default)] shadow-[var(--shadow-soft)] p-5 flex flex-col justify-between"
             >
                 <div className="space-y-5">
                     <div className="flex items-start justify-between gap-3">
@@ -187,7 +188,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                     <button disabled={!inviteEmail.trim() || inviteLoading} onClick={handleInvite} className="flex-1 py-2.5 text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full hover:brightness-105 active:scale-95 disabled:opacity-50 transition-all shadow-sm">
                         {inviteLoading ? 'Granting…' : 'Grant Access'}
                     </button>
-                    <button onClick={() => setIsSharing(false)} className="py-2.5 px-4 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)] transition-all rounded-full">Done</button>
+                    <button onClick={() => setIsSharing(false)} className="py-2.5 px-4 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] hover:text-[var(--text-primary)] transition-all rounded-full">Done</button>
                 </div>
             </motion.div>
         )
@@ -199,7 +200,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="group relative h-full overflow-hidden bg-[var(--bg-card)] rounded-[var(--radius-card)] border border-[var(--border-default)] hover:bg-[var(--bg-hover)] transition-colors duration-200 cursor-pointer flex flex-col p-5"
+            className="group relative h-full overflow-hidden bg-[var(--bg-card)] rounded-[var(--radius-tile)] border border-[var(--border-default)] shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-lift)] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col p-5"
             onClick={handleCardClick}
         >
             {/* Header Area */}
@@ -207,10 +208,13 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                 <div className="flex items-start justify-between mb-5">
                     <div className="flex items-center gap-3 min-w-0">
                         <span
-                            className="relative w-10 h-10 rounded-[var(--radius-tile)] shrink-0 flex items-center justify-center bg-[var(--bg-tertiary)] text-[var(--text-primary)] font-semibold text-base"
+                            className="relative w-11 h-11 rounded-[var(--radius-card)] shrink-0 flex items-center justify-center font-semibold text-base"
+                            style={{
+                                background: `color-mix(in srgb, ${accent} 16%, transparent)`,
+                                color: accent,
+                            }}
                         >
                             {ws.name.charAt(0).toUpperCase()}
-                            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ background: accent }} />
                         </span>
                         <div className="min-w-0">
                             <h3 className="text-lg font-semibold tracking-tight text-[var(--text-primary)] truncate leading-tight">{ws.name}</h3>
@@ -225,7 +229,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                         <div className="relative no-drag">
                             <button
                                 onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
-                                className="w-7 h-7 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors opacity-0 group-hover:opacity-100"
+                                className="w-7 h-7 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors opacity-0 group-hover:opacity-100"
                             >
                                 <MoreHorizontal size={16} />
                             </button>
@@ -269,14 +273,14 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                         {wsLists.slice(0, 4).map(l => (
                             <span
                                 key={l.id}
-                                className="inline-flex items-center gap-1.5 max-w-[140px] rounded-full bg-[var(--bg-hover)] pl-2 pr-2.5 py-1 text-[11px] text-[var(--text-secondary)]"
+                                className="inline-flex items-center gap-1.5 max-w-[140px] rounded-full bg-[var(--bg-secondary)] border border-[var(--border-default)] pl-2 pr-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]"
                             >
                                 <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: (l as any).color || accent }} />
                                 <span className="truncate">{l.name}</span>
                             </span>
                         ))}
                         {wsLists.length > 4 && (
-                            <span className="inline-flex items-center rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] text-[var(--text-muted)] tabular-nums">
+                            <span className="inline-flex items-center rounded-full bg-[var(--bg-secondary)] border border-[var(--border-default)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)] tabular-nums">
                                 +{wsLists.length - 4}
                             </span>
                         )}
@@ -300,12 +304,12 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                 </div>
 
                 <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] font-medium text-[var(--text-tertiary)]">
-                        {isComplete ? 'All caught up' : `${progress}% completed`}
+                    <span className="text-[11px] font-semibold text-[var(--text-secondary)] tabular-nums">
+                        {isComplete ? 'All caught up' : `${progress}%`}
                     </span>
                     <span className="text-[11px] font-medium text-[var(--text-muted)] tabular-nums">{doneTasks.length} / {wsTasks.length}</span>
                 </div>
-                <div className="h-1.5 bg-[var(--bg-hover)] w-full rounded-full overflow-hidden">
+                <div className="h-2 bg-[var(--track)] w-full rounded-full overflow-hidden">
                     <motion.div
                         className="h-full rounded-full"
                         style={{ background: barColor }}
@@ -321,7 +325,7 @@ function WorkspaceBentoCard({ ws }: { ws: Workspace }) {
                             e.stopPropagation()
                             setIsSharing(true)
                         }}
-                        className="no-drag mt-4 w-full flex items-center justify-center gap-2 rounded-[var(--radius-tile)] px-3 py-2 text-xs font-semibold text-[var(--text-tertiary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                        className="no-drag mt-4 w-full flex items-center justify-center gap-2 rounded-[var(--radius-tile)] border border-[var(--border-default)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:text-[var(--text-primary)] transition-colors"
                     >
                         <UserPlus size={14} />
                         Invite teammate
@@ -359,7 +363,7 @@ function CreateWorkspaceCard({ autoOpen, onClose }: { autoOpen?: boolean; onClos
                 layout
                 initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-[var(--bg-card)] rounded-[var(--radius-card)] border border-[var(--border-default)] p-5 flex flex-col justify-between"
+                className="bg-[var(--bg-card)] rounded-[var(--radius-tile)] border border-[var(--border-default)] shadow-[var(--shadow-soft)] p-5 flex flex-col justify-between"
             >
                 <div className="space-y-5">
                     <div className="flex items-center justify-between">
@@ -384,7 +388,7 @@ function CreateWorkspaceCard({ autoOpen, onClose }: { autoOpen?: boolean; onClos
                     <button disabled={!name.trim() || loading} onClick={handleCreate} className="flex-1 py-2.5 text-xs font-semibold bg-[var(--accent-primary)] text-[var(--accent-contrast)] rounded-full hover:brightness-105 active:scale-95 disabled:opacity-50 transition-all shadow-sm">
                         {loading ? 'Creating…' : 'Create Workspace'}
                     </button>
-                    <button onClick={close} className="py-2.5 px-4 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] hover:text-[var(--text-primary)] transition-all rounded-full">Cancel</button>
+                    <button onClick={close} className="py-2.5 px-4 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] hover:text-[var(--text-primary)] transition-all rounded-full">Cancel</button>
                 </div>
             </motion.div>
         )
@@ -393,12 +397,12 @@ function CreateWorkspaceCard({ autoOpen, onClose }: { autoOpen?: boolean; onClos
     return (
         <button
             onClick={() => setIsCreating(true)}
-            className="group h-full min-h-[200px] rounded-[var(--radius-card)] border border-dashed border-[var(--border-default)] hover:border-[var(--border-hover)] hover:bg-[var(--bg-hover)] flex flex-col items-center justify-center gap-3 transition-colors duration-200 cursor-pointer"
+            className="group h-full min-h-[200px] rounded-[var(--radius-tile)] border border-dashed border-[var(--border-hover)] hover:border-[var(--accent-primary)] hover:bg-[var(--bg-secondary)] flex flex-col items-center justify-center gap-3 transition-all duration-200 cursor-pointer"
         >
-            <span className="w-12 h-12 rounded-[var(--radius-tile)] bg-[var(--bg-card)] flex items-center justify-center transition-colors group-hover:bg-[var(--bg-tertiary)]">
-                <Plus size={22} className="text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors" />
+            <span className="w-12 h-12 rounded-[var(--radius-card)] bg-[var(--bg-tertiary)] flex items-center justify-center transition-all group-hover:scale-105 group-hover:bg-[var(--accent-primary)]">
+                <Plus size={22} className="text-[var(--text-secondary)] group-hover:text-[var(--accent-contrast)] transition-colors" />
             </span>
-            <span className="font-semibold text-sm text-[var(--text-tertiary)] group-hover:text-[var(--text-primary)] transition-colors">Create Workspace</span>
+            <span className="font-semibold text-sm text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">Create workspace</span>
         </button>
     )
 }

@@ -3,6 +3,7 @@ import {
   SectionHead,
   Tile,
   TileIcon,
+  ACCENTS,
   Button,
   Eyebrow,
 } from "@/components/ui";
@@ -19,7 +20,7 @@ import {
 } from "@/components/icons";
 
 export const metadata = {
-  title: "Focus Engine — Quoril",
+  title: "Focus Engine",
   description:
     "Three ways to focus, one honest timer: full-screen Deep Focus, a floating always-on-top pill and a quick popup window — with Pomodoro, session types and interval alerts built in.",
 };
@@ -72,7 +73,7 @@ export default function FocusPage() {
               numbers you plan with are the numbers you earned.
             </p>
             <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-              <Button href="/waitlist">Join the waitlist</Button>
+              <Button href="/waitlist">Get V1 free</Button>
               <Button href="/features" variant="secondary">
                 All features
               </Button>
@@ -93,7 +94,7 @@ export default function FocusPage() {
             {/* a) Deep Focus Mode */}
             <Reveal>
               <Tile className="flex h-full flex-col">
-                <TileIcon>
+                <TileIcon tint={ACCENTS[0]}>
                   <IconBolt className="h-[22px] w-[22px]" />
                 </TileIcon>
                 <h3 className="text-[19px] font-semibold tracking-[-0.01em] text-ink">
@@ -118,7 +119,7 @@ export default function FocusPage() {
             {/* b) Super Focus Pill */}
             <Reveal delay={0.06}>
               <Tile className="flex h-full flex-col">
-                <TileIcon>
+                <TileIcon tint={ACCENTS[1]}>
                   <IconClock className="h-[22px] w-[22px]" />
                 </TileIcon>
                 <h3 className="text-[19px] font-semibold tracking-[-0.01em] text-ink">
@@ -142,7 +143,7 @@ export default function FocusPage() {
             {/* c) Focus Popup */}
             <Reveal delay={0.12}>
               <Tile className="flex h-full flex-col">
-                <TileIcon>
+                <TileIcon tint={ACCENTS[2]}>
                   <IconPlay className="h-[22px] w-[22px]" />
                 </TileIcon>
                 <h3 className="text-[19px] font-semibold tracking-[-0.01em] text-ink">
@@ -334,7 +335,7 @@ export default function FocusPage() {
               </p>
               <div className="mt-8">
                 <Button href="/waitlist">
-                  Join the waitlist
+                  Get V1 free
                   <IconArrow className="h-[18px] w-[18px]" />
                 </Button>
               </div>

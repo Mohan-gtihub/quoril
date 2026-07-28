@@ -20,6 +20,8 @@ import { isSameDay, startOfToday, format } from 'date-fns'
 import toast from 'react-hot-toast'
 import { confirm } from '@/components/ui/ConfirmDialog'
 import { getPlannerTaskBuckets } from './plannerBuckets'
+import { useWorkspaceStore } from '@/store/workspaceStore'
+import { NicknameNudge } from './NicknameNudge'
 
 interface ColumnDef {
     id: TaskColumn
@@ -95,7 +97,7 @@ function BoardColumn({
                         {column.id !== 'done' && (
                             <button
                                 onClick={() => setShowCreateModal({ column: column.id, position: 'top' })}
-                                className="w-7 h-7 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--border-hover)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                                className="w-7 h-7 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                                 title="Add task to top"
                             >
                                 <Plus className="w-3.5 h-3.5" />
@@ -144,8 +146,9 @@ function BoardColumn({
                         (() => {
                             const groupedByDay = tasks
                                 .reduce<Record<string, Task[]>>((acc, task) => {
-                                    // Fallback to updated_at or now if completed_at is missing (legacy data fix)
-                                    const rawDate = task.completed_at || task.updated_at || new Date().toISOString()
+                                    // Fall back to the stable created_at (never updated_at, which
+                                    // drifts on every edit) if completed_at is missing.
+                                    const rawDate = task.completed_at || task.created_at || new Date().toISOString()
                                     const dateObj = new Date(rawDate)
                                     const dayKey = dateObj.toDateString()
                                     if (!acc[dayKey]) acc[dayKey] = []
@@ -219,6 +222,7 @@ function BoardColumn({
 export function Planner() {
     const navigate = useNavigate()
     const { selectedListId, lists } = useListStore()
+    const { loadWorkspaceMembers, loadWorkspaceNicknames } = useWorkspaceStore()
     const { tasks, fetchTasks, moveTaskToColumn, reorderTasks, selectedTaskId, toggleComplete } = useTaskStore()
     const { startSession, isActive, taskId: activeFocusId, setShowFocusPanel, endSession } = useFocusStore()
     const { selectedDate } = usePlannerStore()
@@ -254,27 +258,60 @@ export function Planner() {
 
     const [showCreateModal, setShowCreateModal] = useState<{ column: TaskColumn, position: 'top' | 'bottom' } | null>(null)
     const [activeTask, setActiveTask] = useState<Task | null>(null)
+    const [activeColumn, setActiveColumn] = useState<TaskColumn>('today')
 
     // Initial fetch on mount or list change
     useEffect(() => {
         if (!selectedListId) {
-            // If no list is selected, default to 'all' or redirect?
-            // Existing logic redirected to /dashboard (which is this page).
-            // Let's safe guard.
+            // Nothing selected (fresh install, or the selected list was deleted):
+            // fall back to the cross-workspace "all" view rather than leaving the
+            // planner with no selection, which used to strand it on a permanent
+            // "Loading workspace..." screen.
+            useListStore.setState({ selectedListId: 'all' })
             return
         }
         fetchTasks(selectedListId === 'all' ? undefined : selectedListId)
     }, [selectedListId, navigate, fetchTasks])
+
+    // Load members + nicknames for every workspace the visible lists belong to,
+    // so assignee badges (and the nickname nudge) can render across cards.
+    const workspaceIdsKey = useMemo(
+        () => [...new Set(lists.map(l => (l as any).workspace_id).filter(Boolean))].sort().join(','),
+        [lists]
+    )
+    useEffect(() => {
+        if (!workspaceIdsKey) return
+        for (const id of workspaceIdsKey.split(',')) {
+            loadWorkspaceMembers(id)
+            loadWorkspaceNicknames(id)
+        }
+    }, [workspaceIdsKey, loadWorkspaceMembers, loadWorkspaceNicknames])
+
+    // Workspace context for the nickname nudge: the selected list's workspace,
+    // else the first workspace any visible list belongs to.
+    const plannerWorkspaceId = useMemo(() => {
+        const fromSelected = (selectedList as any)?.workspace_id
+        if (fromSelected) return fromSelected as string
+        return workspaceIdsKey ? workspaceIdsKey.split(',')[0] : null
+    }, [selectedList, workspaceIdsKey])
 
     // No need for loadTasks anymore!
 
     const handleDragStart = (event: DragStartEvent) => {
         const { active } = event
         // tasksByColumn is derived, so we can search it
-        const task = Object.values(tasksByColumn)
-            .flat()
-            .find(t => t.id === active.id)
-        setActiveTask(task || null)
+        let found: Task | null = null
+        let foundColumn: TaskColumn = 'today'
+        for (const [col, list] of Object.entries(tasksByColumn)) {
+            const match = list.find(t => t.id === active.id)
+            if (match) {
+                found = match
+                foundColumn = col as TaskColumn
+                break
+            }
+        }
+        setActiveTask(found)
+        setActiveColumn(foundColumn)
     }
 
     const handleDragEnd = async (event: DragEndEvent) => {
@@ -309,28 +346,36 @@ export function Planner() {
             }
         }
 
-        if (!sourceColumn || sourceColumn === targetColumn) {
+        if (!sourceColumn) return
+
+        if (sourceColumn === targetColumn) {
             // Reordering within the same column
-            if (!sourceColumn) return
-            if (sourceColumn === targetColumn) {
-                const columnTasks = [...(tasksByColumn[sourceColumn] || [])]
-                const oldIndex = columnTasks.findIndex(t => t.id === taskId)
-                const newIndex = columnTasks.findIndex(t => t.id === over.id)
+            const columnTasks = [...(tasksByColumn[sourceColumn] || [])]
+            const oldIndex = columnTasks.findIndex(t => t.id === taskId)
+            // If dropped over the column container (not a card), append to end.
+            const overIndex = columnTasks.findIndex(t => t.id === over.id)
+            const newIndex = overIndex === -1 ? columnTasks.length - 1 : overIndex
 
-                if (oldIndex === newIndex) return
+            if (oldIndex === -1 || oldIndex === newIndex) return
 
-                const reorderedList = [...columnTasks]
-                const [movedItem] = reorderedList.splice(oldIndex, 1)
-                reorderedList.splice(newIndex, 0, movedItem)
+            const reorderedList = [...columnTasks]
+            const [movedItem] = reorderedList.splice(oldIndex, 1)
+            reorderedList.splice(newIndex, 0, movedItem)
 
-                const updates = reorderedList.map((t, i) => ({ id: t.id, sort_order: i }))
-                await reorderTasks(updates)
-                return
-            }
+            const updates = reorderedList.map((t, i) => ({ id: t.id, sort_order: i }))
+            await reorderTasks(updates)
+            return
         }
 
         try {
-            await moveTaskToColumn(taskId, targetColumn)
+            // Determine the insertion index in the target column based on the
+            // card we dropped over (so a cross-column drop lands at the drop
+            // point, not always at the bottom).
+            const targetTasks = tasksByColumn[targetColumn] || []
+            const overIndex = targetTasks.findIndex(t => t.id === over.id)
+            const insertIndex = overIndex === -1 ? targetTasks.length : overIndex
+
+            await moveTaskToColumn(taskId, targetColumn, insertIndex)
             if (targetColumn === 'done' && taskId === activeFocusId) {
                 // Trigger celebration logic without closing panel
                 // (notes, score, energy, shouldClosePanel, markCompleted)
@@ -374,7 +419,11 @@ export function Planner() {
         toast.success("Focus Mode Started")
     }
 
-    if (!selectedList && selectedListId !== 'all') {
+    // Only "all" needs no backing list. A selected id that no longer resolves to a
+    // list (deleted, or still being fetched) renders the cross-workspace view via
+    // the effect above instead of stranding the page on a loading message that
+    // nothing ever clears.
+    if (!selectedList && selectedListId !== 'all' && selectedListId) {
         return <div className="p-8 text-[var(--text-muted)]">Loading workspace...</div>
     }
 
@@ -423,10 +472,10 @@ export function Planner() {
 
                 <DragOverlay>
                     {activeTask ? (
-                        <div className="w-72 opacity-90 cursor-grabbing">
+                        <div className={`${activeColumn === 'today' ? 'w-80 lg:w-96' : 'w-72'} opacity-90 cursor-grabbing`}>
                             <TaskCard
                                 task={activeTask}
-                                column={activeTask.status === 'done' ? 'done' : 'today'} // fallback
+                                column={activeColumn}
                                 onComplete={() => { }}
                             />
                         </div>
@@ -434,15 +483,21 @@ export function Planner() {
                 </DragOverlay>
             </DndContext>
 
-            {showCreateModal && selectedListId && (
+            {/* createListId is '' when no real list exists yet (fresh install in
+                the "all" view); opening the modal then would fail on save. */}
+            {showCreateModal && selectedListId && createListId && (
                 <CreateTaskModal
                     isOpen={true}
                     onClose={() => setShowCreateModal(null)}
                     listId={createListId}
+                    column={showCreateModal.column}
+                    position={showCreateModal.position}
                 />
             )}
 
             {selectedTaskId && <TaskDetailsPanel />}
+
+            {plannerWorkspaceId && <NicknameNudge workspaceId={plannerWorkspaceId} />}
         </div>
     )
 }

@@ -17,10 +17,11 @@ export function SuperFocusPill() {
         taskId,
         startBreak,
         stopBreak,
-        skipToNext
+        skipToNext,
+        focusFlash
     } = useFocusStore()
     const { updateSettings } = useSettingsStore()
-    const { tasks, subtasks, fetchSubtasks, toggleSubtask, moveTaskToColumn } = useTaskStore()
+    const { tasks, subtasks, fetchSubtasks, toggleSubtask } = useTaskStore()
     const { isOvertime, displayTime, pomodoroRemaining } = useTimerDisplay()
     const settings = useSettingsStore()
 
@@ -80,8 +81,9 @@ export function SuperFocusPill() {
     const time = displayTime
 
     const handleDone = async () => {
-        if (taskId) await moveTaskToColumn(taskId, 'done')
-        await endSession()
+        // Complete through endSession(markCompleted) so completion + completed_at +
+        // celebration are handled in one place, consistent with FocusPopup/Panel.
+        await endSession(undefined, undefined, undefined, true, true)
     }
 
     const handleAddSubtask = async (e: React.FormEvent) => {
@@ -92,7 +94,12 @@ export function SuperFocusPill() {
     }
 
     return (
-        <div className="w-full h-full flex flex-col gap-2 pointer-events-none pt-4 pb-1 bg-transparent border-none outline-none">
+        <div className={cn(
+            "w-full h-full flex flex-col gap-2 pointer-events-none pt-4 pb-1 bg-transparent border-none outline-none",
+            // No native transparent overlay (web): center the pill on the solid
+            // app surface so the window isn't blank and the controls stay reachable.
+            !platform.capabilities.nativeOverlay && "items-center justify-center"
+        )}>
             {/* Main Pill Row */}
             <div
                 className={cn(
@@ -121,7 +128,15 @@ export function SuperFocusPill() {
                     <GripVertical size={16} className="group-hover/handle:text-[var(--text-primary)] transition-colors" />
                 </div>
 
-                {!isHovered ? (
+                {focusFlash && !isHovered ? (
+                    /* FOCUS REMINDER FLASH — inline, never overlaps */
+                    <div className="flex items-center gap-2.5 flex-1 animate-in fade-in zoom-in-95 duration-300 pr-5 pl-1 overflow-hidden">
+                        <span className="w-2 h-2 rounded-full bg-[var(--focus)] animate-pulse shrink-0" />
+                        <span className="text-sm font-semibold text-[var(--focus)] tracking-wide truncate">
+                            {focusFlash}
+                        </span>
+                    </div>
+                ) : !isHovered ? (
                     /* DEFAULT STATE: [Name] [Time] */
                     <div className="flex items-center justify-between flex-1 animate-in fade-in duration-300 pr-5 pl-1 overflow-hidden">
                         <div className="flex flex-col min-w-0 pr-2 justify-center h-full">

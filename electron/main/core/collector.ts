@@ -1,5 +1,9 @@
 import activeWin from 'active-win'
-import { powerMonitor, systemPreferences } from 'electron'
+import { powerMonitor } from 'electron'
+import { execFile } from 'node:child_process'
+import { resolveDetail, recordObservation } from './trackingDetail'
+
+const IDLE_THRESHOLD_S = 180 // 3 minutes
 
 export interface ActiveWindow {
     appName: string
@@ -7,9 +11,13 @@ export interface ActiveWindow {
     rawApp: string
     rawPath?: string
     isIdle: boolean
-    category: 'Work' | 'Web' | 'Development' | 'Communication' | 'Entertainment' | 'Other' | 'Idle'
+    category: 'Work' | 'Web' | 'Development' | 'Communication' | 'Entertainment' | 'Social' | 'News' | 'Gaming' | 'Other' | 'Idle'
     domain?: string
 }
+
+// Categories treated as attention leaks. Keep in sync with DISTRACTING_CATEGORIES
+// in electron/main/db.ts and DISTRACTING in src/services/insights/buildSummary.ts.
+export const DISTRACTING_CATEGORIES = ['Social', 'Entertainment', 'Gaming', 'News'] as const
 
 /* ---------------- PATTERNS ---------------- */
 
@@ -62,6 +70,21 @@ const CATEGORY_MAP: Record<string, ActiveWindow['category']> = {
     'iterm': 'Development',
     'powershell': 'Development',
     'cmd': 'Development',
+    // Gaming clients / launchers
+    'steam': 'Gaming',
+    'epicgameslauncher': 'Gaming',
+    'epic games launcher': 'Gaming',
+    'riotclientservices': 'Gaming',
+    'league of legends': 'Gaming',
+    'valorant': 'Gaming',
+    'minecraft': 'Gaming',
+    'roblox': 'Gaming',
+    'battle.net': 'Gaming',
+    'origin': 'Gaming',
+    'gog galaxy': 'Gaming',
+    // Social desktop apps
+    'instagram': 'Social',
+    'tiktok': 'Social',
 }
 
 const SITE_TO_CATEGORY: Record<string, ActiveWindow['category']> = {
@@ -85,9 +108,20 @@ const SITE_TO_CATEGORY: Record<string, ActiveWindow['category']> = {
     'Google Sheets': 'Work',
     'Google Slides': 'Work',
     'LinkedIn': 'Web',
-    'Twitter': 'Web',
-    'X/Twitter': 'Web',
-    'Reddit': 'Entertainment',
+    'Twitter/X': 'Social',
+    'Instagram': 'Social',
+    'Facebook': 'Social',
+    'Reddit': 'Social',
+    'TikTok': 'Social',
+    'Snapchat': 'Social',
+    'Threads': 'Social',
+    'BBC': 'News',
+    'CNN': 'News',
+    'NYTimes': 'News',
+    'The Guardian': 'News',
+    'Steam': 'Gaming',
+    'Epic Games': 'Gaming',
+    'IGN': 'Gaming',
     'Amazon': 'Other',
     'eBay': 'Other',
 }
@@ -106,6 +140,19 @@ const SITE_PATTERNS = [
     { name: 'WhatsApp', match: /whatsapp/i },
     { name: 'Discord', match: /discord/i },
     { name: 'Twitter/X', match: /twitter|x\.com/i },
+    { name: 'Instagram', match: /instagram/i },
+    { name: 'Facebook', match: /facebook|fb\.com/i },
+    { name: 'Reddit', match: /reddit/i },
+    { name: 'TikTok', match: /tiktok/i },
+    { name: 'Snapchat', match: /snapchat/i },
+    { name: 'Threads', match: /threads\.net/i },
+    { name: 'BBC', match: /bbc\.com|bbc news/i },
+    { name: 'CNN', match: /cnn\.com/i },
+    { name: 'NYTimes', match: /nytimes|new york times/i },
+    { name: 'The Guardian', match: /theguardian/i },
+    { name: 'Steam', match: /steampowered|steamcommunity/i },
+    { name: 'Epic Games', match: /epicgames\.com/i },
+    { name: 'IGN', match: /ign\.com/i },
     { name: 'Gmail', match: /gmail|mail\.google/i },
     { name: 'Meet', match: /meet\.google/i },
 ]
@@ -119,6 +166,28 @@ function normalize(name: string) {
         .trim()
 }
 
+/**
+ * Hostname of a browser URL, without the "www." prefix. Returns null for
+ * anything unparseable and for non-web schemes (about:blank, file://, the
+ * chrome:// pages), which would otherwise be recorded as if they were sites.
+ */
+function hostnameOf(url: string): string | null {
+    try {
+        const parsed = new URL(url)
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
+        const host = parsed.hostname.replace(/^www\./i, '').toLowerCase()
+        return host || null
+    } catch {
+        return null
+    }
+}
+
+/* isBrowser() used to answer "can this app have a url?" from the display name.
+ * It has been replaced by isUrlCapableBrowser(), which matches the bundle id
+ * against the list active-win itself supports: "Microsoft Edge" and "Vivaldi"
+ * satisfied none of the name heuristics, so anything gated on the old answer
+ * silently excluded two browsers that work fine. */
+
 function detectSite(title: string) {
     for (const s of SITE_PATTERNS) {
         if (s.match.test(title)) return s.name
@@ -126,77 +195,238 @@ function detectSite(title: string) {
     return null
 }
 
+/**
+ * Resolve a window's category (and optional site/domain) from the app name and,
+ * when available, its title. Title is optional — the permission-free fallback
+ * only knows the app name, and still gets a sensible category from CATEGORY_MAP.
+ */
+export function categorize(
+    rawApp: string,
+    title: string = "",
+    url?: string,
+): { category: ActiveWindow["category"]; domain?: string } {
+    const normalizedApp = normalize(rawApp)
+
+    // 1. Base category from the app name.
+    let category: ActiveWindow["category"] = CATEGORY_MAP[normalizedApp] || "Other"
+    let domain: string | undefined
+
+    // 2. Browser → identify the site.
+    if (category === "Web" || normalizedApp.includes("browser") || normalizedApp.includes("chrome")) {
+        // A real URL is exact and covers every site; detectSite() only recognises
+        // SITE_PATTERNS and guesses from the window title. So the url wins when we
+        // have one — Windows/Linux never do, and macOS doesn't until the user opts
+        // into Accessibility.
+        //
+        // The hostname is still run through detectSite() first: SITE_PATTERNS are
+        // substring regexes that match hostnames ("youtube.com" → "YouTube"), which
+        // preserves the friendly name and its SITE_TO_CATEGORY entry. Only genuinely
+        // unknown hosts fall back to the bare hostname, categorised as plain Web.
+        const host = url ? hostnameOf(url) : null
+        const site = (host ? detectSite(host) ?? host : null) ?? detectSite(title)
+        if (site) {
+            domain = site
+            category = SITE_TO_CATEGORY[site] || "Web"
+        }
+    }
+
+    // 3. Title-based override for generically-named apps.
+    if (category === "Other") {
+        if (/visual studio|intellij|pycharm|webstorm|sublime|atom/i.test(title)) {
+            category = "Development"
+        } else if (/word|excel|powerpoint|outlook|onenote|pdf/i.test(title)) {
+            category = "Work"
+        }
+    }
+
+    return { category, domain }
+}
+
+function idleWindow(rawApp: string, rawPath?: string): ActiveWindow {
+    return {
+        appName: "Idle",
+        title: "Away from Keyboard",
+        rawApp,
+        rawPath,
+        isIdle: true,
+        category: "Idle",
+    }
+}
+
+/**
+ * Parse the app name out of `lsappinfo info -only name <asn>` output, which looks
+ * like:  "LSDisplayName"="Google Chrome"
+ */
+export function parseLsAppName(stdout: string): string | null {
+    const m = stdout.match(/"LSDisplayName"\s*=\s*"([^"]+)"/)
+    return m ? m[1].trim() || null : null
+}
+
+function run(cmd: string, args: string[], timeout = 1500): Promise<string> {
+    return new Promise((resolve) => {
+        try {
+            execFile(cmd, args, { timeout }, (err, stdout) => {
+                resolve(err ? "" : String(stdout))
+            })
+        } catch {
+            resolve("")
+        }
+    })
+}
+
+/**
+ * Permission-free frontmost app on macOS. `lsappinfo` reports the foreground app
+ * without any TCC permission (no Accessibility / Screen Recording prompt), so app
+ * level tracking keeps working even when the user hasn't granted access. The
+ * trade-off: no window title and therefore no in-browser site detection.
+ */
+async function macFrontmostAppName(): Promise<string | null> {
+    const asn = (await run("lsappinfo", ["front"])).trim()
+    if (!asn) return null
+    return parseLsAppName(await run("lsappinfo", ["info", "-only", "name", asn]))
+}
+
+/**
+ * Parse the bundle id out of `lsappinfo info -only bundleid <asn>`, which looks
+ * like:  "CFBundleIdentifier"="com.google.Chrome"
+ */
+export function parseLsBundleId(stdout: string): string | null {
+    const m = stdout.match(/"CFBundleIdentifier"\s*=\s*"([^"]+)"/)
+    return m ? m[1].trim() || null : null
+}
+
+/**
+ * The browsers active-win can actually read a url out of, by bundle id. Taken
+ * from the shipped helper binary itself rather than guessed:
+ *
+ *   strings -a node_modules/active-win/main | grep -E 'com\.(google|apple|...)'
+ *
+ * Bundle ids, not display names: "Microsoft Edge" and "Vivaldi" match none of
+ * the display-name heuristics used for categorisation, so deciding this on
+ * names would silently deny url tracking to browsers that support it. Prefix
+ * matching covers the beta/dev/canary/nightly variants the helper also lists.
+ */
+const URL_CAPABLE_BROWSER_IDS = [
+    "com.apple.Safari",
+    "com.apple.SafariTechnologyPreview",
+    "com.google.Chrome",
+    "com.brave.Browser",
+    "com.microsoft.edgemac",
+    "com.operasoftware.Opera",
+    "com.vivaldi.Vivaldi",
+]
+
+function isUrlCapableBrowser(bundleId: string): boolean {
+    return URL_CAPABLE_BROWSER_IDS.some(
+        (id) => bundleId === id || bundleId.startsWith(`${id}.`),
+    )
+}
+
+/**
+ * Is the frontmost app one active-win could return a url for? Answered with
+ * lsappinfo, which needs no permission, so asking costs nothing.
+ */
+async function macFrontmostIsUrlCapable(): Promise<boolean> {
+    const asn = (await run("lsappinfo", ["front"])).trim()
+    if (!asn) return false
+    const bundleId = parseLsBundleId(
+        await run("lsappinfo", ["info", "-only", "bundleid", asn]),
+    )
+    return bundleId !== null && isUrlCapableBrowser(bundleId)
+}
+
 /* ---------------- ENGINE ---------------- */
 
 export async function getActiveWindow(): Promise<ActiveWindow | null> {
     try {
-        // macOS: Check for accessibility permission without requesting it (false)
-        if (process.platform === 'darwin') {
-            const hasAccess = systemPreferences.isTrustedAccessibilityClient(false)
-            if (!hasAccess) {
-                // If we don't have access, we can still detect idle time via powerMonitor
-                // but we can't reliably get the active window title.
-                // We return null to indicate tracking is disabled/restricted.
-                return null
+        const isIdle = powerMonitor.getSystemIdleTime() > IDLE_THRESHOLD_S
+        const detail = resolveDetail()
+
+        // macOS with neither capability live: use the permission-free app-name
+        // source (lsappinfo) and never call active-win at all. active-win's native
+        // helper reaches for Screen Recording / Accessibility as a side effect of
+        // being asked for a title or url, which surfaces a system prompt. Staying
+        // out of it entirely is what keeps default tracking prompt-free.
+        //
+        // resolveDetail() has already withdrawn any capability observed not to
+        // work, so a user who opted in but whose grant is not effective lands
+        // back here rather than being re-prompted on a background pulse.
+        if (process.platform === "darwin" && !detail.titles && !detail.urls) {
+            const appName = await macFrontmostAppName()
+            if (!appName) return null
+            if (isIdle) return idleWindow(appName)
+            const { category } = categorize(appName)
+            return {
+                appName,
+                title: "",
+                rawApp: appName,
+                isIdle: false,
+                category,
             }
         }
 
-        const win = await activeWin()
-        if (!win) return null
+        // A url only ever exists when a supported browser is frontmost. Asking
+        // for one anywhere else cannot return data, but it still makes
+        // active-win's helper run its Accessibility trust check — and that check
+        // prompts. lsappinfo answers "what is frontmost" with no permission at
+        // all, so use it to confine the Accessibility request to the moments it
+        // could actually pay off. Most of the day that is no moments at all.
+        //
+        // Unknown frontmost app means don't ask: a missed url on one pulse costs
+        // nothing, an unnecessary modal costs the user their focus.
+        let wantUrls = detail.urls
+        if (process.platform === "darwin" && wantUrls) {
+            wantUrls = await macFrontmostIsUrlCapable()
+        }
 
-        const idleTime = powerMonitor.getSystemIdleTime()
-        const isIdle = idleTime > 180 // 3 minutes for true idle
+        // Detailed path. The two options map to two different macOS permissions:
+        // screenRecordingPermission gates `title`, accessibilityPermission gates
+        // `url`. Passing false leaves the corresponding field empty rather than
+        // prompting. On Windows/Linux both resolve true and the options are inert.
+        const win = await activeWin({
+            screenRecordingPermission: detail.titles,
+            accessibilityPermission: wantUrls,
+        })
+        if (!win) return null
 
         const rawApp = win.owner.name
         const rawPath = win.owner.path
-        const title = win.title || ''
-        const normalizedApp = normalize(rawApp)
+        const title = win.title || ""
+        // `url` exists only on the macOS browser path; absent elsewhere.
+        const url = (win as { url?: string }).url
 
-        if (isIdle) {
-            return {
-                appName: 'Idle',
-                title: 'Away from Keyboard',
-                rawApp,
-                rawPath,
-                isIdle: true,
-                category: 'Idle'
+        // Report what we actually got. This is the authoritative answer to "is
+        // the permission working" — more so than systemPreferences, which
+        // describes this process rather than active-win's helper binary.
+        if (process.platform === "darwin") {
+            if (detail.titles) recordObservation("titles", title !== "")
+            // A url only exists when a browser is frontmost, so its absence
+            // elsewhere proves nothing and must not be recorded as a failure.
+            // wantUrls, not detail.urls: a pulse that deliberately did not ask
+            // proves nothing, and recording it as a failure would suppress the
+            // capability permanently. It already implies a url-capable browser
+            // was frontmost, which is the condition that makes an empty url
+            // meaningful — so no display-name check on top, which would miss
+            // Edge and Vivaldi and lose their observations entirely.
+            if (wantUrls) {
+                recordObservation("urls", typeof url === "string" && url !== "")
             }
         }
 
-        // 1. Determine base category from App Name
-        let category: ActiveWindow['category'] = CATEGORY_MAP[normalizedApp] || 'Other'
-        let domain: string | undefined
+        if (isIdle) return idleWindow(rawApp, rawPath)
 
-        // 2. Special handling for Browsers (Site Detection)
-        if (category === 'Web' || normalizedApp.includes('browser') || normalizedApp.includes('chrome')) {
-            const site = detectSite(title)
-            if (site) {
-                domain = site
-                category = SITE_TO_CATEGORY[site] || 'Web'
-            }
-        }
-
-        // 3. Title-based override (for apps with generic names)
-        if (category === 'Other') {
-            if (/visual studio|intellij|pycharm|webstorm|sublime|atom/i.test(title)) {
-                category = 'Development'
-            } else if (/word|excel|powerpoint|outlook|onenote|pdf/i.test(title)) {
-                category = 'Work'
-            }
-        }
-
+        const { category, domain } = categorize(rawApp, title, url)
         return {
-            appName: rawApp.replace('.exe', ''), // Keep original app name
+            appName: rawApp.replace(".exe", ""),
             title,
             rawApp,
             rawPath,
             isIdle: false,
             category,
-            domain
+            domain,
         }
-
-    } catch (e: any) {
-        // Catch any remaining errors (e.g. from active-win native code)
+    } catch {
+        // Native errors (e.g. from active-win) — treat as "no data this pulse".
         return null
     }
 }

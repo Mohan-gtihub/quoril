@@ -8,6 +8,7 @@ import { backupService } from '@/services/backupService'
 import { soundService } from '@/services/soundService'
 import { useSettingsStore } from './settingsStore'
 import { parseTitleForTime } from '@/utils/timeParser'
+import { analytics } from '@/services/analytics'
 
 import {
     COLUMN_STATUS,
@@ -29,7 +30,8 @@ interface TaskState {
 
     createTask: (
         task: Partial<Task>,
-        column: TaskColumn
+        column: TaskColumn,
+        position?: 'top' | 'bottom'
     ) => Promise<Task>
 
     updateTask: (id: string, updates: Partial<Task>) => Promise<Task>
@@ -48,7 +50,8 @@ interface TaskState {
 
     moveTaskToColumn: (
         taskId: string,
-        column: TaskColumn
+        column: TaskColumn,
+        insertIndex?: number
     ) => Promise<void>
 
     reorderTasks: (
@@ -134,7 +137,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
     /* ---------------- CREATE ---------------- */
 
-    createTask: async (task, column) => {
+    createTask: async (task, column, position = 'bottom') => {
         try {
             set({ loading: true, error: null })
 
@@ -148,15 +151,15 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                     COLUMN_STATUS[column].includes(t.status as TaskStatus)
             )
 
-            const maxOrder = siblings.reduce(
-                (m, t) => Math.max(m, t.sort_order ?? 0),
-                -1
-            )
+            // 'top' → sort before all siblings; 'bottom' → after all siblings.
+            const sortOrder = position === 'top'
+                ? siblings.reduce((m, t) => Math.min(m, t.sort_order ?? 0), 0) - 1
+                : siblings.reduce((m, t) => Math.max(m, t.sort_order ?? 0), -1) + 1
 
             const finalTask: Partial<Task> = {
                 ...task,
                 status,
-                sort_order: maxOrder + 1,
+                sort_order: sortOrder,
             }
 
             /* Parse time */
@@ -175,12 +178,19 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             const { data, error } =
                 await localService.tasks.create(finalTask)
 
-            if (error || !data) throw error
+            if (error || !data) throw (error ?? new Error('Write returned no data (likely RLS/permission rejection)'))
 
             set((s) => ({
                 tasks: [data, ...s.tasks],
                 loading: false,
             }))
+
+            // Shape only — never the task title.
+            analytics.track('task.created', {
+                hasDueDate: Boolean(data.due_date),
+                priority: data.priority ?? null,
+                isRecurring: Boolean(data.is_recurring),
+            })
 
             return data
         } catch (e) {
@@ -230,7 +240,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             const { data, error } =
                 await localService.tasks.update(id, final)
 
-            if (error || !data) throw error
+            if (error || !data) throw (error ?? new Error('Write returned no data (likely RLS/permission rejection)'))
+
+            // The authoritative DB write succeeded. Clear the crash-recovery
+            // backup so a stale-high value can never inflate future totals (L2).
+            if (typeof final.actual_seconds === 'number') {
+                backupService.remove(id)
+            }
 
             set((s) => ({
                 tasks: s.tasks.map((t) =>
@@ -315,12 +331,29 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                 return
             }
 
-            await get().moveTaskToColumn(id, 'done')
+            // M3: If a focus session is actively tracking this task, complete it
+            // through endSession(markCompleted) so the focus session is closed and
+            // completion is stamped exactly once — rather than leaving the timer
+            // running until syncTimer notices and double-stamps completed_at.
+            // Lazy import avoids a static circular dependency with focusStore.
+            const { useFocusStore } = await import('./focusStore')
+            const focus = useFocusStore.getState()
+            const delegatedToFocus = focus.isActive && focus.taskId === id
 
-            const { successSoundEnabled, successSound } = useSettingsStore.getState()
-            if (successSoundEnabled) {
-                soundService.playSuccess(successSound)
+            if (delegatedToFocus) {
+                // endSession plays the success sound itself; don't double-play below.
+                await focus.endSession(undefined, undefined, undefined, true, true)
+            } else {
+                await get().moveTaskToColumn(id, 'done')
+
+                const { successSoundEnabled, successSound } = useSettingsStore.getState()
+                if (successSoundEnabled) {
+                    soundService.playSuccess(successSound)
+                }
             }
+
+            // Only on a real done-transition — the un-complete path returns above.
+            analytics.track('task.completed', { viaFocusSession: delegatedToFocus })
         } catch (e) {
             console.error('Failed to toggle complete:', e)
             set({ error: 'Failed to complete task' })
@@ -334,7 +367,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             const { data, error } =
                 await localService.tasks.start(id)
 
-            if (error || !data) throw error
+            if (error || !data) throw (error ?? new Error('Write returned no data (likely RLS/permission rejection)'))
 
             set((s) => ({
                 tasks: s.tasks.map((t) =>
@@ -351,7 +384,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
             const { data, error } =
                 await localService.tasks.pause(id)
 
-            if (error || !data) throw error
+            if (error || !data) throw (error ?? new Error('Write returned no data (likely RLS/permission rejection)'))
 
             set((s) => ({
                 tasks: s.tasks.map((t) =>
@@ -365,29 +398,47 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
     /* ---------------- MOVE ---------------- */
 
-    moveTaskToColumn: async (taskId, column) => {
+    moveTaskToColumn: async (taskId, column, insertIndex) => {
         try {
             const status = COLUMN_DEFAULT[column]
 
-            const targets = get().tasks.filter((t) =>
-                COLUMN_STATUS[column].includes(
-                    t.status as TaskStatus
-                )
-            )
-
-            const max = targets.reduce(
-                (m, t) => Math.max(m, t.sort_order ?? 0),
-                -1
-            )
-
             const updates: Partial<Task> = {
                 status,
-                sort_order: max + 1,
                 completed_at: column === 'done' ? new Date().toISOString() : null,
                 // Don't try to update due_date/due_time - they don't exist as separate columns
             }
 
-            await get().updateTask(taskId, updates)
+            // Destination column's existing members (excluding the moving task),
+            // ordered by sort_order, so we can splice the task in at insertIndex.
+            const destTasks = get().tasks
+                .filter((t) =>
+                    t.id !== taskId &&
+                    COLUMN_STATUS[column].includes(t.status as TaskStatus)
+                )
+                .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+
+            if (insertIndex === undefined || insertIndex >= destTasks.length) {
+                // Append to the bottom.
+                const max = destTasks.reduce(
+                    (m, t) => Math.max(m, t.sort_order ?? 0),
+                    -1
+                )
+                updates.sort_order = max + 1
+                await get().updateTask(taskId, updates)
+            } else {
+                // Insert at a specific position and renumber the destination column.
+                const clampedIndex = Math.max(0, insertIndex)
+                await get().updateTask(taskId, updates)
+
+                const movedTask = get().tasks.find((t) => t.id === taskId)
+                if (movedTask) {
+                    const ordered = [...destTasks]
+                    ordered.splice(clampedIndex, 0, movedTask)
+                    await get().reorderTasks(
+                        ordered.map((t, i) => ({ id: t.id, sort_order: i }))
+                    )
+                }
+            }
         } catch (e) {
             console.error(e)
         }
@@ -549,7 +600,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                     sort_order: currentSubtasks.length,
                 })
 
-            if (error || !data) throw error
+            if (error || !data) throw (error ?? new Error('Write returned no data (likely RLS/permission rejection)'))
 
             set((s) => ({
                 subtasks: {
@@ -587,7 +638,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                     completed: !sub.completed,
                 })
 
-            if (error || !data) throw error
+            if (error || !data) throw (error ?? new Error('Write returned no data (likely RLS/permission rejection)'))
 
             const taskId = foundTaskId
             set((s) => ({

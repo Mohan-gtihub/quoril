@@ -12,6 +12,8 @@ import {
 } from '@/utils/securityUtils'
 import { SECURITY_CONFIG } from '@/config/security'
 import { platform } from '@/services/platform'
+import { rolesOf, tierOf, type AppRole, type SubscriptionTier } from '@/utils/permissions'
+import { analytics } from '@/services/analytics'
 
 interface AuthState {
     user: User | null
@@ -21,21 +23,42 @@ interface AuthState {
     lastActivity: number
     sessionFingerprint: string | null
 
+    // Roles & entitlements, decoded from the session JWT (via the Supabase
+    // custom_access_token_hook). Kept in sync wherever the session is set.
+    roles: AppRole[]
+    tier: SubscriptionTier
+
     // Actions
     initialize: () => Promise<void>
     signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
     signUp: (email: string, password: string) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean }>
     signInWithGoogle: () => Promise<{ success: boolean; error?: string }>
     signOut: () => Promise<void>
+    updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>
+    updateEmail: (newEmail: string) => Promise<{ success: boolean; error?: string }>
+    sendPasswordReset: () => Promise<{ success: boolean; error?: string }>
     checkSessionValidity: () => boolean
     updateActivity: () => void
     setUser: (user: User | null) => void
     setSession: (session: Session | null) => void
 }
 
+// 'app.opened' is a per-app-run launch count, but SIGNED_IN can fire more than
+// once in a run (deep-link exchange, re-auth). Latch it so the count stays 1:1
+// with launches.
+let appOpenedEmitted = false
+
 // Session timeout checker
 let sessionTimeoutInterval: NodeJS.Timeout | null = null
 let activityCheckInterval: NodeJS.Timeout | null = null
+
+// Derive the role/tier fields from a SESSION so every session-setting path
+// stays consistent. The custom_access_token_hook injects roles/tier into the
+// access token (JWT), not user.app_metadata, so we must decode the session's
+// token — rolesOf/tierOf handle that when given a session.
+function claimsOf(session: Session | null) {
+    return { roles: rolesOf(session), tier: tierOf(session) }
+}
 
 export const useAuthStore = create<AuthState>((set, get) => ({
     user: null,
@@ -44,6 +67,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     initialized: false,
     lastActivity: Date.now(),
     sessionFingerprint: null,
+    roles: [],
+    tier: 'free',
 
     initialize: async () => {
         const state = get()
@@ -80,6 +105,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 set({
                     session,
                     user: session.user,
+                    ...claimsOf(session),
                     initialized: true,
                     loading: false,
                     lastActivity: Date.now(),
@@ -87,10 +113,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
                 // Start session monitoring
                 startSessionMonitoring()
+
+                // A restored session does not raise SIGNED_IN, so identify here
+                // too — otherwise every returning user's run is unattributed.
+                analytics.identify(session.user.id)
+                if (!appOpenedEmitted) {
+                    appOpenedEmitted = true
+                    analytics.track('app.opened')
+                }
             } else {
                 set({
                     session: null,
                     user: null,
+                    roles: [],
+                    tier: 'free',
                     initialized: true,
                     loading: false,
                 })
@@ -104,22 +140,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     set({
                         session,
                         user: session.user,
+                        ...claimsOf(session),
                         loading: false,
                         lastActivity: Date.now(),
                     })
                     platform.auth.setUser(session.user.id, session.access_token)
                     startSessionMonitoring()
+
+                    analytics.identify(session.user.id)
+                    if (!appOpenedEmitted) {
+                        appOpenedEmitted = true
+                        analytics.track('app.opened')
+                    }
+
+                    // Hydrate the profile here, not just when Settings mounts:
+                    // the greeting and sidebar read full_name from this store on
+                    // first paint and would otherwise fall back to the email.
+                    void import('@/store/profileStore').then(({ useProfileStore }) => {
+                        void useProfileStore.getState().fetchProfile(session.user.id)
+                    })
                 } else if (event === 'SIGNED_OUT') {
                     stopSessionMonitoring()
+                    analytics.reset()
                     set({
                         session: null,
                         user: null,
+                        roles: [],
+                        tier: 'free',
                         loading: false,
                     })
                 } else if (event === 'TOKEN_REFRESHED' && session) {
-                    // Update session on token refresh
+                    // Update session on token refresh — re-read claims in case
+                    // roles/tier changed since the last token was minted.
                     set({
                         session,
+                        user: session.user,
+                        ...claimsOf(session),
                         lastActivity: Date.now(),
                     })
                 }
@@ -177,6 +233,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({
                 session: data.session,
                 user: data.user,
+                ...claimsOf(data.session),
                 loading: false,
                 lastActivity: Date.now(),
             })
@@ -242,6 +299,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 set({
                     session: data.session,
                     user: data.user,
+                    ...claimsOf(data.session),
                     loading: false,
                     lastActivity: Date.now(),
                 })
@@ -348,6 +406,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({
                 user: null,
                 session: null,
+                roles: [],
+                tier: 'free',
                 loading: false,
                 lastActivity: 0,
             })
@@ -357,9 +417,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const { useTaskStore } = await import('@/store/taskStore')
             const { useListStore } = await import('@/store/listStore')
 
+            const { useProfileStore } = await import('@/store/profileStore')
+
             useFocusStore.getState().reset()
             useTaskStore.setState({ tasks: [], selectedTaskId: null })
             useListStore.setState({ lists: [], selectedListId: null })
+            // Drop the cached name so the next user never sees the previous one.
+            useProfileStore.setState({ fullName: '', avatarUrl: null })
 
             // 6. Clear any sensitive data from localStorage
             localStorage.removeItem('auth_attempts')
@@ -367,6 +431,49 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch (error) {
             console.error('[Auth] Sign out error:', error)
             set({ loading: false })
+        }
+    },
+
+    updatePassword: async (newPassword) => {
+        const check = validatePassword(newPassword)
+        if (!check.valid) {
+            return { success: false, error: check.errors[0] || 'Password is too weak' }
+        }
+        try {
+            const { error } = await supabase.auth.updateUser({ password: newPassword })
+            if (error) return { success: false, error: getSecureErrorMessage(error, 'general') }
+            return { success: true }
+        } catch (error) {
+            return { success: false, error: getSecureErrorMessage(error, 'general') }
+        }
+    },
+
+    updateEmail: async (newEmail) => {
+        const emailCheck = validateEmail(newEmail)
+        if (!emailCheck.valid) {
+            return { success: false, error: emailCheck.error || 'Please enter a valid email address' }
+        }
+        try {
+            const { error } = await supabase.auth.updateUser({ email: newEmail })
+            if (error) return { success: false, error: getSecureErrorMessage(error, 'general') }
+            // Supabase sends a confirmation link to the new address before it takes effect.
+            return { success: true }
+        } catch (error) {
+            return { success: false, error: getSecureErrorMessage(error, 'general') }
+        }
+    },
+
+    sendPasswordReset: async () => {
+        const email = get().user?.email
+        if (!email) return { success: false, error: 'No email on file' }
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/reset-password`,
+            })
+            if (error) return { success: false, error: getSecureErrorMessage(error, 'general') }
+            return { success: true }
+        } catch (error) {
+            return { success: false, error: getSecureErrorMessage(error, 'general') }
         }
     },
 
@@ -391,8 +498,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
     },
 
+    // setUser has no access token, so it can't refresh claims — it only updates
+    // the user object. Claims are derived from the session (setSession / auth
+    // events), which is where the JWT with roles/tier lives.
     setUser: (user) => set({ user }),
-    setSession: (session) => set({ session }),
+    setSession: (session) =>
+        set({ session, user: session?.user ?? null, ...claimsOf(session ?? null) }),
 }))
 
 // ==================== SESSION MONITORING ====================

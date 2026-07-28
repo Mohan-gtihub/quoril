@@ -25,8 +25,17 @@ const COLS: [string, [string, string][]][] = [
     "Company",
     [
       ["About", "/about"],
-      ["Privacy", "/security"],
-      ["Contact", "mailto:hello@quoril.app"],
+      ["Blog", "/blog"],
+      ["Contact", "mailto:hello@quoril.in"],
+    ],
+  ],
+  [
+    "Legal",
+    [
+      ["Privacy Policy", "/privacy"],
+      ["Terms of Service", "/terms"],
+      ["Security", "/security"],
+      ["Delete account", "/account/delete"],
     ],
   ],
 ];
@@ -34,15 +43,15 @@ const COLS: [string, [string, string][]][] = [
 export default function Footer() {
   return (
     <footer className="border-t border-line bg-surface">
-      <div className="mx-auto grid max-w-[1180px] grid-cols-2 gap-x-6 gap-y-10 px-5 py-12 sm:px-6 sm:py-16 md:grid-cols-[300px_repeat(3,1fr)] md:gap-10">
+      <div className="mx-auto grid max-w-[1180px] grid-cols-2 gap-x-6 gap-y-10 px-5 py-12 sm:px-6 sm:py-16 md:grid-cols-[260px_repeat(4,1fr)] md:gap-10">
         <div className="col-span-2 max-w-[300px] md:col-span-1">
           <Logo />
           <p className="mt-4 text-[14px] leading-relaxed text-ink-muted">
-            A desktop productivity operating system for deep work — tasks,
-            focus, analytics and digital wellbeing in one native app.
+            Plan your day, protect your focus and understand your time in one
+            private, offline-first desktop app.
           </p>
           <p className="mt-4 text-[13px] text-ink-faint">
-            Built by Mohan Kilari.
+            Built by Erik Vale.
           </p>
         </div>
 
@@ -77,7 +86,7 @@ export default function Footer() {
       <div className="border-t border-line">
         <div className="mx-auto flex max-w-[1180px] flex-col gap-2 px-5 py-6 text-[13px] text-ink-faint sm:flex-row sm:flex-wrap sm:justify-between sm:gap-3 sm:px-6">
           <span>© 2026 Quoril. All rights reserved.</span>
-          <span>Offline-first · Local SQLite + cloud sync · Crafted for people who ship.</span>
+          <span>Plan · Focus · Understand · Offline-first by design.</span>
         </div>
       </div>
     </footer>

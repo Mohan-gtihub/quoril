@@ -6,10 +6,15 @@ interface SettingsState {
     theme: 'system' | 'daylight' | 'dark' | 'light' | 'blue' | 'red' | 'nebula'
     timezone: string
 
+    // AI — Generate Insights on the Reports page (can be turned off entirely).
+    aiInsightsEnabled: boolean
+
     // Blitz mode / Focus Settings
     pomodorosEnabled: boolean
     pomodoroLength: number // minutes
     defaultBreakLength: number // minutes
+    longBreakLength: number // minutes
+    pomodorosUntilLongBreak: number // count of focus pomodoros before a long break
     scrollingTitle: boolean
     dailyFocusGoalMinutes: number // minutes
     superFocusMode: boolean
@@ -40,9 +45,13 @@ export const useSettingsStore = create<SettingsState>()(
             theme: 'daylight',
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 
+            aiInsightsEnabled: true,
+
             pomodorosEnabled: false,
             pomodoroLength: 25,
             defaultBreakLength: 10,
+            longBreakLength: 20,
+            pomodorosUntilLongBreak: 4,
             scrollingTitle: true,
             dailyFocusGoalMinutes: 240,
             superFocusMode: false,

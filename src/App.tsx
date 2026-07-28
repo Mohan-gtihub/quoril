@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect, lazy, Suspense } from 'react'
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import toast, { Toaster } from 'react-hot-toast'
 import { QueryProvider } from '@/providers/QueryProvider'
 import { useAuthStore } from '@/store/authStore'
@@ -21,10 +21,16 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { SuperFocusPill } from '@/components/focus/SuperFocusPill'
 import { WorkspacesOverview } from '@/components/workspaces/WorkspacesOverview'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { CanvasApp } from '@/components/canvas/CanvasApp'
+import { UpdateNotification } from '@/components/updates/UpdateNotification'
+import { FeedbackWidget } from '@/components/feedback/FeedbackWidget'
+import { isTester } from '@/utils/permissions'
+// Excalidraw is large; load the whiteboard only when its route is opened.
+const CanvasApp = lazy(() => import('@/components/canvas/CanvasApp').then((m) => ({ default: m.CanvasApp })))
 
 import { cn } from '@/utils/helpers'
 import { platform } from '@/services/platform'
+import { NavHistoryTracker } from '@/hooks/useNavHistory'
+import { logger } from '@/services/logger'
 
 
 import { dataSyncService } from '@/services/dataSyncService'
@@ -33,7 +39,7 @@ import { useListStore } from '@/store/listStore'
 import { supabase } from '@/services/supabase'
 
 function App() {
-    const { initialize, initialized, user } = useAuthStore()
+    const { initialize, initialized, user, session } = useAuthStore()
     const { isActive, isPaused, isBreak } = useFocusStore()
     const settings = useSettingsStore()
 
@@ -42,6 +48,30 @@ function App() {
             initialize()
         }
     }, [initialize, initialized])
+
+    // Super-focus drives a dedicated pill OVERLAY WINDOW (electron only): when it
+    // turns on, hide this window and open the pill window; when off, close the
+    // pill window and bring this one back. Keeps the pill able to roam across
+    // Spaces without the whole app window roaming with it.
+    useEffect(() => {
+        if (!platform.capabilities.nativeOverlay) return
+        if (settings.superFocusMode) {
+            platform.focusWindow.enterPill()
+        } else {
+            platform.focusWindow.exitPill()
+        }
+    }, [settings.superFocusMode])
+
+    // When the pill window hands the session back, re-read the persisted stores
+    // so this window reflects whatever happened while it was dormant.
+    useEffect(() => {
+        if (!platform.capabilities.nativeOverlay) return
+        const off = platform.focusWindow.onRehydrate(() => {
+            ;(useSettingsStore as any).persist?.rehydrate?.()
+            ;(useFocusStore as any).persist?.rehydrate?.()
+        })
+        return typeof off === 'function' ? off : undefined
+    }, [])
 
     // Start background sync + realtime subscriptions when user is logged in
     useEffect(() => {
@@ -91,13 +121,29 @@ function App() {
         }
     }, [])
 
-    // Inject super-focus-mode class into HTML root for transparency overrides
+    // Inject super-focus-mode class into HTML root for transparency overrides.
+    // Transparency only makes sense on a native transparent overlay window
+    // (Electron). On the web there is no transparent OS window, so applying it
+    // would blank the page — guard against that. (L: minimal-interface blank bug)
     useEffect(() => {
-        if (settings.superFocusMode) {
+        const wantsTransparency = settings.superFocusMode && platform.capabilities.nativeOverlay
+        if (wantsTransparency) {
             document.documentElement.classList.add('super-focus-mode')
         } else {
             document.documentElement.classList.remove('super-focus-mode')
         }
+        return () => document.documentElement.classList.remove('super-focus-mode')
+    }, [settings.superFocusMode])
+
+    // Safety net: Escape always exits Super Focus Mode so the user can never get
+    // stuck on a minimal/blank surface.
+    useEffect(() => {
+        if (!settings.superFocusMode) return
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') settings.updateSettings({ superFocusMode: false })
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
     }, [settings.superFocusMode])
 
     // Mirror the active theme class onto <body> so the page backdrop matches
@@ -119,6 +165,9 @@ function App() {
     // Keep store elapsed in sync for persistence and endSession; use getState() so effect doesn't re-run
     useEffect(() => {
         if (!isActive || (isPaused && !isBreak)) return
+        // During super-focus the dedicated pill window owns the authoritative
+        // tick (electron). Don't double-tick from this dormant window.
+        if (platform.capabilities.nativeOverlay && settings.superFocusMode) return
 
         let intervalId: NodeJS.Timeout | null = null
 
@@ -141,7 +190,7 @@ function App() {
                 intervalId = null
             }
         }
-    }, [isActive, isPaused, isBreak])
+    }, [isActive, isPaused, isBreak, settings.superFocusMode])
 
     // When user comes back to the app, sync store elapsed from real time
     useEffect(() => {
@@ -158,14 +207,21 @@ function App() {
         }
     }, [])
 
-    // DEEP LINK HANDLING (Email Verification + Password Reset)
+    // DEEP LINK HANDLING (Email Verification + Password Reset + OAuth callback)
     useEffect(() => {
-        const result = platform.auth.onDeepLink(async (url) => {
-            console.log('[DeepLink] Received:', url)
-
+        const handleDeepLink = async (url: string) => {
             try {
+                const parsed = new URL(url)
+                if (parsed.protocol !== 'quoril:' || !['auth', 'resume', 'focus'].includes(parsed.hostname)) {
+                    logger.warn('auth.deep_link_rejected')
+                    return
+                }
+                // Never log the raw link: OAuth codes and legacy callback tokens
+                // can appear in its query string or hash fragment.
+                logger.info('auth.deep_link_received', { action: parsed.hostname })
+
                 // RESUME LOGIC — quoril://resume or quoril://focus
-                if (url.includes('resume') || url.includes('focus')) {
+                if (parsed.hostname === 'resume' || parsed.hostname === 'focus') {
                     const store = useFocusStore.getState()
                     if (store.isActive && store.isPaused) {
                         toast("Resuming Mission...")
@@ -175,10 +231,6 @@ function App() {
                 }
 
                 // AUTH LOGIC
-                // Re-parse as a proper URL so URL() can parse query params correctly
-                const parsableUrl = url.replace(/^quoril:\/\//, 'https://quoril.app/')
-                const parsed = new URL(parsableUrl)
-
                 // --- PKCE flow: ?code=xxxx (Supabase default) ---
                 const code = parsed.searchParams.get('code')
                 if (code) {
@@ -216,9 +268,18 @@ function App() {
                     }
                 }
             } catch (e) {
-                console.error('[DeepLink] Error parsing URL:', e)
+                logger.error('auth.deep_link_processing_failed', { name: e instanceof Error ? e.name : undefined })
             }
-        })
+        }
+
+        // 1. Subscribe to live deep links forwarded by the main process.
+        const result = platform.auth.onDeepLink(handleDeepLink)
+
+        // 2. Drain any deep link that arrived before this listener was ready
+        //    (cold-start OAuth callback on Windows, or a send that raced load).
+        platform.auth.getPendingDeepLink()
+            .then((url) => { if (url) handleDeepLink(url) })
+            .catch(() => { })
 
         if (typeof result === 'function') {
             return () => result()
@@ -240,6 +301,7 @@ function App() {
         <ErrorBoundary>
             <QueryProvider>
                 <HashRouter>
+                    <NavHistoryTracker />
                     <div className={cn(
                         "flex flex-col h-screen overflow-hidden transition-all duration-500",
                         settings.theme === 'daylight' && "theme-daylight",
@@ -247,14 +309,17 @@ function App() {
                         settings.theme === 'blue' && "theme-blue",
                         settings.theme === 'red' && "theme-red",
                         settings.theme === 'nebula' && "theme-nebula",
-                        !settings.superFocusMode ? "bg-[var(--bg-primary)]" : "bg-transparent super-focus",
+                        (settings.superFocusMode && platform.capabilities.nativeOverlay) ? "bg-transparent super-focus" : "bg-[var(--bg-primary)]",
                         "text-[var(--text-primary)]"
                     )}>
                         {!settings.superFocusMode && platform.capabilities.nativeOverlay && <TitleBar />}
                         <div className="flex-1 overflow-hidden">
                             {user ? (
                                 settings.superFocusMode ? (
-                                    <SuperFocusPill />
+                                    // On electron the pill lives in its own overlay
+                                    // window (this window is hidden); only the web
+                                    // build renders it inline here.
+                                    platform.capabilities.nativeOverlay ? null : <SuperFocusPill />
                                 ) : (
                                     <Routes>
                                         <Route path="/focus-popup" element={<FocusPopup />} />
@@ -269,7 +334,7 @@ function App() {
                                                     <Route path="/reports" element={<Reports />} />
                                                     <Route path="/activity" element={<ActivityDashboard />} />
                                                     <Route path="/screen-time" element={<ScreenTime />} />
-                                                    <Route path="/canvas" element={<CanvasApp />} />
+                                                    <Route path="/canvas" element={<Suspense fallback={null}><CanvasApp /></Suspense>} />
                                                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                                                 </Routes>
                                             </Layout>
@@ -301,6 +366,12 @@ function App() {
                                 }}
                             />
                             <ConfirmDialog />
+                            {!settings.superFocusMode && <UpdateNotification />}
+                            {/* Report pill (top-right, below the title bar). Hidden
+                                in the compact focus-popup window. */}
+                            {session && !settings.superFocusMode && isTester(session) && (
+                                <FeedbackWidgetGate />
+                            )}
                         </div>
                     </div>
                 </HashRouter>
@@ -308,6 +379,15 @@ function App() {
 
         </ErrorBoundary>
     )
+}
+
+// Renders the feedback pill only on the main app screens. The compact
+// focus-popup window has its own bottom toolbar that the fixed pill would
+// overlap, so it's suppressed there. Route-aware so it toggles on navigation.
+function FeedbackWidgetGate() {
+    const { pathname } = useLocation()
+    if (pathname.startsWith('/focus-popup')) return null
+    return <FeedbackWidget />
 }
 
 export default App

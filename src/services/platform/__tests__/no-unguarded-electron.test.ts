@@ -20,6 +20,7 @@ const ALLOW = [
   'components/dashboard/ActivityDashboard.tsx',
   'components/reports/components/AppUsageReport.tsx',
   'components/reports/hooks/useReportsData.ts',
+  'hooks/useSessionDistraction.ts',
   'components/planner/TaskDetailsPanel.tsx',
   'components/focus/Settings.tsx',
 ]

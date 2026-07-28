@@ -2,6 +2,7 @@
 import { LayoutGrid, Settings, LogOut, BarChart3, Plus, Edit2, Trash2, Check, MoreHorizontal, FolderKanban, Archive, ChevronDown, Folders, Kanban, Smartphone, Map, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { confirm as confirmDialog } from '@/components/ui/ConfirmDialog'
 import { useAuthStore } from '@/store/authStore'
+import { useDisplayName } from '@/hooks/useDisplayName'
 import { useListStore } from '@/store/listStore'
 import { useWorkspaceStore, Workspace } from '@/store/workspaceStore'
 import { cn } from '@/utils/helpers'
@@ -99,25 +100,33 @@ function WorkspaceRow({ ws, isActive, onClick, collapsed }: { ws: Workspace; isA
 
     return (
         <div ref={ref} className="relative group">
-            <button
-                onClick={onClick}
+            <div
                 style={{ borderRadius: 'var(--radius-card)' }}
                 className={cn(
-                    'w-full flex items-center gap-2.5 px-2 py-1.5 text-[13px] transition-all text-left outline-none',
+                    'w-full flex items-center gap-2.5 px-2 py-1.5 text-[13px] transition-all',
                     isActive ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                 )}
             >
-                <div className="w-1.5 h-1.5 rounded-sm shrink-0" style={{ backgroundColor: ws.color }} />
-                <span className="flex-1 truncate">{ws.name}</span>
+                <button
+                    onClick={onClick}
+                    className="flex-1 flex items-center gap-2.5 min-w-0 text-left outline-none"
+                >
+                    <div className="w-1.5 h-1.5 rounded-sm shrink-0" style={{ backgroundColor: ws.color }} />
+                    <span className="flex-1 truncate">{ws.name}</span>
+                </button>
 
-                <div
+                <button
+                    type="button"
+                    aria-label={`Options for ${ws.name}`}
+                    aria-haspopup="menu"
+                    aria-expanded={showMenu}
                     onClick={e => { e.stopPropagation(); setShowMenu(v => !v) }}
                     style={{ borderRadius: 'var(--radius-card)' }}
-                    className={cn("p-0.5 text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] transition-colors shrink-0", showMenu ? "opacity-100 bg-[var(--bg-tertiary)] text-[var(--text-primary)]" : "opacity-0 group-hover:opacity-100")}
+                    className={cn("p-0.5 text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] transition-colors shrink-0 outline-none", showMenu ? "opacity-100 bg-[var(--bg-tertiary)] text-[var(--text-primary)]" : "opacity-0 group-hover:opacity-100")}
                 >
                     <MoreHorizontal size={14} />
-                </div>
-            </button>
+                </button>
+            </div>
 
             <AnimatePresence>
                 {showMenu && (
@@ -180,6 +189,7 @@ function CreateWsInline({ onDone }: { onDone: () => void }) {
                 <div className="flex flex-wrap gap-1 px-0.5">
                     {PALETTE.map(c => (
                         <button key={c} onClick={() => setColor(c)}
+                            aria-label={`Color ${c}`} aria-pressed={color === c} title={c}
                             className="w-3.5 h-3.5 hover:scale-110 transition-transform relative"
                             style={{ backgroundColor: c, borderRadius: 'var(--radius-pill)' }}>
                             {color === c && <Check size={8} className="text-white absolute inset-0 m-auto" />}
@@ -202,6 +212,7 @@ function CreateWsInline({ onDone }: { onDone: () => void }) {
 export function Sidebar() {
     const { fetchLists } = useListStore()
     const { signOut, user } = useAuthStore()
+    const displayName = useDisplayName()
     const { workspaces, activeWorkspaceId, setActiveWorkspace, loadWorkspaces } = useWorkspaceStore()
     const navigate = useNavigate()
     const location = useLocation()
@@ -263,7 +274,7 @@ export function Sidebar() {
 
             {/* Brand + collapse toggle */}
             <div className={cn("pt-5 pb-1 flex items-center", collapsed ? "px-0 justify-center" : "px-4 gap-2.5")}>
-                <img src="/brand-mark.png" alt="Quoril" className="w-7 h-7 shrink-0" style={{ borderRadius: 'var(--radius-card)' }} />
+                <img src={`${import.meta.env.BASE_URL}brand-mark.png`} alt="Quoril" className="w-7 h-7 shrink-0" style={{ borderRadius: 'var(--radius-card)' }} />
                 {!collapsed && (
                     <>
                         <span className="text-[15px] font-bold tracking-tight text-[var(--text-primary)] flex-1">Quoril<span className="text-[var(--accent-primary)]">.</span></span>
@@ -284,7 +295,7 @@ export function Sidebar() {
             <div ref={userMenuRef} className={cn("relative pt-3 pb-2", collapsed ? "px-0" : "px-2")}>
                 <button
                     onClick={() => collapsed ? navigate('/settings') : setShowUserMenu(v => !v)}
-                    title={collapsed ? user?.email?.split('@')[0] : undefined}
+                    title={collapsed ? displayName : undefined}
                     style={{ borderRadius: 'var(--radius-card)' }}
                     className={cn(
                         "w-full flex items-center hover:bg-[var(--bg-hover)] transition-colors text-left outline-none",
@@ -292,12 +303,12 @@ export function Sidebar() {
                     )}
                 >
                     <div className="w-5 h-5 bg-[var(--accent-primary)] flex items-center justify-center text-[var(--accent-contrast)] text-[11px] font-semibold shrink-0" style={{ borderRadius: 'var(--radius-card)' }}>
-                        {user?.email?.charAt(0).toUpperCase()}
+                        {displayName.charAt(0).toUpperCase()}
                     </div>
                     {!collapsed && (
                         <>
                             <div className="flex-1 min-w-0">
-                                <p className="text-[13px] font-semibold text-[var(--text-primary)] truncate">{user?.email?.split('@')[0]}</p>
+                                <p className="text-[13px] font-semibold text-[var(--text-primary)] truncate">{displayName}</p>
                             </div>
                             <ChevronDown size={12} className="text-[var(--text-muted)] shrink-0" />
                         </>

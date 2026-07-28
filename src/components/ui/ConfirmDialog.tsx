@@ -71,7 +71,11 @@ export function ConfirmDialog() {
     }, [open, close])
 
     const iconColor = variant === 'danger' ? 'text-red-400 bg-red-500/10' : variant === 'warning' ? 'text-amber-400 bg-amber-500/10' : 'text-blue-400 bg-blue-500/10'
-    const btnColor = variant === 'danger' ? 'bg-[var(--error)] hover:brightness-110' : variant === 'warning' ? 'bg-[var(--warning)] hover:brightness-110' : 'bg-[var(--accent-primary)] hover:brightness-110'
+    const btnColor = variant === 'danger'
+        ? 'bg-[var(--error)] text-white hover:brightness-110'
+        : variant === 'warning'
+            ? 'bg-[var(--warning)] text-white hover:brightness-110'
+            : 'bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-110'
     const Icon = variant === 'danger' ? Trash2 : AlertTriangle
 
     return (
@@ -95,7 +99,7 @@ export function ConfirmDialog() {
 
                     {/* Dialog */}
                     <motion.div
-                        className="relative w-full max-w-[360px] mx-4 bg-[var(--bg-card)] border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden"
+                        className="relative w-full max-w-[360px] mx-4 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-2xl shadow-2xl overflow-hidden"
                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -104,9 +108,9 @@ export function ConfirmDialog() {
                         {/* Close button */}
                         <button
                             onClick={() => close(false)}
-                            className="absolute top-3 right-3 w-7 h-7 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-center transition-colors"
+                            className="absolute top-3 right-3 w-7 h-7 rounded-lg bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] flex items-center justify-center transition-colors"
                         >
-                            <X className="w-3.5 h-3.5 text-white/30" />
+                            <X className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                         </button>
 
                         {/* Content */}
@@ -115,9 +119,9 @@ export function ConfirmDialog() {
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${iconColor}`}>
                                     <Icon className="w-5 h-5" />
                                 </div>
-                                <div className="flex-1 min-w-0 pt-0.5">
-                                    <h3 className="text-sm font-semibold text-white mb-1">{title}</h3>
-                                    <p className="text-[13px] text-white/40 leading-relaxed">{message}</p>
+                                <div className="flex-1 min-w-0 pt-0.5 pr-6">
+                                    <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-1">{title}</h3>
+                                    <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">{message}</p>
                                 </div>
                             </div>
                         </div>
@@ -126,14 +130,14 @@ export function ConfirmDialog() {
                         <div className="flex gap-2.5 px-6 pb-5">
                             <button
                                 onClick={() => close(false)}
-                                className="flex-1 py-2.5 px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-[13px] font-bold text-white/50 transition-colors"
+                                className="flex-1 py-2.5 px-4 rounded-xl bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] text-[13px] font-bold text-[var(--text-secondary)] transition-colors"
                             >
                                 {cancelLabel}
                             </button>
                             <button
                                 onClick={() => close(true)}
                                 autoFocus
-                                className={`flex-1 py-2.5 px-4 rounded-xl text-[13px] font-bold text-white transition-all ${btnColor}`}
+                                className={`flex-1 py-2.5 px-4 rounded-xl text-[13px] font-bold transition-all ${btnColor}`}
                             >
                                 {confirmLabel}
                             </button>

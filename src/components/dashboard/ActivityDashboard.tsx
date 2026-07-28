@@ -40,13 +40,34 @@ export function ActivityDashboard() {
     const [appUsage, setAppUsage] = useState<AppUsage[]>([])
     const [domainUsage, setDomainUsage] = useState<DomainUsage[]>([])
     const [loading, setLoading] = useState(true)
+    const [trackingAvailable, setTrackingAvailable] = useState(appTracking)
+    const [detailAvailable, setDetailAvailable] = useState(appTracking)
     const [categoryMap, setCategoryMap] = useState<Record<string, string>>({})
 
     useEffect(() => {
         if (!appTracking) return
-        loadData()
-        const interval = setInterval(loadData, 5000) // Poll every 5s for live updates
-        return () => clearInterval(interval)
+        let cancelled = false
+        const start = async () => {
+            const available = await Promise.resolve(platform.screenTime.isTrackingAvailable())
+            if (cancelled) return
+            setTrackingAvailable(available)
+            Promise.resolve(platform.screenTime.isDetailTrackingAvailable())
+                .then((detail) => { if (!cancelled) setDetailAvailable(detail) })
+                .catch(() => { if (!cancelled) setDetailAvailable(false) })
+            if (!available) {
+                setLoading(false)
+                return
+            }
+            loadData()
+            const interval = setInterval(loadData, 5000) // Poll every 5s for live updates
+            return () => clearInterval(interval)
+        }
+        let cleanup: void | (() => void)
+        start().then((fn) => { cleanup = fn })
+        return () => {
+            cancelled = true
+            cleanup?.()
+        }
     }, [])
 
     const loadData = async () => {
@@ -67,16 +88,18 @@ export function ActivityDashboard() {
 
     // Load app categories for accurate productivity scoring
     useEffect(() => {
-        if (!appTracking) return
+        if (!appTracking || !trackingAvailable) return
         const today = format(new Date(), 'yyyy-MM-dd')
         window.electronAPI?.db?.getAppUsage(today + 'T00:00:00', today + 'T23:59:59')
             .then((rows: any[]) => {
                 const map: Record<string, string> = {}
-                rows?.forEach((r: any) => { if (r.appName && r.category) map[r.appName] = r.category })
+                // Key by a normalized app name so it joins reliably with appUsage's
+                // app_id (the two identify the same app but vary in case/spacing).
+                rows?.forEach((r: any) => { if (r.appName && r.category) map[String(r.appName).trim().toLowerCase()] = r.category })
                 setCategoryMap(map)
             })
             .catch(() => {})
-    }, [])
+    }, [trackingAvailable])
 
     const { totalTime, topApps, topDomains, productivityScore } = useMemo(() => {
         const sortedApps = [...appUsage].sort((a, b) => b.total_seconds - a.total_seconds)
@@ -87,7 +110,7 @@ export function ActivityDashboard() {
         // Real productivity score based on app categories
         let productiveSeconds = 0
         sortedApps.forEach(app => {
-            const cat = categoryMap[app.app_id] || 'Other'
+            const cat = categoryMap[String(app.app_id).trim().toLowerCase()] || 'Other'
             if (['Development', 'Work'].includes(cat)) {
                 productiveSeconds += app.total_seconds
             }
@@ -112,14 +135,21 @@ export function ActivityDashboard() {
     }
 
     // ── Web: app tracking unavailable ──────────────────────────────────────────
-    if (!appTracking) {
+    if (!appTracking || (!loading && !trackingAvailable)) {
         return (
             <div className="flex flex-col h-full overflow-y-auto bg-[var(--bg-primary)] px-6 md:px-10 py-8 text-[var(--text-primary)]">
                 <div className="mb-8">
                     <h1 className="text-3xl font-semibold tracking-tight">Activity</h1>
                     <p className="text-[var(--text-secondary)] mt-1 text-sm">Your digital footprint</p>
                 </div>
-                <TrackingUnavailable />
+                <TrackingUnavailable
+                    title={appTracking ? 'App Tracking Optional' : undefined}
+                    description={
+                        appTracking
+                            ? 'Activity tracking requires macOS Accessibility access. Quoril still works for planning and focus sessions without it.'
+                            : undefined
+                    }
+                />
             </div>
         )
     }
@@ -238,7 +268,13 @@ export function ActivityDashboard() {
                         <Globe size={16} className="text-[var(--text-muted)]" />
                         Top Websites
                     </h3>
-                    {topDomains.length > 0 ? (
+                    {!detailAvailable ? (
+                        <div className="h-[300px] flex flex-col items-center justify-center text-center text-[var(--text-muted)] px-6">
+                            <Globe size={48} className="mb-4 opacity-20" />
+                            <p className="text-[var(--text-secondary)]">Website breakdown is off</p>
+                            <p className="text-xs mt-2 max-w-xs leading-relaxed">App usage is tracked automatically. Turn on website addresses in Settings to split browser time into individual sites — it stays on this device.</p>
+                        </div>
+                    ) : topDomains.length > 0 ? (
                         <div className="h-[300px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={topDomains} layout="vertical" margin={{ left: 10, right: 30 }}>

@@ -16,6 +16,48 @@ const getUser = async () => {
 
 const db = () => (window as any).electronAPI?.db
 
+/* ---------------- DELETED TOMBSTONES ----------------
+ * A persistent, renderer-side set of task ids the user deleted. This is the
+ * single source of truth for "the user does not want to see this task". It is
+ * independent of the cloud and of the Electron main process, so a deleted task
+ * can never reappear because:
+ *   - the cloud copy is owned by another user and our soft-delete was rejected
+ *     by RLS (shared/workspace tasks), or
+ *   - a sync pull / mergeSharedFromCloud re-materialised the row, or
+ *   - the desktop DB hasn't been rebuilt with the latest guards.
+ * Restoring a task removes its tombstone. */
+const DELETED_TASKS_KEY = 'quoril_deleted_task_ids'
+
+const deletedTombstones = {
+    all: (): Set<string> => {
+        try {
+            const raw = localStorage.getItem(DELETED_TASKS_KEY)
+            return new Set(raw ? (JSON.parse(raw) as string[]) : [])
+        } catch {
+            return new Set()
+        }
+    },
+    add: (id: string) => {
+        try {
+            const set = deletedTombstones.all()
+            set.add(id)
+            localStorage.setItem(DELETED_TASKS_KEY, JSON.stringify([...set]))
+        } catch { /* best-effort */ }
+    },
+    remove: (id: string) => {
+        try {
+            const set = deletedTombstones.all()
+            if (set.delete(id)) {
+                localStorage.setItem(DELETED_TASKS_KEY, JSON.stringify([...set]))
+            }
+        } catch { /* best-effort */ }
+    },
+    filter: <T extends { id: string }>(rows: T[]): T[] => {
+        const set = deletedTombstones.all()
+        return set.size ? rows.filter(r => !set.has(r.id)) : rows
+    },
+}
+
 /* ---------------- TASK MAP ---------------- */
 
 const mapTask = (row: any): Task => {
@@ -48,6 +90,63 @@ const mapTask = (row: any): Task => {
     }
 }
 
+const mergeSharedFromCloud = async (
+    table: 'lists' | 'tasks' | 'subtasks',
+    localRows: any[],
+    userId: string,
+    applyQuery?: (q: any) => any,
+): Promise<any[]> => {
+    if (!navigator.onLine) return localRows
+    try {
+        let query = (supabase.from(table) as any).select('*').is('deleted_at', null)
+        if (applyQuery) query = applyQuery(query)
+
+        const { data, error } = await query
+        if (error || !data?.length) return localRows
+        let shared = data.filter((r: any) => r.user_id !== userId)
+        if (!shared.length) return localRows
+
+        // Drop cloud rows the user already soft-deleted locally. The cloud copy is
+        // owned by someone else, so our delete can't be pushed (RLS) and the row
+        // still reads as un-deleted in the cloud — without this guard it would be
+        // resurrected into the in-memory list on every fetch ("deleted task keeps
+        // coming back"). The local tombstone is the source of truth for the user.
+        try {
+            const deletedIds: string[] = (await db()?.getLocallyDeletedIds?.(table)) || []
+            if (deletedIds.length) {
+                const tombstoned = new Set(deletedIds)
+                shared = shared.filter((r: any) => !tombstoned.has(r.id))
+            }
+        } catch { /* best-effort; fall back to unfiltered */ }
+        if (!shared.length) return localRows
+
+        const byId = new Map<string, any>()
+        for (const r of localRows) byId.set(r.id, r)
+        const toMaterialize: any[] = []
+        for (const r of shared) {
+            if (!byId.has(r.id)) {
+                byId.set(r.id, r)
+                toMaterialize.push(r)
+            }
+        }
+
+        // Persist shared rows into local SQLite so they are first-class locally:
+        // taskExists() is true (no orphan focus sessions), db().updateTask() finds
+        // them (pause/edit persist), and focus-session FKs resolve. Written with
+        // synced=1 (via upsertFromCloud) so unedited shared rows aren't re-pushed;
+        // user_id (original owner) is preserved so a later local edit syncs back to
+        // the owner — enabling collaborative edits. Best-effort: a failure here just
+        // falls back to the previous in-memory-only behaviour.
+        if (toMaterialize.length) {
+            try { await db()?.upsertFromCloud?.(table, toMaterialize) } catch { /* best-effort */ }
+        }
+
+        return [...byId.values()]
+    } catch {
+        return localRows
+    }
+}
+
 /* ================= PRESTIGE SERVICE ================= */
 
 export const localService = {
@@ -75,11 +174,13 @@ export const localService = {
 
                 const { data, error } = await query.order('sort_order', { ascending: true })
                 if (error) return { data: [], error: error.message }
-                return { data: (data || []).map(mapTask), error: null }
+                return { data: deletedTombstones.filter(data || []).map(mapTask), error: null }
             }
 
             const rows = await db().getTasks(user.id, listId)
-            return { data: rows.map(mapTask), error: null }
+            const merged = await mergeSharedFromCloud('tasks', rows, user.id,
+                (q) => (listId && listId !== 'all') ? q.eq('list_id', listId) : q)
+            return { data: deletedTombstones.filter(merged).map(mapTask), error: null }
         },
 
         create: async (task: Partial<Task>) => {
@@ -122,6 +223,14 @@ export const localService = {
         },
 
         update: async (id: string, updates: any) => {
+            // Keep the persistent delete-tombstone in sync: soft-delete adds it,
+            // restore (deleted_at: null) clears it. This is what guarantees a
+            // deleted task stays hidden regardless of cloud/RLS/sync outcome.
+            if (updates.deleted_at !== undefined) {
+                if (updates.deleted_at) deletedTombstones.add(id)
+                else deletedTombstones.remove(id)
+            }
+
             const row: any = { ...updates, updated_at: new Date().toISOString(), synced: 0 }
 
             if (updates.is_recurring !== undefined) {
@@ -189,12 +298,36 @@ export const localService = {
                 return { data: mapTask(data), error: null }
             }
 
+            // Desktop: tasks the current user owns live in local SQLite; tasks
+            // shared via a workspace live only in the cloud (see mergeSharedFromCloud).
+            // If the row isn't ours locally, write straight to Supabase so a member's
+            // edit/assignment to a teammate's task actually persists (RLS authorizes it)
+            // instead of silently no-op'ing against an absent local row.
+            const ownsLocally = await db().taskExists(id).catch(() => false)
+            if (!ownsLocally) {
+                // Soft-deleting a task we don't own locally (e.g. a workspace task
+                // shared by another user) can't be pushed — RLS rejects updating the
+                // owner's row. Write a local tombstone first so mergeSharedFromCloud's
+                // getLocallyDeletedIds guard stops the row from being resurrected on
+                // the next fetch ("deleted task keeps coming back").
+                if (row.deleted_at) {
+                    try {
+                        await db().upsertFromCloud('tasks', [{ id, deleted_at: row.deleted_at, updated_at: row.updated_at }])
+                    } catch { /* best-effort */ }
+                }
+                const { data, error } = await (supabase.from('tasks') as any)
+                    .update(row).eq('id', id).select().single()
+                if (error) return { data: null, error: error.message }
+                return { data: mapTask(data), error: null }
+            }
+
             const fresh = await db().updateTask(id, row)
             dataSyncService.trigger()
             return { data: mapTask(Array.isArray(fresh) ? fresh[0] : fresh), error: null }
         },
 
         delete: async (id: string) => {
+            deletedTombstones.add(id)
             if (!db()) {
                 const { error } = await (supabase.from('tasks') as any)
                     .update({ deleted_at: new Date().toISOString() })
@@ -208,29 +341,51 @@ export const localService = {
         },
 
         permanentDelete: async (id: string) => {
+            deletedTombstones.add(id)
             if (!db()) {
                 const { error } = await (supabase.from('tasks') as any).delete().eq('id', id)
                 return { error: error?.message || null }
             }
             await db().hardDeleteTask(id)
+            // Also remove the cloud row. The push loop only upserts existing local
+            // rows, so a hard-deleted task would otherwise survive in the cloud and
+            // get restored on the next pull(). Best-effort: if offline this fails and
+            // the row may resurrect, but that's the rare edge case.
+            if (navigator.onLine) {
+                const { error } = await (supabase.from('tasks') as any).delete().eq('id', id)
+                if (error) console.warn('[Delete] Cloud hard-delete failed; task may resurrect on next sync:', error.message)
+            }
             dataSyncService.trigger()
             return { error: null }
         },
 
-        start: (id: string) => {
-            if (!db()) return // Fallback handled by store usually? No, store calls this. 
-            // If No DB, we technically can't "START" locally with high precision if the logic is in C++.
-            // But looking at previous code: `db()?.startTask(id)` implies it returns something?
-            // Actually `startTask` in local DB likely updates `started_at` column.
-
-            // Fallback:
-            // supabase.from('tasks').update({ started_at: new Date().toISOString() }).eq('id', id)
-            // But this is async and `start` here calculates duration?
-            // The `db().startTask(id)` likely returns the updated task row?
-            return db()?.startTask(id)
+        start: async (id: string) => {
+            // Web (Supabase-only) path: stamp started_at so live-time calculations
+            // and crash recovery work the same as on the desktop DB path (L4).
+            if (!db()) {
+                const { data, error } = await (supabase.from('tasks') as any)
+                    .update({ started_at: new Date().toISOString(), status: 'active' })
+                    .eq('id', id)
+                    .select()
+                    .single()
+                if (error) return { data: null, error: error.message }
+                return { data: mapTask(data), error: null }
+            }
+            return db().startTask(id)
         },
 
-        pause: (id: string) => db()?.pauseTask(id),
+        pause: async (id: string) => {
+            if (!db()) {
+                const { data, error } = await (supabase.from('tasks') as any)
+                    .update({ started_at: null, status: 'paused' })
+                    .eq('id', id)
+                    .select()
+                    .single()
+                if (error) return { data: null, error: error.message }
+                return { data: mapTask(data), error: null }
+            }
+            return db().pauseTask(id)
+        },
 
         reorder: async (items: { id: string; sort_order: number }[]) => {
             if (!db()) {
@@ -297,7 +452,9 @@ export const localService = {
             }
 
             const rows = await db().getLists(user.id, archived)
-            return { data: rows, error: null }
+            const merged = await mergeSharedFromCloud('lists', rows, user.id)
+            const filtered = merged.filter((l: any) => archived ? !!l.archived_at : !l.archived_at)
+            return { data: filtered, error: null }
         },
 
         create: async (list: any) => {
@@ -363,6 +520,12 @@ export const localService = {
                 return { error: error?.message || null }
             }
             await db().hardDeleteList(id)
+            // Remove the cloud row too — otherwise pull() restores it on next sync
+            // (same reason as tasks.permanentDelete above).
+            if (navigator.onLine) {
+                const { error } = await (supabase.from('lists') as any).delete().eq('id', id)
+                if (error) console.warn('[Delete] Cloud hard-delete failed; list may resurrect on next sync:', error.message)
+            }
             dataSyncService.trigger()
             return { error: null }
         },
@@ -406,7 +569,9 @@ export const localService = {
             }
 
             const rows = await db().getSubtasks(taskId)
-            return { data: rows.map((r: any) => ({ ...r, completed: !!r.done })), error: null }
+            const merged = await mergeSharedFromCloud('subtasks', rows, user.id,
+                (q) => q.eq('task_id', taskId))
+            return { data: merged.map((r: any) => ({ ...r, completed: !!r.done })), error: null }
         },
 
         create: async (sub: Partial<Subtask>) => {
@@ -517,7 +682,8 @@ export const localService = {
                 user_id: user.id,
                 task_id: session.task_id,
                 type: session.session_type || 'focus',
-                seconds: session.actual_seconds || 0,
+                // Callers pass `seconds` directly; keep `actual_seconds` as a legacy alias.
+                seconds: session.seconds ?? session.actual_seconds ?? 0,
                 start_time: session.start_time,
                 end_time: session.end_time,
                 metadata: JSON.stringify({

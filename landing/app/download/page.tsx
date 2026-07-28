@@ -4,6 +4,7 @@ import {
   SectionHead,
   Tile,
   TileIcon,
+  ACCENTS,
   Badge,
 } from "@/components/ui";
 import Reveal from "@/components/Reveal";
@@ -11,9 +12,9 @@ import Waitlist from "@/components/Waitlist";
 import { IconCheck } from "@/components/icons";
 
 export const metadata: Metadata = {
-  title: "Download — Quoril for desktop",
+  title: "Download for desktop",
   description:
-    "Native Quoril apps for macOS, Windows and Linux. Join the waitlist to get your download link at launch.",
+    "Native Quoril apps for macOS, Windows and Linux. Get V1 free before launch and receive your download link when it is ready.",
 };
 
 /* ── monochrome OS glyphs ─────────────────────────────────── */
@@ -101,13 +102,13 @@ export default function DownloadPage() {
       <section className="pt-[130px]">
         <Container>
           <Reveal className="mx-auto flex max-w-[760px] flex-col items-center text-center">
-            <Badge>Coming Q3 2026</Badge>
+            {/* <Badge>Coming Q3 2026</Badge> */}
             <h1 className="mt-6 font-heading text-[clamp(36px,6vw,64px)] font-semibold leading-[1.02] tracking-[-0.035em] text-ink">
               Quoril for desktop.
             </h1>
             <p className="mt-5 max-w-[560px] text-[18px] leading-relaxed text-ink-muted">
-              Native apps for macOS, Windows and Linux. Join the waitlist to get
-              your download link at launch.
+              Native apps for macOS, Windows and Linux. Get V1 free before
+              launch and receive your download link when it is ready.
             </p>
           </Reveal>
         </Container>
@@ -158,7 +159,7 @@ export default function DownloadPage() {
             {REASONS.map((r, i) => (
               <Reveal key={r.title} delay={i * 0.05}>
                 <Tile className="h-full">
-                  <TileIcon>
+                  <TileIcon tint={ACCENTS[i % ACCENTS.length]}>
                     <IconCheck className="h-5 w-5" />
                   </TileIcon>
                   <h3 className="font-heading text-[17px] font-semibold text-ink">

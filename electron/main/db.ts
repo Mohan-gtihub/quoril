@@ -5,6 +5,22 @@ import { app } from 'electron'
 
 let db: Database.Database
 
+// Categories treated as attention leaks. Keep in sync with DISTRACTING_CATEGORIES
+// in electron/main/core/collector.ts and DISTRACTING in
+// src/services/insights/buildSummary.ts.
+const DISTRACTING_CATEGORIES = ['Social', 'Entertainment', 'Gaming', 'News']
+// Safe to interpolate: internal constant, never user input.
+const DISTRACTING_SQL = DISTRACTING_CATEGORIES.map(c => `'${c}'`).join(', ')
+
+// Browser app_ids collapse every website under one row with a thrashing category,
+// so real site categories live in domain_sessions/domain_categories instead. We
+// count distracting *websites* from the domain tables and exclude browsers from
+// the app-based distraction count to avoid double-counting. app_id is the browser
+// display name on macOS ("Google Chrome") and the exe stem on Windows ("chrome"),
+// so match with case-insensitive LIKE on common browser needles.
+const BROWSER_NEEDLES = ['chrome', 'chromium', 'msedge', 'edge', 'firefox', 'brave', 'safari', 'opera', 'arc', 'vivaldi']
+const NOT_BROWSER_SQL = BROWSER_NEEDLES.map(n => `LOWER(s.app_id) NOT LIKE '%${n}%'`).join(' AND ')
+
 /* ---------------- HELPERS ---------------- */
 
 function now() {
@@ -31,7 +47,9 @@ function exec(sql: string, params: any[] = []) {
         }
         return db.prepare(sql).run(...clean)
     } catch (e) {
-        console.error('[DB ERROR]', sql, params, e)
+        // SQL parameters can contain task titles, notes, and user identifiers.
+        // Keep the statement type for debugging without exposing user content.
+        console.error('[DB ERROR]', sql, { parameterCount: params.length, error: e })
         throw e
     }
 }
@@ -198,6 +216,11 @@ export const dbOps = {
         return exec(`SELECT * FROM ${table} WHERE synced = 0 LIMIT ?`, [limit])
     },
 
+    countPending(table: string) {
+        const rows = exec(`SELECT COUNT(*) AS count FROM ${table} WHERE synced = 0`) as { count: number }[]
+        return rows[0]?.count ?? 0
+    },
+
     markSynced(table: string, id: string) {
         exec(`UPDATE ${table} SET synced = 1 WHERE id =?`, [id])
     },
@@ -220,8 +243,13 @@ export const dbOps = {
         )
         const hasUpdatedAt = localCols.has('updated_at')
 
-        const getLocalUpdated = hasUpdatedAt
-            ? db.prepare(`SELECT updated_at FROM ${table} WHERE id = ?`)
+        const hasDeletedAt = localCols.has('deleted_at')
+        // Only select columns that actually exist — some tables (e.g. focus_sessions)
+        // have deleted_at but no updated_at, so selecting both unconditionally throws
+        // "no such column: updated_at" and aborts the whole pull.
+        const selectCols = [hasUpdatedAt && 'updated_at', hasDeletedAt && 'deleted_at'].filter(Boolean) as string[]
+        const getLocalRow = selectCols.length
+            ? db.prepare(`SELECT ${selectCols.join(', ')} FROM ${table} WHERE id = ?`)
             : null
 
         let written = 0
@@ -230,16 +258,29 @@ export const dbOps = {
             for (const raw of batch) {
                 if (!raw || !raw.id) continue
 
+                const local = getLocalRow?.get(raw.id) as { updated_at?: string; deleted_at?: string } | undefined
+
+                // Tombstone guard: if the user deleted this row locally and the
+                // incoming cloud copy is NOT deleted, never resurrect it. The local
+                // delete is the user's intent; a stale-but-undeleted cloud row (e.g.
+                // a delete that couldn't be pushed, or a row owned by someone else)
+                // must not bring it back. This is what stopped deleted tasks from
+                // "coming back again and again".
+                if (hasDeletedAt && local?.deleted_at && !raw.deleted_at) {
+                    continue
+                }
+
                 // Last-write-wins guard
-                if (getLocalUpdated) {
-                    const local = getLocalUpdated.get(raw.id) as { updated_at?: string } | undefined
-                    if (local?.updated_at && raw.updated_at && local.updated_at >= raw.updated_at) {
-                        continue // local copy is newer or equal — keep it
-                    }
+                if (hasUpdatedAt && local?.updated_at && raw.updated_at && local.updated_at >= raw.updated_at) {
+                    continue // local copy is newer or equal — keep it
                 }
 
                 const row: Record<string, any> = { synced: 1 }
                 for (const [k, v] of Object.entries(raw)) {
+                    // Cloud JSONB columns (content_json, viewport_json, …) come back as
+                    // parsed JS objects but live locally in TEXT columns. sanitize()
+                    // below JSON.stringifies any object value, so they're stored as
+                    // valid JSON rather than "[object Object]".
                     if (localCols.has(k)) row[k] = v
                 }
 
@@ -259,7 +300,7 @@ export const dbOps = {
     /* ---- Named update ops (replace raw db:exec) ---- */
 
     updateTask(id: string, updates: Record<string, any>) {
-        const TASK_COLUMNS = new Set(['title','description','status','priority','estimate_m','spent_s','started_at','due_at','completed_at','parent_id','sort_order','updated_at','deleted_at','synced','is_recurring','last_reset_date','list_id'])
+        const TASK_COLUMNS = new Set(['title','description','status','priority','estimate_m','spent_s','started_at','due_at','completed_at','parent_id','sort_order','updated_at','deleted_at','synced','is_recurring','last_reset_date','list_id','assigned_to'])
         const keys = Object.keys(updates).filter(k => TASK_COLUMNS.has(k))
         if (!keys.length) return
         exec(`UPDATE tasks SET ${keys.map(k => `${k}=?`).join(',')} WHERE id=?`, [...keys.map(k => updates[k]), id])
@@ -318,6 +359,16 @@ export const dbOps = {
     taskExists(taskId: string): boolean {
         const rows = exec('SELECT id FROM tasks WHERE id=? AND deleted_at IS NULL', [taskId]) as any[]
         return rows?.length > 0
+    },
+
+    // Ids in `table` that are tombstoned locally (deleted_at set). Used to stop
+    // mergeSharedFromCloud from resurrecting a shared row the user just deleted
+    // locally when the cloud copy (owned by someone else) is still un-deleted.
+    getLocallyDeletedIds(table: string): string[] {
+        const ALLOWED = new Set(['tasks', 'lists', 'subtasks'])
+        if (!ALLOWED.has(table)) return []
+        const rows = exec(`SELECT id FROM ${table} WHERE deleted_at IS NOT NULL`) as any[]
+        return (rows || []).map((r: any) => r.id)
     },
 
     requeueWorkspace(workspaceId: string) {
@@ -479,6 +530,144 @@ export const dbOps = {
             WHERE start_time >= ? AND start_time <= ?
         `, [startDate, endDate]) as any[])?.[0] ?? {}
 
+        // 8b. Overall distraction — active time on distracting apps/sites across the
+        // whole range (timer-independent), grouped by category. Non-browser desktop
+        // apps come from app_sessions; distracting websites come from the domain
+        // tables (browser app rows can't carry a per-site category). Merged in JS.
+        const distractionByCategoryRows = (exec(`
+            SELECT COALESCE(a.category, 'Other')                         AS category,
+                   COALESCE(SUM(s.duration_seconds - s.idle_seconds), 0) AS activeSeconds
+            FROM app_sessions s
+            LEFT JOIN apps a ON s.app_id = a.id
+            WHERE s.start_time >= ? AND s.start_time <= ?
+              AND COALESCE(a.category, 'Other') IN (${DISTRACTING_SQL})
+              AND ${NOT_BROWSER_SQL}
+            GROUP BY category
+            UNION ALL
+            SELECT COALESCE(dc.category, 'Web')            AS category,
+                   COALESCE(SUM(ds.duration_seconds), 0)   AS activeSeconds
+            FROM domain_sessions ds
+            LEFT JOIN domain_categories dc ON ds.domain = dc.domain
+            WHERE ds.start_time >= ? AND ds.start_time <= ?
+              AND COALESCE(dc.category, 'Web') IN (${DISTRACTING_SQL})
+            GROUP BY category
+        `, [startDate, endDate, startDate, endDate]) as any[]) ?? []
+
+        // Fold the two sources into one seconds-per-category map.
+        const distractionMap = new Map<string, number>()
+        for (const r of distractionByCategoryRows) {
+            const sec = Number(r.activeSeconds) || 0
+            distractionMap.set(r.category, (distractionMap.get(r.category) ?? 0) + sec)
+        }
+        const distractionByCategory = [...distractionMap.entries()]
+            .map(([category, activeSeconds]) => ({ category, activeSeconds }))
+            .filter(c => c.activeSeconds > 0)
+            .sort((a, b) => b.activeSeconds - a.activeSeconds)
+        const distractionActiveSeconds = distractionByCategory.reduce((s, c) => s + c.activeSeconds, 0)
+
+        // 9. Deep-work blocks per day (sessions >= 25 min uninterrupted)
+        const deepWorkByDay = (exec(`
+            SELECT
+                strftime('%Y-%m-%d', start_time)    AS day,
+                COALESCE(SUM(seconds), 0)           AS deepSeconds,
+                COUNT(*)                            AS blockCount
+            FROM focus_sessions
+            WHERE user_id = ?
+              AND type != 'break'
+              AND seconds >= 1500
+              AND start_time >= ? AND start_time <= ?
+            GROUP BY day
+            ORDER BY day ASC
+        `, [userId, startDate, endDate]) as any[]) ?? []
+
+        // 10. Peak productivity hours — focus seconds by hour-of-day (local)
+        const peakHours = (exec(`
+            SELECT
+                CAST(strftime('%H', start_time, 'localtime') AS INTEGER) AS hour,
+                COALESCE(SUM(seconds), 0)           AS focusSeconds
+            FROM focus_sessions
+            WHERE user_id = ?
+              AND type != 'break'
+              AND start_time >= ? AND start_time <= ?
+            GROUP BY hour
+            ORDER BY hour ASC
+        `, [userId, startDate, endDate]) as any[]) ?? []
+
+        // 11. Focus time per task (for task<->focus linkage)
+        const taskFocus = (exec(`
+            SELECT
+                fs.task_id                          AS taskId,
+                COALESCE(t.title, 'Untitled')       AS title,
+                COALESCE(t.status, 'unknown')       AS status,
+                COALESCE(SUM(fs.seconds), 0)        AS focusSeconds
+            FROM focus_sessions fs
+            LEFT JOIN tasks t ON t.id = fs.task_id
+            WHERE fs.user_id = ?
+              AND fs.type != 'break'
+              AND fs.task_id IS NOT NULL
+              AND fs.start_time >= ? AND fs.start_time <= ?
+            GROUP BY fs.task_id
+            ORDER BY focusSeconds DESC
+            LIMIT 30
+        `, [userId, startDate, endDate]) as any[]) ?? []
+
+        // 12. Raw focus windows in range (for distraction-during-focus overlap, computed in JS)
+        const focusWindows = (exec(`
+            SELECT start_time AS start, end_time AS end
+            FROM focus_sessions
+            WHERE user_id = ?
+              AND type != 'break'
+              AND end_time IS NOT NULL
+              AND start_time >= ? AND start_time <= ?
+        `, [userId, startDate, endDate]) as any[]) ?? []
+
+        // 13. Distracting sessions in range — non-browser desktop apps plus
+        // distracting websites (from domain tables, since browser app rows can't
+        // carry a per-site category). Used for focus-session overlap.
+        const distractingSessions = (exec(`
+            SELECT s.start_time AS start, s.end_time AS end
+            FROM app_sessions s
+            LEFT JOIN apps a ON s.app_id = a.id
+            WHERE s.end_time IS NOT NULL
+              AND s.start_time >= ? AND s.start_time <= ?
+              AND COALESCE(a.category, 'Other') IN (${DISTRACTING_SQL})
+              AND ${NOT_BROWSER_SQL}
+            UNION ALL
+            SELECT ds.start_time AS start, ds.end_time AS end
+            FROM domain_sessions ds
+            LEFT JOIN domain_categories dc ON ds.domain = dc.domain
+            WHERE ds.end_time IS NOT NULL
+              AND ds.start_time >= ? AND ds.start_time <= ?
+              AND COALESCE(dc.category, 'Web') IN (${DISTRACTING_SQL})
+        `, [startDate, endDate, startDate, endDate]) as any[]) ?? []
+
+        // 14. Planned vs actual — tasks due today vs completed
+        const plannedToday = (exec(`
+            SELECT
+                COALESCE(SUM(CASE WHEN date(due_at,'localtime') = date('now','localtime') THEN 1 ELSE 0 END), 0) AS dueToday,
+                COALESCE(SUM(CASE WHEN date(due_at,'localtime') = date('now','localtime') AND status='done' THEN 1 ELSE 0 END), 0) AS completedOfDue
+            FROM tasks
+            WHERE user_id = ? AND deleted_at IS NULL AND due_at IS NOT NULL
+        `, [userId]) as any[])?.[0] ?? { dueToday: 0, completedOfDue: 0 }
+
+        // Completed-in-range count — denominator for task<->focus linkage
+        const doneInRangeRow = (exec(`
+            SELECT COUNT(*) AS n FROM tasks
+            WHERE user_id = ?
+              AND deleted_at IS NULL
+              AND status = 'done'
+              AND completed_at IS NOT NULL
+              AND completed_at >= ? AND completed_at <= ?
+        `, [userId, startDate, endDate]) as any[])?.[0] ?? { n: 0 }
+        const doneInRange = doneInRangeRow.n ?? 0
+
+        // 15. Does any app-tracking data exist in range? (drives adaptive UI)
+        const appDataRow = (exec(`
+            SELECT COUNT(*) AS n FROM app_sessions
+            WHERE start_time >= ? AND start_time <= ?
+        `, [startDate, endDate]) as any[])?.[0] ?? { n: 0 }
+        const hasAppData = (appDataRow.n ?? 0) > 0
+
         return {
             focusSummary,
             weeklyTrend,
@@ -488,7 +677,58 @@ export const dbOps = {
             workspaceStats,
             productiveAppSeconds,
             allAppSeconds,
+            deepWorkByDay,
+            peakHours,
+            taskFocus,
+            focusWindows,
+            distractingSessions,
+            distractionActiveSeconds,
+            distractionByCategory,
+            plannedToday,
+            doneInRange,
+            hasAppData,
         }
+    },
+
+    /* ---- Live distraction for the current focus sitting ---- */
+    // Distracting active time overlapping [startISO, endISO], for the live focus
+    // strip. Non-browser desktop apps + distracting websites (domain tables), with
+    // overlap computed in JS so partial sessions at the window edges count fairly.
+    getSessionDistraction(startISO: string, endISO: string) {
+        const winStart = Date.parse(startISO)
+        const winEnd = Date.parse(endISO)
+        if (!(winEnd > winStart)) return { distractionSeconds: 0, byCategory: [] as { category: string; seconds: number }[] }
+
+        const rows = (exec(`
+            SELECT s.start_time AS start, s.end_time AS end, COALESCE(a.category, 'Other') AS category
+            FROM app_sessions s
+            LEFT JOIN apps a ON s.app_id = a.id
+            WHERE COALESCE(a.category, 'Other') IN (${DISTRACTING_SQL})
+              AND ${NOT_BROWSER_SQL}
+              AND s.start_time <= ? AND (s.end_time IS NULL OR s.end_time >= ?)
+            UNION ALL
+            SELECT ds.start_time AS start, ds.end_time AS end, COALESCE(dc.category, 'Web') AS category
+            FROM domain_sessions ds
+            LEFT JOIN domain_categories dc ON ds.domain = dc.domain
+            WHERE COALESCE(dc.category, 'Web') IN (${DISTRACTING_SQL})
+              AND ds.start_time <= ? AND (ds.end_time IS NULL OR ds.end_time >= ?)
+        `, [endISO, startISO, endISO, startISO]) as any[]) ?? []
+
+        const byCat = new Map<string, number>()
+        for (const r of rows) {
+            const s = Date.parse(r.start)
+            const e = r.end ? Date.parse(r.end) : winEnd // open session → up to window end
+            if (isNaN(s) || isNaN(e)) continue
+            const overlapMs = Math.max(0, Math.min(winEnd, e) - Math.max(winStart, s))
+            if (overlapMs <= 0) continue
+            byCat.set(r.category, (byCat.get(r.category) ?? 0) + overlapMs / 1000)
+        }
+        const byCategory = [...byCat.entries()]
+            .map(([category, seconds]) => ({ category, seconds: Math.round(seconds) }))
+            .filter(c => c.seconds > 0)
+            .sort((a, b) => b.seconds - a.seconds)
+        const distractionSeconds = byCategory.reduce((sum, c) => sum + c.seconds, 0)
+        return { distractionSeconds, byCategory }
     },
 
     /* ---- Screen Time / Digital Wellbeing (one aggregated call) ---- */
@@ -604,7 +844,7 @@ export const dbOps = {
             SELECT
                 CASE
                     WHEN COALESCE(a.category, 'Other') IN ('Development', 'Work') THEN 'productive'
-                    WHEN COALESCE(a.category, 'Other') IN ('Entertainment', 'Gaming') THEN 'unproductive'
+                    WHEN COALESCE(a.category, 'Other') IN (${DISTRACTING_SQL}) THEN 'unproductive'
                     ELSE 'neutral'
                 END AS bucket,
                 SUM(s.duration_seconds) AS totalSeconds
@@ -674,6 +914,7 @@ function autoMigrate() {
     if (!listCols.some((c: any) => c.name === 'workspace_id')) db.exec("ALTER TABLE lists ADD COLUMN workspace_id TEXT")
     const taskCols = db.prepare("PRAGMA table_info(tasks)").all()
     if (!taskCols.some((c: any) => c.name === 'deleted_at')) db.exec("ALTER TABLE tasks ADD COLUMN deleted_at TEXT")
+    if (!taskCols.some((c: any) => c.name === 'assigned_to')) db.exec("ALTER TABLE tasks ADD COLUMN assigned_to TEXT")
     const subtaskCols = db.prepare("PRAGMA table_info(subtasks)").all()
     if (!subtaskCols.some((c: any) => c.name === 'deleted_at')) db.exec("ALTER TABLE subtasks ADD COLUMN deleted_at TEXT")
 
@@ -787,7 +1028,8 @@ function autoMigrate() {
             home_viewport_json TEXT,
             settings_json TEXT NOT NULL DEFAULT '{"grid":true,"snap":false,"autoZoneHints":false}',
             schema_version INTEGER DEFAULT 1,
-            created_at TEXT, updated_at TEXT, deleted_at TEXT
+            created_at TEXT, updated_at TEXT, deleted_at TEXT,
+            synced INTEGER DEFAULT 0
         );
         CREATE INDEX IF NOT EXISTS canvases_user_idx ON canvases(user_id, deleted_at);
 
@@ -806,7 +1048,8 @@ function autoMigrate() {
             linked_task_id TEXT,
             is_landmark INTEGER DEFAULT 0,
             last_touched_at TEXT,
-            created_at TEXT, updated_at TEXT, deleted_at TEXT
+            created_at TEXT, updated_at TEXT, deleted_at TEXT,
+            synced INTEGER DEFAULT 0
         );
         CREATE INDEX IF NOT EXISTS blocks_canvas_idx ON blocks(canvas_id, deleted_at);
         CREATE INDEX IF NOT EXISTS blocks_linked_task_idx ON blocks(linked_task_id);
@@ -935,6 +1178,20 @@ function autoMigrate() {
             db.prepare("UPDATE db_meta SET value='11' WHERE key='version'").run()
         })()
         version = 11
+    }
+    if (version < 12) {
+        // Canvas tables predate cloud sync — add the `synced` dirty-flag column so
+        // they flow through dataSyncService's push/pull like tasks/lists do.
+        db.transaction(() => {
+            for (const table of ['canvases', 'blocks']) {
+                const cols = (db.prepare(`PRAGMA table_info(${table})`).all() as any[]).map((r) => r.name)
+                if (!cols.includes('synced')) {
+                    db.exec(`ALTER TABLE ${table} ADD COLUMN synced INTEGER DEFAULT 0`)
+                }
+            }
+            db.prepare("UPDATE db_meta SET value='12' WHERE key='version'").run()
+        })()
+        version = 12
     }
 }
 

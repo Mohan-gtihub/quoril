@@ -30,6 +30,7 @@ const GIFS = [
 export function CompletionCelebration({ taskTitle, timeSpent, onClose }: CompletionCelebrationProps) {
     const settings = useSettingsStore()
     const [gifUrl] = useState(() => GIFS[Math.floor(Math.random() * GIFS.length)])
+    const [gifFailed, setGifFailed] = useState(false)
 
     useEffect(() => {
         // Play success sound
@@ -88,14 +89,17 @@ export function CompletionCelebration({ taskTitle, timeSpent, onClose }: Complet
                 <div className="absolute -top-24 -left-24 w-48 h-48 bg-green-500/10 rounded-full blur-[60px]" />
                 <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-blue-500/10 rounded-full blur-[60px]" />
 
-                {/* Gif Reveal */}
-                {settings.funGifEnabled && (
-                    <div className="w-full h-40 mb-6 rounded-2xl overflow-hidden border border-white/5 bg-black/20">
-                        <img src={gifUrl} alt="Celebration" className="w-full h-full object-cover opacity-80" />
+                {/* Gif Reveal — falls back to the trophy if the GIF can't load */}
+                {settings.funGifEnabled && !gifFailed ? (
+                    <div className="w-full h-40 mb-6 rounded-2xl overflow-hidden border border-[var(--border-default)] bg-black/20">
+                        <img
+                            src={gifUrl}
+                            alt="Celebration"
+                            className="w-full h-full object-cover opacity-80"
+                            onError={() => setGifFailed(true)}
+                        />
                     </div>
-                )}
-
-                {!settings.funGifEnabled && (
+                ) : (
                     <div className="flex justify-center mb-6">
                         <div className="bg-green-500/10 p-5 rounded-full ring-1 ring-green-500/20">
                             <Trophy className="w-12 h-12 text-green-500" />
@@ -103,30 +107,30 @@ export function CompletionCelebration({ taskTitle, timeSpent, onClose }: Complet
                     </div>
                 )}
 
-                <h2 className="text-3xl font-semibold text-white text-center mb-2 uppercase tracking-tighter">
+                <h2 className="text-3xl font-semibold text-[var(--text-primary)] text-center mb-2 uppercase tracking-tighter">
                     {randomMessage}
                 </h2>
 
-                <p className="text-white/40 text-center text-sm mb-8 font-bold uppercase tracking-[0.2em] line-clamp-1">
+                <p className="text-[var(--text-tertiary)] text-center text-sm mb-8 font-bold uppercase tracking-[0.2em] line-clamp-1">
                     {taskTitle}
                 </p>
 
                 <div className="grid grid-cols-2 gap-3 mb-8">
-                    <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center">
+                    <div className="bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-2xl p-4 flex flex-col items-center justify-center">
                         <Zap className="w-5 h-5 text-amber-500 mb-1" />
-                        <span className="text-white font-semibold text-lg tabular-nums">{formatTime(timeSpent)}</span>
-                        <span className="text-[11px] text-white/30 uppercase font-bold">Invested</span>
+                        <span className="text-[var(--text-primary)] font-semibold text-lg tabular-nums">{formatTime(timeSpent)}</span>
+                        <span className="text-[11px] text-[var(--text-muted)] uppercase font-bold">Invested</span>
                     </div>
-                    <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center">
+                    <div className="bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-2xl p-4 flex flex-col items-center justify-center">
                         <CheckCircle2 className="w-5 h-5 text-green-500 mb-1" />
-                        <span className="text-white font-semibold text-lg uppercase tabular-nums">1.0</span>
-                        <span className="text-[11px] text-white/30 uppercase font-bold">Fulfill Score</span>
+                        <span className="text-[var(--text-primary)] font-semibold text-lg uppercase tabular-nums">1.0</span>
+                        <span className="text-[11px] text-[var(--text-muted)] uppercase font-bold">Fulfill Score</span>
                     </div>
                 </div>
 
                 <button
                     onClick={onClose}
-                    className="w-full py-4 rounded-2xl bg-white text-black font-semibold uppercase tracking-[0.2em] text-xs hover:bg-gray-200 transition-all active:scale-95"
+                    className="w-full py-4 rounded-2xl bg-[var(--accent-primary)] text-[var(--accent-contrast)] font-semibold uppercase tracking-[0.2em] text-xs hover:brightness-105 transition-all active:scale-95"
                 >Continue Sequence</button>
             </div>
         </div>

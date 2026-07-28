@@ -2,10 +2,13 @@
 
 import { motion } from "framer-motion";
 
-const INK = "#16160f";
-const TRACK = "rgb(244, 244, 242)"; // sunken token
+// SVG presentation attributes (stroke/fill) can't resolve CSS var(), so these
+// are literals chosen to read on BOTH light and dark backgrounds:
+// a mid-slate ink and a translucent grey track.
+const INK = "#7A7A72";
+const TRACK = "rgba(128,128,128,0.18)";
 
-// Quoril accent palette
+// Quoril accent palette (shared brand hues — fine on either background)
 export const FOCUS = "#2B6BF5";
 export const BREAK = "#F5A623";
 export const WELLBEING = "#10C49A";

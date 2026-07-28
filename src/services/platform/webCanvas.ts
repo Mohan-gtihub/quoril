@@ -2,10 +2,14 @@ import type { CanvasPort } from './types'
 import { supabase } from '@/services/supabase'
 
 // Cast to any to bypass strict Supabase generated-types for tables not in the schema file.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any
 
 function now() { return new Date().toISOString() }
+
+function throwIfError(error: any, operation: string) {
+  if (!error) return
+  throw new Error(error.message || `Canvas ${operation} failed`)
+}
 
 function parseJSON<T>(s: any, fallback: T): T {
   if (s == null) return fallback
@@ -98,21 +102,24 @@ function hydrateZone(r: any) {
 
 export const webCanvas: CanvasPort = {
   async list(userId) {
-    const { data } = await db
+    void userId // RLS, rather than ownership, defines the accessible canvas list.
+    const { data, error } = await db
       .from('canvases')
       .select('*')
-      .eq('user_id', userId)
       .is('deleted_at', null)
       .order('updated_at', { ascending: false })
+    throwIfError(error, 'list')
     return (data ?? []).map(hydrateCanvas)
   },
 
   async get(id) {
-    const { data } = await db
+    const { data, error } = await db
       .from('canvases')
       .select('*')
       .eq('id', id)
       .single()
+    if (error?.code === 'PGRST116') return null
+    throwIfError(error, 'load')
     return data ? hydrateCanvas(data) : null
   },
 
@@ -134,7 +141,8 @@ export const webCanvas: CanvasPort = {
       updated_at: ts,
       deleted_at: null,
     }
-    const { data } = await db.from('canvases').upsert(row, { onConflict: 'id' }).select().single()
+    const { data, error } = await db.from('canvases').upsert(row, { onConflict: 'id' }).select().single()
+    throwIfError(error, 'save')
     return data ? hydrateCanvas(data) : null
   },
 
@@ -146,17 +154,19 @@ export const webCanvas: CanvasPort = {
 
   async softDelete(id) {
     const ts = now()
-    await db.from('canvases').update({ deleted_at: ts, updated_at: ts }).eq('id', id)
+    const { error } = await db.from('canvases').update({ deleted_at: ts, updated_at: ts }).eq('id', id)
+    throwIfError(error, 'delete')
   },
 
   async listBlocks(canvasId) {
-    const { data } = await db
+    const { data, error } = await db
       .from('blocks')
       .select('*')
       .eq('canvas_id', canvasId)
       .is('deleted_at', null)
       .order('z', { ascending: true })
       .order('created_at', { ascending: true })
+    throwIfError(error, 'scene load')
     return (data ?? []).map(hydrateBlock)
   },
 
@@ -182,7 +192,8 @@ export const webCanvas: CanvasPort = {
       updated_at: ts,
       deleted_at: b.deletedAt ?? null,
     }
-    const { data } = await db.from('blocks').upsert(row, { onConflict: 'id' }).select().single()
+    const { data, error } = await db.from('blocks').upsert(row, { onConflict: 'id' }).select().single()
+    throwIfError(error, 'scene save')
     return data ? hydrateBlock(data) : null
   },
 
@@ -209,18 +220,21 @@ export const webCanvas: CanvasPort = {
       updated_at: ts,
       deleted_at: b.deletedAt ?? null,
     }))
-    await db.from('blocks').upsert(rows, { onConflict: 'id' })
+    const { error } = await db.from('blocks').upsert(rows, { onConflict: 'id' })
+    throwIfError(error, 'scene batch save')
   },
 
   async softDeleteBlock(id) {
     const ts = now()
-    await db.from('blocks').update({ deleted_at: ts, updated_at: ts }).eq('id', id)
+    const { error } = await db.from('blocks').update({ deleted_at: ts, updated_at: ts }).eq('id', id)
+    throwIfError(error, 'scene delete')
   },
 
   async softDeleteBlocksBatch(ids) {
     if (!ids || ids.length === 0) return
     const ts = now()
-    await db.from('blocks').update({ deleted_at: ts, updated_at: ts }).in('id', ids)
+    const { error } = await db.from('blocks').update({ deleted_at: ts, updated_at: ts }).in('id', ids)
+    throwIfError(error, 'scene batch delete')
   },
 
   async listConnections(canvasId) {

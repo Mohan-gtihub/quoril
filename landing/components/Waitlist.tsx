@@ -1,64 +1,110 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { IconArrow, IconCheck } from "./icons";
+import { trackEvent } from "./Analytics";
 
-const ROLES = ["Engineer", "Designer", "Founder", "PM", "Student", "Other"];
-const PLATFORMS = ["macOS", "Windows", "Linux"];
+const DISCORD_INVITE = "https://discord.gg/Dmpsb6Ah3";
 
 type Status = "idle" | "loading" | "success" | "duplicate" | "error";
 
-export default function Waitlist({ id }: { id?: string }) {
+export default function Waitlist({
+  id,
+  showCount = true,
+  showIntro = true,
+}: {
+  id?: string;
+  showCount?: boolean;
+  showIntro?: boolean;
+}) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<string>("");
-  const [platform, setPlatform] = useState<string>("macOS");
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
+  const [shareMessage, setShareMessage] = useState("");
   const [count, setCount] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const startedRef = useRef(false);
+  const emailId = useId();
+  const errorId = `${emailId}-error`;
 
   useEffect(() => {
+    if (!showCount) return;
     let alive = true;
     fetch("/api/waitlist")
       .then((r) => r.json())
-      .then((d) => alive && typeof d.count === "number" && setCount(d.count))
+      .then(
+        (d) =>
+          alive &&
+          typeof d.count === "number" &&
+          d.count > 0 &&
+          setCount(d.count),
+      )
       .catch(() => {});
     return () => {
       alive = false;
     };
-  }, []);
+  }, [showCount]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (status === "loading") return;
     setStatus("loading");
     setMessage("");
+    trackEvent("waitlist_submitted");
 
     try {
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, role, platform }),
+        body: JSON.stringify({ email }),
       });
       const data = await res.json();
 
       if (!res.ok) {
         setStatus("error");
         setMessage(data.error ?? "Something went wrong.");
+        trackEvent("waitlist_failed", { reason: `http_${res.status}` });
         return;
       }
-      if (typeof data.count === "number") setCount(data.count);
+      if (typeof data.count === "number" && data.count > 0) setCount(data.count);
       if (data.duplicate) {
         setStatus("duplicate");
-        setMessage("You're already on the list — we'll be in touch soon.");
+        setMessage("You're already covered — we'll send your V1 access at launch.");
+        trackEvent("waitlist_duplicate");
       } else {
         setStatus("success");
-        setMessage("You're in. Welcome to the Quoril early crew.");
+        setMessage("We'll send your free V1 access when Quoril launches.");
+        trackEvent("waitlist_completed");
       }
     } catch {
       setStatus("error");
       setMessage("Network error. Please try again.");
+      trackEvent("waitlist_failed", { reason: "network" });
+    }
+  }
+
+  async function shareInvite() {
+    const url = `${window.location.origin}/?ref=friend`;
+    const shareData = {
+      title: "Quoril — Plan. Focus. Understand.",
+      text: "Quoril brings planning, focus and private time insights into one desktop app. V1 is free before launch.",
+      url,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        setShareMessage("Invite shared");
+        trackEvent("waitlist_referral_shared", { method: "native" });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShareMessage("Invite link copied");
+        trackEvent("waitlist_referral_shared", { method: "clipboard" });
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setShareMessage("Copy this link: quoril.in/?ref=friend");
     }
   }
 
@@ -76,32 +122,41 @@ export default function Waitlist({ id }: { id?: string }) {
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.25 }}
             >
-              <div className="mb-2 flex items-center gap-2">
-                {/* <span className="h-2 w-2 rounded-full bg-ink animate-pulse2" />
-                <span className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-faint">
-                  Early access · Q3 2026
-                </span> */}
-              </div>
-              <h3 className="text-2xl font-semibold tracking-[-0.02em] text-ink">
-                Join the waitlist
-              </h3>
-              <p className="mb-5 mt-1.5 text-[15px] text-ink-muted">
-                Be first to turn your desktop into a focus machine. No spam — one
-                launch email.
-              </p>
+              {showIntro && (
+                <div className="mb-5">
+                  <h3 className="text-2xl font-semibold tracking-[-0.02em] text-ink">
+                    Get Quoril V1 free
+                  </h3>
+                  <p className="mt-1.5 text-[15px] text-ink-muted">
+                    Enter your email and we will send access when V1 launches.
+                  </p>
+                </div>
+              )}
 
-              <form onSubmit={submit} className="space-y-4">
+              <form onSubmit={submit}>
                 <div className="flex flex-col gap-3 sm:flex-row">
+                  <label htmlFor={emailId} className="sr-only">
+                    Email address
+                  </label>
                   <input
+                    id={emailId}
                     ref={inputRef}
                     type="email"
+                    inputMode="email"
+                    autoComplete="email"
                     required
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
+                      if (!startedRef.current) {
+                        startedRef.current = true;
+                        trackEvent("waitlist_started");
+                      }
                       if (status === "error") setStatus("idle");
                     }}
                     placeholder="you@example.com"
+                    aria-describedby={status === "error" ? errorId : undefined}
+                    aria-invalid={status === "error"}
                     className="min-w-0 flex-1 rounded-pill border border-line-strong bg-paper px-5 py-3.5 text-[15px] text-ink outline-none transition placeholder:text-ink-faint focus:border-ink/40 focus:ring-4 focus:ring-ink/5"
                   />
                   <button
@@ -116,43 +171,17 @@ export default function Waitlist({ id }: { id?: string }) {
                       </span>
                     ) : (
                       <>
-                        Get early access
+                        Get V1 free
                         <IconArrow className="h-4 w-4 transition group-hover:translate-x-0.5" />
                       </>
                     )}
                   </button>
                 </div>
 
-                <div className="space-y-4 rounded-card border border-line bg-paper/60 p-4 sm:p-5">
-                  <Field label="I'm a…">
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {ROLES.map((r) => (
-                        <Pill
-                          key={r}
-                          active={role === r}
-                          onClick={() => setRole(role === r ? "" : r)}
-                        >
-                          {r}
-                        </Pill>
-                      ))}
-                    </div>
-                  </Field>
-
-                  <div className="h-px w-full bg-line" />
-
-                  <Field label="Platform">
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {PLATFORMS.map((p) => (
-                        <Pill key={p} active={platform === p} onClick={() => setPlatform(p)}>
-                          {p}
-                        </Pill>
-                      ))}
-                    </div>
-                  </Field>
-                </div>
-
                 {status === "error" && (
-                  <p className="text-sm text-state-error">{message}</p>
+                  <p id={errorId} role="alert" className="mt-3 text-sm text-state-error">
+                    {message}
+                  </p>
                 )}
               </form>
             </motion.div>
@@ -173,7 +202,7 @@ export default function Waitlist({ id }: { id?: string }) {
                 <IconCheck className="h-8 w-8" />
               </motion.div>
               <h3 className="text-2xl font-semibold tracking-[-0.02em] text-ink">
-                {status === "duplicate" ? "Already on the list" : "You're in 🎉"}
+                {status === "duplicate" ? "Your free V1 is reserved" : "Free V1 claimed"}
               </h3>
               <p className="mx-auto mt-2 max-w-sm text-ink-muted">{message}</p>
               {count !== null && (
@@ -185,79 +214,54 @@ export default function Waitlist({ id }: { id?: string }) {
                   people waiting.
                 </p>
               )}
+
+              <div className="mx-auto mt-7 flex max-w-md flex-col justify-center gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={shareInvite}
+                  className="inline-flex items-center justify-center rounded-pill bg-ink px-5 py-3 text-sm font-semibold text-paper transition hover:bg-ink/90"
+                >
+                  Invite a friend
+                </button>
+                <a
+                  href={DISCORD_INVITE}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackEvent("discord_clicked")}
+                  className="inline-flex items-center justify-center rounded-pill border border-line-strong bg-paper px-5 py-3 text-sm font-semibold text-ink transition hover:bg-sunken"
+                >
+                  Join the community
+                </a>
+              </div>
+              {shareMessage && (
+                <p className="mt-3 text-sm text-ink-muted" aria-live="polite">
+                  {shareMessage}
+                </p>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {!done && (
-        <div className="mt-4 flex items-center justify-center gap-3 text-sm text-ink-muted">
-          <div className="flex -space-x-2">
-            {[12, 32, 45, 65].map((n, i) => (
-              <img
-                key={i}
-                src={`https://i.pravatar.cc/48?img=${n}`}
-                alt=""
-                loading="lazy"
-                className="h-6 w-6 rounded-full border-2 border-paper object-cover"
-              />
-            ))}
-          </div>
+      {!done && (count !== null || !showCount) && (
+        <div className="mt-4 flex items-center justify-center gap-2 text-sm text-ink-muted">
+          <span className="grid h-5 w-5 place-items-center rounded-full bg-ink text-paper" aria-hidden="true">
+            <IconCheck className="h-3 w-3" />
+          </span>
           <span>
             {count !== null ? (
               <>
                 <span className="mono font-semibold text-ink">
                   {count.toLocaleString()}
                 </span>{" "}
-                builders already waiting
+                people have claimed free V1
               </>
             ) : (
-              "Loading early crew…"
+              "No card required"
             )}
           </span>
         </div>
       )}
     </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <span className="mb-2.5 block text-center text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
-        {label}
-      </span>
-      {children}
-    </div>
-  );
-}
-
-function Pill({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-pill border px-3.5 py-1.5 text-[13px] font-medium transition active:scale-95 ${
-        active
-          ? "border-ink bg-ink text-paper shadow-soft"
-          : "border-line-strong bg-paper text-ink-muted hover:border-ink/40 hover:text-ink"
-      }`}
-    >
-      {children}
-    </button>
   );
 }

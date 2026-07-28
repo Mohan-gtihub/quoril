@@ -11,7 +11,8 @@ const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || ''
 
 class SyncManager {
     private supabase: SupabaseClient | null = null
-    // @ts-ignore
+    // Retained for the sync paths the renderer will hand back. A suppression
+    // comment used to sit here; it was suppressing nothing and has been removed.
     private userId: string | null = null
 
     constructor() {
@@ -20,7 +21,10 @@ class SyncManager {
         }
     }
 
-    async setUserId(id: string | null, accessToken?: string | null) {
+    // accessToken is still passed by callers but unused: main-process sync is
+    // disabled and the renderer owns the session. Prefixed with _ to keep the
+    // signature stable without tripping no-unused-vars.
+    async setUserId(id: string | null, _accessToken?: string | null) {
         this.userId = id
         // Note: We no longer set the session here because main process sync is disabled.
         // The renderer process (dataSyncService.ts) handles all synchronization.

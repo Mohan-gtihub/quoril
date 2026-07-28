@@ -1,3 +1,5 @@
+import type { DetailCapability, TrackingDetail } from '@/services/platform/types'
+
 export interface ElectronAPI {
     reports: any
     window: {
@@ -63,7 +65,9 @@ export interface ElectronAPI {
         getDailyDomainUsage: (date: string) => Promise<any[]>
         genericUpdate: (table: string, id: string, updates: any) => Promise<any>
         taskExists: (taskId: string) => Promise<boolean>
+        getLocallyDeletedIds: (table: string) => Promise<string[]>
         getPending: (table: string, limit?: number) => Promise<any[]>
+        countPending: (table: string) => Promise<number>
         markSynced: (table: string, id: string) => Promise<void>
         upsertFromCloud: (table: string, rows: any[]) => Promise<number>
         requeueWorkspace: (workspaceId: string) => Promise<void>
@@ -78,8 +82,11 @@ export interface ElectronAPI {
         getLiveSession: () => Promise<any>
     }
     permissions: {
-        checkAccessibility: () => Promise<boolean>
-        requestAccessibility: () => Promise<boolean>
+        getTrackingDetail: () => Promise<TrackingDetail>
+        setTrackingDetail: (capability: DetailCapability, enabled: boolean) => Promise<TrackingDetail>
+        requestAccessibility: () => Promise<{ granted: boolean; detail: TrackingDetail }>
+        openPrivacySettings: (capability: DetailCapability) => Promise<boolean>
+        relaunch: () => Promise<void>
         startTracking: () => Promise<boolean>
     }
     screenTime: {

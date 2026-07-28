@@ -1,0 +1,22 @@
+{
+    // The main and preload processes were previously covered by no tsconfig at
+    // all, so nothing typechecked them — a merge once dropped a function that
+    // was still being called and the build stayed green. `npm run typecheck`
+    // now includes this project.
+    "compilerOptions": {
+        "target": "ES2022",
+        "lib": ["ES2022"],
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "types": ["node"],
+        "skipLibCheck": true,
+        "resolveJsonModule": true,
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
+        "isolatedModules": true,
+        "noEmit": true,
+        "strict": true,
+        "noFallthroughCasesInSwitch": true
+    },
+    "include": ["electron"]
+}

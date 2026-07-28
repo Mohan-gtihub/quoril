@@ -7,11 +7,16 @@ import type { Task } from '@/types/database'
 import type { TaskColumn } from '@/types/list'
 import { useFocusStore } from '@/store/focusStore'
 import { useTaskStore } from '@/store/taskStore'
+import { useListStore } from '@/store/listStore'
+import { useWorkspaceStore } from '@/store/workspaceStore'
+import { useAuthStore } from '@/store/authStore'
 import { calculateRemainingSeconds } from '@/utils/sessionUtils'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { formatTimeInput, parseTimeInput } from '@/utils/timeParser'
 import { useTimerDisplay } from '@/hooks/useTimerDisplay'
 import { cn } from '@/utils/helpers'
+import { resolveAssigneeLabel, assigneeInitial, canEditTaskTime } from '@/utils/assignee'
+import { getPriorityMeta, isUrgentPriority } from '@/utils/priority'
 import { useSettingsStore } from '@/store/settingsStore'
 import { confirm } from '@/components/ui/ConfirmDialog'
 import { usePlannerStore } from '@/store/plannerStore'
@@ -39,7 +44,7 @@ const getTaskStateStyles = (isActive: boolean, isPaused: boolean, isCompleted: b
             return "bg-[var(--accent-primary)]/[0.06] border-[var(--accent-primary)]/30"
         }
     }
-    return "bg-[var(--bg-secondary)] border-[var(--border-default)] hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)]"
+    return "bg-[var(--bg-card)] border-[var(--border-default)] shadow-[var(--shadow-soft)] hover:border-[var(--border-hover)] hover:shadow-[var(--shadow-lift)]"
 }
 
 export function TaskCard({ task, column, onComplete, draggable = true, disableTimer = false }: TaskCardProps) {
@@ -52,8 +57,32 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
         isDragging,
     } = useSortable({ id: task.id, disabled: !draggable })
 
-    const { updateTask, archiveTask, permanentDeleteTask, moveTaskToColumn, fetchSubtasks, subtasks, toggleSubtask, deleteSubtask, createSubtask, toggleTaskRecurring } = useTaskStore()
+    const { updateTask, archiveTask, permanentDeleteTask, moveTaskToColumn, fetchSubtasks, subtasks, toggleSubtask, deleteSubtask, createSubtask, toggleTaskRecurring, toggleComplete } = useTaskStore()
     const settings = useSettingsStore()
+
+    // Assignment — only for tasks in a shared workspace list.
+    const lists = useListStore(s => s.lists)
+    const membersByWorkspace = useWorkspaceStore(s => s.membersByWorkspace)
+    const loadWorkspaceMembers = useWorkspaceStore(s => s.loadWorkspaceMembers)
+    const currentEmail = useAuthStore(s => s.user?.email ?? null)
+    const workspaceId = useMemo(
+        () => (lists.find(l => l.id === task.list_id) as any)?.workspace_id ?? null,
+        [lists, task.list_id]
+    )
+    const nicknamesByWorkspace = useWorkspaceStore(s => s.nicknamesByWorkspace)
+    const nicknames = workspaceId ? (nicknamesByWorkspace[workspaceId] || {}) : {}
+    const assigneeLabel = resolveAssigneeLabel(task.assigned_to, nicknames)
+    const canEditTime = canEditTaskTime(task.assigned_to, currentEmail)
+    const assignees = useMemo(() => {
+        if (!workspaceId) return [] as string[]
+        const set = new Set(
+            (membersByWorkspace[workspaceId] || [])
+                .filter(m => !m.deleted_at)
+                .map(m => m.email.toLowerCase())
+        )
+        if (currentEmail) set.add(currentEmail.toLowerCase())
+        return [...set].sort()
+    }, [workspaceId, membersByWorkspace, currentEmail])
 
     const { selectedDate } = usePlannerStore()
     // Focus Store – subscribe to what we need for active-timer display
@@ -82,6 +111,11 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
         fetchSubtasks(task.id)
     }, [task.id, fetchSubtasks])
 
+    // Load workspace members lazily, only when the card is expanded to assign.
+    useEffect(() => {
+        if (isExpanded && workspaceId) loadWorkspaceMembers(workspaceId)
+    }, [isExpanded, workspaceId, loadWorkspaceMembers])
+
     const allSubtasks = subtasks[task.id] || []
 
     const handleColumnMove = async (direction: 'next' | 'prev') => {
@@ -91,7 +125,11 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
         const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1
         if (newIndex >= 0 && newIndex < COLUMN_ORDER.length) {
             const targetCol = COLUMN_ORDER[newIndex]
-            await moveTaskToColumn(task.id, targetCol)
+            if (targetCol === 'done' || column === 'done') {
+                await toggleComplete(task.id)
+            } else {
+                await moveTaskToColumn(task.id, targetCol)
+            }
         }
     }
 
@@ -112,6 +150,8 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
     const progressPercent = totalSub > 0 ? Math.round((doneSub / totalSub) * 100) : 0
 
     const isCompleted = task.status === 'done' || column === 'done'
+    const priorityMeta = getPriorityMeta(task.priority)
+    const urgent = isUrgentPriority(task.priority) && !isCompleted
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -134,6 +174,8 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
             if (timer.isPaused) focus.resumeSession()
             else focus.pauseSession()
         } else {
+            // Only the assignee (or anyone, if unassigned) may start a workspace task.
+            if (!canEditTime) return
             focus.startSession(task.id)
             focus.setShowFocusPanel(true)
         }
@@ -146,8 +188,14 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
 
     const handleTitleBlur = async () => {
         setIsEditingTitle(false)
-        if (titleInput !== task.title) {
-            await updateTask(task.id, { title: titleInput })
+        const trimmed = titleInput.trim()
+        if (!trimmed) {
+            // Don't allow blanking a task title; revert to the saved value.
+            setTitleInput(task.title)
+            return
+        }
+        if (trimmed !== task.title) {
+            await updateTask(task.id, { title: trimmed })
         }
     }
 
@@ -190,7 +238,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
             {/* Top Row: Title & Actions */}
             <div className="flex items-start gap-3 min-h-[28px]">
                 {/* Checkbox */}
-                <div className="pt-0.5">
+                <div className="pt-0.5" onPointerDown={e => e.stopPropagation()}>
                     <Checkbox
                         checked={isCompleted}
                         onChange={() => onComplete ? onComplete() : undefined}
@@ -231,21 +279,24 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                     {isTaskActive && allSubtasks.length > 0 && (
                         <div className="mt-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
                             <div className="space-y-1.5">
-                                {allSubtasks.slice(0, 5).map(sub => (
-                                    <div key={sub.id} className="flex items-center gap-2 px-1 py-0.5 group/sub">
+                                {allSubtasks.slice(0, 5).map(sub => {
+                                    const subDone = !!(sub.done || sub.completed)
+                                    return (
+                                    <div key={sub.id} className="flex items-center gap-2 px-1 py-0.5 group/sub" onPointerDown={e => e.stopPropagation()}>
                                         <Checkbox
-                                            checked={!!sub.completed}
+                                            checked={subDone}
                                             onChange={() => toggleSubtask(sub.id)}
                                             size="xs"
                                         />
                                         <span className={cn(
                                             "text-[11px] truncate flex-1",
-                                            sub.completed ? "line-through text-[var(--text-muted)]" : "text-[var(--text-secondary)]"
+                                            subDone ? "line-through text-[var(--text-muted)]" : "text-[var(--text-secondary)]"
                                         )}>
                                             {sub.title}
                                         </span>
                                     </div>
-                                ))}
+                                    )
+                                })}
                                 {allSubtasks.length > 5 && (
                                     <span className="text-[11px] text-[var(--text-muted)] pl-6 font-medium">+{allSubtasks.length - 5} more</span>
                                 )}
@@ -269,7 +320,9 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                 </div>
 
                 {/* Hover Actions */}
-                <div className={cn(
+                <div
+                    onPointerDown={e => e.stopPropagation()}
+                    className={cn(
                     "flex items-center gap-1 transition-all duration-200",
                     isTaskActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                 )}>
@@ -296,13 +349,33 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
             </div>
 
             {/* Bottom Row: Metadata & Timer */}
-            <div className="flex items-center justify-between mt-3 pl-1">
-                <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between gap-2 mt-3 pl-1 min-w-0">
+                <div className="flex items-center gap-3.5 min-w-0 flex-1 overflow-hidden">
+                    {/* Priority — a coloured dot for every task; high/critical also
+                        get the word so urgency reads at a glance. */}
+                    {priorityMeta && !isCompleted && (
+                        <span className="flex items-center gap-1.5" title={`${priorityMeta.label} priority`}>
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: priorityMeta.color }} />
+                            {urgent && (
+                                <span
+                                    className="text-[10px] font-bold uppercase tracking-[0.08em]"
+                                    style={{ color: priorityMeta.color }}
+                                >
+                                    {priorityMeta.label}
+                                </span>
+                            )}
+                        </span>
+                    )}
+
                     {/* EST */}
                     {!settings.hideEstDoneTimes && (
                         <div
-                            className="flex items-center gap-1.5 text-[11px] font-medium tabular-nums text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
-                            onClick={(e) => { e.stopPropagation(); setIsEditingEst(true); }}
+                            className={cn(
+                                "flex items-center gap-1.5 text-[11px] font-medium tabular-nums text-[var(--text-muted)] transition-colors",
+                                canEditTime ? "hover:text-[var(--text-secondary)] cursor-pointer" : "cursor-default opacity-70"
+                            )}
+                            title={canEditTime ? undefined : `Only the assignee (${assigneeLabel}) can change the time`}
+                            onClick={(e) => { e.stopPropagation(); if (canEditTime) setIsEditingEst(true); }}
                         >
                             {isEditingEst ? (
                                 <input
@@ -317,7 +390,7 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                                 />
                             ) : (
                                 <span className="lowercase tracking-tight">
-                                    {(task.estimated_minutes ?? 0) > 0 ? `${formatTimeInput(task.estimated_minutes!)}` : 'unlimited'}
+                                    {(task.estimated_minutes ?? 0) > 0 ? `${formatTimeInput(task.estimated_minutes!)}` : 'no est'}
                                 </span>
                             )}
                         </div>
@@ -330,10 +403,23 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                             <span>{doneSub}/{totalSub}</span>
                         </div>
                     )}
+
+                    {/* Assignee */}
+                    {task.assigned_to && (
+                        <div
+                            className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--text-secondary)]"
+                            title={`Assigned to ${assigneeLabel}`}
+                        >
+                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[var(--accent-primary)]/15 text-[var(--accent-primary)] text-[10px] font-semibold uppercase">
+                                {assigneeInitial(assigneeLabel)}
+                            </span>
+                            <span className="truncate max-w-[90px]">{assigneeLabel}</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Right Side: Timer Controls */}
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 shrink-0" onPointerDown={e => e.stopPropagation()}>
                     {!isCompleted && !disableTimer && (
                         <>
                             {isTaskActive ? (
@@ -362,7 +448,12 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                             ) : (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleStartClick(); }}
-                                    className="h-7 px-3 rounded-full text-[11px] font-semibold flex items-center gap-1.5 transition-all active:scale-95 bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105"
+                                    disabled={!canEditTime}
+                                    title={canEditTime ? undefined : `Assigned to ${assigneeLabel} — only they can start this task`}
+                                    className={cn(
+                                        "h-7 px-3 rounded-full text-[11px] font-semibold flex items-center gap-1.5 transition-all bg-[var(--accent-primary)] text-[var(--accent-contrast)]",
+                                        canEditTime ? "active:scale-95 hover:brightness-105" : "opacity-40 cursor-not-allowed"
+                                    )}
                                 >
                                     <Play className="w-2.5 h-2.5 fill-current" />
                                     <span>Start</span>
@@ -382,8 +473,12 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                             </span>
                         ) : (
                             <span
-                                onClick={e => { e.stopPropagation(); setIsEditingActual(true); }}
-                                className="text-[var(--text-muted)] hover:text-[var(--text-tertiary)] cursor-pointer"
+                                onClick={e => { e.stopPropagation(); if (canEditTime) setIsEditingActual(true); }}
+                                className={cn(
+                                    "text-[var(--text-muted)]",
+                                    canEditTime ? "hover:text-[var(--text-tertiary)] cursor-pointer" : "cursor-default"
+                                )}
+                                title={canEditTime ? undefined : `Only the assignee (${assigneeLabel}) can change the time`}
                             >
                                 {isEditingActual ? (
                                     <input
@@ -425,6 +520,30 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                             className="w-full bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-xl p-3 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]/30 resize-none min-h-[80px] placeholder:text-[var(--text-muted)] transition-all"
                         />
                     </div>
+
+                    {/* Assignee — only for tasks in a shared workspace */}
+                    {workspaceId && (
+                        <div className="space-y-2">
+                            <div className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.2em] ml-1">
+                                Assigned to
+                            </div>
+                            <select
+                                value={task.assigned_to ?? ''}
+                                onChange={(e) => updateTask(task.id, { assigned_to: e.target.value || null })}
+                                className="w-full bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-xl px-3 py-2.5 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]/30 transition-all"
+                            >
+                                <option value="">Unassigned</option>
+                                {task.assigned_to && !assignees.includes(task.assigned_to.toLowerCase()) && (
+                                    <option value={task.assigned_to}>{task.assigned_to} (former member)</option>
+                                )}
+                                {assignees.map(email => (
+                                    <option key={email} value={email}>
+                                        {resolveAssigneeLabel(email, nicknames)}{currentEmail && email === currentEmail.toLowerCase() ? ' (you)' : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     {/* Subtasks */}
                     <div className="space-y-2">
@@ -491,10 +610,11 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
                         </div>
                         <div className="flex gap-2">
                             <button
-                                onClick={() => { focus.startSession(task.id) }}
-                                className="p-2 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/20 transition-colors"
+                                onClick={() => { if (canEditTime) focus.startSession(task.id) }}
+                                disabled={!canEditTime}
+                                className="p-2 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-[var(--accent-primary)]/10"
                                 aria-label="Launch Task Now"
-                                title="Launch Task Now"
+                                title={canEditTime ? "Launch Task Now" : `Assigned to ${assigneeLabel} — only they can start this task`}
                             >
                                 <Play className="w-4 h-4 fill-current" />
                             </button>

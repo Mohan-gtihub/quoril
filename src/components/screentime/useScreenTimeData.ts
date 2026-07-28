@@ -62,6 +62,9 @@ export interface ProductivityBucket {
 
 export interface ScreenTimeData {
     loading: boolean
+    trackingAvailable: boolean
+    /** Window titles + website/domain detail (macOS Accessibility / non-mac desktop). */
+    detailAvailable: boolean
     date: string
     setDate: (d: string) => void
     hourly: HourlyBucket[]
@@ -83,22 +86,41 @@ export function useScreenTimeData(): ScreenTimeData {
     const [date, setDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
     const [raw, setRaw] = useState<any>(null)
     const [loading, setLoading] = useState(true)
+    const [trackingAvailable, setTrackingAvailable] = useState(platform.capabilities.appTracking)
+    const [detailAvailable, setDetailAvailable] = useState(platform.capabilities.appTracking)
 
     useEffect(() => {
+        let cancelled = false
         setLoading(true)
-        platform.screenTime.getData({ date })
-            .then((data: any) => {
+        Promise.resolve(platform.screenTime.isTrackingAvailable())
+            .then(async (available) => {
+                if (cancelled) return
+                setTrackingAvailable(available)
+                Promise.resolve(platform.screenTime.isDetailTrackingAvailable())
+                    .then((detail) => { if (!cancelled) setDetailAvailable(detail) })
+                    .catch(() => { if (!cancelled) setDetailAvailable(false) })
+                if (!available) {
+                    setRaw(null)
+                    setLoading(false)
+                    return
+                }
+                const data = await platform.screenTime.getData({ date })
+                if (cancelled) return
                 setRaw(data)
                 setLoading(false)
             })
             .catch((err: any) => {
+                if (cancelled) return
                 console.error('[ScreenTime] Failed:', err)
+                setTrackingAvailable(false)
                 setLoading(false)
             })
+        return () => { cancelled = true }
     }, [date])
 
     // Refresh every 30s for live updates
     useEffect(() => {
+        if (!trackingAvailable) return
         const today = format(new Date(), 'yyyy-MM-dd')
         if (date !== today) return
         const interval = setInterval(() => {
@@ -107,7 +129,7 @@ export function useScreenTimeData(): ScreenTimeData {
                 .catch(() => {})
         }, 30000)
         return () => clearInterval(interval)
-    }, [date])
+    }, [date, trackingAvailable])
 
     const hourly = useMemo((): HourlyBucket[] => {
         const map: Record<number, HourlyBucket> = {}
@@ -143,10 +165,12 @@ export function useScreenTimeData(): ScreenTimeData {
     }, [hourly])
 
     const avgDailySeconds = useMemo(() => {
-        const days = weekly.filter(d => d.totalSeconds > 0)
+        // Exclude the selected day itself so "vs average" compares against the
+        // OTHER days, not an average that already includes the value being compared.
+        const days = weekly.filter(d => d.day !== date && d.totalSeconds > 0)
         if (days.length === 0) return 0
         return Math.round(days.reduce((s, d) => s + d.totalSeconds, 0) / days.length)
-    }, [weekly])
+    }, [weekly, date])
 
     const todayVsAvg = useMemo(() => {
         if (avgDailySeconds === 0) return 0
@@ -155,6 +179,8 @@ export function useScreenTimeData(): ScreenTimeData {
 
     return {
         loading,
+        trackingAvailable,
+        detailAvailable,
         date,
         setDate,
         hourly,

@@ -32,9 +32,30 @@ export interface RecurringEntry {
     streak: number
 }
 
+/* ─── Functions ──────────────────────────────────────────────── */
+
+export function computeTaskFocusLinkage(
+    taskFocus: { taskId: string; title: string; status: string; focusSeconds: number }[],
+    doneInRange: number,
+): { linkedPct: number; topTasks: { taskId: string; title: string; focusSeconds: number }[] } {
+    const doneWithFocus = taskFocus.filter(t => t.status === 'done' && t.focusSeconds > 0).length
+    const linkedPct = doneInRange > 0 ? Math.min(100, Math.round((doneWithFocus / doneInRange) * 100)) : 0
+    const topTasks = [...taskFocus]
+        .filter(t => t.status === 'done')
+        .sort((a, b) => b.focusSeconds - a.focusSeconds)
+        .slice(0, 5)
+        .map(t => ({ taskId: t.taskId, title: t.title, focusSeconds: t.focusSeconds }))
+    return { linkedPct, topTasks }
+}
+
 /* ─── Hook ───────────────────────────────────────────────────── */
 
-export function useTaskReport(tasks: TaskRow[]) {
+export function useTaskReport(
+    tasks: TaskRow[],
+    taskFocus: { taskId: string; title: string; status: string; focusSeconds: number }[] = [],
+    plannedToday: { dueToday: number; completedOfDue: number } = { dueToday: 0, completedOfDue: 0 },
+    doneInRange: number = 0,
+) {
     // Completion basics
     const total = useMemo(() => tasks.length, [tasks])
     const completed = useMemo(() => tasks.filter(t => t.status === 'done').length, [tasks])
@@ -91,6 +112,8 @@ export function useTaskReport(tasks: TaskRow[]) {
 
     const recurringCompletedCount = useMemo(() => recurringData.filter(r => r.isCompleted).length, [recurringData])
 
+    const focusLinkage = useMemo(() => computeTaskFocusLinkage(taskFocus, doneInRange), [taskFocus, doneInRange])
+
     return {
         total,
         completed,
@@ -103,5 +126,7 @@ export function useTaskReport(tasks: TaskRow[]) {
         mostOverestimated,
         recurringData,
         recurringCompletedCount,
+        focusLinkage,
+        plannedToday,
     }
 }

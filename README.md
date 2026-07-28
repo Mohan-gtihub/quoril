@@ -2,7 +2,7 @@
 
 A desktop productivity operating system for deep work. Quoril combines task management, focus tracking, app usage analytics, and digital wellbeing into a single offline-first Electron application with real-time cloud sync.
 
-Built by **Mohan Kilari**.
+Built by **Erik Vale**.
 
 ---
 
@@ -866,7 +866,7 @@ npm install
 
 ### `active-win` permission error (macOS)
 - Go to System Settings > Privacy & Security > Accessibility
-- Enable Quoril.app
+- Enable quoril.in
 - Or use the in-app permission card in Settings
 
 ### Build fails with EBUSY
@@ -881,5 +881,5 @@ npm install
 ---
 
 **Version:** 1.0.0
-**Author:** Mohan Kilari
+**Author:** Erik Vale
 **License:** MIT

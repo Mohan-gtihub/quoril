@@ -3,6 +3,8 @@ export interface Capabilities {
   nativeOverlay: boolean
   pictureInPicture: boolean
   localDb: boolean
+  /** AI-generated report insights are available (key + backend present). */
+  aiInsights: boolean
 }
 
 export type Unavailable = { available: false }
@@ -22,8 +24,42 @@ export interface DataPort {
 
 export interface ScreenTimePort {
   getData(args: { date: string }): Promise<any | Unavailable>
-  isTrackingAvailable(): boolean
+  /** App-level tracking — which apps are used. Works on all desktop platforms. */
+  isTrackingAvailable(): boolean | Promise<boolean>
+  /**
+   * True when at least one detail capability is both opted into and granted.
+   * Use getTrackingDetail() when you need to distinguish the two.
+   */
+  isDetailTrackingAvailable(): boolean | Promise<boolean>
+
+  // These are uniformly async and use null/false rather than the Unavailable
+  // sentinel: they are driven by a user toggling a switch, and a caller in that
+  // position wants "no, and here's the state" rather than a branch on a marker.
+
+  /** Per-capability opt-in and OS-grant state. Null where unsupported (web). */
+  getTrackingDetail(): Promise<TrackingDetail | null>
+  /** Persist an opt-in and restart the tracking engine. Returns the new state. */
+  setTrackingDetail(
+    capability: DetailCapability,
+    enabled: boolean,
+  ): Promise<TrackingDetail | null>
+  /** Surface the macOS Accessibility prompt. Explicit user action only. */
+  requestAccessibility(): Promise<{ granted: boolean; detail: TrackingDetail } | null>
+  /** Deep-link to the relevant macOS Privacy pane (Screen Recording has no prompt API). */
+  openPrivacySettings(capability: DetailCapability): Promise<boolean>
+  /** Restart the app — required before a Screen Recording grant takes effect. */
+  relaunch(): Promise<void>
 }
+
+/**
+ * Detailed tracking capabilities. Each maps to a different macOS permission:
+ *   titles → Screen Recording (window titles)
+ *   urls   → Accessibility    (browser website addresses)
+ * `enabled` is the user's opt-in; `granted` is the OS. Detail is collected only
+ * when both are true.
+ */
+export type DetailCapability = 'titles' | 'urls'
+export type TrackingDetail = Record<DetailCapability, { enabled: boolean; granted: boolean }>
 
 export interface FocusWindowPort {
   setAlwaysOnTop(flag: boolean): void | Unavailable
@@ -31,6 +67,12 @@ export interface FocusWindowPort {
   restore(): void | Unavailable
   setResizable(flag: boolean): void | Unavailable
   closeDevTools(): void | Unavailable
+  /** Open the dedicated focus-pill overlay window and hide the main window. */
+  enterPill(): void | Unavailable
+  /** Close the pill window and bring the main app window back. */
+  exitPill(): void | Unavailable
+  /** Subscribe to the main window's "re-read persisted state" signal. */
+  onRehydrate(cb: () => void): (() => void) | Unavailable
 }
 
 export interface KeyValuePort {
@@ -43,6 +85,7 @@ export interface AuthPort {
   signInWithPassword(email: string, password: string): Promise<any>
   signOut(): Promise<void>
   onDeepLink(cb: (url: string) => void): (() => void) | Unavailable
+  getPendingDeepLink(): Promise<string | null>
   setUser(userId: string | null, accessToken?: string | null): void | Unavailable
 }
 
@@ -58,6 +101,42 @@ export interface TrackerPort {
 
 export interface LinksPort {
   openExternal(url: string): void | Unavailable
+}
+
+export interface NotificationsPort {
+  /** Fire a native OS notification (outside the app window). No-op on web. */
+  show(title: string, body: string): void | Unavailable
+}
+
+// Mirrors UpdateStatus in electron/main/updater.ts + electron/preload/index.ts.
+export type UpdateStatus =
+  | { state: 'idle' }
+  | { state: 'checking' }
+  | { state: 'not-available' }
+  | { state: 'available'; version: string; notes: string | null; releaseDate: string | null }
+  | { state: 'downloading'; version: string; percent: number; bytesPerSecond: number; transferred: number; total: number }
+  | { state: 'downloaded'; version: string; notes: string | null; releaseDate: string | null }
+  | { state: 'error'; message: string }
+
+export interface UpdatesPort {
+  /** Current updater status (pulled on mount so we don't miss the first event). */
+  getStatus(): Promise<UpdateStatus>
+  /** Trigger a manual check. */
+  check(): Promise<UpdateStatus>
+  /** Start downloading an available update, once the user has consented. */
+  download(): Promise<boolean>
+  /** Quit and install a downloaded update ("Restart Now"). Resolves false if none ready. */
+  restartAndInstall(): Promise<boolean>
+  /** Subscribe to status changes. Returns an unsubscribe fn, or Unavailable on web. */
+  onStatus(cb: (status: UpdateStatus) => void): (() => void) | Unavailable
+}
+
+export interface FeedbackPort {
+  /**
+   * Capture the current app window as a PNG data URL for the alpha feedback
+   * widget. Desktop-only (native window capture); web returns Unavailable.
+   */
+  captureScreen(): Promise<string | Unavailable>
 }
 
 export interface CanvasPort {
@@ -84,6 +163,17 @@ export interface CanvasPort {
   unfurlLink(url: string): Promise<{ url: string; title: string; description: string; image?: string; siteName?: string; fetchedAt?: number }>
 }
 
+export interface InsightsPort {
+  /**
+   * Turn an aggregated, privacy-safe report summary into structured suggestions.
+   * `summary` is the ReportInsightSummary from services/insights; typed as unknown
+   * here so the platform layer stays decoupled from the insights module's shape.
+   * Returns an InsightsResponse ({ ok, ... }); web/mobile without a backend return
+   * { ok: false }. A future mobile target implements this against an HTTPS endpoint.
+   */
+  generate(summary: unknown): Promise<{ ok: true; result: any; model: string } | { ok: false; error: string }>
+}
+
 export interface Platform {
   capabilities: Capabilities
   data: DataPort
@@ -94,5 +184,9 @@ export interface Platform {
   windowControls: WindowControlsPort
   tracker: TrackerPort
   links: LinksPort
+  notifications: NotificationsPort
+  updates: UpdatesPort
   canvas: CanvasPort
+  feedback: FeedbackPort
+  insights: InsightsPort
 }

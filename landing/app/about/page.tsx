@@ -2,6 +2,7 @@ import {
   Container,
   Tile,
   TileIcon,
+  ACCENTS,
   Button,
   Stat,
   Eyebrow,
@@ -10,9 +11,9 @@ import Reveal from "@/components/Reveal";
 import { IconGlobe, IconLayers, IconChart, IconCheck } from "@/components/icons";
 
 export const metadata = {
-  title: "About — Quoril",
+  title: "About",
   description:
-    "Quoril is a native command center for deep work — built by Mohan Kilari for people who ship. Local-first, private, and focused.",
+    "Quoril helps you plan, focus and understand your time in one local-first desktop app, built by Erik Vale.",
 };
 
 const PRINCIPLES = [
@@ -56,7 +57,7 @@ export default function AboutPage() {
               <Eyebrow>About</Eyebrow>
             </div>
             <h1 className="font-heading text-[clamp(34px,6vw,62px)] font-semibold leading-[1.03] tracking-[-0.035em] text-ink">
-              Built for people who ship.
+              Built to help you plan, focus and understand.
             </h1>
             <p className="mt-6 max-w-[620px] text-[18px] leading-relaxed text-ink-muted">
               Quoril is a native command center for deep work — a single, quiet
@@ -116,7 +117,7 @@ export default function AboutPage() {
             {PRINCIPLES.map((p, i) => (
               <Reveal key={p.title} style={{ transitionDelay: `${i * 80}ms` }}>
                 <Tile className="h-full">
-                  <TileIcon>{p.icon}</TileIcon>
+                  <TileIcon tint={ACCENTS[i % ACCENTS.length]}>{p.icon}</TileIcon>
                   <h3 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">
                     {p.title}
                   </h3>
@@ -160,7 +161,7 @@ export default function AboutPage() {
               help shape what deep work should feel like.
             </p>
             <div className="mt-8">
-              <Button href="/waitlist">Join the waitlist</Button>
+              <Button href="/waitlist">Get V1 free</Button>
             </div>
           </Reveal>
         </Container>

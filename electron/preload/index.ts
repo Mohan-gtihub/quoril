@@ -23,6 +23,42 @@ contextBridge.exposeInMainWorld('electronAPI', {
             ipcRenderer.invoke('notification:show', { title, body }),
     },
 
+    // Alpha feedback — screenshot the current window (PNG data URL, or null).
+    feedback: {
+        capture: (): Promise<string | null> => ipcRenderer.invoke('feedback:capture'),
+    },
+
+    // AI Insights — send an aggregated report summary, get structured suggestions.
+    insights: {
+        generate: (summary: unknown) => ipcRenderer.invoke('insights:generate', summary),
+    },
+
+    // Auto-update (silent background check → download → restart prompt)
+    updates: {
+        getStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:getStatus'),
+        check: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:check'),
+        download: (): Promise<boolean> => ipcRenderer.invoke('update:download'),
+        restartAndInstall: (): Promise<boolean> => ipcRenderer.invoke('update:restartAndInstall'),
+        onStatus: (callback: (status: UpdateStatus) => void) => {
+            const subscription = (_: any, status: UpdateStatus) => callback(status)
+            ipcRenderer.on('update:status', subscription)
+            return () => ipcRenderer.removeListener('update:status', subscription)
+        },
+    },
+
+    // Focus pill window lifecycle (separate overlay window)
+    pill: {
+        enter: () => ipcRenderer.invoke('pill:enter'),
+        exit: () => ipcRenderer.invoke('pill:exit'),
+        // Main window asks the renderer to re-read persisted state after the
+        // pill window handed the focus session back.
+        onRehydrate: (cb: () => void) => {
+            const listener = () => cb()
+            ipcRenderer.on('app:rehydrate', listener)
+            return () => ipcRenderer.removeListener('app:rehydrate', listener)
+        },
+    },
+
     // Focus session
     focus: {
         started: (data: { duration: number; taskId: string }) =>
@@ -81,7 +117,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
         getDailyDomainUsage: (date: string) => ipcRenderer.invoke('db:getDailyDomainUsage', date),
         genericUpdate: (table: string, id: string, updates: any) => ipcRenderer.invoke('db:genericUpdate', table, id, updates),
         taskExists: (taskId: string) => ipcRenderer.invoke('db:taskExists', taskId),
+        getLocallyDeletedIds: (table: string) => ipcRenderer.invoke('db:getLocallyDeletedIds', table),
         getPending: (table: string, limit?: number) => ipcRenderer.invoke('db:getPending', table, limit),
+        countPending: (table: string) => ipcRenderer.invoke('db:countPending', table),
         markSynced: (table: string, id: string) => ipcRenderer.invoke('db:markSynced', table, id),
         upsertFromCloud: (table: string, rows: any[]) => ipcRenderer.invoke('db:upsertFromCloud', table, rows),
         requeueWorkspace: (workspaceId: string) => ipcRenderer.invoke('db:requeueWorkspace', workspaceId),
@@ -98,16 +136,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
         getLiveSession: () => ipcRenderer.invoke('tracker:getLiveSession'),
     },
 
-    // Permissions (macOS accessibility for app tracking)
+    // Permissions. Baseline app tracking needs none; the two detail capabilities
+    // (window titles, website addresses) are opt-in and macOS-gated.
     permissions: {
-        checkAccessibility: () => ipcRenderer.invoke('permissions:checkAccessibility'),
-        requestAccessibility: () => ipcRenderer.invoke('permissions:requestAccessibility'),
+        getTrackingDetail: (): Promise<TrackingDetail> =>
+            ipcRenderer.invoke('permissions:getTrackingDetail'),
+        setTrackingDetail: (capability: DetailCapability, enabled: boolean): Promise<TrackingDetail> =>
+            ipcRenderer.invoke('permissions:setTrackingDetail', capability, enabled),
+        requestAccessibility: (): Promise<{ granted: boolean; detail: TrackingDetail }> =>
+            ipcRenderer.invoke('permissions:requestAccessibility'),
+        openPrivacySettings: (capability: DetailCapability): Promise<boolean> =>
+            ipcRenderer.invoke('permissions:openPrivacySettings', capability),
+        relaunch: (): Promise<void> => ipcRenderer.invoke('permissions:relaunch'),
         startTracking: () => ipcRenderer.invoke('permissions:startTracking'),
     },
 
     // Auth
     auth: {
         setUser: (userId: string | null, accessToken?: string | null) => ipcRenderer.invoke('auth:setUser', userId, accessToken),
+        getPendingDeepLink: (): Promise<string | null> => ipcRenderer.invoke('auth:getPendingDeepLink'),
         onDeepLink: (callback: (url: string) => void) => {
             const subscription = (_: any, url: string) => callback(url)
             ipcRenderer.on('deep-link', subscription)
@@ -119,6 +166,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     reports: {
         getDashboardData: (args: { userId: string; startDate: string; endDate: string }) =>
             ipcRenderer.invoke('reports:getDashboardData', args),
+        getSessionDistraction: (args: { startISO: string; endISO: string }) =>
+            ipcRenderer.invoke('reports:getSessionDistraction', args),
     },
 
     // Screen Time
@@ -173,6 +222,21 @@ contextBridge.exposeInMainWorld('electron', {
 })
 
 // Type definitions for TypeScript
+
+// Mirrors TrackingDetail in electron/main/core/trackingDetail.ts.
+export type DetailCapability = 'titles' | 'urls'
+export type TrackingDetail = Record<DetailCapability, { enabled: boolean; granted: boolean }>
+
+// Mirrors UpdateStatus in electron/main/updater.ts.
+export type UpdateStatus =
+    | { state: 'idle' }
+    | { state: 'checking' }
+    | { state: 'not-available' }
+    | { state: 'available'; version: string; notes: string | null; releaseDate: string | null }
+    | { state: 'downloading'; version: string; percent: number; bytesPerSecond: number; transferred: number; total: number }
+    | { state: 'downloaded'; version: string; notes: string | null; releaseDate: string | null }
+    | { state: 'error'; message: string }
+
 export interface ElectronAPI {
     window: {
         minimize: () => Promise<void>
@@ -186,6 +250,15 @@ export interface ElectronAPI {
     }
     notification: {
         show: (title: string, body: string) => Promise<void>
+    }
+    feedback: {
+        capture: () => Promise<string | null>
+    }
+    updates: {
+        getStatus: () => Promise<UpdateStatus>
+        check: () => Promise<UpdateStatus>
+        restartAndInstall: () => Promise<boolean>
+        onStatus: (callback: (status: UpdateStatus) => void) => () => void
     }
     focus: {
         started: (data: { duration: number; taskId: string }) => void
@@ -234,7 +307,9 @@ export interface ElectronAPI {
         getAppUsageByTask: (taskId: string) => Promise<any[]>
         genericUpdate: (table: string, id: string, updates: any) => Promise<any>
         taskExists: (taskId: string) => Promise<boolean>
-        getPending: (table: string) => Promise<any[]>
+        getLocallyDeletedIds: (table: string) => Promise<string[]>
+        getPending: (table: string, limit?: number) => Promise<any[]>
+        countPending: (table: string) => Promise<number>
         markSynced: (table: string, id: string) => Promise<void>
         upsertFromCloud: (table: string, rows: any[]) => Promise<number>
         requeueWorkspace: (workspaceId: string) => Promise<void>
@@ -249,16 +324,21 @@ export interface ElectronAPI {
         getLiveSession: () => Promise<any>
     }
     permissions: {
-        checkAccessibility: () => Promise<boolean>
-        requestAccessibility: () => Promise<boolean>
+        getTrackingDetail: () => Promise<TrackingDetail>
+        setTrackingDetail: (capability: DetailCapability, enabled: boolean) => Promise<TrackingDetail>
+        requestAccessibility: () => Promise<{ granted: boolean; detail: TrackingDetail }>
+        openPrivacySettings: (capability: DetailCapability) => Promise<boolean>
+        relaunch: () => Promise<void>
         startTracking: () => Promise<boolean>
     }
     auth: {
         setUser: (userId: string | null, accessToken?: string | null) => Promise<void>
+        getPendingDeepLink: () => Promise<string | null>
         onDeepLink: (callback: (url: string) => void) => () => void
     }
     reports: {
         getDashboardData: (args: { userId: string; startDate: string; endDate: string }) => Promise<any>
+        getSessionDistraction: (args: { startISO: string; endISO: string }) => Promise<{ distractionSeconds: number; byCategory: { category: string; seconds: number }[] }>
     }
     screenTime: {
         getData: (args: { date: string }) => Promise<any>

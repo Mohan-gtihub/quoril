@@ -2,21 +2,122 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ───────────────────────────────────────────────────────────
+   THEME TOKENS
+   :root = original "Daylight" light system (DEFAULT)
+   .dark = "Midnight" variant (toggled via sun/moon switch)
+   Values are `R G B` channel triples so Tailwind's /opacity works.
+─────────────────────────────────────────────────────────── */
+:root {
+  /* surfaces */
+  --c-paper: 251 251 250; /* #FBFBFA warm white */
+  --c-surface: 255 255 255; /* #FFFFFF */
+  --c-sunken: 244 244 242; /* #F4F4F2 */
+  --c-line: 235 234 230; /* #EBEAE6 */
+  --c-line-strong: 222 221 215; /* #DEDDD7 */
+  /* text */
+  --c-ink: 22 22 15; /* #16160F warm near-black */
+  --c-ink-muted: 107 106 99; /* #6B6A63 */
+  --c-ink-faint: 156 155 146; /* #9C9B92 */
+  /* priority ramp */
+  --c-prio-critical: 22 22 15;
+  --c-prio-high: 107 107 102;
+  --c-prio-medium: 168 168 161;
+  --c-prio-low: 207 206 199;
+  /* state */
+  --c-success: 21 128 61;
+  --c-warning: 180 83 9;
+  --c-error: 220 38 38;
+  /* accents */
+  --c-focus: 43 107 245; /* #2B6BF5 */
+  --c-break: 245 166 35; /* #F5A623 */
+  --c-wellbeing: 16 196 154; /* #10C49A */
+  --c-deepslate: 61 61 61; /* #3D3D3D */
+  --c-brand: 22 22 15; /* light theme: brand == ink (monochrome) */
+
+  /* elevations */
+  --shadow-soft: 0 1px 2px rgba(22, 22, 15, 0.04),
+    0 10px 28px -16px rgba(22, 22, 15, 0.14);
+  --shadow-lift: 0 2px 6px rgba(22, 22, 15, 0.05),
+    0 24px 56px -28px rgba(22, 22, 15, 0.22);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  /* texture helpers */
+  --dot-color: rgba(22, 22, 15, 0.05);
+  --aurora: transparent;
+  --sheen-color: rgba(22, 22, 15, 0.18);
+  --scrollbar-track: #fbfbfa;
+  --scrollbar-thumb: #dcdbd5;
+  --scrollbar-thumb-hover: #c7c6bf;
+  --selection-bg: #16160f;
+  --selection-fg: #fbfbfa;
+}
+
+.dark {
+  /* surfaces (near-black, faint cool tint) */
+  --c-paper: 8 9 12; /* #08090C */
+  --c-surface: 14 16 20; /* #0E1014 */
+  --c-sunken: 21 24 30; /* #15181E */
+  --c-line: 38 41 48; /* ~rgba white 0.08 flattened */
+  --c-line-strong: 56 60 68;
+  /* text */
+  --c-ink: 244 245 247; /* #F4F5F7 */
+  --c-ink-muted: 155 161 173; /* #9BA1AD */
+  --c-ink-faint: 100 107 120; /* #646B78 */
+  /* priority ramp (brighter = higher) */
+  --c-prio-critical: 244 245 247;
+  --c-prio-high: 155 161 173;
+  --c-prio-medium: 100 107 120;
+  --c-prio-low: 58 63 73;
+  /* state */
+  --c-success: 62 207 142;
+  --c-warning: 245 166 35;
+  --c-error: 239 68 68;
+  /* accents (dark-tuned) */
+  --c-focus: 91 141 239; /* #5B8DEF */
+  --c-break: 245 166 35;
+  --c-wellbeing: 45 212 167; /* #2DD4A7 */
+  --c-deepslate: 27 31 39;
+  --c-brand: 91 141 239; /* dark theme: cool blue brand accent */
+
+  /* elevations */
+  --shadow-soft: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 16px 40px -24px rgba(0, 0, 0, 0.8);
+  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 32px 64px -28px rgba(0, 0, 0, 0.9);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  /* texture helpers */
+  --dot-color: rgba(255, 255, 255, 0.045);
+  --aurora: radial-gradient(
+    60% 50% at 50% 0%,
+    rgba(91, 141, 239, 0.16) 0%,
+    transparent 70%
+  );
+  --sheen-color: rgba(91, 141, 239, 0.55);
+  --scrollbar-track: #08090c;
+  --scrollbar-thumb: #2a2f38;
+  --scrollbar-thumb-hover: #3a4049;
+  --selection-bg: #5b8def;
+  --selection-fg: #ffffff;
+}
+
 html {
   scroll-behavior: smooth;
 }
 
 body {
-  background: #fbfbfa;
-  color: #16160f;
+  background: rgb(var(--c-paper));
+  color: rgb(var(--c-ink));
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 ::selection {
-  background: #16160f;
-  color: #fbfbfa;
+  background: var(--selection-bg);
+  color: var(--selection-fg);
 }
 
 /* tabular numerals for any timer / metric */
@@ -27,13 +128,18 @@ body {
 
 /* subtle dotted backdrop — quiet texture, not noise */
 .dotgrid {
-  background-image: radial-gradient(rgba(22, 22, 15, 0.05) 1px, transparent 1px);
+  background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);
   background-size: 22px 22px;
+}
+
+/* faint top-down glow behind hero / CTA blocks (dark theme only) */
+.aurora {
+  background: var(--aurora);
 }
 
 /* hairline helper (sub-pixel crisp on hi-dpi) */
 .hairline {
-  box-shadow: 0 0 0 1px #ebeae6;
+  box-shadow: 0 0 0 1px rgb(var(--c-line));
 }
 
 /* thin custom scrollbar */
@@ -41,18 +147,18 @@ body {
   width: 11px;
 }
 ::-webkit-scrollbar-track {
-  background: #fbfbfa;
+  background: var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
-  background: #dcdbd5;
+  background: var(--scrollbar-thumb);
   border-radius: 999px;
-  border: 3px solid #fbfbfa;
+  border: 3px solid var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #c7c6bf;
+  background: var(--scrollbar-thumb-hover);
 }
 
-/* very slow sheen on the waitlist card edge — monochrome, restrained */
+/* very slow sheen on the waitlist card edge — restrained */
 .sheen {
   position: relative;
 }
@@ -65,7 +171,7 @@ body {
   background: linear-gradient(
     120deg,
     transparent 35%,
-    rgba(22, 22, 15, 0.18) 50%,
+    var(--sheen-color) 50%,
     transparent 65%
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -88,4 +194,197 @@ body {
   html {
     scroll-behavior: auto;
   }
+}
+
+/* ────────────────────────────────────────────────────────────
+   Blog content — styles for admin-authored raw HTML.
+
+   The post body is injected as HTML, so we style by element here
+   (rather than utility classes) to give a clean, professional,
+   magazine-grade reading experience with full design freedom.
+   ──────────────────────────────────────────────────────────── */
+.blog-content {
+  color: rgb(var(--c-ink-muted));
+  font-size: 18px;
+  line-height: 1.8;
+  letter-spacing: -0.003em;
+}
+.blog-content > :first-child {
+  margin-top: 0;
+}
+.blog-content > :last-child {
+  margin-bottom: 0;
+}
+.blog-content p {
+  margin: 1.4em 0;
+}
+.blog-content h2,
+.blog-content h3,
+.blog-content h4 {
+  color: rgb(var(--c-ink));
+  font-family: var(--font-poppins, var(--font-inter, inherit));
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  scroll-margin-top: 100px;
+}
+.blog-content h2 {
+  font-size: 1.7em;
+  margin: 1.9em 0 0.6em;
+}
+.blog-content h3 {
+  font-size: 1.32em;
+  margin: 1.6em 0 0.5em;
+}
+.blog-content h4 {
+  font-size: 1.1em;
+  margin: 1.4em 0 0.5em;
+}
+.blog-content a {
+  color: rgb(var(--c-focus));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+.blog-content a:hover {
+  text-decoration-thickness: 2px;
+}
+.blog-content strong {
+  color: rgb(var(--c-ink));
+  font-weight: 600;
+}
+.blog-content ul,
+.blog-content ol {
+  margin: 1.4em 0;
+  padding-left: 1.5em;
+}
+.blog-content li {
+  margin: 0.55em 0;
+  padding-left: 0.3em;
+}
+.blog-content ul li::marker {
+  color: rgb(var(--c-ink-faint));
+}
+.blog-content ol li::marker {
+  color: rgb(var(--c-ink-faint));
+  font-variant-numeric: tabular-nums;
+}
+.blog-content img,
+.blog-content video,
+.blog-content iframe {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 2em 0;
+  border-radius: 16px;
+  border: 1px solid rgb(var(--c-line));
+}
+.blog-content figure {
+  margin: 2em 0;
+}
+.blog-content figcaption {
+  margin-top: 0.7em;
+  text-align: center;
+  font-size: 0.82em;
+  color: rgb(var(--c-ink-faint));
+}
+.blog-content blockquote {
+  margin: 1.8em 0;
+  padding: 0.2em 0 0.2em 1.3em;
+  border-left: 3px solid rgb(var(--c-focus));
+  color: rgb(var(--c-ink));
+  font-style: italic;
+  font-size: 1.08em;
+}
+.blog-content hr {
+  margin: 2.6em 0;
+  border: 0;
+  border-top: 1px solid rgb(var(--c-line));
+}
+.blog-content code {
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  font-size: 0.86em;
+  background: rgb(var(--c-sunken));
+  border: 1px solid rgb(var(--c-line));
+  border-radius: 6px;
+  padding: 0.12em 0.4em;
+  color: rgb(var(--c-ink));
+}
+.blog-content pre {
+  margin: 1.8em 0;
+  padding: 1.1em 1.3em;
+  overflow-x: auto;
+  background: rgb(var(--c-sunken));
+  border: 1px solid rgb(var(--c-line));
+  border-radius: 14px;
+  font-size: 0.85em;
+  line-height: 1.65;
+}
+.blog-content pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+}
+.blog-content table {
+  width: 100%;
+  margin: 1.8em 0;
+  border-collapse: collapse;
+  font-size: 0.92em;
+}
+.blog-content th,
+.blog-content td {
+  padding: 0.7em 0.9em;
+  border: 1px solid rgb(var(--c-line));
+  text-align: left;
+}
+.blog-content th {
+  background: rgb(var(--c-sunken));
+  color: rgb(var(--c-ink));
+  font-weight: 600;
+}
+
+/* ── React Flow (canvas mockup) — Quoril surface ───────────── */
+.canvas-board .react-flow__node {
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+/* let our Card draw all selection chrome — kill RF's default outline */
+.canvas-board .react-flow__node.selected,
+.canvas-board .react-flow__node:focus,
+.canvas-board .react-flow__node:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+/* connection points stay invisible until you approach a block */
+.canvas-board .rf-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgb(var(--c-surface));
+  border: 1.5px solid rgb(var(--c-ink-faint));
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.canvas-board .react-flow__node:hover .rf-dot,
+.canvas-board .react-flow__node.selected .rf-dot {
+  opacity: 1;
+}
+.canvas-board .rf-dot:hover {
+  border-color: rgb(var(--c-ink));
+}
+.canvas-board .react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 2;
+}
+.canvas-board .react-flow__attribution {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .canvas-board .react-flow__edge.animated path {
+    animation: none;
+  }
+}
+
+@keyframes rf-ripple {
+  from { transform: translate(-50%, -50%) scale(0.4); opacity: 0.9; }
+  to   { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
 }

@@ -56,14 +56,14 @@ function fetchHtml(url: string, timeoutMs = 5000): Promise<string> {
                 clearTimeout(to)
                 resolve(buf)
             })
-            res.on('error', (e) => {
+            res.on('error', (e: Error) => {
                 if (done) return
                 done = true
                 clearTimeout(to)
                 reject(e)
             })
         })
-        req.on('error', (e) => {
+        req.on('error', (e: Error) => {
             if (done) return
             done = true
             clearTimeout(to)

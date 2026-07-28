@@ -13,7 +13,9 @@
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS public.workspaces (
-    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    -- The desktop SQLite store and app clients create UUID strings themselves.
+    -- Keep this TEXT so all workspace reference columns share the same type.
+    id           TEXT PRIMARY KEY,
     user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     name         TEXT NOT NULL,
     color        TEXT DEFAULT '#6366f1',
@@ -41,6 +43,15 @@ CREATE POLICY "Users can delete their own workspaces"        ON public.workspace
 GRANT ALL ON public.workspaces TO authenticated;
 GRANT ALL ON public.workspaces TO service_role;
 
+-- Lists originate in supabase_setup.sql. Workspace collaboration relies on
+-- this column, so it belongs in the base web/workspace migration rather than
+-- a later policy-only delta.
+ALTER TABLE public.lists
+    ADD COLUMN IF NOT EXISTS workspace_id TEXT REFERENCES public.workspaces(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_lists_workspace_deleted
+    ON public.lists (workspace_id, deleted_at);
+
 
 -- ============================================================
 -- 2. CANVASES
@@ -49,7 +60,9 @@ GRANT ALL ON public.workspaces TO service_role;
 CREATE TABLE IF NOT EXISTS public.canvases (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id             UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    workspace_id        UUID REFERENCES public.workspaces(id) ON DELETE SET NULL,
+    -- workspaces.id is TEXT in the existing schema, so this column must be TEXT to
+    -- form the FK (whiteboards leave it null anyway).
+    workspace_id        TEXT REFERENCES public.workspaces(id) ON DELETE SET NULL,
     title               TEXT NOT NULL DEFAULT 'Untitled',
     icon                TEXT,
     color               TEXT,

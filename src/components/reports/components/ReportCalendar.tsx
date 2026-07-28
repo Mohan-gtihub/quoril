@@ -102,7 +102,7 @@ export function ReportCalendar({ selectedDate, onSelectDate, onSelectMonth, sele
             </div>
 
             {/* Month Report Button */}
-            <div className="mt-6 pt-4 border-t border-white/5">
+            <div className="mt-6 pt-4 border-t border-[var(--border-default)]">
                 <button
                     onClick={() => onSelectMonth(currentMonth)}
                     className={`w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all

@@ -30,6 +30,7 @@
   --bg-card: #161616;
   --bg-elevated: #1c1c1c;
   --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-hover-strong: rgba(255, 255, 255, 0.10);
 
   --border-default: rgba(255, 255, 255, 0.06);
   --border-hover: rgba(255, 255, 255, 0.12);
@@ -62,6 +63,13 @@
   --warning: #f59e0b;
   --error: #ef4444;
 
+  /* Task priority — traffic-light scale: green is calm, red needs attention.
+     Kept identical across themes so a priority always means the same colour. */
+  --priority-low:      #22c55e; /* green  */
+  --priority-medium:   #f97316; /* orange */
+  --priority-high:     #ef4444; /* red    */
+  --priority-critical: #b91c1c; /* deep red — top of the scale */
+
   /* Quoril accent palette */
   --focus: #2b6bf5;        /* active focus sessions, sync status, ring timer fill */
   --focus-glow: rgba(43, 107, 245, 0.45);
@@ -79,6 +87,22 @@
   --accent-green-100: rgba(74, 222, 128, 0.1);
   --accent-gray-700: rgba(255, 255, 255, 0.07);
   --accent-gray-800: rgba(255, 255, 255, 0.05);
+
+  /* Elevation — dark themes use a deep, subtle shadow (cards separate by
+     tone more than shadow, so keep it restrained). */
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 24px -14px rgba(0, 0, 0, 0.55);
+  --shadow-lift: 0 2px 8px rgba(0, 0, 0, 0.35), 0 24px 48px -22px rgba(0, 0, 0, 0.65);
+
+  /* visible "empty track" tone — progress rails, heatmap empty cells.
+     (--bg-hover is too faint to read as a filled track.) */
+  --track: rgba(255, 255, 255, 0.08);
+
+  /* GitHub contribution-graph palette (dark default) */
+  --gh-l0: #161b22;
+  --gh-l1: #0e4429;
+  --gh-l2: #006d32;
+  --gh-l3: #26a641;
+  --gh-l4: #39d353;
 
   /* Shape tokens (FitSpark big-rounded bento look) */
   --radius-tile: 28px;
@@ -100,29 +124,36 @@
    Emphasis comes from ink weight & whitespace, not chromatic accent.
    ─────────────────────────────────────────────────────────────── */
 .theme-daylight {
-  /* surfaces — clean neutral greys, macOS light look */
-  --bg-primary: #f5f5f7;   /* window background (apple light grey) */
-  --bg-secondary: #fbfbfd;
-  --bg-tertiary: #eeeef1;  /* inputs, tracks, chips */
-  --bg-card: #ffffff;      /* white content cards */
-  --bg-elevated: #ffffff;
-  --bg-hover: rgba(0, 0, 0, 0.04);
+  /* surfaces — soft blush canvas with crisp white cards lifting off it.
+     The pink is desaturated (~8-14% sat) so it reads as a warm tinted
+     neutral rather than candy; saturation stays low enough that the ink
+     ramp below keeps its contrast ratios. Lightness steps mirror the
+     previous cool-grey ramp, so surface hierarchy is unchanged. */
+  --bg-primary: #f8eef1;   /* soft blush canvas — deepest surface */
+  --bg-secondary: #fdf7f9; /* sidebar / secondary panels */
+  --bg-tertiary: #f2e3e8;  /* inputs, tracks, chips — has real presence */
+  --bg-card: #ffffff;      /* crisp white cards lift above the canvas */
+  --bg-elevated: #ffffff;  /* popovers/modals */
+  --bg-hover: rgba(60, 20, 35, 0.055);
+  --bg-hover-strong: rgba(60, 20, 35, 0.095);
 
-  /* hairline borders — gentle, cool grey */
-  --border-default: #e4e4e8;
-  --border-hover: #d4d4da;
+  /* crisp hairline borders — subtle, warm to match the blush surfaces */
+  --border-default: #eddfe4;
+  --border-hover: #dcc7ce;
 
-  /* neutral ink ramp — softened, never pure black */
-  --text-primary: #2e2e32;   /* soft near-black */
-  --text-secondary: #6e6e76;
-  --text-tertiary: #8c8c94;
-  --text-muted: #b0b0b8;
+  /* ink ramp — rich slate, modern contrast (not washed out) */
+  --text-primary: #171a21;   /* deep slate near-black */
+  --text-secondary: #515967;
+  --text-tertiary: #767d8b;
+  --text-muted: #9aa0ac;
 
-  /* Monochrome accent — graphite ink for highlights (black-on-white) */
+  /* Primary accent stays graphite ink — buttons/active fills read black,
+     keeping the clean monochrome look. Chromatic color lives in the
+     functional accents (--focus/--break/--wellbeing) & status below. */
   --accent-primary: #2e2e32;
   --accent-secondary: #44444a;
   --accent-glow: rgba(0, 0, 0, 0.06);
-  --accent-contrast: #ffffff;
+  --accent-contrast: #ffffff;    /* white text on the dark fill */
 
   --accent-lime-50: rgba(0, 0, 0, 0.03);
   --accent-lime-100: rgba(0, 0, 0, 0.05);
@@ -131,61 +162,147 @@
   --accent-lime-400: #44444a;
   --accent-lime-500: #2e2e32;
 
-  --accent-violet: #2e2e32;
-  --accent-violet-glow: rgba(0, 0, 0, 0.06);
-  --accent-violet-100: rgba(0, 0, 0, 0.045);
+  --accent-violet: #6366f1;
+  --accent-violet-glow: rgba(99, 102, 241, 0.25);
+  --accent-violet-100: rgba(99, 102, 241, 0.10);
 
-  /* no chromatic "success" — highlight with ink, not green.
-     warning/error stay desaturated for genuine alerts only. */
-  --success: #2e2e32;
-  --warning: #9a7b3f;
-  --error: #c25a52;
-  --accent-green-400: #2e2e32;
-  --accent-green-100: rgba(0, 0, 0, 0.05);
+  /* chromatic status — tuned deeper for legibility on white
+     (mirrors landing's daylight state ramp). */
+  --success: #15803d;
+  --warning: #b45309;
+  --error: #dc2626;
+  --accent-green-400: #15803d;
+  --accent-green-100: rgba(21, 128, 61, 0.10);
   --accent-gray-700: rgba(0, 0, 0, 0.05);
   --accent-gray-800: rgba(0, 0, 0, 0.03);
+
+  /* Quoril functional accents (focus / break / wellbeing) — daylight-tuned,
+     matching the landing page so the light theme carries real color. */
+  --focus: #2b6bf5;
+  --focus-glow: rgba(43, 107, 245, 0.30);
+  --focus-100: rgba(43, 107, 245, 0.10);
+  --break: #d97706;        /* amber, deepened for white bg */
+  --break-glow: rgba(217, 119, 6, 0.28);
+  --break-100: rgba(217, 119, 6, 0.10);
+  --wellbeing: #0d9488;    /* teal, deepened for white bg */
+  --wellbeing-glow: rgba(13, 148, 136, 0.28);
+  --wellbeing-100: rgba(13, 148, 136, 0.10);
+  --deepslate: #e8e8ec;
+
+  /* soft elevation — gentle, diffuse shadows that lift cards off the
+     canvas (the thing that makes light UIs feel modern, not flat). */
+  --shadow-soft: 0 1px 2px rgba(20, 24, 33, 0.04), 0 6px 16px -10px rgba(20, 24, 33, 0.12);
+  --shadow-lift: 0 2px 6px rgba(20, 24, 33, 0.06), 0 18px 40px -20px rgba(20, 24, 33, 0.20);
+
+  /* visible empty-track tone (heatmap cells, progress rails) */
+  --track: #e4e6ea;
+
+  /* GitHub contribution-graph palette (light) */
+  --gh-l0: #ebedf0;
+  --gh-l1: #9be9a8;
+  --gh-l2: #40c463;
+  --gh-l3: #30a14e;
+  --gh-l4: #216e39;
 
   /* balanced, professional radii (matches the site) */
   --radius-tile: 20px;
   --radius-card: 14px;
   --radius-pill: 999px;
 
-  /* light/silver glass */
-  --glass-bg-thin: rgba(255, 255, 255, 0.5);
-  --glass-bg-regular: rgba(255, 255, 255, 0.7);
-  --glass-bg-thick: rgba(251, 251, 250, 0.9);
-  --glass-border: rgba(22, 22, 15, 0.08);
-  --glass-border-silver: rgba(22, 22, 15, 0.1);
-  --glass-shadow: rgba(22, 22, 15, 0.08);
+  /* solid surfaces — no translucency (translucent glass reads washed-out
+     on light themes). Panels are crisp, opaque cards. */
+  --glass-bg-thin: #ffffff;
+  --glass-bg-regular: #ffffff;
+  --glass-bg-thick: #ffffff;
+  --glass-border: var(--border-default);
+  --glass-border-silver: var(--border-default);
+  --glass-shadow: rgba(20, 24, 33, 0.10);
 }
 
 /* Light Theme (Lunar) */
 .theme-light {
-  --bg-primary: #f8fafc;
-  --bg-secondary: #ffffff;
-  --bg-tertiary: #f1f5f9;
-  --bg-card: #ffffff;
-  --bg-hover: rgba(0, 0, 0, 0.04);
+  /* window sits a step below cards so panels lift, not one flat sheet.
+     Clearly pink window with warm near-white cards floating above it.
+     Saturation is lifted well past a neutral tint while lightness stays
+     high (L~93-97%), so the ink ramp below keeps its contrast ratios. */
+  --bg-primary: #fbdfe8;   /* pink window — deepest surface */
+  --bg-secondary: #fdeff3; /* sidebar / secondary panels */
+  --bg-tertiary: #f7d3de;  /* inputs, tracks, chips */
+  --bg-card: #fffafc;      /* warm near-white cards lift off the pink */
+  --bg-elevated: #ffffff;  /* popovers/modals lift to true white */
+  --bg-hover: rgba(120, 30, 60, 0.055);
+  --bg-hover-strong: rgba(120, 30, 60, 0.105);
 
-  --border-default: rgba(0, 0, 0, 0.08);
-  --border-hover: rgba(0, 0, 0, 0.15);
+  --border-default: rgba(120, 30, 60, 0.11);
+  --border-hover: rgba(120, 30, 60, 0.19);
 
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-tertiary: #64748b;
-  --text-muted: #94a3b8;
+  /* ink ramp warmed to a rosy slate: the old blue-grey secondaries read as
+     dirty grey against pink surfaces. Lightness is unchanged, so contrast
+     against --bg-card still passes. */
+  --text-primary: #2b1a22;
+  --text-secondary: #6a4653;
+  --text-tertiary: #8a6674;
+  --text-muted: #ab8b97;
 
-  /* Light Theme - Silver/White Glass */
-  --glass-bg-thin: rgba(255, 255, 255, 0.4);
-  --glass-bg-regular: rgba(255, 255, 255, 0.6);
-  --glass-bg-thick: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(0, 0, 0, 0.06);
-  --glass-border-silver: rgba(0, 0, 0, 0.1);
-  --glass-shadow: rgba(0, 0, 0, 0.05);
+  /* solid crisp surfaces — no washed-out translucency */
+  --glass-bg-thin: #fffafc;
+  --glass-bg-regular: #fffafc;
+  --glass-bg-thick: #ffffff;
+  --glass-border: var(--border-default);
+  --glass-border-silver: var(--border-default);
+  --glass-shadow: rgba(120, 30, 60, 0.10);
 
-  --accent-primary: #2563eb;
-  --accent-secondary: #3b82f6;
-  --accent-glow: rgba(37, 99, 235, 0.2);
+  --accent-primary: #2b1a22;     /* ink — buttons/active fills stay dark */
+  --accent-secondary: #4a3039;
+  --accent-glow: rgba(0, 0, 0, 0.06);
+  --accent-contrast: #ffffff;
+
+  /* warm-tinted overlays: neutral black alphas grey out the pink beneath */
+  --accent-lime-50: rgba(120, 30, 60, 0.035);
+  --accent-lime-100: rgba(120, 30, 60, 0.06);
+  --accent-lime-200: rgba(120, 30, 60, 0.10);
+  --accent-lime-300: rgba(120, 30, 60, 0.16);
+  --accent-lime-400: #4a3039;
+  --accent-lime-500: #2b1a22;
+
+  --accent-violet: #6366f1;
+  --accent-violet-glow: rgba(99, 102, 241, 0.25);
+  --accent-violet-100: rgba(99, 102, 241, 0.10);
+
+  /* chromatic status — deepened for legibility on white */
+  --success: #15803d;
+  --warning: #b45309;
+  --error: #dc2626;
+  --accent-green-400: #15803d;
+  --accent-green-100: rgba(21, 128, 61, 0.10);
+  --accent-gray-700: rgba(0, 0, 0, 0.05);
+  --accent-gray-800: rgba(0, 0, 0, 0.03);
+
+  /* functional accents — light-tuned */
+  --focus: #2563eb;
+  --focus-glow: rgba(37, 99, 235, 0.30);
+  --focus-100: rgba(37, 99, 235, 0.10);
+  --break: #d97706;
+  --break-glow: rgba(217, 119, 6, 0.28);
+  --break-100: rgba(217, 119, 6, 0.10);
+  --wellbeing: #0d9488;
+  --wellbeing-glow: rgba(13, 148, 136, 0.28);
+  --wellbeing-100: rgba(13, 148, 136, 0.10);
+  --deepslate: #e8e8ec;
+
+  /* soft elevation */
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px -10px rgba(15, 23, 42, 0.12);
+  --shadow-lift: 0 2px 6px rgba(15, 23, 42, 0.06), 0 18px 40px -20px rgba(15, 23, 42, 0.20);
+
+  /* visible empty-track tone */
+  --track: #e2e5ea;
+
+  /* GitHub contribution-graph palette (light) */
+  --gh-l0: #ebedf0;
+  --gh-l1: #9be9a8;
+  --gh-l2: #40c463;
+  --gh-l3: #30a14e;
+  --gh-l4: #216e39;
 }
 
 /* Arcade Blue Theme */
@@ -195,6 +312,7 @@
   --bg-tertiary: #0f2147;
   --bg-card: #0d1e40;
   --bg-hover: rgba(59, 130, 246, 0.15);
+  --bg-hover-strong: rgba(59, 130, 246, 0.24);
 
   --border-default: rgba(59, 130, 246, 0.2);
   --border-hover: rgba(59, 130, 246, 0.4);
@@ -215,6 +333,7 @@
   --bg-tertiary: #421010;
   --bg-card: #3a0d0d;
   --bg-hover: rgba(239, 68, 68, 0.15);
+  --bg-hover-strong: rgba(239, 68, 68, 0.24);
 
   --border-default: rgba(239, 68, 68, 0.2);
   --border-hover: rgba(239, 68, 68, 0.4);
@@ -238,6 +357,7 @@
   --bg-tertiary: rgba(255, 255, 255, 0.03);
   --bg-card: rgba(255, 255, 255, 0.02);
   --bg-hover: rgba(139, 92, 246, 0.1);
+  --bg-hover-strong: rgba(139, 92, 246, 0.2);
 
   /* Nebula Glass Overrides */
   --glass-bg-thin: rgba(20, 10, 30, 0.3);

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTaskStore } from '@/store/taskStore'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import { useFocusStore } from '@/store/focusStore'
-import { useAuthStore } from '@/store/authStore'
+import { useDisplayName } from '@/hooks/useDisplayName'
 import { useListStore } from '@/store/listStore'
 import { format, subDays } from 'date-fns'
 import {
@@ -21,17 +21,7 @@ function getGreeting() {
 
 const WEEK_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
-/** Build a deterministic completion pattern for the last 7 days from an id seed. */
-function weekPattern(seed: string, doneToday: boolean) {
-    let h = 0
-    for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
-    const days: boolean[] = []
-    for (let d = 6; d >= 0; d--) {
-        if (d === 0) { days.push(doneToday); continue }
-        days.push(((h >> d) & 1) === 1 || ((h >> (d + 3)) & 1) === 1)
-    }
-    return days
-}
+const isBreakType = (type?: string) => type === 'break' || type === 'long_break'
 
 function currentStreak(days: boolean[]) {
     let s = 0
@@ -43,37 +33,53 @@ function currentStreak(days: boolean[]) {
 }
 
 export function HabitOverview() {
-    const { user } = useAuthStore()
     const { tasks, toggleComplete, setSelectedTask } = useTaskStore()
     const { lists, setSelectedList } = useListStore()
     const { workspaces, setActiveWorkspace } = useWorkspaceStore()
     const { sessions } = useFocusStore()
     const navigate = useNavigate()
 
-    const name = user?.email?.split('@')[0] || 'there'
+    const name = useDisplayName()
     const today = new Date()
+    const todayKey = format(today, 'yyyy-MM-dd')
+
+    // Real per-task activity: the set of "<taskId>|<localDay>" keys for which a
+    // (non-break) focus session exists. This replaces the previous hash-of-id
+    // fabrication so streaks/consistency/dots reflect actual work.
+    const activityKeys = useMemo(() => {
+        const set = new Set<string>()
+        for (const s of sessions as any[]) {
+            if (!s.task_id || !s.start_time || isBreakType(s.session_type)) continue
+            set.add(`${s.task_id}|${format(new Date(s.start_time), 'yyyy-MM-dd')}`)
+        }
+        return set
+    }, [sessions])
 
     // Treat each active task as a "habit" so this works against the real store.
     const habits = useMemo(() => {
+        const dayKeys = Array.from({ length: 7 }, (_, i) => format(subDays(today, 6 - i), 'yyyy-MM-dd'))
         const valid = tasks.filter((t: any) =>
             !t.deleted_at && (!t.list_id || lists.some((l: any) => l.id === t.list_id)))
         return valid.map((t: any) => {
             const doneToday = t.status === 'done' &&
-                t.completed_at?.startsWith(today.toISOString().split('T')[0])
+                (t.completed_at ? format(new Date(t.completed_at), 'yyyy-MM-dd') === todayKey : false)
             const list = t.list_id ? lists.find((l: any) => l.id === t.list_id) : null
             const ws = list ? workspaces.find((w: any) => w.id === list.workspace_id) : null
-            const days = weekPattern(t.id, !!doneToday || t.status === 'done')
+            // A day counts if real focus activity exists for this task that day;
+            // today additionally counts if the task is marked done.
+            const days = dayKeys.map((dk, i) =>
+                activityKeys.has(`${t.id}|${dk}`) || (i === 6 && !!doneToday))
             return {
                 id: t.id,
                 title: t.title,
-                doneToday: !!doneToday || t.status === 'done',
+                doneToday: !!doneToday,
                 wsName: ws?.name || 'Personal',
                 wsColor: ws?.color || 'var(--accent-primary)',
                 days,
                 streak: currentStreak(days),
             }
         })
-    }, [tasks, lists, workspaces])
+    }, [tasks, lists, workspaces, activityKeys, todayKey])
 
     const completedToday = habits.filter(h => h.doneToday).length
     const total = habits.length

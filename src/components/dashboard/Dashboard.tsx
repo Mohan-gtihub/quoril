@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import { useFocusStore } from '@/store/focusStore'
 import {
-    Plus, Search, CheckCircle2, Circle,
+    Plus, Search, CheckCircle2,
     Layers, MoreHorizontal, Archive, Copy, Edit3,
     Flame, ListPlus, FolderKanban, X, RotateCcw, Trash2,
     Zap, Target, GripVertical, AlarmClock, ChevronDown, Check
@@ -28,16 +28,12 @@ import type { List, Task } from '@/types/database'
 import { cn } from '@/utils/helpers'
 import { format, isToday, isTomorrow } from 'date-fns'
 import { calculateRealTimeFocus } from '@/utils/timeCalculations'
+import { PRIORITY_META, isUrgentPriority } from '@/utils/priority'
 
 /* ─────────────────────────────────────────
    HELPERS
 ───────────────────────────────────────── */
-const P_INFO: Record<string, { label: string; color: string }> = {
-    critical: { label: 'Critical', color: 'var(--text-primary)' },
-    high: { label: 'High', color: 'var(--text-secondary)' },
-    medium: { label: 'Medium', color: 'var(--text-tertiary)' },
-    low: { label: 'Low', color: 'var(--text-muted)' },
-}
+const P_INFO = PRIORITY_META
 
 function fmtDue(due: string | null | undefined) {
     if (!due) return null
@@ -140,7 +136,9 @@ export function Dashboard() {
         const validListIds = new Set(visibleLists.map(l => l.id))
         const all = tasks.filter(t => !t.deleted_at && t.list_id && validListIds.has(t.list_id))
         const active = all.filter(t => t.status !== 'done')
-        const doneToday = all.filter(t => t.status === 'done' && t.completed_at?.startsWith(new Date().toISOString().split('T')[0]))
+        // Compare on the LOCAL calendar day (matches focus-minute bucketing).
+        const todayKey = format(new Date(), 'yyyy-MM-dd')
+        const doneToday = all.filter(t => t.status === 'done' && t.completed_at && format(new Date(t.completed_at), 'yyyy-MM-dd') === todayKey)
 
         const focusMin = Math.round(calculateRealTimeFocus(sessions, isActive, startTime, sessionType) / 60)
 
@@ -320,7 +318,9 @@ export function Dashboard() {
                                             const done = lt.filter(t => t.status === 'done')
                                             const progress = lt.length ? Math.round((done.length / lt.length) * 100) : 0
                                             const hasActive = lt.some(t => t.id === activeTaskId && isActive)
-                                            const size = getBentoSize(lt.length)
+                                            // Size by how much there is to *show* (pending tasks), not total —
+                                            // a mostly-done list shouldn't inflate into a giant empty card.
+                                            const size = getBentoSize(pending.length)
 
                                             return (
                                                 <SortableBentoCard key={list.id} id={list.id} size={size} disabled={isArchived} isDragging={activeDragId === list.id}>
@@ -473,7 +473,9 @@ function BentoListCard({
     onDuplicate, onEdit, onArchive, onMove, onRestore, onPermanentDelete, search
 }: CardProps) {
     const accent = list.color || 'var(--accent-primary)'
-    const taskLimit = size === 'sm' ? 2 : size === 'md' ? 6 : 4
+    // Wide (lg) cards lay tasks out in two columns, so they can show more.
+    const twoCol = size === 'lg'
+    const taskLimit = size === 'sm' ? 3 : size === 'md' ? 6 : 8
     const previewTasks = pending.slice(0, taskLimit)
 
     const hl = (text: string, q: string) => {
@@ -501,8 +503,14 @@ function BentoListCard({
             <div className="relative flex items-start justify-between px-4 pt-4 pb-3 shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0">
                     {/* Avatar — neutral tile with a single colour dot */}
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--bg-tertiary)] border border-[var(--border-default)] shrink-0">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: accent }} />
+                    <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border"
+                        style={{
+                            backgroundColor: `color-mix(in srgb, ${accent} 14%, transparent)`,
+                            borderColor: `color-mix(in srgb, ${accent} 24%, transparent)`,
+                        }}
+                    >
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: accent }} />
                     </div>
                     <div className="min-w-0">
                         <h3 className="font-semibold text-sm text-[var(--text-primary)] truncate leading-tight">
@@ -563,18 +571,18 @@ function BentoListCard({
             {/* ── Progress bar ── */}
             <div className="relative px-4 pb-2 shrink-0">
                 <div className="flex items-center gap-2 mb-1">
-                    <div className="flex-1 h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
+                    <div className="flex-1 h-1 bg-[var(--bg-hover)] rounded-full overflow-hidden">
                         <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${progress}%` }}
                             transition={{ duration: 0.8, ease: 'easeOut' }}
                             className="h-full rounded-full"
                             style={{
-                                background: progress === 100 ? 'var(--success)' : 'var(--accent-primary)',
+                                background: progress === 100 ? 'var(--success)' : accent,
                             }}
                         />
                     </div>
-                    <span className="text-[11px] font-bold text-[var(--text-muted)] tabular-nums shrink-0">{progress}%</span>
+                    <span className="text-[10px] font-bold text-[var(--text-muted)] tabular-nums shrink-0">{progress}%</span>
                 </div>
             </div>
 
@@ -588,39 +596,47 @@ function BentoListCard({
                         }
                     </div>
                 ) : (
-                    <div className="space-y-1">
-                        {previewTasks.map(t => {
-                            const p = P_INFO[t.priority]
-                            const due = fmtDue(t.due_date)
-                            return (
-                                <div key={t.id} className="flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-[var(--bg-hover)] transition-colors group/task">
-                                    <Circle size={11} className="text-[var(--text-muted)] mt-0.5 shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[11px] text-[var(--text-secondary)] truncate leading-tight">{hl(t.title, search)}</p>
-                                        {(due || p) && (
-                                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                                {due && (
-                                                    <span className="flex items-center gap-0.5 text-[11px] text-[var(--text-muted)]">
-                                                        <AlarmClock size={7} /> {due}
-                                                    </span>
-                                                )}
-                                                {p && (
-                                                    <span className="text-[11px] font-semibold rounded-full" style={{ color: p.color }}>
-                                                        ● {p.label}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        )}
+                    <>
+                        <div className={cn(twoCol ? "grid grid-cols-2 gap-x-2 gap-y-0.5" : "space-y-0.5")}>
+                            {previewTasks.map(t => {
+                                const p = P_INFO[t.priority]
+                                const due = fmtDue(t.due_date)
+                                const urgent = isUrgentPriority(t.priority)
+                                return (
+                                    <div key={t.id} className="flex items-start gap-2.5 rounded-lg px-2 py-1.5 hover:bg-[var(--bg-hover)] transition-colors group/task">
+                                        {/* Priority marker — colour is the signal; size nudges up with urgency */}
+                                        <span
+                                            className={cn("shrink-0 rounded-full", urgent ? "w-1.5 h-1.5 mt-[5px]" : "w-1 h-1 mt-1.5")}
+                                            style={{ backgroundColor: p ? p.color : 'var(--text-muted)' }}
+                                            title={p ? `${p.label} priority` : undefined}
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[11px] text-[var(--text-secondary)] truncate leading-tight group-hover/task:text-[var(--text-primary)] transition-colors">{hl(t.title, search)}</p>
+                                            {(due || urgent) && (
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    {urgent && p && (
+                                                        <span className="text-[9px] font-bold uppercase tracking-[0.06em]" style={{ color: p.color }}>
+                                                            {p.label}
+                                                        </span>
+                                                    )}
+                                                    {due && (
+                                                        <span className="inline-flex items-center gap-0.5 text-[10px] text-[var(--text-muted)]">
+                                                            <AlarmClock size={8} /> {due}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            )
-                        })}
+                                )
+                            })}
+                        </div>
                         {pending.length > taskLimit && (
-                            <p className="text-[11px] text-[var(--text-muted)] text-center pt-0.5 italic">
+                            <p className="text-[11px] text-[var(--text-muted)] pt-1.5 pl-2 font-medium">
                                 +{pending.length - taskLimit} more
                             </p>
                         )}
-                    </div>
+                    </>
                 )}
             </div>
 
@@ -709,5 +725,5 @@ function EmptyState({ kind, onCreate, search }: { kind: string; onCreate: () => 
 
 
 export function IconButton({ icon, onClick, className = "" }: { icon: React.ReactNode; onClick?: () => void; className?: string }) {
-    return <button onClick={onClick} className={`p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--border-hover)] ${className}`}>{icon}</button>
+    return <button onClick={onClick} className={`p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover-strong)] ${className}`}>{icon}</button>
 }

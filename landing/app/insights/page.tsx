@@ -1,10 +1,10 @@
-import { Container, SectionHead, Tile, TileIcon, Button, Eyebrow } from "@/components/ui";
+import { Container, SectionHead, Tile, TileIcon, ACCENTS, Button, Eyebrow } from "@/components/ui";
 import Reveal from "@/components/Reveal";
 import { Heatmap, Ring, Donut, CategoryBars, FOCUS, BREAK, WELLBEING } from "@/components/Charts";
 import { IconChart, IconScreen, IconArrow } from "@/components/icons";
 
 export const metadata = {
-  title: "Insights · Reports & Screen Time — Quoril",
+  title: "Insights · Reports & Screen Time",
   description:
     "See exactly where your hours go. Quoril turns native screen-time tracking into reports, productivity scores, and digital wellbeing insights.",
 };
@@ -78,7 +78,7 @@ export default function InsightsPage() {
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Button href="/waitlist">
-                Join the waitlist <IconArrow className="h-4 w-4" />
+                Get V1 free <IconArrow className="h-4 w-4" />
               </Button>
               <Button href="/features" variant="secondary">
                 Explore features
@@ -129,7 +129,7 @@ export default function InsightsPage() {
                   <h3 className="text-[15px] font-semibold text-ink">
                     Hourly usage heatmap
                   </h3>
-                  <TileIcon>
+                  <TileIcon tint={ACCENTS[0]}>
                     <IconChart className="h-5 w-5" />
                   </TileIcon>
                 </div>
@@ -225,7 +225,7 @@ export default function InsightsPage() {
                   <h3 className="text-[15px] font-semibold text-ink">
                     Productivity split
                   </h3>
-                  <TileIcon>
+                  <TileIcon tint={ACCENTS[2]}>
                     <IconScreen className="h-5 w-5" />
                   </TileIcon>
                 </div>
@@ -386,7 +386,7 @@ export default function InsightsPage() {
               </p>
               <div className="mt-8 flex justify-center">
                 <Button href="/waitlist">
-                  Join the waitlist <IconArrow className="h-4 w-4" />
+                  Get V1 free <IconArrow className="h-4 w-4" />
                 </Button>
               </div>
             </div>

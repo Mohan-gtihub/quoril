@@ -5,12 +5,13 @@
 // provides a structurally-correct impl that compiles and passes the selector test.
 
 import type { Platform } from './types'
+import { UNAVAILABLE } from './types'
 
 const api = () => (window as any).electronAPI
 const legacy = () => (window as any).electron
 
 export const electronPlatform: Platform = {
-  capabilities: { appTracking: true, nativeOverlay: true, pictureInPicture: false, localDb: true },
+  capabilities: { appTracking: true, nativeOverlay: true, pictureInPicture: false, localDb: true, aiInsights: true },
   data: {
     async listTasks() { return api().db.listTasks?.() ?? [] },
     async saveTask(t) { return api().db.saveTask?.(t) },
@@ -24,7 +25,36 @@ export const electronPlatform: Platform = {
   },
   screenTime: {
     async getData(args) { return api().screenTime?.getData(args) },
-    isTrackingAvailable() { return true },
+    // App-level tracking works on every desktop platform — on macOS the
+    // permission-free lsappinfo path records app usage even without Accessibility.
+    async isTrackingAvailable() { return true },
+    // Window titles and website addresses are two separate opt-ins, each gated by
+    // a different macOS permission. "Detail available" means at least one is live
+    // — the Screen Time view uses it to decide whether any detail panel can show
+    // data at all. Callers needing per-capability state use getTrackingDetail().
+    async isDetailTrackingAvailable() {
+      const detail = await api().permissions?.getTrackingDetail?.()
+      if (!detail) return false
+      return (
+        (detail.titles.enabled && detail.titles.granted) ||
+        (detail.urls.enabled && detail.urls.granted)
+      )
+    },
+    async getTrackingDetail() {
+      return api().permissions?.getTrackingDetail?.() ?? null
+    },
+    async setTrackingDetail(capability, enabled) {
+      return api().permissions?.setTrackingDetail?.(capability, enabled) ?? null
+    },
+    async requestAccessibility() {
+      return api().permissions?.requestAccessibility?.() ?? null
+    },
+    async openPrivacySettings(capability) {
+      return Boolean(await api().permissions?.openPrivacySettings?.(capability))
+    },
+    async relaunch() {
+      await api().permissions?.relaunch?.()
+    },
   },
   focusWindow: {
     setAlwaysOnTop(flag) { legacy()?.setAlwaysOnTop?.(flag) },
@@ -32,6 +62,15 @@ export const electronPlatform: Platform = {
     restore() { legacy()?.restoreWindow?.() },
     setResizable(flag) { legacy()?.setResizable?.(flag) },
     closeDevTools() { legacy()?.closeDevTools?.() },
+    enterPill() {
+      const r = api()?.pill?.enter?.()
+      if (r && typeof r.catch === 'function') r.catch(console.error)
+    },
+    exitPill() {
+      const r = api()?.pill?.exit?.()
+      if (r && typeof r.catch === 'function') r.catch(console.error)
+    },
+    onRehydrate(cb) { return api()?.pill?.onRehydrate?.(cb) ?? { available: false as const } },
   },
   store: {
     async get(key) { return api().store?.get(key) ?? null },
@@ -42,6 +81,7 @@ export const electronPlatform: Platform = {
     async signInWithPassword() { throw new Error('electron auth uses deep-link flow') },
     async signOut() {},
     onDeepLink(cb) { return api().auth?.onDeepLink?.(cb) ?? { available: false as const } },
+    async getPendingDeepLink() { return api().auth?.getPendingDeepLink?.() ?? null },
     setUser(userId, accessToken) { const r = api().auth?.setUser?.(userId, accessToken); if (r && typeof r.catch === 'function') r.catch(console.error); return r },
   },
   windowControls: {
@@ -53,7 +93,35 @@ export const electronPlatform: Platform = {
     setContext(taskId) { api().tracker?.setContext?.(taskId) },
   },
   links: {
-    openExternal(url) { api().file?.openExternal?.(url) },
+    openExternal(url) {
+      const fn = api()?.file?.openExternal
+      if (typeof fn !== 'function') return { available: false as const }
+      const r = fn(url)
+      if (r && typeof r.catch === 'function') r.catch(console.error)
+      return undefined
+    },
+  },
+  notifications: {
+    show(title, body) {
+      const fn = api()?.notification?.show
+      if (typeof fn !== 'function') return { available: false as const }
+      const r = fn(title, body)
+      if (r && typeof r.catch === 'function') r.catch(console.error)
+      return undefined
+    },
+  },
+  updates: {
+    async getStatus() { return api().updates?.getStatus?.() ?? { state: 'idle' } },
+    async check() { return api().updates?.check?.() ?? { state: 'not-available' } },
+    async download() { return Boolean(await api().updates?.download?.()) },
+    async restartAndInstall() { return Boolean(await api().updates?.restartAndInstall?.()) },
+    onStatus(cb) { return api().updates?.onStatus?.(cb) ?? { available: false as const } },
+  },
+  feedback: {
+    async captureScreen() {
+      const dataUrl = await api()?.feedback?.capture?.()
+      return dataUrl ?? UNAVAILABLE
+    },
   },
   canvas: {
     list: (userId) => api().canvas.list(userId),
@@ -73,5 +141,12 @@ export const electronPlatform: Platform = {
     upsertZone: (z) => api().canvas.upsertZone(z),
     softDeleteZone: (id) => api().canvas.softDeleteZone(id),
     unfurlLink: (url) => api().canvas.unfurlLink(url),
+  },
+  insights: {
+    async generate(summary) {
+      const fn = api()?.insights?.generate
+      if (typeof fn !== 'function') return { ok: false as const, error: 'AI insights are unavailable in this build.' }
+      return fn(summary)
+    },
   },
 }

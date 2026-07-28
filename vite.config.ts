@@ -9,7 +9,13 @@ const isWeb = process.env.VITE_TARGET === 'web'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-    define: { __VITE_TARGET__: JSON.stringify(process.env.VITE_TARGET ?? 'electron') },
+    // Only explicitly-public Supabase settings may enter the renderer bundle.
+    // This keeps accidentally named VITE_* credentials out of web builds.
+    envPrefix: 'VITE_SUPABASE_',
+    define: {
+        __VITE_TARGET__: JSON.stringify(process.env.VITE_TARGET ?? 'electron'),
+        __APP_VERSION__: JSON.stringify(pkg.version ?? '0.0.0'),
+    },
     plugins: [
         react(),
         ...(isWeb ? [] : [electron({
