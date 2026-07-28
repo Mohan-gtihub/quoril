@@ -11,6 +11,14 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ## [Unreleased]
 
+## [1.1.7] - 2026-07-28
+
+### Fixed
+
+- Fixed a rare black screen on startup. If the window ever fails to draw, Quoril
+  now recovers on its own on the next launch, and when something does go wrong it
+  shows an error you can report instead of a blank window.
+
 ## [1.1.6] - 2026-07-28
 
 ### Fixed
