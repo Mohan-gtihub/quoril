@@ -310,6 +310,19 @@ function createWindow() {
         )
     }
 
+    // Never let a black screen be silent again: log any renderer load failure
+    // or crash to the desktop crash log so packaged builds are diagnosable
+    // (DevTools is otherwise unavailable in production).
+    mainWindow.webContents.on('did-fail-load', (_e, errorCode, errorDescription, validatedURL) => {
+        logCrash('renderer:did-fail-load', `${errorCode} ${errorDescription} @ ${validatedURL}`)
+    })
+    mainWindow.webContents.on('render-process-gone', (_e, details) => {
+        logCrash('renderer:process-gone', `reason=${details.reason} exitCode=${details.exitCode}`)
+    })
+    mainWindow.webContents.on('preload-error', (_e, preloadPath, error) => {
+        logCrash('renderer:preload-error', `${preloadPath}\n${error?.stack || error}`)
+    })
+
     const showMainWindow = () => {
         if (!mainWindow || mainWindow.isDestroyed()) return
         mainWindow.show()
@@ -328,18 +341,18 @@ function createWindow() {
         }
     }, 3000)
 
-    if (isDev) {
-        globalShortcut.register('CommandOrControl+Shift+I', () => {
-            if (mainWindow) {
-                mainWindow.webContents.toggleDevTools()
-            }
-        })
-        globalShortcut.register('F12', () => {
-            if (mainWindow) {
-                mainWindow.webContents.toggleDevTools()
-            }
-        })
-    }
+    // DevTools toggle is available in production too, so a black-screen or
+    // silent renderer failure on an installed build can still be inspected.
+    globalShortcut.register('CommandOrControl+Shift+I', () => {
+        if (mainWindow) {
+            mainWindow.webContents.toggleDevTools()
+        }
+    })
+    globalShortcut.register('F12', () => {
+        if (mainWindow) {
+            mainWindow.webContents.toggleDevTools()
+        }
+    })
 
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
         if (parseDeepLink(url)) {
