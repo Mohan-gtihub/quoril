@@ -223,6 +223,9 @@ describe("getActiveWindow — macOS never calls active-win when detail is off", 
 describe("getActiveWindow — macOS with detail enabled", () => {
   beforeEach(() => {
     setPlatform("darwin");
+    // A browser is frontmost, which is the only situation in which a url can
+    // exist — and therefore the only one where Accessibility is worth asking for.
+    state.lsName = '"LSDisplayName"="Google Chrome"';
     state.activeWinResult = {
       owner: { name: "Google Chrome", path: "/Applications/Chrome.app" },
       title: "rick astley - YouTube",
@@ -242,6 +245,37 @@ describe("getActiveWindow — macOS with detail enabled", () => {
     });
   });
 
+  // active-win's helper runs an Accessibility trust check whenever it is asked
+  // for a url, and that check shows a system modal. The tracking loop pulses
+  // every 5s, so asking outside a browser — where no url can exist anyway —
+  // turns an ineffective grant into a dialog every 5 seconds, forever.
+  it("does not request Accessibility when no browser is frontmost", async () => {
+    state.detail = { titles: true, urls: true };
+    state.lsName = '"LSDisplayName"="Code"';
+    state.activeWinResult = {
+      owner: { name: "Code", path: "/Applications/Code.app" },
+      title: "collector.ts — quoril",
+    };
+    await getActiveWindow();
+
+    const activeWin = (await import("active-win")).default as any;
+    expect(activeWin).toHaveBeenCalledWith({
+      screenRecordingPermission: true,
+      accessibilityPermission: false,
+    });
+  });
+
+  it("records no url observation from a pulse that never asked", async () => {
+    state.detail = { titles: false, urls: true };
+    // Frontmost is unknown, so the collector declines to ask — but active-win
+    // still reports a browser. Recording that as a failure would suppress urls
+    // permanently on the strength of a question never put.
+    state.lsFront = "";
+    await getActiveWindow();
+
+    expect(state.observations).not.toContainEqual(["urls", false]);
+  });
+
   it("derives the domain from the real url, not the title", async () => {
     state.detail = { titles: false, urls: true };
     const r = await getActiveWindow();
@@ -249,8 +283,17 @@ describe("getActiveWindow — macOS with detail enabled", () => {
     expect(r?.category).toBe("Entertainment");
   });
 
-  it("uses lsappinfo no more once active-win is driving", async () => {
+  // lsappinfo is still consulted, but only to answer "is a browser frontmost"
+  // — the question that decides whether asking for a url could pay off. It is
+  // permission-free and cheap; the modal it avoids is neither.
+  it("uses lsappinfo only to decide whether a url is worth asking for", async () => {
     state.detail = { titles: true, urls: true };
+    await getActiveWindow();
+    expect(state.execCalls.every((c) => c[0] === "lsappinfo")).toBe(true);
+  });
+
+  it("does not shell out at all when urls are not wanted", async () => {
+    state.detail = { titles: true, urls: false };
     await getActiveWindow();
     expect(state.execCalls.length).toBe(0);
   });

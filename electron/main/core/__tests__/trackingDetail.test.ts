@@ -126,20 +126,65 @@ describe("requestAccessibility", () => {
   });
 });
 
-/* resolveDetail is what the collector asks active-win for. It is the opt-in
-   ALONE, deliberately not AND-ed with the permission check.
+/* resolveDetail is what the collector asks active-win for: the opt-in, narrowed
+   only by what is worth asking.
 
-   Gating the request on systemPreferences made the failure self-fulfilling: a
-   false reading meant active-win was never called, so the permission was never
-   exercised, so nothing could ever change the reading. That shipped, and left
-   users staring at "waiting on permission" they had already granted. */
+   Gating the request on systemPreferences alone made the failure
+   self-fulfilling: a false reading meant active-win was never called, so the
+   permission was never exercised, so nothing could ever change the reading.
+   That shipped, and left users staring at "waiting on permission" they had
+   already granted.
+
+   Asking unconditionally is not free either. active-win's helper prompts when
+   it is asked for a url without an effective grant, and the tracking loop
+   pulses every 5s — so "ask anyway, forever" is a system modal every 5 seconds.
+   Hence a bounded probe, then silence. */
 describe("resolveDetail", () => {
-  it("follows the opt-in alone, so the capability is actually exercised", () => {
+  it("follows the opt-in, so the capability is actually exercised", () => {
     expect(resolveDetail()).toEqual({ titles: false, urls: false });
 
     setFlag("urls", true);
-    // Not granted according to systemPreferences — we ask anyway.
+    // Not granted according to systemPreferences — we probe anyway.
     expect(state.accessibilityTrusted).toBe(false);
+    expect(resolveDetail().urls).toBe(true);
+  });
+
+  it("stops asking once the capability is observed not to work", () => {
+    setFlag("urls", true);
+    // Even with the OS claiming the grant is in place: that is exactly the
+    // case that loops, because the TCC record can be toggled on and still not
+    // match the running binary's signature.
+    state.accessibilityTrusted = true;
+    expect(resolveDetail().urls).toBe(true);
+
+    recordObservation("urls", false);
+    expect(resolveDetail().urls).toBe(false);
+    expect(resolveDetail().urls).toBe(false);
+  });
+
+  it("gives up after a bounded number of probes when nothing is granted", () => {
+    setFlag("urls", true);
+    state.accessibilityTrusted = false;
+
+    const asked = [resolveDetail().urls, resolveDetail().urls, resolveDetail().urls];
+    // A couple of probes to discover the truth, then it stops on its own —
+    // without ever having seen a single observation.
+    expect(asked).toEqual([true, true, false]);
+  });
+
+  it("resumes probing when the user explicitly asks again", () => {
+    setFlag("urls", true);
+    recordObservation("urls", false);
+    expect(resolveDetail().urls).toBe(false);
+
+    clearObservations();
+    expect(resolveDetail().urls).toBe(true);
+  });
+
+  it("keeps asking once the capability is observed working", () => {
+    setFlag("urls", true);
+    recordObservation("urls", true);
+    expect(resolveDetail().urls).toBe(true);
     expect(resolveDetail().urls).toBe(true);
   });
 

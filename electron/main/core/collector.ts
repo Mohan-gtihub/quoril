@@ -299,9 +299,9 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
         // being asked for a title or url, which surfaces a system prompt. Staying
         // out of it entirely is what keeps default tracking prompt-free.
         //
-        // resolveDetail() is already AND-ed with the live OS grant, so a user who
-        // opted in and later revoked the permission lands back here rather than
-        // being re-prompted on a background pulse.
+        // resolveDetail() has already withdrawn any capability observed not to
+        // work, so a user who opted in but whose grant is not effective lands
+        // back here rather than being re-prompted on a background pulse.
         if (process.platform === "darwin" && !detail.titles && !detail.urls) {
             const appName = await macFrontmostAppName()
             if (!appName) return null
@@ -316,13 +316,28 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
             }
         }
 
+        // A url only ever exists when a browser is frontmost. Asking for one
+        // anywhere else cannot return data, but it still makes active-win's
+        // helper run its Accessibility trust check — and that check prompts.
+        // lsappinfo answers "what is frontmost" with no permission at all, so
+        // use it to confine the Accessibility request to the moments it could
+        // actually pay off. Most of the day that is no moments at all.
+        //
+        // Unknown frontmost app means don't ask: a missed url on one pulse costs
+        // nothing, an unnecessary modal costs the user their focus.
+        let wantUrls = detail.urls
+        if (process.platform === "darwin" && wantUrls) {
+            const frontmost = await macFrontmostAppName()
+            wantUrls = frontmost !== null && isBrowser(frontmost)
+        }
+
         // Detailed path. The two options map to two different macOS permissions:
         // screenRecordingPermission gates `title`, accessibilityPermission gates
         // `url`. Passing false leaves the corresponding field empty rather than
         // prompting. On Windows/Linux both resolve true and the options are inert.
         const win = await activeWin({
             screenRecordingPermission: detail.titles,
-            accessibilityPermission: detail.urls,
+            accessibilityPermission: wantUrls,
         })
         if (!win) return null
 
@@ -339,7 +354,10 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
             if (detail.titles) recordObservation("titles", title !== "")
             // A url only exists when a browser is frontmost, so its absence
             // elsewhere proves nothing and must not be recorded as a failure.
-            if (detail.urls && isBrowser(rawApp)) {
+            // wantUrls, not detail.urls: a pulse that deliberately did not ask
+            // proves nothing, and recording it as a failure would suppress the
+            // capability permanently.
+            if (wantUrls && isBrowser(rawApp)) {
                 recordObservation("urls", typeof url === "string" && url !== "")
             }
         }
