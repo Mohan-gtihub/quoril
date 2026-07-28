@@ -11,18 +11,18 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ## [Unreleased]
 
-## [1.1.4] - 2026-07-28
-
-### Added
-
-- Windows builds are now published with every release, so Quoril for Windows
-  updates itself automatically like macOS and Linux.
+## [1.1.5] - 2026-07-28
 
 ### Fixed
 
-- The update checker no longer shows a technical error when the release feed is
-  briefly unavailable. Transient problems are handled quietly in the background;
-  only an explicit "Check for updates" reports them.
+- Windows and macOS now ship from the same release. Earlier versions alternated
+  between the two, so whichever platform was not in the newest release either
+  stalled or reported an update error — Windows sat on 1.0.6 through the whole
+  1.1.x series, and macOS could not see past 1.1.3.
+- The update check no longer shows an error when a release carries no build for
+  your platform. It reports that you are up to date, which is what it means.
+- Update failures are reported as a single readable line instead of a wall of
+  raw server response text.
 
 ## [1.1.3] - 2026-07-27
 
@@ -109,7 +109,8 @@ Version 1.0.8 was prepared but never published, so its changes ship here.
 - macOS builds are signed and notarized correctly, so auto-update is no longer
   blocked by Gatekeeper.
 
-[Unreleased]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.3...HEAD
+[Unreleased]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.5...HEAD
+[1.1.5]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.3...v1.1.5
 [1.1.3]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.0...v1.1.1

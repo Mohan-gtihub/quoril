@@ -1,6 +1,15 @@
 /**
  * One-command macOS release.
  *
+ * macOS is the one platform that cannot be built by CI here: signing requires a
+ * Developer ID identity in a keychain, and the repo has no certificate secrets.
+ * Windows and Linux build on the tag push; this script publishes macOS onto the
+ * same release from a Mac. If the current version is already released without
+ * macOS artifacts it runs in 'attach' mode — no bump, no tag, no changelog —
+ * which is the normal way to finish a release started by CI.
+ *
+ *   npm run ship:mac               # attach macOS to the current release,
+ *                                  # or cut a new patch if it already has it
  *   npm run ship:mac -- minor      # 1.1.0 -> 1.2.0
  *   npm run ship:mac -- patch      # 1.1.0 -> 1.1.1
  *   npm run ship:mac -- 2.0.0      # explicit
@@ -73,15 +82,29 @@ try {
 const changelog = readFileSync('CHANGELOG.md', 'utf8')
 const current = JSON.parse(readFileSync('package.json', 'utf8')).version
 
-async function isReleased(v) {
+async function releaseAssets(v) {
     const res = await fetch(`https://api.github.com/repos/${REPO}/releases/tags/v${v}`, {
         headers: { Accept: 'application/vnd.github+json' },
     }).catch(() => null)
-    return res?.status === 200
+    if (res?.status !== 200) return null
+    const body = await res.json().catch(() => null)
+    return (body?.assets ?? []).map((a) => a.name)
+}
+
+async function isReleased(v) {
+    return (await releaseAssets(v)) !== null
 }
 
 /**
- * Two ways to arrive here:
+ * Three ways to arrive here:
+ *
+ *   'attach'       — the current version is released but carries no macOS
+ *                    artifacts. The tag trigger builds Windows and Linux on CI;
+ *                    macOS cannot run there because signing needs a keychain
+ *                    and the repo has no certificate secrets, so it is always
+ *                    published from a Mac afterwards. Build and upload onto the
+ *                    existing release: no bump, no tag, no changelog, because
+ *                    the version being completed is the one already announced.
  *
  *   'ship-current' — package.json names a version that was never published and
  *                    already has its notes written. Someone bumped by hand, or
@@ -89,28 +112,61 @@ async function isReleased(v) {
  *                    bumping again would burn a version number for nothing and
  *                    strand the notes already written under it.
  *
- *   'bump'         — the current version is out in the world, so this is a new
- *                    release and needs both a new number and new notes.
+ *   'bump'         — the current version is out in the world with macOS already
+ *                    on it, so this is a new release and needs both a new number
+ *                    and new notes.
  */
-const currentReleased = await isReleased(current)
+const currentAssets = await releaseAssets(current)
+const currentReleased = currentAssets !== null
+const currentHasMac = (currentAssets ?? []).includes('latest-mac.yml')
 const currentNotes = sectionBody(changelog, current)
-const mode = !currentReleased && currentNotes ? 'ship-current' : 'bump'
+
+const mode = currentReleased && !currentHasMac
+    ? 'attach'
+    : !currentReleased && currentNotes
+        ? 'ship-current'
+        : 'bump'
 
 const unreleased = sectionBody(changelog, 'Unreleased')
 if (mode === 'bump' && !unreleased) {
     fail(
         'CHANGELOG.md has nothing under ## [Unreleased].',
-        `v${current} is already published, so this would be a new release —`,
-        'and every release needs notes: they become the GitHub release body',
-        'and the in-app "what\'s new" text. Describe the changes, then re-run.',
+        `v${current} is already published with macOS artifacts, so this would be`,
+        'a new release — and every release needs notes: they become the GitHub',
+        'release body and the in-app "what\'s new" text.',
+        'Describe the changes, then re-run.',
     )
 }
 
 console.log(`  branch ${branch}, tree clean, gh ok`)
+
+// In attach mode the tag already exists. Building from a commit other than the
+// one it points at means shipping a macOS binary that does not match the
+// Windows and Linux ones on the same release — worth saying out loud, but not
+// worth blocking: release tooling and CI config routinely land after the tag,
+// and they change nothing inside the app.
+if (mode === 'attach') {
+    const tagCommit = (() => {
+        try {
+            return capture('git', ['rev-list', '-n', '1', `v${current}`])
+        } catch {
+            return null
+        }
+    })()
+    if (tagCommit && tagCommit !== capture('git', ['rev-parse', 'HEAD'])) {
+        const drift = capture('git', ['rev-list', '--count', `v${current}..HEAD`])
+        console.warn(
+            `  ! HEAD is ${drift} commit(s) ahead of v${current} — the macOS build`,
+        )
+        console.warn('    will not be byte-identical in provenance to Windows/Linux.')
+    }
+}
 console.log(
-    mode === 'ship-current'
-        ? `  v${current} is bumped but unpublished — shipping it as-is (no bump)`
-        : `  v${current} is published — releasing a new ${bump} version`,
+    mode === 'attach'
+        ? `  v${current} is published without macOS — adding it to that release`
+        : mode === 'ship-current'
+            ? `  v${current} is bumped but unpublished — shipping it as-is (no bump)`
+            : `  v${current} is published — releasing a new ${bump} version`,
 )
 
 /* ── 2. verify ─────────────────────────────────────────────── */
@@ -132,7 +188,9 @@ if (dryRun) {
     console.log(
         mode === 'bump'
             ? `  would bump from ${current}`
-            : `  would ship ${current} unchanged`,
+            : mode === 'attach'
+                ? `  would add macOS artifacts to the existing v${current}`
+                : `  would ship ${current} unchanged`,
     )
     console.log('\n--dry-run: stopping before any changes are written.')
     console.log('Notes that would be published:\n')
@@ -185,10 +243,18 @@ if (capture('git', ['status', '--porcelain'])) {
 
 step(6, 'Tagging and pushing')
 
+// attach mode is completing a release that already exists: its tag is what
+// created it, and Windows and Linux are already built from that tag. Re-tagging
+// is not just unnecessary, it is impossible without moving the tag off the
+// commit those builds came from.
+if (mode === 'attach') {
+    console.log(`  v${current} is already tagged and pushed — nothing to do`)
+}
+
 // A previous run may have tagged and then failed during the build. Reuse the
 // tag if it already points at this commit; refuse if it points elsewhere,
 // because moving a tag would silently change what a published release refers to.
-const existingTag = (() => {
+const existingTag = mode === 'attach' ? null : (() => {
     try {
         return capture('git', ['rev-list', '-n', '1', tag])
     } catch {
@@ -196,7 +262,9 @@ const existingTag = (() => {
     }
 })()
 
-if (!existingTag) {
+if (mode === 'attach') {
+    // handled above
+} else if (!existingTag) {
     run('git', ['tag', '-a', tag, '-m', `Quoril ${version}`])
 } else if (existingTag === capture('git', ['rev-parse', 'HEAD'])) {
     console.log(`  ${tag} already exists at this commit`)
@@ -208,29 +276,42 @@ if (!existingTag) {
     )
 }
 
-run('git', ['push', 'origin', branch])
-run('git', ['push', 'origin', tag])
+if (mode !== 'attach') {
+    run('git', ['push', 'origin', branch])
+    run('git', ['push', 'origin', tag])
+}
 
 /* ── 7. publish ────────────────────────────────────────────── */
 
 step(7, 'Building, signing, notarizing, publishing')
 console.log('  Notarization usually takes 5-15 minutes.')
-// Pushing the tag above also started .github/workflows/release.yml, which
-// publishes the Linux AppImage to this same release. Its macOS job stays
-// skipped while the signing secrets are absent, so the two do not collide.
-// ONCE THOSE SECRETS EXIST, CI will publish macOS too and this local step
-// becomes a duplicate — at that point this script should stop at step 6 and
-// let CI finish the job.
-console.log('  Linux is published in parallel by the release workflow.\n')
+// macOS is published from a Mac, always. Signing needs a Developer ID identity
+// in a keychain, and the repo has no certificate secrets to give a runner one,
+// so release.yml's macOS job stays skipped by design — see the `capabilities`
+// job. Windows and Linux are built by that same workflow off the tag, and this
+// step adds macOS to the release they created. Every platform ends up on one
+// version; only the machine that builds each differs.
+console.log('  Windows and Linux are published in parallel by the release workflow.\n')
 
 try {
-    run('npm', ['run', 'release:mac', '--', '--publish'])
+    // The release already exists in attach mode — by definition, since that is
+    // what put us here. Tell release-mac.mjs that finding it is expected;
+    // macOS uploads dmg/zip/latest-mac.yml, so nothing already there is touched.
+    run('npm', ['run', 'release:mac', '--', '--publish'], {
+        env: mode === 'attach'
+            ? { ...process.env, QUORIL_CI_ATTACH: 'true' }
+            : process.env,
+    })
 } catch (error) {
     fail(
         'Publish failed.',
         `The commit and tag ${tag} are already pushed. Fix the problem and re-run:`,
-        '  npm run release:mac -- --publish',
-        `Or remove the tag: git push origin :${tag} && git tag -d ${tag}`,
+        mode === 'attach'
+            ? '  QUORIL_CI_ATTACH=true npm run release:mac -- --publish'
+            : '  npm run release:mac -- --publish',
+        ...(mode === 'attach'
+            ? []
+            : [`Or remove the tag: git push origin :${tag} && git tag -d ${tag}`]),
     )
     throw error
 }

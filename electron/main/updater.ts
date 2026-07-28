@@ -116,7 +116,16 @@ export function initAutoUpdate() {
         // offline-noise filter has to apply. manualCheckInFlight lets a
         // user-initiated check still see the error it caused.
         if (!manualCheckInFlight && isNetworkError(err)) return
-        broadcast({ state: 'error', message: err?.message ?? String(err) })
+        if (isFeedMissingError(err)) {
+            // The release exists but carries no metadata for this platform —
+            // there is simply nothing to update to. Not an error the user can
+            // act on, and identical in effect to "you're on the latest".
+            broadcast(manualCheckInFlight
+                ? { state: 'error', message: NO_BUILD_MESSAGE }
+                : { state: 'not-available' })
+            return
+        }
+        broadcast({ state: 'error', message: describeError(err) })
     })
 
     registerIpc()
@@ -220,6 +229,34 @@ function isNetworkError(err: any): boolean {
     return /createhttperror|http error|cannot find|unable to find|status code|latest\.yml|latest-mac\.yml/.test(msg)
 }
 
+const NO_BUILD_MESSAGE =
+    'No update is published for this platform yet. You are on the newest build available for macOS.'
+
+// The update feed itself is missing: electron-updater asked GitHub for
+// latest-mac.yml / latest.yml on the newest release and got a 404. That happens
+// whenever a release ships assets for only some platforms — the release is real,
+// this platform just has nothing in it. Nothing for the user to fix, and the
+// raw error is a full dump of GitHub's response headers, so it must not reach
+// the UI as a scary red card.
+function isFeedMissingError(err: any): boolean {
+    if (Number(err?.statusCode) === 404) return true
+    const msg = String(err?.message ?? err ?? '')
+    return /HttpError:\s*404|404 Not Found|"?status(Code)?"?\s*[:=]\s*404/i.test(msg)
+        || /cannot find .*(latest.*\.yml)/i.test(msg)
+}
+
+// electron-updater stringifies the entire HTTP response — headers and all —
+// into `message`. Keep the first line and cap the length so the renderer shows
+// something a human can read.
+const MAX_ERROR_LENGTH = 300
+function describeError(err: any): string {
+    const raw = String(err?.message ?? err ?? 'Unknown error')
+    const firstLine = raw.split('\n')[0].trim() || raw.trim()
+    return firstLine.length > MAX_ERROR_LENGTH
+        ? `${firstLine.slice(0, MAX_ERROR_LENGTH).trimEnd()}…`
+        : firstLine
+}
+
 /**
  * @param surfaceNetworkErrors true when a human explicitly asked (the
  *   Settings "Check for updates" button). A user who clicked deserves an
@@ -235,7 +272,13 @@ async function checkSilently(surfaceNetworkErrors = false) {
             // previously-found update isn't clobbered by a transient blip.
             return
         }
-        broadcast({ state: 'error', message: err?.message ?? String(err) })
+        if (isFeedMissingError(err)) {
+            broadcast(surfaceNetworkErrors
+                ? { state: 'error', message: NO_BUILD_MESSAGE }
+                : { state: 'not-available' })
+            return
+        }
+        broadcast({ state: 'error', message: describeError(err) })
     }
 }
 
@@ -265,7 +308,7 @@ function registerIpc() {
             await autoUpdater.downloadUpdate()
             return true
         } catch (err: any) {
-            broadcast({ state: 'error', message: err?.message ?? String(err) })
+            broadcast({ state: 'error', message: describeError(err) })
             return false
         }
     })

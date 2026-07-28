@@ -55,12 +55,29 @@ if (publish) {
         { headers: { Accept: 'application/vnd.github+json' } },
     ).catch(() => null)
 
-    if (existing?.status === 200) {
+    // QUORIL_CI_ATTACH means "this release is expected to exist" — the tag
+    // created it and the linux/windows jobs are attaching their own artifacts
+    // to it in parallel. mac adds a disjoint set of files (dmg, zip,
+    // latest-mac.yml), so nothing is overwritten. Without this the guard fires
+    // on every CI release, because whichever platform job finishes first
+    // creates the release the others then find. Same exemption as
+    // publish-release.mjs; its absence here is why mac could only ever be
+    // published onto a tag of its own.
+    const attaching = process.env.QUORIL_CI_ATTACH === 'true'
+
+    if (existing?.status === 200 && !attaching) {
         console.error(`\nv${version} is already released on GitHub.`)
         console.error('Publishing again would overwrite its assets with a different')
         console.error('build under the same version number. Bump first:')
         console.error('  npm version patch    # 1.0.8 -> 1.0.9')
+        console.error('\nTo add macOS artifacts to an existing release on purpose')
+        console.error('(e.g. it shipped with only a Windows build), set')
+        console.error('QUORIL_CI_ATTACH=true.')
         process.exit(1)
+    }
+
+    if (existing?.status === 200 && attaching) {
+        console.log(`Attaching macOS artifacts to the existing v${version} release.`)
     }
 }
 
