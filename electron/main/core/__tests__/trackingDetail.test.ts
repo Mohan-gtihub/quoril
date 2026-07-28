@@ -149,7 +149,7 @@ describe("resolveDetail", () => {
     expect(resolveDetail().urls).toBe(true);
   });
 
-  it("stops asking once the capability is observed not to work", () => {
+  it("stops asking once urls repeatedly come back empty", () => {
     setFlag("urls", true);
     // Even with the OS claiming the grant is in place: that is exactly the
     // case that loops, because the TCC record can be toggled on and still not
@@ -157,9 +157,39 @@ describe("resolveDetail", () => {
     state.accessibilityTrusted = true;
     expect(resolveDetail().urls).toBe(true);
 
+    // One failure is not enough — a blank tab or a browser mid-launch must not
+    // switch the feature off.
+    recordObservation("urls", false);
+    expect(resolveDetail().urls).toBe(true);
+    recordObservation("urls", false);
+    expect(resolveDetail().urls).toBe(true);
     recordObservation("urls", false);
     expect(resolveDetail().urls).toBe(false);
-    expect(resolveDetail().urls).toBe(false);
+  });
+
+  it("forgives a failure streak that a success interrupts", () => {
+    setFlag("urls", true);
+    state.accessibilityTrusted = true;
+
+    recordObservation("urls", false);
+    recordObservation("urls", false);
+    recordObservation("urls", true); // streak broken
+    recordObservation("urls", false);
+    recordObservation("urls", false);
+    expect(resolveDetail().urls).toBe(true);
+  });
+
+  /* An empty title is what active-win returns BOTH when Screen Recording is
+     denied and when the frontmost app simply has no window — verified against
+     the real helper. The two cannot be told apart, so titles must never be
+     switched off by observation, or looking at the desktop would disable a
+     feature the user turned on. */
+  it("never suppresses titles, however often they come back empty", () => {
+    setFlag("titles", true);
+    state.screenStatus = "denied";
+
+    for (let i = 0; i < 10; i++) recordObservation("titles", false);
+    expect(resolveDetail().titles).toBe(true);
   });
 
   it("gives up after a bounded number of probes when nothing is granted", () => {
@@ -174,7 +204,7 @@ describe("resolveDetail", () => {
 
   it("resumes probing when the user explicitly asks again", () => {
     setFlag("urls", true);
-    recordObservation("urls", false);
+    for (let i = 0; i < 3; i++) recordObservation("urls", false);
     expect(resolveDetail().urls).toBe(false);
 
     clearObservations();

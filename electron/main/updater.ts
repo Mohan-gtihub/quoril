@@ -121,7 +121,7 @@ export function initAutoUpdate() {
             // there is simply nothing to update to. Not an error the user can
             // act on, and identical in effect to "you're on the latest".
             broadcast(manualCheckInFlight
-                ? { state: 'error', message: NO_BUILD_MESSAGE }
+                ? { state: 'error', message: noBuildMessage() }
                 : { state: 'not-available' })
             return
         }
@@ -218,8 +218,28 @@ export function isNetworkError(err: any): boolean {
     return /net::|getaddrinfo|enotfound|econnrefused|econnreset|etimedout|network|socket hang up|unable to (connect|resolve)/.test(msg)
 }
 
-const NO_BUILD_MESSAGE =
-    'No update is published for this platform yet. You are on the newest build available for macOS.'
+/**
+ * Named for the platform actually running, not the one this was first written
+ * for. Every platform reaches this path — a release carrying only some
+ * platforms' assets is exactly the situation that produces it, and which of
+ * them is missing varies per release.
+ */
+function platformLabel(): string {
+    switch (process.platform) {
+        case 'darwin':
+            return 'macOS'
+        case 'win32':
+            return 'Windows'
+        case 'linux':
+            return 'Linux'
+        default:
+            return 'this platform'
+    }
+}
+
+export function noBuildMessage(): string {
+    return `No update is published for ${platformLabel()} yet. You are on the newest build available.`
+}
 
 // The update feed itself is missing: electron-updater asked GitHub for
 // latest-mac.yml / latest.yml on the newest release and got a 404. That happens
@@ -263,7 +283,7 @@ async function checkSilently(surfaceNetworkErrors = false) {
         }
         if (isFeedMissingError(err)) {
             broadcast(surfaceNetworkErrors
-                ? { state: 'error', message: NO_BUILD_MESSAGE }
+                ? { state: 'error', message: noBuildMessage() }
                 : { state: 'not-available' })
             return
         }

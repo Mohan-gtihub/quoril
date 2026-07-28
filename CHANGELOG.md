@@ -11,6 +11,16 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ## [Unreleased]
 
+### Fixed
+
+- macOS: the Accessibility permission prompt no longer reappears every few
+  seconds. Quoril now asks only while a browser is in front — the only place a
+  web address can come from — and stops asking altogether once it is clear the
+  permission is not taking effect, instead of putting the same dialog up again
+  on every check.
+- The "no update published for your platform" message now names the platform
+  you are actually running. On Windows and Linux it previously said macOS.
+
 ## [1.1.5] - 2026-07-28
 
 ### Fixed

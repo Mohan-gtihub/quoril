@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterAll } from "vitest";
 import { createRequire } from "node:module";
 
 /* updater.ts pulls in electron at import time; none of it is needed to test the
@@ -98,5 +98,30 @@ describe("isNetworkError", () => {
      branch would never be reached on a manual check. */
   it("does not classify a missing feed as a network failure", () => {
     expect(isNetworkError(realGithub404())).toBe(false);
+  });
+});
+
+/* The "nothing for your platform" message names the platform. It was written
+   during a macOS incident and hardcoded "macOS", but every platform reaches
+   this path — this repo has shipped releases carrying only one platform's
+   assets several times, so a Windows user could be told they were on the
+   newest build available for macOS. */
+describe("noBuildMessage", () => {
+  const origPlatform = process.platform;
+  const setPlatform = (p: string) =>
+    Object.defineProperty(process, "platform", { value: p, configurable: true });
+  afterAll(() => setPlatform(origPlatform));
+
+  it("names the platform actually running", async () => {
+    const { noBuildMessage } = await import("../updater");
+    setPlatform("win32");
+    expect(noBuildMessage()).toContain("Windows");
+    expect(noBuildMessage()).not.toContain("macOS");
+
+    setPlatform("linux");
+    expect(noBuildMessage()).toContain("Linux");
+
+    setPlatform("darwin");
+    expect(noBuildMessage()).toContain("macOS");
   });
 });
