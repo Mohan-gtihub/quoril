@@ -121,7 +121,7 @@ export function initAutoUpdate() {
             // there is simply nothing to update to. Not an error the user can
             // act on, and identical in effect to "you're on the latest".
             broadcast(manualCheckInFlight
-                ? { state: 'error', message: NO_BUILD_MESSAGE }
+                ? { state: 'error', message: noBuildMessage() }
                 : { state: 'not-available' })
             return
         }
@@ -209,7 +209,7 @@ function createUpdateLogger() {
 // surfacing them would train users to ignore a card that mostly cries wolf.
 // The first automatic check fires 8s after launch, which routinely lands
 // before wifi has associated.
-function isNetworkError(err: any): boolean {
+export function isNetworkError(err: any): boolean {
     const code = String(err?.code ?? '')
     if (/^(ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ECONNRESET|ETIMEDOUT|ENETUNREACH|EHOSTUNREACH|EPIPE|ERR_INTERNET_DISCONNECTED)$/.test(code)) {
         return true
@@ -229,8 +229,28 @@ function isNetworkError(err: any): boolean {
     return /createhttperror|http error|cannot find|unable to find|status code|latest\.yml|latest-mac\.yml/.test(msg)
 }
 
-const NO_BUILD_MESSAGE =
-    'No update is published for this platform yet. You are on the newest build available for macOS.'
+/**
+ * Named for the platform actually running, not the one this was first written
+ * for. Every platform reaches this path — a release carrying only some
+ * platforms' assets is exactly the situation that produces it, and which of
+ * them is missing varies per release.
+ */
+function platformLabel(): string {
+    switch (process.platform) {
+        case 'darwin':
+            return 'macOS'
+        case 'win32':
+            return 'Windows'
+        case 'linux':
+            return 'Linux'
+        default:
+            return 'this platform'
+    }
+}
+
+export function noBuildMessage(): string {
+    return `No update is published for ${platformLabel()} yet. You are on the newest build available.`
+}
 
 // The update feed itself is missing: electron-updater asked GitHub for
 // latest-mac.yml / latest.yml on the newest release and got a 404. That happens
@@ -238,7 +258,7 @@ const NO_BUILD_MESSAGE =
 // this platform just has nothing in it. Nothing for the user to fix, and the
 // raw error is a full dump of GitHub's response headers, so it must not reach
 // the UI as a scary red card.
-function isFeedMissingError(err: any): boolean {
+export function isFeedMissingError(err: any): boolean {
     if (Number(err?.statusCode) === 404) return true
     const msg = String(err?.message ?? err ?? '')
     return /HttpError:\s*404|404 Not Found|"?status(Code)?"?\s*[:=]\s*404/i.test(msg)
@@ -249,7 +269,7 @@ function isFeedMissingError(err: any): boolean {
 // into `message`. Keep the first line and cap the length so the renderer shows
 // something a human can read.
 const MAX_ERROR_LENGTH = 300
-function describeError(err: any): string {
+export function describeError(err: any): string {
     const raw = String(err?.message ?? err ?? 'Unknown error')
     const firstLine = raw.split('\n')[0].trim() || raw.trim()
     return firstLine.length > MAX_ERROR_LENGTH
@@ -274,7 +294,7 @@ async function checkSilently(surfaceNetworkErrors = false) {
         }
         if (isFeedMissingError(err)) {
             broadcast(surfaceNetworkErrors
-                ? { state: 'error', message: NO_BUILD_MESSAGE }
+                ? { state: 'error', message: noBuildMessage() }
                 : { state: 'not-available' })
             return
         }

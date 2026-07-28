@@ -182,11 +182,11 @@ function hostnameOf(url: string): string | null {
     }
 }
 
-/** Is this app one whose frontmost window can have a URL at all? */
-function isBrowser(rawApp: string): boolean {
-    const n = normalize(rawApp)
-    return CATEGORY_MAP[n] === "Web" || n.includes("browser") || n.includes("chrome")
-}
+/* isBrowser() used to answer "can this app have a url?" from the display name.
+ * It has been replaced by isUrlCapableBrowser(), which matches the bundle id
+ * against the list active-win itself supports: "Microsoft Edge" and "Vivaldi"
+ * satisfied none of the name heuristics, so anything gated on the old answer
+ * silently excluded two browsers that work fine. */
 
 function detectSite(title: string) {
     for (const s of SITE_PATTERNS) {
@@ -286,6 +286,55 @@ async function macFrontmostAppName(): Promise<string | null> {
     return parseLsAppName(await run("lsappinfo", ["info", "-only", "name", asn]))
 }
 
+/**
+ * Parse the bundle id out of `lsappinfo info -only bundleid <asn>`, which looks
+ * like:  "CFBundleIdentifier"="com.google.Chrome"
+ */
+export function parseLsBundleId(stdout: string): string | null {
+    const m = stdout.match(/"CFBundleIdentifier"\s*=\s*"([^"]+)"/)
+    return m ? m[1].trim() || null : null
+}
+
+/**
+ * The browsers active-win can actually read a url out of, by bundle id. Taken
+ * from the shipped helper binary itself rather than guessed:
+ *
+ *   strings -a node_modules/active-win/main | grep -E 'com\.(google|apple|...)'
+ *
+ * Bundle ids, not display names: "Microsoft Edge" and "Vivaldi" match none of
+ * the display-name heuristics used for categorisation, so deciding this on
+ * names would silently deny url tracking to browsers that support it. Prefix
+ * matching covers the beta/dev/canary/nightly variants the helper also lists.
+ */
+const URL_CAPABLE_BROWSER_IDS = [
+    "com.apple.Safari",
+    "com.apple.SafariTechnologyPreview",
+    "com.google.Chrome",
+    "com.brave.Browser",
+    "com.microsoft.edgemac",
+    "com.operasoftware.Opera",
+    "com.vivaldi.Vivaldi",
+]
+
+function isUrlCapableBrowser(bundleId: string): boolean {
+    return URL_CAPABLE_BROWSER_IDS.some(
+        (id) => bundleId === id || bundleId.startsWith(`${id}.`),
+    )
+}
+
+/**
+ * Is the frontmost app one active-win could return a url for? Answered with
+ * lsappinfo, which needs no permission, so asking costs nothing.
+ */
+async function macFrontmostIsUrlCapable(): Promise<boolean> {
+    const asn = (await run("lsappinfo", ["front"])).trim()
+    if (!asn) return false
+    const bundleId = parseLsBundleId(
+        await run("lsappinfo", ["info", "-only", "bundleid", asn]),
+    )
+    return bundleId !== null && isUrlCapableBrowser(bundleId)
+}
+
 /* ---------------- ENGINE ---------------- */
 
 export async function getActiveWindow(): Promise<ActiveWindow | null> {
@@ -299,9 +348,9 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
         // being asked for a title or url, which surfaces a system prompt. Staying
         // out of it entirely is what keeps default tracking prompt-free.
         //
-        // resolveDetail() is already AND-ed with the live OS grant, so a user who
-        // opted in and later revoked the permission lands back here rather than
-        // being re-prompted on a background pulse.
+        // resolveDetail() has already withdrawn any capability observed not to
+        // work, so a user who opted in but whose grant is not effective lands
+        // back here rather than being re-prompted on a background pulse.
         if (process.platform === "darwin" && !detail.titles && !detail.urls) {
             const appName = await macFrontmostAppName()
             if (!appName) return null
@@ -316,13 +365,27 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
             }
         }
 
+        // A url only ever exists when a supported browser is frontmost. Asking
+        // for one anywhere else cannot return data, but it still makes
+        // active-win's helper run its Accessibility trust check — and that check
+        // prompts. lsappinfo answers "what is frontmost" with no permission at
+        // all, so use it to confine the Accessibility request to the moments it
+        // could actually pay off. Most of the day that is no moments at all.
+        //
+        // Unknown frontmost app means don't ask: a missed url on one pulse costs
+        // nothing, an unnecessary modal costs the user their focus.
+        let wantUrls = detail.urls
+        if (process.platform === "darwin" && wantUrls) {
+            wantUrls = await macFrontmostIsUrlCapable()
+        }
+
         // Detailed path. The two options map to two different macOS permissions:
         // screenRecordingPermission gates `title`, accessibilityPermission gates
         // `url`. Passing false leaves the corresponding field empty rather than
         // prompting. On Windows/Linux both resolve true and the options are inert.
         const win = await activeWin({
             screenRecordingPermission: detail.titles,
-            accessibilityPermission: detail.urls,
+            accessibilityPermission: wantUrls,
         })
         if (!win) return null
 
@@ -339,7 +402,13 @@ export async function getActiveWindow(): Promise<ActiveWindow | null> {
             if (detail.titles) recordObservation("titles", title !== "")
             // A url only exists when a browser is frontmost, so its absence
             // elsewhere proves nothing and must not be recorded as a failure.
-            if (detail.urls && isBrowser(rawApp)) {
+            // wantUrls, not detail.urls: a pulse that deliberately did not ask
+            // proves nothing, and recording it as a failure would suppress the
+            // capability permanently. It already implies a url-capable browser
+            // was frontmost, which is the condition that makes an empty url
+            // meaningful — so no display-name check on top, which would miss
+            // Edge and Vivaldi and lose their observations entirely.
+            if (wantUrls) {
                 recordObservation("urls", typeof url === "string" && url !== "")
             }
         }

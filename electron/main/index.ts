@@ -992,6 +992,12 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
        user action; every status read elsewhere is prompt-free. */
     ipcMain.handle('permissions:requestAccessibility', () => {
         const granted = requestAccessibility()
+        // The collector stops asking for a capability it has observed failing,
+        // because on macOS every ask with an ineffective grant is another system
+        // modal. An explicit request is the one moment that verdict should be
+        // reconsidered — without this, a user who grants access here stays
+        // suppressed and sees nothing change.
+        clearObservations()
         return { granted, detail: getTrackingDetail() }
     })
 
@@ -1004,6 +1010,10 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
         shell.openExternal(
             `x-apple.systempreferences:com.apple.preference.security?${pane}`,
         )
+        // The user is on their way to grant it. Drop the suppression now so the
+        // next pulse after they flip the switch actually tries again, instead of
+        // staying silent on the strength of a verdict reached before they did.
+        clearObservations()
         return true
     })
 

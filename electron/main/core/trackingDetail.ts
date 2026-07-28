@@ -120,6 +120,7 @@ const observed: Record<DetailCapability, boolean | null> = { titles: null, urls:
 
 export function recordObservation(capability: DetailCapability, succeeded: boolean) {
     observed[capability] = succeeded
+    if (capability === 'urls') recordUrlOutcome(succeeded)
 }
 
 /** Forget observations — used when an opt-in is toggled, so stale evidence
@@ -127,10 +128,83 @@ export function recordObservation(capability: DetailCapability, succeeded: boole
 export function clearObservations() {
     observed.titles = null
     observed.urls = null
+    // Restore the prompt budget too: this is called when the user toggles an
+    // opt-in or explicitly asks for the permission, which is exactly the moment
+    // a fresh attempt is warranted — and the only moment a prompt is expected.
+    resetPromptBudget()
 }
 
 function isCapabilityLive(capability: DetailCapability): boolean {
     return observed[capability] ?? isGranted(capability)
+}
+
+/* ---------------- PROMPT BUDGET ---------------- */
+
+/**
+ * active-win's helper calls AXIsProcessTrustedWithOptions with the *prompting*
+ * option set (verified: the binary imports _AXIsProcessTrustedWithOptions and
+ * carries the AXTrustedCheckOptionPrompt key). It is a fresh short-lived
+ * process on every pulse, and the tracking loop pulses every 5 seconds — so
+ * anything that lets a pulse ask for a url while the grant is not effective
+ * produces a system modal every 5 seconds, forever.
+ *
+ * The grant can be ineffective even with Quoril switched on in System Settings:
+ * the TCC record is matched against the binary's signature, so a rebuilt or
+ * re-signed app can leave a row that is toggled on but no longer matches, and
+ * the helper keeps being told "not trusted".
+ *
+ * THIS APPLIES TO urls ONLY, and the asymmetry is deliberate:
+ *
+ *   urls   — the Accessibility check re-prompts on every helper invocation, and
+ *            an empty url is only ever recorded when a url-capable browser was
+ *            frontmost, so the evidence is meaningful.
+ *
+ *   titles — an empty title is what the helper returns BOTH when Screen
+ *            Recording is denied and when the frontmost app simply has no
+ *            window (verified: Finder with no window, menu-bar-only apps).
+ *            The two are indistinguishable, so treating an empty title as
+ *            proof of a missing permission would silently switch off a feature
+ *            the user turned on, on the strength of them looking at the
+ *            desktop. Screen Recording also does not re-prompt per call the
+ *            way the Accessibility check does, so there is no storm to stop.
+ */
+const PROBE_BUDGET = 2
+const FAILURE_STREAK_LIMIT = 3
+let urlProbesUsed = 0
+let urlFailureStreak = 0
+
+/** Count consecutive url failures; any success resets. Only urls suppress. */
+function recordUrlOutcome(succeeded: boolean) {
+    urlFailureStreak = succeeded ? 0 : urlFailureStreak + 1
+}
+
+function resetPromptBudget() {
+    urlProbesUsed = 0
+    urlFailureStreak = 0
+}
+
+function mayAsk(capability: DetailCapability): boolean {
+    if (process.platform !== 'darwin') return true
+    // Titles are governed by the opt-in alone — see the asymmetry above.
+    if (capability === 'titles') return true
+
+    // Proven to work — no prompt can result.
+    if (observed.urls === true) return true
+
+    // Repeatedly asked in a browser and got nothing back. Asking again cannot
+    // produce data; it can only re-fire the dialog. This has to outrank
+    // isGranted(), because the case that hurts is precisely the one where the
+    // OS claims the grant exists and the helper is still refused. A streak
+    // rather than a single failure, so one odd pulse (a blank tab, a browser
+    // mid-launch) cannot switch the feature off.
+    if (urlFailureStreak >= FAILURE_STREAK_LIMIT) return false
+
+    // A reported grant is good enough to try without burning budget; otherwise
+    // allow a couple of probes so a wrong "false" reading cannot permanently
+    // disable the capability. That was the self-fulfilling failure this file
+    // warns about: never asking means never finding out.
+    if (isGranted('urls')) return true
+    return urlProbesUsed++ < PROBE_BUDGET
 }
 
 /* ---------------- QUERIES ---------------- */
@@ -145,18 +219,17 @@ export function getTrackingDetail(): TrackingDetail {
 /**
  * What the collector should ask active-win for.
  *
- * This is the user's opt-in ALONE — deliberately not AND-ed with the permission
- * check. Gating the request on the permission API made the failure
- * self-fulfilling: a false reading meant active-win was never called, so the
- * permission was never exercised, so nothing could ever change the reading.
- *
- * Asking is also what lets macOS prompt in the first place, and asking without
- * permission is harmless — the field simply comes back empty, which is exactly
- * the signal recordObservation() needs.
+ * The user's opt-in, narrowed by mayAsk(). It is deliberately NOT a plain AND
+ * with the permission check: gating purely on the permission API made the
+ * failure self-fulfilling — a false reading meant active-win was never called,
+ * so the permission was never exercised, so nothing could ever change the
+ * reading. mayAsk() keeps that escape hatch (a bounded number of probes) while
+ * refusing to ask forever, because "ask anyway" is not free on macOS: each ask
+ * with an ineffective grant is another system modal, five seconds apart.
  */
 export function resolveDetail(): Record<DetailCapability, boolean> {
     return {
-        titles: readFlag('titles'),
-        urls: readFlag('urls'),
+        titles: readFlag('titles') && mayAsk('titles'),
+        urls: readFlag('urls') && mayAsk('urls'),
     }
 }

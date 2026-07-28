@@ -11,6 +11,18 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ## [Unreleased]
 
+## [1.1.6] - 2026-07-28
+
+### Fixed
+
+- macOS: the Accessibility permission prompt no longer reappears every few
+  seconds. Quoril now asks only while a browser is in front — the only place a
+  web address can come from — and stops asking altogether once it is clear the
+  permission is not taking effect, instead of putting the same dialog up again
+  on every check.
+- The "no update published for your platform" message now names the platform
+  you are actually running. On Windows and Linux it previously said macOS.
+
 ## [1.1.5] - 2026-07-28
 
 ### Fixed
@@ -109,7 +121,8 @@ Version 1.0.8 was prepared but never published, so its changes ship here.
 - macOS builds are signed and notarized correctly, so auto-update is no longer
   blocked by Gatekeeper.
 
-[Unreleased]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.5...HEAD
+[Unreleased]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.6...HEAD
+[1.1.6]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.3...v1.1.5
 [1.1.3]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/Mohan-gtihub/quoril/compare/v1.1.1...v1.1.2

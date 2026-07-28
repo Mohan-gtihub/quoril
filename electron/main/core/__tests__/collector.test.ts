@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   activeWinResult: null as any,
   lsFront: "ASN:0x0-0x1:",
   lsName: '"LSDisplayName"="Code"',
+  lsBundleId: '"CFBundleIdentifier"="com.microsoft.VSCode"',
   execCalls: [] as string[][],
   // What the user has opted into AND been granted. Both off is the default
   // install state, which must stay entirely permission-free.
@@ -38,12 +39,18 @@ vi.mock("node:child_process", () => {
     const callback = typeof _opts === "function" ? _opts : cb;
     state.execCalls.push([cmd, ...args]);
     if (args.includes("front")) callback(null, state.lsFront);
+    else if (args.includes("bundleid")) callback(null, state.lsBundleId);
     else callback(null, state.lsName);
   };
   return { execFile, default: { execFile } };
 });
 
-import { getActiveWindow, parseLsAppName, categorize } from "../collector";
+import {
+  getActiveWindow,
+  parseLsAppName,
+  parseLsBundleId,
+  categorize,
+} from "../collector";
 
 const origPlatform = process.platform;
 function setPlatform(p: NodeJS.Platform) {
@@ -57,6 +64,7 @@ beforeEach(() => {
   state.activeWinResult = null;
   state.lsFront = "ASN:0x0-0x1:";
   state.lsName = '"LSDisplayName"="Code"';
+  state.lsBundleId = '"CFBundleIdentifier"="com.microsoft.VSCode"';
   state.execCalls = [];
   state.detail = { titles: false, urls: false };
   state.observations = [];
@@ -74,6 +82,22 @@ describe("parseLsAppName", () => {
     expect(parseLsAppName("")).toBeNull();
     expect(parseLsAppName("ASN:0x0-0x1:")).toBeNull();
     expect(parseLsAppName('"LSDisplayName"=""')).toBeNull();
+  });
+});
+
+describe("parseLsBundleId", () => {
+  it("extracts the bundle id", () => {
+    expect(parseLsBundleId('"CFBundleIdentifier"="com.google.Chrome"')).toBe(
+      "com.google.Chrome",
+    );
+    expect(parseLsBundleId('  "CFBundleIdentifier" = "com.apple.Safari" \n')).toBe(
+      "com.apple.Safari",
+    );
+  });
+  it("returns null on missing/garbage output", () => {
+    expect(parseLsBundleId("")).toBeNull();
+    expect(parseLsBundleId('"LSDisplayName"="Safari"')).toBeNull();
+    expect(parseLsBundleId('"CFBundleIdentifier"=""')).toBeNull();
   });
 });
 
@@ -223,6 +247,10 @@ describe("getActiveWindow — macOS never calls active-win when detail is off", 
 describe("getActiveWindow — macOS with detail enabled", () => {
   beforeEach(() => {
     setPlatform("darwin");
+    // A browser is frontmost, which is the only situation in which a url can
+    // exist — and therefore the only one where Accessibility is worth asking for.
+    state.lsName = '"LSDisplayName"="Google Chrome"';
+    state.lsBundleId = '"CFBundleIdentifier"="com.google.Chrome"';
     state.activeWinResult = {
       owner: { name: "Google Chrome", path: "/Applications/Chrome.app" },
       title: "rick astley - YouTube",
@@ -242,6 +270,78 @@ describe("getActiveWindow — macOS with detail enabled", () => {
     });
   });
 
+  // active-win's helper runs an Accessibility trust check whenever it is asked
+  // for a url, and that check shows a system modal. The tracking loop pulses
+  // every 5s, so asking outside a browser — where no url can exist anyway —
+  // turns an ineffective grant into a dialog every 5 seconds, forever.
+  it("does not request Accessibility when no browser is frontmost", async () => {
+    state.detail = { titles: true, urls: true };
+    state.lsName = '"LSDisplayName"="Code"';
+    state.lsBundleId = '"CFBundleIdentifier"="com.microsoft.VSCode"';
+    state.activeWinResult = {
+      owner: { name: "Code", path: "/Applications/Code.app" },
+      title: "collector.ts — quoril",
+    };
+    await getActiveWindow();
+
+    const activeWin = (await import("active-win")).default as any;
+    expect(activeWin).toHaveBeenCalledWith({
+      screenRecordingPermission: true,
+      accessibilityPermission: false,
+    });
+  });
+
+  /* The gate is on bundle id, not display name, precisely because of these two:
+     "Microsoft Edge" and "Vivaldi" match none of the display-name heuristics
+     isBrowser() uses for categorisation, so deciding this on names would have
+     silently denied url tracking to two browsers active-win fully supports. */
+  it.each([
+    ["Microsoft Edge", "com.microsoft.edgemac"],
+    ["Vivaldi", "com.vivaldi.Vivaldi"],
+    ["Safari", "com.apple.Safari"],
+    ["Brave Browser", "com.brave.Browser"],
+    ["Opera", "com.operasoftware.Opera"],
+    // Channel variants are suffixes of the ids the helper lists.
+    ["Google Chrome Canary", "com.google.Chrome.canary"],
+    ["Microsoft Edge Dev", "com.microsoft.edgemac.Dev"],
+  ])("requests Accessibility for %s", async (name, bundleId) => {
+    state.detail = { titles: false, urls: true };
+    state.lsName = `"LSDisplayName"="${name}"`;
+    state.lsBundleId = `"CFBundleIdentifier"="${bundleId}"`;
+    await getActiveWindow();
+
+    const activeWin = (await import("active-win")).default as any;
+    expect(activeWin).toHaveBeenCalledWith({
+      screenRecordingPermission: false,
+      accessibilityPermission: true,
+    });
+  });
+
+  // A bundle id that merely starts with a supported one's characters is a
+  // different app: com.google.ChromeRemoteDesktop is not a browser.
+  it("does not treat a lookalike bundle id as a browser", async () => {
+    state.detail = { titles: false, urls: true };
+    state.lsBundleId = '"CFBundleIdentifier"="com.google.ChromeRemoteDesktop"';
+    await getActiveWindow();
+
+    const activeWin = (await import("active-win")).default as any;
+    expect(activeWin).toHaveBeenCalledWith({
+      screenRecordingPermission: false,
+      accessibilityPermission: false,
+    });
+  });
+
+  it("records no url observation from a pulse that never asked", async () => {
+    state.detail = { titles: false, urls: true };
+    // Frontmost is unknown, so the collector declines to ask — but active-win
+    // still reports a browser. Recording that as a failure would suppress urls
+    // permanently on the strength of a question never put.
+    state.lsFront = "";
+    await getActiveWindow();
+
+    expect(state.observations).not.toContainEqual(["urls", false]);
+  });
+
   it("derives the domain from the real url, not the title", async () => {
     state.detail = { titles: false, urls: true };
     const r = await getActiveWindow();
@@ -249,8 +349,17 @@ describe("getActiveWindow — macOS with detail enabled", () => {
     expect(r?.category).toBe("Entertainment");
   });
 
-  it("uses lsappinfo no more once active-win is driving", async () => {
+  // lsappinfo is still consulted, but only to answer "is a browser frontmost"
+  // — the question that decides whether asking for a url could pay off. It is
+  // permission-free and cheap; the modal it avoids is neither.
+  it("uses lsappinfo only to decide whether a url is worth asking for", async () => {
     state.detail = { titles: true, urls: true };
+    await getActiveWindow();
+    expect(state.execCalls.every((c) => c[0] === "lsappinfo")).toBe(true);
+  });
+
+  it("does not shell out at all when urls are not wanted", async () => {
+    state.detail = { titles: true, urls: false };
     await getActiveWindow();
     expect(state.execCalls.length).toBe(0);
   });
