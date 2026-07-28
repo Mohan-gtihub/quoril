@@ -19,6 +19,13 @@ on:
   push:
     tags:
       - "v*"
+  # A tag created server-side — `gh release create v1.1.5`, or the "Draft a new
+  # release" UI — fires `create`/`release`, never `push`, so the tag trigger
+  # above silently misses that flow. v1.1.4 shipped that way and got no build
+  # from CI at all. Both triggers are kept because either flow may be used, and
+  # only one of them fires per release.
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -68,6 +75,26 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           QUORIL_CI_ATTACH: "true"
         run: npm run publish:linux
+
+  # NSIS needs no code signing to install or auto-update (users just see a
+  # SmartScreen warning on first run), so this runs unconditionally — same
+  # footing as linux. Before this job existed every .exe was published by hand
+  # from a Windows machine, which is how win and mac drifted onto separate tags
+  # and left each platform's updater staring at a release with no feed for it.
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Publish Windows installer
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          QUORIL_CI_ATTACH: "true"
+        run: npm run publish:win
 
   macos:
     needs: capabilities
