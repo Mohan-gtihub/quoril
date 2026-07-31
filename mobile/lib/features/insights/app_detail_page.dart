@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/models/models.dart';
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/widgets/common.dart';
@@ -40,13 +41,17 @@ class _AppDetailPageState extends State<AppDetailPage> {
   @override
   Widget build(BuildContext context) {
     final app = widget.app;
-    final accent = (app.distracting ? QColors.danger : QColors.tint).resolveFrom(context);
+    final accent = (app.distracting ? QColors.danger : QColors.breakColor).resolveFrom(context);
     final opens = (app.minutes / 6).round() + 3;
     final nudges = app.distracting ? (app.minutes / 12).round() : 0;
+    final brightness =
+        MediaQuery.maybeOf(context)?.platformBrightness ?? Brightness.light;
 
     return CupertinoPageScaffold(
       backgroundColor: QColors.bgGrouped.resolveFrom(context),
-      child: CustomScrollView(
+      child: GradientBackground(
+        gradient: QGradients.page(brightness),
+        child: CustomScrollView(
         slivers: [
           CupertinoSliverNavigationBar(
             largeTitle: Text(app.name),
@@ -105,7 +110,7 @@ class _AppDetailPageState extends State<AppDetailPage> {
                 children: [
                   InsetRow(
                     icon: CupertinoIcons.hand_draw,
-                    iconColor: QColors.tint,
+                    iconColor: QColors.breakColor,
                     title: 'Opens',
                     value: '$opens',
                     showChevron: false,
@@ -158,6 +163,7 @@ class _AppDetailPageState extends State<AppDetailPage> {
             ]),
           ),
         ],
+        ),
       ),
     );
   }

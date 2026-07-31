@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/widgets/inset_list.dart';
@@ -20,14 +21,18 @@ class AboutPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.tint.resolveFrom(context);
+    final brightness = MediaQuery.platformBrightnessOf(context);
     return CupertinoPageScaffold(
-      backgroundColor: QColors.bgGrouped.resolveFrom(context),
-      child: CustomScrollView(
+      backgroundColor: const Color(0x00000000),
+      child: GradientBackground(
+        gradient: QGradients.page(brightness),
+        child: CustomScrollView(
         slivers: [
           const CupertinoSliverNavigationBar(
             previousPageTitle: 'You',
             largeTitle: Text('About'),
+            backgroundColor: Color(0x00000000),
+            border: null,
           ),
           SliverList(
             delegate: SliverChildListDelegate([
@@ -40,11 +45,7 @@ class AboutPage extends StatelessWidget {
                       height: 72,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
-                        gradient: LinearGradient(
-                          colors: [tint, tint.withValues(alpha: 0.55)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        gradient: QGradients.warm,
                       ),
                       child: const Icon(
                         CupertinoIcons.timer,
@@ -92,7 +93,7 @@ class AboutPage extends StatelessWidget {
                   ),
                   InsetRow(
                     icon: CupertinoIcons.lock_shield_fill,
-                    iconColor: QColors.tint,
+                    iconColor: QColors.breakColor,
                     title: 'Privacy Policy',
                     onTap: () => _info(
                       context,
@@ -148,6 +149,7 @@ class AboutPage extends StatelessWidget {
             ]),
           ),
         ],
+        ),
       ),
     );
   }
@@ -160,13 +162,18 @@ class _DocPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brightness = MediaQuery.platformBrightnessOf(context);
     return CupertinoPageScaffold(
-      backgroundColor: QColors.bgGrouped.resolveFrom(context),
-      child: CustomScrollView(
+      backgroundColor: const Color(0x00000000),
+      child: GradientBackground(
+        gradient: QGradients.page(brightness),
+        child: CustomScrollView(
         slivers: [
           CupertinoSliverNavigationBar(
             previousPageTitle: 'About',
             largeTitle: Text(title),
+            backgroundColor: const Color(0x00000000),
+            border: null,
           ),
           SliverToBoxAdapter(
             child: Padding(
@@ -181,6 +188,7 @@ class _DocPage extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }

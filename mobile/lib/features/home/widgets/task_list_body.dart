@@ -23,13 +23,24 @@ class TaskListSliver extends ConsumerWidget {
   final List<Workspace> workspaces;
   final TaskBucket bucket;
 
-  static const _order = [TaskBucket.backlog, TaskBucket.week, TaskBucket.today, TaskBucket.done];
+  static const _order = [
+    TaskBucket.backlog,
+    TaskBucket.week,
+    TaskBucket.today,
+    TaskBucket.done,
+  ];
 
   (Color, String) _badge(BuildContext context, Task t) {
     final wsId = t.listId ?? t.workspaceId;
-    final ws = workspaces.where((w) => w.id == wsId).cast<Workspace?>().firstWhere((w) => true, orElse: () => null);
+    final ws = workspaces
+        .where((w) => w.id == wsId)
+        .cast<Workspace?>()
+        .firstWhere((w) => true, orElse: () => null);
     if (ws != null) return (ws.color, ws.badge);
-    return (QColors.tint, t.title.isEmpty ? '?' : t.title.substring(0, 1).toUpperCase());
+    return (
+      QColors.tint,
+      t.title.isEmpty ? '?' : t.title.substring(0, 1).toUpperCase(),
+    );
   }
 
   void _move(WidgetRef ref, Task t, int dir) {
@@ -58,12 +69,15 @@ class TaskListSliver extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.xs, QSpace.md, 140),
       sliver: SliverList.separated(
         itemCount: filtered.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(height: QSpace.sm),
+        separatorBuilder: (_, _) => const SizedBox(height: QSpace.sm),
         itemBuilder: (context, i) {
           if (i == 0) {
             return Padding(
               padding: const EdgeInsets.only(left: QSpace.xxs, bottom: 2),
-              child: Text('${filtered.length} scheduled tasks', style: QType.footnote),
+              child: Text(
+                '${filtered.length} scheduled tasks',
+                style: QType.footnote,
+              ),
             );
           }
           final t = filtered[i - 1];

@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/models/models.dart';
@@ -76,12 +77,18 @@ class _DistractionRulesPageState extends State<DistractionRulesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final brightness = MediaQuery.platformBrightnessOf(context);
     return CupertinoPageScaffold(
-      backgroundColor: QColors.bgGrouped.resolveFrom(context),
-      child: CustomScrollView(
+      backgroundColor: const Color(0x00000000),
+      child: GradientBackground(
+        gradient: QGradients.page(brightness),
+        child: CustomScrollView(
         slivers: [
           const CupertinoSliverNavigationBar(
-              previousPageTitle: 'You', largeTitle: Text('Distraction Rules')),
+              previousPageTitle: 'You',
+              largeTitle: Text('Distraction Rules'),
+              backgroundColor: Color(0x00000000),
+              border: null),
           SliverList(
             delegate: SliverChildListDelegate([
               const SizedBox(height: QSpace.xs),
@@ -100,7 +107,7 @@ class _DistractionRulesPageState extends State<DistractionRulesPage> {
                     ),
                   InsetRow(
                     icon: CupertinoIcons.add,
-                    iconColor: QColors.tint,
+                    iconColor: QColors.breakColor,
                     title: 'Add app',
                     showChevron: false,
                     onTap: _addApp,
@@ -137,7 +144,7 @@ class _DistractionRulesPageState extends State<DistractionRulesPage> {
                 children: [
                   InsetRow(
                     icon: CupertinoIcons.clock_fill,
-                    iconColor: QColors.focus,
+                    iconColor: QColors.breakColor,
                     title: 'Focus hours',
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -189,6 +196,7 @@ class _DistractionRulesPageState extends State<DistractionRulesPage> {
             ]),
           ),
         ],
+        ),
       ),
     );
   }
@@ -211,7 +219,7 @@ class _TimeChip extends StatelessWidget {
         ),
         child: Text(label,
             style: QType.subhead.copyWith(
-                color: QColors.tint.resolveFrom(context),
+                color: QColors.breakColor.resolveFrom(context),
                 fontFeatures: const [FontFeature.tabularFigures()])),
       ),
     );
@@ -227,7 +235,7 @@ class _DayDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.tint.resolveFrom(context);
+    final tint = QColors.breakColor.resolveFrom(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(

@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/widgets/inset_list.dart';
@@ -64,12 +65,19 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final brightness = MediaQuery.platformBrightnessOf(context);
     return CupertinoPageScaffold(
-      backgroundColor: QColors.bgGrouped.resolveFrom(context),
-      child: CustomScrollView(
+      backgroundColor: const Color(0x00000000),
+      child: GradientBackground(
+        gradient: QGradients.page(brightness),
+        child: CustomScrollView(
         slivers: [
           const CupertinoSliverNavigationBar(
-              previousPageTitle: 'You', largeTitle: Text('Notifications')),
+            previousPageTitle: 'You',
+            largeTitle: Text('Notifications'),
+            backgroundColor: Color(0x00000000),
+            border: null,
+          ),
           SliverList(
             delegate: SliverChildListDelegate([
               const SizedBox(height: QSpace.xs),
@@ -91,12 +99,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
                         ? null
                         : CupertinoButton(
                             padding: EdgeInsets.zero,
-                            minSize: 0,
                             onPressed: () {
                               HapticFeedback.selectionClick();
                               setState(() => _authorized = true);
                             },
                             child: const Text('Enable'),
+                            minimumSize: Size(0, 0),
                           ),
                   ),
                 ],
@@ -117,12 +125,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     iconColor: QColors.wellbeing,
                     title: 'Session complete',
                     showChevron: false,
-                    trailing: _sw(_sessionComplete,
-                        (v) => setState(() => _sessionComplete = v)),
+                    trailing: _sw(
+                      _sessionComplete,
+                      (v) => setState(() => _sessionComplete = v),
+                    ),
                   ),
                   InsetRow(
                     icon: CupertinoIcons.speaker_2_fill,
-                    iconColor: QColors.tint,
+                    iconColor: QColors.breakColor,
                     title: 'Sound',
                     showChevron: false,
                     trailing: _sw(_sound, (v) => setState(() => _sound = v)),
@@ -138,8 +148,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     iconColor: QColors.workspacePalette[2],
                     title: 'Quiet hours',
                     showChevron: false,
-                    trailing:
-                        _sw(_quietHours, (v) => setState(() => _quietHours = v)),
+                    trailing: _sw(
+                      _quietHours,
+                      (v) => setState(() => _quietHours = v),
+                    ),
                   ),
                   if (_quietHours)
                     InsetRow(
@@ -150,11 +162,18 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _Chip(label: _hm(_quietStart), onTap: () => _pickQuiet(true)),
+                          _Chip(
+                            label: _hm(_quietStart),
+                            onTap: () => _pickQuiet(true),
+                          ),
                           const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 6),
-                              child: Text('–')),
-                          _Chip(label: _hm(_quietEnd), onTap: () => _pickQuiet(false)),
+                            padding: EdgeInsets.symmetric(horizontal: 6),
+                            child: Text('–'),
+                          ),
+                          _Chip(
+                            label: _hm(_quietEnd),
+                            onTap: () => _pickQuiet(false),
+                          ),
                         ],
                       ),
                     ),
@@ -164,6 +183,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             ]),
           ),
         ],
+        ),
       ),
     );
   }
@@ -184,10 +204,13 @@ class _Chip extends StatelessWidget {
           color: QColors.fill.resolveFrom(context),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Text(label,
-            style: QType.subhead.copyWith(
-                color: QColors.tint.resolveFrom(context),
-                fontFeatures: const [FontFeature.tabularFigures()])),
+        child: Text(
+          label,
+          style: QType.subhead.copyWith(
+            color: QColors.breakColor.resolveFrom(context),
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
       ),
     );
   }

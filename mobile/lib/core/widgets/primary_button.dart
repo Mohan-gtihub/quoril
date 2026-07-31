@@ -13,6 +13,7 @@ class PrimaryButton extends StatelessWidget {
     required this.onPressed,
     this.style = QButtonStyle.filled,
     this.color,
+    this.foreground,
     this.icon,
     this.expand = true,
     this.height = 52,
@@ -23,6 +24,10 @@ class PrimaryButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final QButtonStyle style;
   final Color? color;
+
+  /// Overrides the label/icon ink. Used for high-contrast white pills on a
+  /// colored background (e.g. a white CTA with dark warm ink over a gradient).
+  final Color? foreground;
   final IconData? icon;
   final bool expand;
   final double height;
@@ -36,15 +41,15 @@ class PrimaryButton extends StatelessWidget {
     switch (style) {
       case QButtonStyle.filled:
         bg = tint;
-        fg = CupertinoColors.white;
+        fg = foreground ?? CupertinoColors.white;
         break;
       case QButtonStyle.tinted:
         bg = tint.withValues(alpha: 0.15);
-        fg = tint;
+        fg = foreground ?? tint;
         break;
       case QButtonStyle.plain:
         bg = const Color(0x00000000);
-        fg = tint;
+        fg = foreground ?? tint;
         break;
     }
 

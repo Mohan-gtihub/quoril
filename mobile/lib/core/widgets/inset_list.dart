@@ -97,7 +97,7 @@ class InsetRow extends StatelessWidget {
               padding: const EdgeInsets.only(left: QSpace.xs),
               child: Text(value!, style: QType.body.copyWith(color: QColors.labelSecondary)),
             ),
-          if (trailing != null) trailing!,
+          ?trailing,
           if (onTap != null && showChevron && trailing == null)
             Padding(
               padding: const EdgeInsets.only(left: QSpace.xxs),

@@ -6,7 +6,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/data/providers.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
+import '../../core/theme/gradients.dart';
 import '../../core/widgets/primary_button.dart';
+
+// ── Warm Aurora foreground palette (over QGradients.warm) ────────────────────
+const Color _fgPrimary = CupertinoColors.white;
+final Color _fgSecondary = CupertinoColors.white.withValues(alpha: 0.78);
+final Color _glassBorder = CupertinoColors.white.withValues(alpha: 0.24);
 
 /// Auth entry point — native iOS Sign In / Create Account wired to Supabase.
 ///
@@ -198,24 +204,22 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       backgroundColor: QColors.bgGrouped.resolveFrom(context),
-      child: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          CupertinoSliverNavigationBar(
-            largeTitle: Text(_isSignUp ? 'Create Account' : 'Sign In'),
-            backgroundColor:
-                QColors.bgGrouped.resolveFrom(context).withValues(alpha: 0.7),
-            border: null,
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  QSpace.lg, QSpace.xs, QSpace.lg, QSpace.xxl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildWordmark(context),
-                  const SizedBox(height: QSpace.lg),
+      child: GradientBackground(
+        gradient: QGradients.warm,
+        child: SafeArea(
+          bottom: false,
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                      QSpace.lg, QSpace.xl, QSpace.lg, QSpace.xxl),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildWordmark(context),
+                      const SizedBox(height: QSpace.lg),
                   _buildModeToggle(context),
                   const SizedBox(height: QSpace.xl),
                   _buildFields(context),
@@ -239,6 +243,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   const SizedBox(height: QSpace.xl),
                   PrimaryButton(
                     label: _isSignUp ? 'Create Account' : 'Sign In',
+                    color: CupertinoColors.white,
+                    foreground: const Color(0xFF2A0A06),
                     loading: _loading,
                     onPressed: _loading ? null : _submit,
                   ),
@@ -248,68 +254,92 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   _GoogleButton(
                     onPressed: _loading ? null : _continueWithGoogle,
                   ),
-                ],
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildWordmark(BuildContext context) {
-    final tint = QColors.tint.resolveFrom(context);
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            color: tint,
-            borderRadius: BorderRadius.circular(QRadius.glass),
-            boxShadow: QElevation.floating(context),
-          ),
-          child: const Icon(
-            CupertinoIcons.bolt_fill,
-            size: 36,
-            color: CupertinoColors.white,
+        // Compact brand row — mark + wordmark, left-aligned (editorial, not a
+        // centered logo box).
+        Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: CupertinoColors.white.withValues(alpha: 0.16),
+                border: Border.all(color: _glassBorder, width: 1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(CupertinoIcons.bolt_fill,
+                  size: 18, color: CupertinoColors.white),
+            ),
+            const SizedBox(width: QSpace.xs),
+            Text(
+              'Quoril',
+              style: QType.headline.copyWith(
+                color: _fgPrimary,
+                letterSpacing: 0.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: QSpace.xl),
+        Text(
+          _isSignUp ? 'Create your\naccount.' : 'Welcome\nback.',
+          style: QType.largeTitle.copyWith(
+            color: _fgPrimary,
+            fontSize: 40,
+            height: 1.05,
+            fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: QSpace.sm),
-        Text('Quoril', style: QType.title1),
-        const SizedBox(height: QSpace.xxs),
         Text(
           _isSignUp
-              ? 'Focus, protected. Start in seconds.'
-              : 'Welcome back to your focus.',
-          style: QType.subhead,
-          textAlign: TextAlign.center,
+              ? 'Set up your space to focus deeply and keep distractions out.'
+              : 'Pick up right where your focus left off.',
+          style: QType.body.copyWith(color: _fgSecondary, height: 1.3),
         ),
       ],
     );
   }
 
   Widget _buildModeToggle(BuildContext context) {
-    Widget seg(String label) => Padding(
+    Widget seg(_AuthMode m, String label) => Padding(
           padding: const EdgeInsets.symmetric(vertical: QSpace.xs),
           child: Text(
             label,
             style: QType.subhead.copyWith(
-              color: QColors.label.resolveFrom(context),
+              // White frosted thumb → dark warm ink when selected; translucent
+              // white when not. Keeps the amber accent reserved for elsewhere.
+              color: _mode == m ? const Color(0xFF2A0A06) : _fgSecondary,
               fontWeight: FontWeight.w600,
             ),
           ),
         );
     return CupertinoSlidingSegmentedControl<_AuthMode>(
       groupValue: _mode,
-      backgroundColor: QColors.secondaryFill.resolveFrom(context),
-      thumbColor: QColors.surface.resolveFrom(context),
+      backgroundColor: CupertinoColors.white.withValues(alpha: 0.12),
+      thumbColor: CupertinoColors.white,
       onValueChanged: (m) {
         if (m != null) _setMode(m);
       },
       children: {
-        _AuthMode.signIn: seg('Sign In'),
-        _AuthMode.signUp: seg('Create Account'),
+        _AuthMode.signIn: seg(_AuthMode.signIn, 'Sign In'),
+        _AuthMode.signUp: seg(_AuthMode.signUp, 'Create Account'),
       },
     );
   }
@@ -320,6 +350,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       children: [
         _AuthField(
           controller: _emailCtrl,
+          onGradient: true,
           placeholder: 'Email',
           icon: CupertinoIcons.mail,
           keyboardType: TextInputType.emailAddress,
@@ -335,6 +366,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         _AuthField(
           controller: _passwordCtrl,
           focusNode: _passwordFocus,
+          onGradient: true,
           placeholder: 'Password',
           icon: CupertinoIcons.lock,
           obscure: _obscure,
@@ -351,7 +383,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           },
           trailing: CupertinoButton(
             padding: EdgeInsets.zero,
-            minSize: 0,
+            minimumSize: const Size(0, 0),
             onPressed: () {
               HapticFeedback.selectionClick();
               setState(() => _obscure = !_obscure);
@@ -359,7 +391,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             child: Icon(
               _obscure ? CupertinoIcons.eye : CupertinoIcons.eye_slash,
               size: 20,
-              color: QColors.labelSecondary.resolveFrom(context),
+              color: _fgSecondary,
             ),
           ),
         ),
@@ -369,12 +401,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             alignment: Alignment.centerRight,
             child: CupertinoButton(
               padding: EdgeInsets.zero,
-              minSize: 0,
+              minimumSize: const Size(0, 0),
               onPressed: _openForgotSheet,
               child: Text(
                 'Forgot password?',
                 style: QType.footnote.copyWith(
-                  color: QColors.tint.resolveFrom(context),
+                  color: _fgPrimary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -386,13 +418,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 
   Widget _buildDivider(BuildContext context) {
-    final sep = QColors.separator.resolveFrom(context);
+    final sep = CupertinoColors.white.withValues(alpha: 0.24);
     return Row(
       children: [
         Expanded(child: Container(height: 1, color: sep)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
-          child: Text('or', style: QType.footnote),
+          child: Text('or', style: QType.footnote.copyWith(color: _fgSecondary)),
         ),
         Expanded(child: Container(height: 1, color: sep)),
       ],
@@ -408,6 +440,7 @@ class _AuthField extends StatelessWidget {
     required this.icon,
     this.focusNode,
     this.obscure = false,
+    this.onGradient = false,
     this.keyboardType,
     this.textInputAction,
     this.autofillHints,
@@ -422,6 +455,9 @@ class _AuthField extends StatelessWidget {
   final String placeholder;
   final IconData icon;
   final bool obscure;
+
+  /// Frosted-glass styling for use over a colored gradient (white ink).
+  final bool onGradient;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final Iterable<String>? autofillHints;
@@ -433,28 +469,52 @@ class _AuthField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasError = errorText != null;
-    final border = hasError
-        ? QColors.danger.resolveFrom(context)
-        : QColors.separator.resolveFrom(context);
+    const errorInk = Color(0xFFFFC2B5); // light red that reads on the gradient
+
+    final Color fill;
+    final Color borderColor;
+    final Color iconColor;
+    final Color textColor;
+    final Color placeholderColor;
+    final Color errorTextColor;
+    if (onGradient) {
+      fill = CupertinoColors.white.withValues(alpha: 0.12);
+      borderColor = hasError
+          ? errorInk
+          : CupertinoColors.white.withValues(alpha: 0.22);
+      iconColor = CupertinoColors.white.withValues(alpha: 0.7);
+      textColor = CupertinoColors.white;
+      placeholderColor = CupertinoColors.white.withValues(alpha: 0.45);
+      errorTextColor = errorInk;
+    } else {
+      fill = QColors.surface.resolveFrom(context);
+      borderColor = (hasError
+              ? QColors.danger.resolveFrom(context)
+              : QColors.separator.resolveFrom(context))
+          .withValues(alpha: hasError ? 1.0 : 0.6);
+      iconColor = QColors.labelSecondary.resolveFrom(context);
+      textColor = QColors.label.resolveFrom(context);
+      placeholderColor = QColors.labelTertiary.resolveFrom(context);
+      errorTextColor = QColors.danger.resolveFrom(context);
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          constraints: const BoxConstraints(minHeight: 44),
+          constraints: const BoxConstraints(minHeight: 52),
           decoration: BoxDecoration(
-            color: QColors.surface.resolveFrom(context),
+            color: fill,
             borderRadius: BorderRadius.circular(QRadius.row),
             border: Border.all(
-              color: border.withValues(alpha: hasError ? 1.0 : 0.6),
+              color: borderColor,
               width: hasError ? 1.5 : 1,
             ),
           ),
           padding: const EdgeInsets.symmetric(horizontal: QSpace.sm),
           child: Row(
             children: [
-              Icon(icon,
-                  size: 20,
-                  color: QColors.labelSecondary.resolveFrom(context)),
+              Icon(icon, size: 20, color: iconColor),
               const SizedBox(width: QSpace.sm),
               Expanded(
                 child: CupertinoTextField.borderless(
@@ -467,11 +527,11 @@ class _AuthField extends StatelessWidget {
                   autofillHints: autofillHints,
                   onChanged: onChanged,
                   onSubmitted: onSubmitted,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  style: QType.body,
-                  placeholderStyle: QType.body.copyWith(
-                    color: QColors.labelTertiary.resolveFrom(context),
-                  ),
+                  cursorColor: onGradient ? CupertinoColors.white : null,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  style: QType.body.copyWith(color: textColor),
+                  placeholderStyle:
+                      QType.body.copyWith(color: placeholderColor),
                 ),
               ),
               if (trailing != null) ...[
@@ -487,9 +547,7 @@ class _AuthField extends StatelessWidget {
             padding: const EdgeInsets.only(left: QSpace.xxs),
             child: Text(
               errorText!,
-              style: QType.caption.copyWith(
-                color: QColors.danger.resolveFrom(context),
-              ),
+              style: QType.caption.copyWith(color: errorTextColor),
             ),
           ),
         ],
@@ -526,9 +584,13 @@ class _PasswordRules extends StatelessWidget {
   }
 
   Widget _rule(BuildContext context, String label, bool met) {
-    final color = met
-        ? QColors.wellbeing.resolveFrom(context)
-        : QColors.labelTertiary.resolveFrom(context);
+    // On the warm gradient: met = white check, unmet = dim white.
+    final iconColor = met
+        ? CupertinoColors.white
+        : CupertinoColors.white.withValues(alpha: 0.4);
+    final textColor = met
+        ? CupertinoColors.white.withValues(alpha: 0.92)
+        : CupertinoColors.white.withValues(alpha: 0.55);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -536,17 +598,10 @@ class _PasswordRules extends StatelessWidget {
           Icon(
             met ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.circle,
             size: 16,
-            color: color,
+            color: iconColor,
           ),
           const SizedBox(width: QSpace.xs),
-          Text(
-            label,
-            style: QType.footnote.copyWith(
-              color: met
-                  ? QColors.label.resolveFrom(context)
-                  : QColors.labelSecondary.resolveFrom(context),
-            ),
-          ),
+          Text(label, style: QType.footnote.copyWith(color: textColor)),
         ],
       ),
     );
@@ -566,13 +621,13 @@ class _GoogleButton extends StatelessWidget {
       child: CupertinoButton(
         padding: EdgeInsets.zero,
         borderRadius: BorderRadius.circular(QRadius.capsule),
-        color: QColors.surface.resolveFrom(context),
+        color: CupertinoColors.white.withValues(alpha: 0.12),
         onPressed: onPressed,
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(QRadius.capsule),
             border: Border.all(
-              color: QColors.separator.resolveFrom(context),
+              color: CupertinoColors.white.withValues(alpha: 0.22),
               width: 1,
             ),
           ),
@@ -581,13 +636,21 @@ class _GoogleButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const _GoogleGlyph(size: 20),
+              // White chip keeps Google's multi-color 'G' legible on glass.
+              Container(
+                width: 26,
+                height: 26,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: CupertinoColors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: const _GoogleGlyph(size: 16),
+              ),
               const SizedBox(width: QSpace.sm),
               Text(
                 'Continue with Google',
-                style: QType.headline.copyWith(
-                  color: QColors.label.resolveFrom(context),
-                ),
+                style: QType.headline.copyWith(color: CupertinoColors.white),
               ),
             ],
           ),

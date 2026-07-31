@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/data/mock_data.dart';
 import '../../core/data/providers.dart';
 import '../../core/models/models.dart';
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/widgets/common.dart';
@@ -45,6 +46,10 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
   int _remaining = _defaultSeconds;
   int _saves = 0;
 
+  /// Elapsed (in seconds) at the start of the current lap/block; Lap Time is
+  /// measured from here so it resets whenever the block is reset.
+  int _lapStartElapsed = 0;
+
   // Overlays
   bool _showNudge = false;
   bool _showFriction = false;
@@ -65,6 +70,9 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
   }
 
   int get _elapsed => _totalSeconds - _remaining;
+
+  /// Time since the current lap/block started.
+  int get _lapElapsed => (_elapsed - _lapStartElapsed).clamp(0, _totalSeconds);
 
   // ---- session control ----------------------------------------------------
 
@@ -96,6 +104,17 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
         _runTicker();
       }
     });
+  }
+
+  /// Restart the current block: refill the timer and begin a fresh lap.
+  void _reset() {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _remaining = _totalSeconds;
+      _lapStartElapsed = 0;
+      _phase = _Phase.running;
+    });
+    _runTicker();
   }
 
   Future<void> _finish() async {
@@ -170,6 +189,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
       _showBreak = false;
       _remaining = _defaultSeconds;
       _totalSeconds = _defaultSeconds;
+      _lapStartElapsed = 0;
       _phase = _Phase.running;
     });
     _runTicker();
@@ -242,6 +262,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
           setState(() {
             _totalSeconds = _defaultSeconds;
             _remaining = _defaultSeconds;
+            _lapStartElapsed = 0;
             _saves = 0;
             _phase = _Phase.running;
           });
@@ -255,54 +276,49 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final progress = _totalSeconds == 0 ? 0.0 : _remaining / _totalSeconds;
+    // Stopwatch look: progress fills as time elapses.
+    final progress = _totalSeconds == 0 ? 0.0 : _elapsed / _totalSeconds;
     final title = widget.task?.title ?? 'Focus session';
 
     return CupertinoPageScaffold(
       backgroundColor: QColors.bg.resolveFrom(context),
       child: Stack(
         children: [
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: QSpace.lg),
-              child: Column(
-                children: [
-                  _TopBar(onClose: _requestClose, onMenu: _openMenu),
-                  const Spacer(),
-                  CircularTimer(
-                    progress: progress,
-                    label: fmtClock(_remaining),
-                    sublabel: _phase == _Phase.paused ? 'Paused' : 'Deep Work',
-                  ),
-                  const SizedBox(height: QSpace.xl),
-                  _TaskChip(title: title, hasTask: widget.task != null),
-                  const SizedBox(height: QSpace.md),
-                  _ProtectedRow(saves: _saves),
-                  const Spacer(),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ControlCapsule(
-                          icon: _phase == _Phase.paused
-                              ? CupertinoIcons.play_fill
-                              : CupertinoIcons.pause_fill,
-                          label: _phase == _Phase.paused ? 'Resume' : 'Pause',
-                          onTap: _togglePause,
-                        ),
-                      ),
-                      const SizedBox(width: QSpace.sm),
-                      Expanded(
-                        child: _ControlCapsule(
-                          icon: CupertinoIcons.checkmark_alt,
-                          label: 'Done',
-                          color: QColors.wellbeing,
-                          onTap: _finish,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: QSpace.xl),
-                ],
+          GradientBackground(
+            gradient: QGradients.warm,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: QSpace.lg),
+                child: Column(
+                  children: [
+                    _TopBar(onClose: _requestClose, onMenu: _openMenu),
+                    const Spacer(),
+                    ClockFaceTimer(
+                      progress: progress,
+                      label: fmtHms(_elapsed),
+                      sublabel:
+                          _phase == _Phase.paused ? 'Paused' : 'Deep Work',
+                    ),
+                    const SizedBox(height: QSpace.xl),
+                    _TaskChip(title: title, hasTask: widget.task != null),
+                    const SizedBox(height: QSpace.lg),
+                    _LapTotalRow(
+                      lap: _lapElapsed,
+                      total: _elapsed,
+                      lapStart: _lapStartElapsed,
+                    ),
+                    const SizedBox(height: QSpace.md),
+                    _ProtectedRow(saves: _saves),
+                    const Spacer(),
+                    _TransportPill(
+                      paused: _phase == _Phase.paused,
+                      onPlayPause: _togglePause,
+                      onRecord: _finish,
+                      onReset: _reset,
+                    ),
+                    const SizedBox(height: QSpace.xl),
+                  ],
+                ),
               ),
             ),
           ),
@@ -384,8 +400,7 @@ class _CircleGlassButton extends StatelessWidget {
         child: SizedBox(
           width: 44,
           height: 44,
-          child: Icon(icon,
-              size: 20, color: QColors.label.resolveFrom(context)),
+          child: Icon(icon, size: 20, color: CupertinoColors.white),
         ),
       ),
     );
@@ -403,13 +418,11 @@ class _TaskChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.tint.resolveFrom(context);
     return Container(
       padding:
           const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: QSpace.xs),
       decoration: BoxDecoration(
-        color: (hasTask ? tint : QColors.fill.resolveFrom(context))
-            .withValues(alpha: hasTask ? 0.12 : 1.0),
+        color: CupertinoColors.white.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(QRadius.capsule),
       ),
       child: Row(
@@ -420,7 +433,7 @@ class _TaskChip extends StatelessWidget {
                 ? CupertinoIcons.checkmark_square
                 : CupertinoIcons.circle_grid_hex,
             size: 16,
-            color: hasTask ? tint : QColors.labelSecondary.resolveFrom(context),
+            color: CupertinoColors.white.withValues(alpha: 0.9),
           ),
           const SizedBox(width: 6),
           Flexible(
@@ -429,13 +442,98 @@ class _TaskChip extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: QType.subhead.copyWith(
                 fontWeight: FontWeight.w600,
-                color:
-                    hasTask ? tint : QColors.labelSecondary.resolveFrom(context),
+                color: CupertinoColors.white,
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// "Lap Time / Total Time" — two columns, each with TWO tabular-figure rows
+/// (current + a prior/last value), like a small lap list.
+class _LapTotalRow extends StatelessWidget {
+  const _LapTotalRow({
+    required this.lap,
+    required this.total,
+    required this.lapStart,
+  });
+  final int lap;
+  final int total;
+
+  /// Elapsed at which the current lap began — used as the "previous" row.
+  final int lapStart;
+
+  @override
+  Widget build(BuildContext context) {
+    // Second row: for Lap show where the lap started; for Total show the
+    // portion before the current lap. Kept simple + non-crashing.
+    final prevTotal = (total - lap).clamp(0, total);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _TimeColumn(
+          label: 'Lap Time',
+          primary: fmtHms(lap),
+          secondary: fmtHms(lapStart),
+        ),
+        Container(
+          width: 1,
+          height: 56,
+          margin: const EdgeInsets.symmetric(horizontal: QSpace.xl),
+          color: CupertinoColors.white.withValues(alpha: 0.2),
+        ),
+        _TimeColumn(
+          label: 'Total Time',
+          primary: fmtHms(total),
+          secondary: fmtHms(prevTotal),
+        ),
+      ],
+    );
+  }
+}
+
+class _TimeColumn extends StatelessWidget {
+  const _TimeColumn({
+    required this.label,
+    required this.primary,
+    required this.secondary,
+  });
+  final String label;
+  final String primary;
+  final String secondary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: QType.caption.copyWith(
+            letterSpacing: 1.0,
+            fontWeight: FontWeight.w600,
+            color: CupertinoColors.white.withValues(alpha: 0.6),
+          ),
+        ),
+        const SizedBox(height: QSpace.xxs),
+        Text(
+          primary,
+          style: QType.title3.copyWith(
+            color: CupertinoColors.white,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          secondary,
+          style: QType.subhead.copyWith(
+            color: CupertinoColors.white.withValues(alpha: 0.55),
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -446,48 +544,118 @@ class _ProtectedRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final green = QColors.wellbeing.resolveFrom(context);
+    const white = CupertinoColors.white;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(CupertinoIcons.shield_fill, size: 15, color: green),
+        Icon(CupertinoIcons.shield_fill,
+            size: 15, color: white.withValues(alpha: 0.85)),
         const SizedBox(width: 6),
         Text('Protected · $saves saves',
-            style: QType.subhead
-                .copyWith(color: green, fontWeight: FontWeight.w600)),
+            style: QType.subhead.copyWith(
+                color: white.withValues(alpha: 0.85),
+                fontWeight: FontWeight.w600)),
       ],
     );
   }
 }
 
-class _ControlCapsule extends StatelessWidget {
-  const _ControlCapsule({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.color,
+/// Translucent rounded pill holding three transport controls: play/pause
+/// (outlined) · a white filled RECORD button with an orange dot · reset
+/// (outlined circular arrow).
+class _TransportPill extends StatelessWidget {
+  const _TransportPill({
+    required this.paused,
+    required this.onPlayPause,
+    required this.onRecord,
+    required this.onReset,
   });
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final Color? color;
+  final bool paused;
+  final VoidCallback onPlayPause;
+  final VoidCallback onRecord;
+  final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) {
-    final c = (color ?? QColors.label).resolveFrom(context);
+    return GlassSurface(
+      radius: QRadius.capsule,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+            horizontal: QSpace.xl, vertical: QSpace.md),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _OutlinedControl(
+              icon: paused ? CupertinoIcons.play_fill : CupertinoIcons.pause_fill,
+              onTap: onPlayPause,
+            ),
+            const SizedBox(width: QSpace.xl),
+            _RecordButton(onTap: onRecord),
+            const SizedBox(width: QSpace.xl),
+            _OutlinedControl(
+              icon: CupertinoIcons.arrow_counterclockwise,
+              onTap: onReset,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A thin white-outlined round control (play / reset).
+class _OutlinedControl extends StatelessWidget {
+  const _OutlinedControl({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: GlassSurface(
-        radius: QRadius.capsule,
-        padding: const EdgeInsets.symmetric(vertical: QSpace.md),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 18, color: c),
-            const SizedBox(width: QSpace.xs),
-            Text(label, style: QType.headline.copyWith(color: c)),
-          ],
+      child: Container(
+        width: 52,
+        height: 52,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: CupertinoColors.white.withValues(alpha: 0.85),
+            width: 1.5,
+          ),
+        ),
+        child: Icon(icon, size: 22, color: CupertinoColors.white),
+      ),
+    );
+  }
+}
+
+/// White filled RECORD button with a centered orange dot.
+class _RecordButton extends StatelessWidget {
+  const _RecordButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 64,
+        height: 64,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: CupertinoColors.white,
+        ),
+        child: Container(
+          width: 22,
+          height: 22,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Color(0xFFF37A1E),
+          ),
         ),
       ),
     );

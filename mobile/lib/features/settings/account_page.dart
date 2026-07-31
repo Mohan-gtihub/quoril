@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/data/providers.dart';
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/widgets/inset_list.dart';
@@ -52,13 +53,19 @@ class AccountPage extends ConsumerWidget {
     final fullName = (profile?['full_name'] as String?)?.trim();
     final displayName = (fullName != null && fullName.isNotEmpty) ? fullName : '—';
 
+    final brightness = MediaQuery.platformBrightnessOf(context);
     return CupertinoPageScaffold(
-      backgroundColor: QColors.bgGrouped.resolveFrom(context),
-      child: CustomScrollView(
+      backgroundColor: const Color(0x00000000),
+      child: GradientBackground(
+        gradient: QGradients.page(brightness),
+        child: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
           const CupertinoSliverNavigationBar(
-              previousPageTitle: 'You', largeTitle: Text('Account')),
+              previousPageTitle: 'You',
+              largeTitle: Text('Account'),
+              backgroundColor: Color(0x00000000),
+              border: null),
           SliverList(
             delegate: SliverChildListDelegate([
               const SizedBox(height: QSpace.xs),
@@ -72,7 +79,7 @@ class AccountPage extends ConsumerWidget {
                       showChevron: false),
                   InsetRow(
                       icon: CupertinoIcons.mail_solid,
-                      iconColor: QColors.tint,
+                      iconColor: QColors.breakColor,
                       title: 'Email',
                       value: email,
                       showChevron: false),
@@ -168,6 +175,7 @@ class AccountPage extends ConsumerWidget {
             ]),
           ),
         ],
+        ),
       ),
     );
   }
@@ -181,7 +189,7 @@ class _PlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.tint.resolveFrom(context);
+    final tint = QColors.breakColor.resolveFrom(context);
     return Container(
       padding: const EdgeInsets.all(QSpace.md),
       decoration: BoxDecoration(

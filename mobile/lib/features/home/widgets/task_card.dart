@@ -7,7 +7,9 @@ import '../../../core/models/models.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
 
-/// Elevated Blitzit-style task card (no border, depth via layering).
+/// A single task row — a clean, native inset card built on [CupertinoListTile].
+/// Leading check circle, title (+ priority flame), an estimate/subtask subtitle,
+/// and a small list badge. Reorder + edit + delete live in the context menu.
 class TaskCard extends StatefulWidget {
   const TaskCard({
     super.key,
@@ -41,22 +43,21 @@ class TaskCard extends StatefulWidget {
 class _TaskCardState extends State<TaskCard> {
   bool _expanded = false;
 
-  String _estLabel() {
+  String? _metaLine() {
+    final parts = <String>[];
     final e = widget.task.estimateMinutes;
-    if (e == null) return 'No est';
-    final h = e ~/ 60;
-    final m = e % 60;
-    if (h > 0) return m > 0 ? 'Est ${h}h ${m}m' : 'Est ${h}h';
-    return 'Est ${m}m';
-  }
-
-  String _spentLabel() {
+    if (e != null) {
+      final h = e ~/ 60;
+      final m = e % 60;
+      parts.add(h > 0 ? (m > 0 ? 'Est ${h}h ${m}m' : 'Est ${h}h') : 'Est ${m}m');
+    }
     final s = widget.task.spentSeconds;
-    if (s == 0) return '';
-    final m = s ~/ 60;
-    final h = m ~/ 60;
-    if (h > 0) return '${h}h ${m % 60}m done';
-    return '${m}m done';
+    if (s > 0) {
+      final m = s ~/ 60;
+      final h = m ~/ 60;
+      parts.add(h > 0 ? '${h}h ${m % 60}m done' : '${m}m done');
+    }
+    return parts.isEmpty ? null : parts.join('  ·  ');
   }
 
   @override
@@ -64,138 +65,64 @@ class _TaskCardState extends State<TaskCard> {
     final t = widget.task;
     final done = t.done;
     final hasSubs = t.subtasks.isNotEmpty;
+    final accent = t.priority.color.resolveFrom(context);
+    final radius = BorderRadius.circular(QRadius.taskCard);
+    final meta = _metaLine();
+    final isHot = t.priority == Priority.high || t.priority == Priority.critical;
 
-    final card = Container(
-      decoration: BoxDecoration(
-        color: QColors.surface.resolveFrom(context),
-        borderRadius: BorderRadius.circular(QRadius.taskCard),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: QSpace.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final tile = CupertinoListTile(
+      padding: const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: QSpace.xs),
+      backgroundColor: QColors.surface.resolveFrom(context),
+      backgroundColorActivated: QColors.secondaryFill.resolveFrom(context),
+      leading: _CheckCircle(done: done, onTap: widget.onToggle),
+      title: Row(
         children: [
-          Row(
-            children: [
-              _CheckCircle(done: done, onTap: widget.onToggle),
-              const SizedBox(width: QSpace.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        if (t.priority == Priority.high || t.priority == Priority.critical) ...[
-                          Icon(CupertinoIcons.flame_fill, size: 13, color: t.priority.color.resolveFrom(context)),
-                          const SizedBox(width: 4),
-                        ],
-                        Flexible(
-                          child: Text(
-                            t.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: QType.callout.copyWith(
-                              fontWeight: FontWeight.w600,
-                              decoration: done ? TextDecoration.lineThrough : null,
-                              color: done ? QColors.labelTertiary.resolveFrom(context) : QColors.label.resolveFrom(context),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: QSpace.xs),
-              _MoveArrow(icon: CupertinoIcons.chevron_left, onTap: widget.onMovePrev),
-              _MoveArrow(icon: CupertinoIcons.chevron_right, onTap: widget.onMoveNext),
-              const SizedBox(width: QSpace.xs),
-              _ListBadge(color: widget.badgeColor, letter: widget.badgeLetter),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.only(left: 34),
-            child: Row(
-              children: [
-                Text(
-                  _estLabel(),
-                  style: QType.caption.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
-                ),
-                const Spacer(),
-                if (_spentLabel().isNotEmpty)
-                  Text(
-                    _spentLabel(),
-                    style: QType.caption.copyWith(
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                      color: QColors.tint.resolveFrom(context),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          if (hasSubs) ...[
-            const SizedBox(height: 6),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                HapticFeedback.selectionClick();
-                setState(() => _expanded = !_expanded);
-              },
-              child: Padding(
-                padding: const EdgeInsets.only(left: 34, top: 2, bottom: 2),
-                child: Row(
-                  children: [
-                    _RingPainter.widget(context, t.subtaskDone, t.subtasks.length),
-                    const SizedBox(width: QSpace.xs),
-                    Text('${t.subtaskDone}/${t.subtasks.length} Subtasks', style: QType.caption),
-                    const SizedBox(width: 4),
-                    Icon(
-                      _expanded ? CupertinoIcons.chevron_up : CupertinoIcons.chevron_down,
-                      size: 12,
-                      color: QColors.labelTertiary.resolveFrom(context),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (_expanded)
-              Padding(
-                padding: const EdgeInsets.only(left: 34, top: 4),
-                child: Column(
-                  children: [
-                    for (final s in t.subtasks)
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => widget.onSubtaskToggle(s),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 5),
-                          child: Row(
-                            children: [
-                              Icon(
-                                s.done ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.circle,
-                                size: 18,
-                                color: s.done ? QColors.tint.resolveFrom(context) : QColors.labelTertiary.resolveFrom(context),
-                              ),
-                              const SizedBox(width: QSpace.xs),
-                              Expanded(
-                                child: Text(
-                                  s.title,
-                                  style: QType.footnote.copyWith(
-                                    decoration: s.done ? TextDecoration.lineThrough : null,
-                                    color: s.done ? QColors.labelTertiary.resolveFrom(context) : QColors.labelSecondary.resolveFrom(context),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+          if (isHot) ...[
+            Icon(CupertinoIcons.flame_fill, size: 13, color: accent),
+            const SizedBox(width: 5),
           ],
+          Flexible(
+            child: Text(
+              t.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: QType.body.copyWith(
+                fontWeight: FontWeight.w600,
+                decoration: done ? TextDecoration.lineThrough : null,
+                color: done
+                    ? QColors.labelTertiary.resolveFrom(context)
+                    : QColors.label.resolveFrom(context),
+              ),
+            ),
+          ),
         ],
+      ),
+      subtitle: meta == null
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                meta,
+                style: QType.footnote.copyWith(
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+      trailing: _ListBadge(color: widget.badgeColor, letter: widget.badgeLetter),
+      onTap: widget.onTap,
+    );
+
+    final card = ClipRRect(
+      borderRadius: radius,
+      child: Container(
+        color: QColors.surface.resolveFrom(context),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            tile,
+            if (hasSubs) _subtasks(context, t),
+          ],
+        ),
       ),
     );
 
@@ -210,14 +137,24 @@ class _TaskCardState extends State<TaskCard> {
           trailingIcon: CupertinoIcons.pencil,
           child: const Text('Edit'),
         ),
-        CupertinoContextMenuAction(
-          onPressed: () {
-            Navigator.pop(context);
-            widget.onMoveNext?.call();
-          },
-          trailingIcon: CupertinoIcons.arrow_right,
-          child: const Text('Move'),
-        ),
+        if (widget.onMovePrev != null)
+          CupertinoContextMenuAction(
+            onPressed: () {
+              Navigator.pop(context);
+              widget.onMovePrev!();
+            },
+            trailingIcon: CupertinoIcons.arrow_left,
+            child: const Text('Move back'),
+          ),
+        if (widget.onMoveNext != null)
+          CupertinoContextMenuAction(
+            onPressed: () {
+              Navigator.pop(context);
+              widget.onMoveNext!();
+            },
+            trailingIcon: CupertinoIcons.arrow_right,
+            child: const Text('Move forward'),
+          ),
         CupertinoContextMenuAction(
           isDestructiveAction: true,
           onPressed: () {
@@ -229,14 +166,86 @@ class _TaskCardState extends State<TaskCard> {
         ),
       ],
       builder: (context, animation) {
-        // While previewing, drop the tap gesture.
         final previewing = animation.value >= CupertinoContextMenu.animationOpensAt;
-        return GestureDetector(
-          onTap: previewing ? null : widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: card,
-        );
+        // During the context-menu preview the card is lifted onto a plain
+        // background — give it a rounded clip so it doesn't show square corners.
+        if (previewing) return card;
+        return card;
       },
+    );
+  }
+
+  Widget _subtasks(BuildContext context, Task t) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(height: 0.5, color: QColors.separator.resolveFrom(context).withValues(alpha: 0.5)),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            setState(() => _expanded = !_expanded);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: QSpace.sm),
+            child: Row(
+              children: [
+                _SubtaskRing(done: t.subtaskDone, total: t.subtasks.length),
+                const SizedBox(width: QSpace.xs),
+                Text(
+                  '${t.subtaskDone}/${t.subtasks.length} subtasks',
+                  style: QType.footnote,
+                ),
+                const Spacer(),
+                Icon(
+                  _expanded ? CupertinoIcons.chevron_up : CupertinoIcons.chevron_down,
+                  size: 13,
+                  color: QColors.labelTertiary.resolveFrom(context),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_expanded)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(QSpace.md, 0, QSpace.md, QSpace.xs),
+            child: Column(
+              children: [
+                for (final s in t.subtasks)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => widget.onSubtaskToggle(s),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          Icon(
+                            s.done ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.circle,
+                            size: 18,
+                            color: s.done
+                                ? QColors.wellbeing.resolveFrom(context)
+                                : QColors.labelTertiary.resolveFrom(context),
+                          ),
+                          const SizedBox(width: QSpace.sm),
+                          Expanded(
+                            child: Text(
+                              s.title,
+                              style: QType.subhead.copyWith(
+                                decoration: s.done ? TextDecoration.lineThrough : null,
+                                color: s.done
+                                    ? QColors.labelTertiary.resolveFrom(context)
+                                    : QColors.label.resolveFrom(context),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
@@ -255,48 +264,21 @@ class _CheckCircle extends StatelessWidget {
         onTap();
       },
       child: SizedBox(
-        width: 30,
-        height: 30,
+        width: 28,
+        height: 28,
         child: Center(
           child: AnimatedSwitcher(
             duration: QMotion.fast,
             transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
             child: Icon(
-              done ? CupertinoIcons.checkmark_alt_circle_fill : CupertinoIcons.circle,
+              done ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.circle,
               key: ValueKey(done),
               size: 26,
-              color: done ? QColors.wellbeing.resolveFrom(context) : QColors.labelTertiary.resolveFrom(context),
+              color: done
+                  ? QColors.wellbeing.resolveFrom(context)
+                  : QColors.labelTertiary.resolveFrom(context),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MoveArrow extends StatelessWidget {
-  const _MoveArrow({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: enabled
-          ? () {
-              HapticFeedback.selectionClick();
-              onTap!();
-            }
-          : null,
-      child: SizedBox(
-        width: 30,
-        height: 44,
-        child: Icon(
-          icon,
-          size: 18,
-          color: enabled ? QColors.labelSecondary.resolveFrom(context) : QColors.labelTertiary.resolveFrom(context).withValues(alpha: 0.35),
         ),
       ),
     );
@@ -327,25 +309,32 @@ class _ListBadge extends StatelessWidget {
   }
 }
 
-class _RingPainter extends CustomPainter {
-  _RingPainter(this.frac, this.track, this.fill);
-  final double frac;
-  final Color track;
-  final Color fill;
+class _SubtaskRing extends StatelessWidget {
+  const _SubtaskRing({required this.done, required this.total});
+  final int done;
+  final int total;
 
-  static Widget widget(BuildContext context, int done, int total) {
+  @override
+  Widget build(BuildContext context) {
     return SizedBox(
       width: 14,
       height: 14,
       child: CustomPaint(
-        painter: _RingPainter(
+        painter: _SubtaskRingPainter(
           total == 0 ? 0 : done / total,
           QColors.fill.resolveFrom(context),
-          QColors.tint.resolveFrom(context),
+          QColors.wellbeing.resolveFrom(context),
         ),
       ),
     );
   }
+}
+
+class _SubtaskRingPainter extends CustomPainter {
+  _SubtaskRingPainter(this.frac, this.track, this.fill);
+  final double frac;
+  final Color track;
+  final Color fill;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -365,5 +354,6 @@ class _RingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RingPainter old) => old.frac != frac || old.track != track || old.fill != fill;
+  bool shouldRepaint(covariant _SubtaskRingPainter old) =>
+      old.frac != frac || old.track != track || old.fill != fill;
 }

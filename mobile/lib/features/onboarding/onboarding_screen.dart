@@ -3,10 +3,25 @@ import 'package:flutter/services.dart';
 
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
+import '../../core/theme/gradients.dart';
 import '../../core/models/models.dart';
 import '../../core/widgets/primary_button.dart';
 import '../auth/sign_in_screen.dart';
 import 'widgets/onboarding_chip.dart';
+
+// ── Warm Aurora foreground palette ──────────────────────────────────────────
+// These screens are full-bleed over QGradients.warm, so foreground is white /
+// translucent-white with a warm-amber accent for selection.
+const Color _warmAccent = Color(0xFFFF9E3D);
+
+/// Dark warm ink used on white/amber surfaces for high contrast.
+const Color _darkInk = Color(0xFF2A0A06);
+
+const Color _fgPrimary = CupertinoColors.white;
+final Color _fgSecondary = CupertinoColors.white.withValues(alpha: 0.72);
+final Color _fgTertiary = CupertinoColors.white.withValues(alpha: 0.5);
+final Color _glassFill = CupertinoColors.white.withValues(alpha: 0.12);
+final Color _glassBorder = CupertinoColors.white.withValues(alpha: 0.22);
 
 /// First-run flow. 7 steps: welcome, distractions, goal, intensity,
 /// Screen Time explainer, notifications explainer, recap. Native paged flow
@@ -65,9 +80,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _finish() {
     HapticFeedback.lightImpact();
-    Navigator.of(context).pushReplacement(
-      CupertinoPageRoute(builder: (_) => const SignInScreen()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(CupertinoPageRoute(builder: (_) => const SignInScreen()));
   }
 
   // Skip is shown on the three setup steps (distractions, goal, intensity).
@@ -75,8 +90,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.tint.resolveFrom(context);
-
     final ctaLabel = switch (_page) {
       0 => 'Get Started',
       4 => 'Allow Screen Time',
@@ -87,12 +100,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     return CupertinoPageScaffold(
       backgroundColor: QColors.bg.resolveFrom(context),
-      child: SafeArea(
+      child: GradientBackground(
+        gradient: QGradients.warm,
+        child: SafeArea(
         child: Column(
           children: [
             // Top bar: page dots + Skip.
             Padding(
-              padding: const EdgeInsets.fromLTRB(QSpace.lg, QSpace.sm, QSpace.lg, 0),
+              padding: const EdgeInsets.fromLTRB(
+                QSpace.lg,
+                QSpace.sm,
+                QSpace.lg,
+                0,
+              ),
               child: Row(
                 children: [
                   _PageDots(count: _pageCount, active: _page),
@@ -102,9 +122,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     opacity: _showSkip ? 1 : 0,
                     child: CupertinoButton(
                       padding: EdgeInsets.zero,
-                      minSize: 44,
+                      minimumSize: const Size(44, 44),
                       onPressed: _showSkip ? _skip : null,
-                      child: Text('Skip', style: QType.body.copyWith(color: tint)),
+                      child: Text(
+                        'Skip',
+                        style: QType.body.copyWith(color: _fgSecondary),
+                      ),
                     ),
                   ),
                 ],
@@ -142,7 +165,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   const _PermissionPage(
                     icon: CupertinoIcons.shield_lefthalf_fill,
-                    accent: CupertinoColors.systemBlue,
                     title: 'Screen Time Access',
                     subtitle:
                         'Quoril uses Screen Time to gently step in when a distracting app pulls you away.',
@@ -154,7 +176,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   const _PermissionPage(
                     icon: CupertinoIcons.bell_fill,
-                    accent: CupertinoColors.systemBlue,
                     title: 'Notifications',
                     subtitle:
                         'A well-timed nudge is the whole point. We keep them rare and meaningful.',
@@ -174,15 +195,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             // Footer CTAs.
             Padding(
-              padding: const EdgeInsets.fromLTRB(QSpace.lg, QSpace.sm, QSpace.lg, QSpace.md),
+              padding: const EdgeInsets.fromLTRB(
+                QSpace.lg,
+                QSpace.sm,
+                QSpace.lg,
+                QSpace.md,
+              ),
               child: Column(
                 children: [
-                  PrimaryButton(label: ctaLabel, onPressed: _next),
+                  PrimaryButton(
+                    label: ctaLabel,
+                    color: CupertinoColors.white,
+                    foreground: _darkInk,
+                    onPressed: _next,
+                  ),
                   if (_page == 4 || _page == 5) ...[
                     const SizedBox(height: QSpace.xs),
                     PrimaryButton(
                       label: 'Not now',
                       style: QButtonStyle.plain,
+                      foreground: CupertinoColors.white,
                       onPressed: _next,
                     ),
                   ],
@@ -190,6 +222,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -205,8 +238,6 @@ class _PageDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.tint.resolveFrom(context);
-    final off = QColors.separator.resolveFrom(context);
     return Row(
       children: List.generate(count, (i) {
         final on = i == active;
@@ -217,7 +248,9 @@ class _PageDots extends StatelessWidget {
           width: on ? 20 : 7,
           height: 7,
           decoration: BoxDecoration(
-            color: on ? tint : off.withValues(alpha: 0.6),
+            color: on
+                ? CupertinoColors.white
+                : CupertinoColors.white.withValues(alpha: 0.35),
             borderRadius: BorderRadius.circular(QRadius.capsule),
           ),
         );
@@ -244,7 +277,12 @@ class _PageFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(QSpace.lg, QSpace.md, QSpace.lg, QSpace.xl),
+      padding: const EdgeInsets.fromLTRB(
+        QSpace.lg,
+        QSpace.md,
+        QSpace.lg,
+        QSpace.xl,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -253,14 +291,19 @@ class _PageFrame extends StatelessWidget {
             Center(child: hero!),
             const SizedBox(height: QSpace.xl),
           ],
-          Text(title, style: QType.title1),
+          Text(
+            title,
+            style: QType.largeTitle.copyWith(
+              color: _fgPrimary,
+              height: 1.05,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           if (subtitle != null) ...[
-            const SizedBox(height: QSpace.xs),
+            const SizedBox(height: QSpace.sm),
             Text(
               subtitle!,
-              style: QType.body.copyWith(
-                color: QColors.labelSecondary.resolveFrom(context),
-              ),
+              style: QType.body.copyWith(color: _fgSecondary, height: 1.3),
             ),
           ],
           const SizedBox(height: QSpace.xl),
@@ -278,41 +321,41 @@ class _WelcomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.tint.resolveFrom(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: QSpace.lg),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Quoril mark — single soft floating tier, systemBlue.
+          // Quoril mark — frosted white glass tier on the warm wash.
           Container(
-            width: 128,
-            height: 128,
+            width: 88,
+            height: 88,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: tint,
+              color: CupertinoColors.white.withValues(alpha: 0.16),
+              border: Border.all(color: _glassBorder, width: 1),
               boxShadow: QElevation.floating(context),
             ),
             child: const Icon(
               CupertinoIcons.scope,
-              size: 60,
+              size: 44,
               color: CupertinoColors.white,
             ),
           ),
           const SizedBox(height: QSpace.xxl),
           Text(
-            'Your focus companion',
-            style: QType.largeTitle,
-            textAlign: TextAlign.center,
+            'Your focus\ncompanion',
+            style: QType.largeTitle.copyWith(
+              color: _fgPrimary,
+              height: 1.05,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: QSpace.sm),
           Text(
             'Quoril helps you notice the pull of distraction — and gently guides you back to what matters.',
-            style: QType.body.copyWith(
-              color: QColors.labelSecondary.resolveFrom(context),
-            ),
-            textAlign: TextAlign.center,
+            style: QType.body.copyWith(color: _fgSecondary, height: 1.3),
           ),
         ],
       ),
@@ -340,7 +383,8 @@ class _DistractionsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return _PageFrame(
       title: 'What pulls you away?',
-      subtitle: 'Pick the apps that tend to break your focus. You can change these later.',
+      subtitle:
+          'Pick the apps that tend to break your focus. You can change these later.',
       child: Wrap(
         spacing: QSpace.sm,
         runSpacing: QSpace.sm,
@@ -395,8 +439,11 @@ class _GoalTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.tint.resolveFrom(context);
     final progress = (hours / 6).clamp(0.0, 1.0);
+    final titleColor = selected ? _darkInk : _fgPrimary;
+    final subColor = selected
+        ? _darkInk.withValues(alpha: 0.7)
+        : _fgSecondary;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -406,29 +453,38 @@ class _GoalTile extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 44),
         padding: const EdgeInsets.all(QSpace.md),
         decoration: BoxDecoration(
-          color: selected
-              ? tint.withValues(alpha: 0.14)
-              : QColors.surface.resolveFrom(context),
+          color: selected ? _warmAccent : _glassFill,
           borderRadius: BorderRadius.circular(QRadius.card),
+          border: Border.all(
+            color: selected ? _warmAccent : _glassBorder,
+            width: 1,
+          ),
         ),
         child: Row(
           children: [
-            RingPreview(progress: progress, color: tint, label: '${hours}h'),
+            RingPreview(
+              progress: progress,
+              color: selected ? _darkInk : _warmAccent,
+              label: '${hours}h',
+            ),
             const SizedBox(width: QSpace.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${hours}h focused', style: QType.headline),
-                  const SizedBox(height: 2),
                   Text(
-                    switch (hours) {
-                      2 => 'A steady, sustainable start',
-                      4 => 'A solid, balanced day',
-                      _ => 'Deep, ambitious focus',
-                    },
-                    style: QType.footnote,
+                    '${hours}h focused',
+                    style: QType.headline.copyWith(
+                      color: titleColor,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
+                  const SizedBox(height: 2),
+                  Text(switch (hours) {
+                    2 => 'A steady, sustainable start',
+                    4 => 'A solid, balanced day',
+                    _ => 'Deep, ambitious focus',
+                  }, style: QType.footnote.copyWith(color: subColor)),
                 ],
               ),
             ),
@@ -436,7 +492,7 @@ class _GoalTile extends StatelessWidget {
               selected
                   ? CupertinoIcons.checkmark_circle_fill
                   : CupertinoIcons.circle,
-              color: selected ? tint : QColors.labelTertiary.resolveFrom(context),
+              color: selected ? _darkInk : _fgTertiary,
               size: 24,
             ),
           ],
@@ -489,7 +545,8 @@ class _IntensityPage extends StatelessWidget {
               selected: value == v,
               onTap: () => onSelect(v),
             ),
-            if (v != NudgeIntensity.toughLove) const SizedBox(height: QSpace.sm),
+            if (v != NudgeIntensity.toughLove)
+              const SizedBox(height: QSpace.sm),
           ],
         ],
       ),
@@ -513,7 +570,10 @@ class _SelectableRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.tint.resolveFrom(context);
+    final titleColor = selected ? _darkInk : _fgPrimary;
+    final descColor = selected
+        ? _darkInk.withValues(alpha: 0.7)
+        : _fgSecondary;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -523,35 +583,37 @@ class _SelectableRow extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 44),
         padding: const EdgeInsets.all(QSpace.md),
         decoration: BoxDecoration(
-          color: selected
-              ? tint.withValues(alpha: 0.14)
-              : QColors.surface.resolveFrom(context),
+          color: selected ? _warmAccent : _glassFill,
           borderRadius: BorderRadius.circular(QRadius.card),
+          border: Border.all(
+            color: selected ? _warmAccent : _glassBorder,
+            width: 1,
+          ),
         ),
         child: Row(
           children: [
             Icon(
               icon,
               size: 22,
-              color: selected ? tint : QColors.labelSecondary.resolveFrom(context),
+              color: selected ? _darkInk : _fgSecondary,
             ),
             const SizedBox(width: QSpace.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: QType.headline),
+                  Text(title, style: QType.headline.copyWith(color: titleColor)),
                   const SizedBox(height: 2),
-                  Text(desc, style: QType.footnote),
+                  Text(desc, style: QType.footnote.copyWith(color: descColor)),
                 ],
               ),
             ),
             const SizedBox(width: QSpace.xs),
             Icon(
               selected
-                  ? CupertinoIcons.largecircle_fill_circle
+                  ? CupertinoIcons.checkmark_circle_fill
                   : CupertinoIcons.circle,
-              color: selected ? tint : QColors.labelTertiary.resolveFrom(context),
+              color: selected ? _darkInk : _fgTertiary,
               size: 24,
             ),
           ],
@@ -566,56 +628,76 @@ class _SelectableRow extends StatelessWidget {
 class _PermissionPage extends StatelessWidget {
   const _PermissionPage({
     required this.icon,
-    required this.accent,
     required this.title,
     required this.subtitle,
     required this.rows,
   });
 
   final IconData icon;
-  final Color accent;
   final String title;
   final String subtitle;
   final List<String> rows;
 
   @override
   Widget build(BuildContext context) {
-    final a = accent.resolveFrom(context);
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(QSpace.lg, QSpace.md, QSpace.lg, QSpace.xl),
+      padding: const EdgeInsets.fromLTRB(
+        QSpace.lg,
+        QSpace.md,
+        QSpace.lg,
+        QSpace.xl,
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: QSpace.md),
           Container(
-            width: 108,
-            height: 108,
+            width: 88,
+            height: 88,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: a.withValues(alpha: 0.14),
+              color: CupertinoColors.white.withValues(alpha: 0.16),
+              border: Border.all(
+                color: CupertinoColors.white.withValues(alpha: 0.24),
+                width: 1,
+              ),
             ),
-            child: Icon(icon, size: 50, color: a),
+            child: Icon(icon, size: 42, color: CupertinoColors.white),
           ),
           const SizedBox(height: QSpace.xl),
-          Text(title, style: QType.title1, textAlign: TextAlign.center),
-          const SizedBox(height: QSpace.xs),
+          Text(
+            title,
+            style: QType.largeTitle.copyWith(
+              color: _fgPrimary,
+              height: 1.05,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: QSpace.sm),
           Text(
             subtitle,
-            style: QType.body.copyWith(
-              color: QColors.labelSecondary.resolveFrom(context),
-            ),
-            textAlign: TextAlign.center,
+            style: QType.body.copyWith(color: _fgSecondary, height: 1.3),
           ),
           const SizedBox(height: QSpace.xl),
           for (final r in rows)
             Padding(
               padding: const EdgeInsets.only(bottom: QSpace.md),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(CupertinoIcons.checkmark_seal_fill, size: 22, color: a),
+                  Icon(
+                    CupertinoIcons.checkmark_seal_fill,
+                    size: 22,
+                    color: CupertinoColors.white.withValues(alpha: 0.72),
+                  ),
                   const SizedBox(width: QSpace.sm),
-                  Expanded(child: Text(r, style: QType.callout)),
+                  Expanded(
+                    child: Text(
+                      r,
+                      style: QType.callout.copyWith(color: _fgPrimary),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -638,25 +720,31 @@ class _RecapPage extends StatelessWidget {
   final NudgeIntensity intensity;
 
   String get _intensityLabel => switch (intensity) {
-        NudgeIntensity.gentle => 'Gentle',
-        NudgeIntensity.firm => 'Firm',
-        NudgeIntensity.toughLove => 'Tough-love',
-      };
+    NudgeIntensity.gentle => 'Gentle',
+    NudgeIntensity.firm => 'Firm',
+    NudgeIntensity.toughLove => 'Tough-love',
+  };
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.tint.resolveFrom(context);
-    final good = QColors.wellbeing.resolveFrom(context);
     final watched = distractions.where((d) => d != 'Add').toList();
     return _PageFrame(
       hero: Container(
-        width: 108,
-        height: 108,
+        width: 88,
+        height: 88,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: good.withValues(alpha: 0.14),
+          color: CupertinoColors.white.withValues(alpha: 0.16),
+          border: Border.all(
+            color: CupertinoColors.white.withValues(alpha: 0.24),
+            width: 1,
+          ),
         ),
-        child: Icon(CupertinoIcons.checkmark_alt_circle_fill, size: 56, color: good),
+        child: const Icon(
+          CupertinoIcons.checkmark_alt_circle_fill,
+          size: 46,
+          color: CupertinoColors.white,
+        ),
       ),
       title: "You're all set",
       subtitle: "Here's how Quoril will have your back.",
@@ -664,24 +752,21 @@ class _RecapPage extends StatelessWidget {
         children: [
           _RecapRow(
             icon: CupertinoIcons.eye_slash_fill,
-            color: QColors.danger.resolveFrom(context),
             title: 'Watching',
             value: watched.isEmpty
                 ? 'No apps yet'
                 : watched.take(3).join(', ') +
-                    (watched.length > 3 ? ' +${watched.length - 3}' : ''),
+                      (watched.length > 3 ? ' +${watched.length - 3}' : ''),
           ),
           const SizedBox(height: QSpace.sm),
           _RecapRow(
             icon: CupertinoIcons.scope,
-            color: tint,
             title: 'Daily goal',
             value: '${goalHours}h of focus',
           ),
           const SizedBox(height: QSpace.sm),
           _RecapRow(
             icon: CupertinoIcons.hand_raised_fill,
-            color: QColors.breakColor.resolveFrom(context),
             title: 'Nudges',
             value: _intensityLabel,
           ),
@@ -694,12 +779,10 @@ class _RecapPage extends StatelessWidget {
 class _RecapRow extends StatelessWidget {
   const _RecapRow({
     required this.icon,
-    required this.color,
     required this.title,
     required this.value,
   });
   final IconData icon;
-  final Color color;
   final String title;
   final String value;
 
@@ -708,8 +791,9 @@ class _RecapRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(QSpace.md),
       decoration: BoxDecoration(
-        color: QColors.surface.resolveFrom(context),
+        color: _glassFill,
         borderRadius: BorderRadius.circular(QRadius.card),
+        border: Border.all(color: _glassBorder, width: 1),
       ),
       child: Row(
         children: [
@@ -717,19 +801,20 @@ class _RecapRow extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
+              color: CupertinoColors.white.withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(QRadius.row),
+              border: Border.all(color: _glassBorder, width: 1),
             ),
-            child: Icon(icon, size: 20, color: color),
+            child: Icon(icon, size: 20, color: CupertinoColors.white),
           ),
           const SizedBox(width: QSpace.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: QType.footnote),
+                Text(title, style: QType.footnote.copyWith(color: _fgSecondary)),
                 const SizedBox(height: 1),
-                Text(value, style: QType.headline),
+                Text(value, style: QType.headline.copyWith(color: _fgPrimary)),
               ],
             ),
           ),

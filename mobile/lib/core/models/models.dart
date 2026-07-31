@@ -56,6 +56,21 @@ Color parseColor(String? raw, {int seed = 0}) {
   return QColors.workspacePalette[seed.abs() % QColors.workspacePalette.length];
 }
 
+/// A person assigned to a task — rendered as a colored initials avatar in the
+/// stacked avatar cluster on task/event cards.
+class Assignee {
+  const Assignee({required this.name, required this.color});
+  final String name;
+  final Color color;
+
+  String get initials {
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    return (parts[0].substring(0, 1) + parts[1].substring(0, 1)).toUpperCase();
+  }
+}
+
 class Task {
   Task({
     required this.id,
@@ -70,6 +85,9 @@ class Task {
     this.workspaceId,
     this.listId,
     this.notes,
+    this.startLabel,
+    this.finishLabel,
+    this.assignees = const [],
   });
 
   final String id;
@@ -84,6 +102,11 @@ class Task {
   String? workspaceId;
   String? listId;
   String? notes;
+
+  /// Reference-style scheduled window (e.g. "08:02" / "10:39") + avatar cluster.
+  String? startLabel;
+  String? finishLabel;
+  List<Assignee> assignees;
 
   int get subtaskDone => subtasks.where((s) => s.done).length;
 
@@ -130,6 +153,40 @@ class Task {
       notes: r['description']?.toString(),
     );
   }
+}
+
+/// A scheduled calendar event — the unit rendered on the Calendar screen.
+class CalendarEvent {
+  const CalendarEvent({
+    required this.id,
+    required this.title,
+    required this.start,
+    required this.finish,
+    this.color = const Color(0xFFF37A1E),
+    this.assignees = const [],
+  });
+
+  final String id;
+  final String title;
+
+  /// Concrete start / finish instants — the day is derived from [start].
+  final DateTime start;
+  final DateTime finish;
+
+  final Color color;
+  final List<Assignee> assignees;
+
+  /// Calendar day (midnight-normalized) this event belongs to.
+  DateTime get day => DateTime(start.year, start.month, start.day);
+
+  /// "09:24" style label in 24h time.
+  static String hhmm(DateTime t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  String get startLabel => hhmm(start);
+  String get finishLabel => hhmm(finish);
+
+  Duration get duration => finish.difference(start);
 }
 
 enum SessionType { regular, deepWork, quickSprint, pomodoro }

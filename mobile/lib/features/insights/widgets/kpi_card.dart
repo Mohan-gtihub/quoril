@@ -28,6 +28,9 @@ class KpiCard extends StatelessWidget {
     final deltaColor =
         (deltaUp ? QColors.wellbeing : QColors.danger).resolveFrom(context);
     final vColor = (valueColor ?? QColors.label).resolveFrom(context);
+    // Warm Aurora: leading glyph carries the amber accent (a warm highlight),
+    // unless a semantic value color is set — then the glyph echoes it.
+    final iconColor = (valueColor ?? QColors.breakColor).resolveFrom(context);
     return GlassCard(
       padding: const EdgeInsets.all(QSpace.md),
       child: Column(
@@ -37,7 +40,7 @@ class KpiCard extends StatelessWidget {
           Row(
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 15, color: QColors.labelTertiary.resolveFrom(context)),
+                Icon(icon, size: 15, color: iconColor),
                 const SizedBox(width: 5),
               ],
               Expanded(

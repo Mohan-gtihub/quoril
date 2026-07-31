@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/widgets/primary_button.dart';
@@ -35,12 +36,12 @@ class _PaywallSheetState extends State<_PaywallSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.tint.resolveFrom(context);
+    final tint = QColors.breakColor.resolveFrom(context);
     return FractionallySizedBox(
       heightFactor: 0.92,
       child: Container(
         decoration: BoxDecoration(
-          color: QColors.bgGrouped.resolveFrom(context),
+          gradient: QGradients.page(MediaQuery.platformBrightnessOf(context)),
           borderRadius:
               const BorderRadius.vertical(top: Radius.circular(QRadius.glass)),
         ),
@@ -64,13 +65,9 @@ class _PaywallSheetState extends State<_PaywallSheet> {
                     child: Container(
                       width: 64,
                       height: 64,
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [tint, tint.withValues(alpha: 0.6)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        gradient: QGradients.warm,
                       ),
                       child: const Icon(CupertinoIcons.star_fill,
                           color: CupertinoColors.white, size: 32),
@@ -164,7 +161,7 @@ class _ComparisonTable extends StatelessWidget {
         v ? CupertinoIcons.checkmark_alt : CupertinoIcons.minus,
         size: 18,
         color: v
-            ? (pro ? QColors.tint : QColors.wellbeing).resolveFrom(context)
+            ? (pro ? QColors.breakColor : QColors.wellbeing).resolveFrom(context)
             : QColors.labelTertiary.resolveFrom(context),
       );
     }
@@ -203,7 +200,7 @@ class _ComparisonTable extends StatelessWidget {
                     child: Text('Pro',
                         style: QType.caption.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: QColors.tint.resolveFrom(context)),
+                            color: QColors.breakColor.resolveFrom(context)),
                         textAlign: TextAlign.center)),
               ],
             ),
@@ -242,7 +239,7 @@ class _PlanTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.tint.resolveFrom(context);
+    final tint = QColors.breakColor.resolveFrom(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(

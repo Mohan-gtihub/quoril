@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/models/models.dart';
@@ -58,7 +59,7 @@ class _WatchedAppSheetState extends State<_WatchedAppSheet> {
     final editing = widget.existing != null;
     return Container(
       decoration: BoxDecoration(
-        color: QColors.bgGrouped.resolveFrom(context),
+        gradient: QGradients.page(MediaQuery.platformBrightnessOf(context)),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(QRadius.glass)),
       ),
       child: SafeArea(

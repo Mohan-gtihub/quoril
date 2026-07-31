@@ -1,44 +1,41 @@
-import 'dart:ui';
+import 'package:adaptive_platform_ui/adaptive_platform_ui.dart';
 import 'package:flutter/cupertino.dart';
 import '../theme/tokens.dart';
 
-/// Liquid-Glass surface: blurred translucent material with a hairline border.
+/// Liquid-Glass surface: native UIVisualEffectView material on iOS 26 (via
+/// [AdaptiveBlurView]), graceful BackdropFilter blur on iOS <26 / Android.
 /// Use for tab bars, floating controls, and elevated cards.
 class GlassSurface extends StatelessWidget {
   const GlassSurface({
     super.key,
     required this.child,
     this.radius = QRadius.glass,
-    this.blur = 20,
     this.padding = EdgeInsets.zero,
     this.tint,
   });
 
   final Widget child;
   final double radius;
-  final double blur;
   final EdgeInsetsGeometry padding;
   final Color? tint;
 
   @override
   Widget build(BuildContext context) {
     final base = (tint ?? QColors.surface).resolveFrom(context);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: base.withValues(alpha: 0.72),
-            borderRadius: BorderRadius.circular(radius),
-            border: Border.all(
-              color: QColors.separator.resolveFrom(context).withValues(alpha: 0.5),
-              width: 0.5,
-            ),
+    final br = BorderRadius.circular(radius);
+    return AdaptiveBlurView(
+      borderRadius: br,
+      child: Container(
+        padding: padding,
+        decoration: BoxDecoration(
+          color: base.withValues(alpha: 0.4),
+          borderRadius: br,
+          border: Border.all(
+            color: QColors.separator.resolveFrom(context).withValues(alpha: 0.5),
+            width: 0.5,
           ),
-          child: child,
         ),
+        child: child,
       ),
     );
   }

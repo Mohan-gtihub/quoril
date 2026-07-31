@@ -3,8 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/data/providers.dart';
+import '../../core/data/mock_data.dart';
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
+import '../../core/widgets/common.dart';
 import '../../core/widgets/inset_list.dart';
 import 'about_page.dart';
 import 'account_page.dart';
@@ -25,12 +28,19 @@ class YouScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final brightness = MediaQuery.platformBrightnessOf(context);
     return CupertinoPageScaffold(
-      backgroundColor: QColors.bgGrouped.resolveFrom(context),
-      child: CustomScrollView(
+      backgroundColor: QColors.bgGrouped.resolveFrom(context).withValues(alpha: 0.0),
+      child: GradientBackground(
+        gradient: QGradients.page(brightness),
+        child: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          const CupertinoSliverNavigationBar(largeTitle: Text('You')),
+          const CupertinoSliverNavigationBar(
+            largeTitle: Text('You'),
+            backgroundColor: Color(0x00000000),
+            border: null,
+          ),
           SliverList(
             delegate: SliverChildListDelegate([
               const SizedBox(height: QSpace.xs),
@@ -41,13 +51,13 @@ class YouScreen extends ConsumerWidget {
                 children: [
                   InsetRow(
                     icon: CupertinoIcons.timer,
-                    iconColor: QColors.focus,
+                    iconColor: QColors.breakColor,
                     title: 'Focus & Pomodoro',
                     onTap: () => _push(context, const FocusSettingsPage()),
                   ),
                   InsetRow(
                     icon: CupertinoIcons.shield_lefthalf_fill,
-                    iconColor: QColors.breakColor,
+                    iconColor: QColors.workspacePalette[3],
                     title: 'Distraction Rules',
                     onTap: () => _push(context, const DistractionRulesPage()),
                   ),
@@ -104,6 +114,7 @@ class YouScreen extends ConsumerWidget {
             ]),
           ),
         ],
+        ),
       ),
     );
   }
@@ -138,78 +149,153 @@ class _ProfileHeader extends ConsumerWidget {
     final displayName = (fullName != null && fullName.trim().isNotEmpty)
         ? fullName
         : (email ?? 'Signed out');
-    final tint = QColors.tint.resolveFrom(context);
+    final showEmail =
+        fullName != null && fullName.trim().isNotEmpty && email != null;
+    const onWarm = CupertinoColors.white;
 
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: QSpace.md),
-        padding: const EdgeInsets.all(QSpace.md),
+        padding: const EdgeInsets.all(QSpace.lg),
         decoration: BoxDecoration(
-          color: QColors.surface.resolveFrom(context),
-          borderRadius: BorderRadius.circular(QRadius.card),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [tint, tint.withValues(alpha: 0.62)],
-                ),
-              ),
-              child: Text(
-                initialsFor(email, fullName),
-                style: QType.title2.copyWith(color: CupertinoColors.white),
-              ),
+          gradient: QGradients.warm,
+          borderRadius: BorderRadius.circular(QRadius.glass),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFC5471B).withValues(alpha: 0.28),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
             ),
-            const SizedBox(width: QSpace.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(displayName,
-                      style: QType.title3,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  if (fullName != null && fullName.trim().isNotEmpty && email != null) ...[
-                    const SizedBox(height: 2),
-                    Text(email,
-                        style: QType.subhead,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
-                  ],
-                  const SizedBox(height: QSpace.xs),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: QSpace.sm, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: (auth.isPro ? QColors.warn : QColors.fill)
-                          .resolveFrom(context)
-                          .withValues(alpha: auth.isPro ? 0.18 : 1.0),
-                      borderRadius: BorderRadius.circular(QRadius.capsule),
-                    ),
-                    child: Text(
-                      tierLabel(auth.tier),
-                      style: QType.caption.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: (auth.isPro ? QColors.warn : QColors.labelSecondary)
-                            .resolveFrom(context),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(CupertinoIcons.chevron_right,
-                size: 16, color: QColors.labelTertiary.resolveFrom(context)),
           ],
         ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: onWarm.withValues(alpha: 0.22),
+                    border: Border.all(
+                        color: onWarm.withValues(alpha: 0.55), width: 1.5),
+                  ),
+                  child: Text(
+                    initialsFor(email, fullName),
+                    style: QType.title2.copyWith(color: onWarm),
+                  ),
+                ),
+                const SizedBox(width: QSpace.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(displayName,
+                          style: QType.title3.copyWith(color: onWarm),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                      if (showEmail) ...[
+                        const SizedBox(height: 2),
+                        Text(email,
+                            style: QType.subhead
+                                .copyWith(color: onWarm.withValues(alpha: 0.82)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ],
+                      const SizedBox(height: QSpace.xs),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: QSpace.sm, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: onWarm.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(QRadius.capsule),
+                        ),
+                        child: Text(
+                          tierLabel(auth.tier),
+                          style: QType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: onWarm,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(CupertinoIcons.chevron_right,
+                    size: 16, color: onWarm.withValues(alpha: 0.7)),
+              ],
+            ),
+            const SizedBox(height: QSpace.md),
+            Container(height: 0.5, color: onWarm.withValues(alpha: 0.24)),
+            const SizedBox(height: QSpace.md),
+            Row(
+              children: [
+                _HeroStat(
+                  value: '${Mock.streakDays}',
+                  unit: 'days',
+                  label: 'Streak',
+                ),
+                Container(
+                    width: 0.5,
+                    height: 34,
+                    color: onWarm.withValues(alpha: 0.24)),
+                _HeroStat(
+                  value: fmtHm(Mock.focusTodaySeconds),
+                  label: 'Focus today',
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroStat extends StatelessWidget {
+  const _HeroStat({required this.value, this.unit, required this.label});
+  final String value;
+  final String? unit;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    const onWarm = CupertinoColors.white;
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                value,
+                style: QType.title1.copyWith(
+                  color: onWarm,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              if (unit != null) ...[
+                const SizedBox(width: 4),
+                Text(unit!,
+                    style: QType.subhead
+                        .copyWith(color: onWarm.withValues(alpha: 0.8))),
+              ],
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(label.toUpperCase(),
+              style: QType.caption.copyWith(
+                  color: onWarm.withValues(alpha: 0.78),
+                  letterSpacing: 0.4,
+                  fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }

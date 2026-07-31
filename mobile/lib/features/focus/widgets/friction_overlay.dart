@@ -69,7 +69,6 @@ class NudgeBanner extends StatelessWidget {
                   ),
                   CupertinoButton(
                     padding: EdgeInsets.zero,
-                    minSize: 44,
                     onPressed: () {
                       HapticFeedback.selectionClick();
                       onDismiss();
@@ -78,7 +77,7 @@ class NudgeBanner extends StatelessWidget {
                       CupertinoIcons.xmark_circle_fill,
                       size: 24,
                       color: QColors.labelTertiary.resolveFrom(context),
-                    ),
+                    ), minimumSize: Size(44, 44),
                   ),
                 ],
               ),

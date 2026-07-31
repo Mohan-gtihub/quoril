@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/data/mock_data.dart';
 import '../../core/models/models.dart';
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/widgets/common.dart';
@@ -58,9 +59,13 @@ class InterventionHistoryPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = Mock.interventions();
 
+    final brightness =
+        MediaQuery.maybeOf(context)?.platformBrightness ?? Brightness.light;
     return CupertinoPageScaffold(
       backgroundColor: QColors.bgGrouped.resolveFrom(context),
-      child: CustomScrollView(
+      child: GradientBackground(
+        gradient: QGradients.page(brightness),
+        child: CustomScrollView(
         slivers: [
           CupertinoSliverNavigationBar(
             largeTitle: const Text('History'),
@@ -73,7 +78,7 @@ class InterventionHistoryPage extends StatelessWidget {
                 child: Row(
                   children: [
                     Icon(CupertinoIcons.bell_fill,
-                        color: QColors.tint.resolveFrom(context), size: 22),
+                        color: QColors.breakColor.resolveFrom(context), size: 22),
                     const SizedBox(width: QSpace.sm),
                     Expanded(
                       child: RichText(
@@ -161,6 +166,7 @@ class InterventionHistoryPage extends StatelessWidget {
               ),
             ),
         ],
+        ),
       ),
     );
   }

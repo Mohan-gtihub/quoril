@@ -3,8 +3,12 @@ import 'package:flutter/services.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
 
-/// Native selectable toggle chip: icon + label. Depth via layered fills, not
-/// borders — tint fill + checkmark when selected. Adaptive light/dark.
+/// Warm-accent amber used across the onboarding "Warm Aurora" gradient screens.
+const Color _warmAccent = Color(0xFFFF9E3D);
+
+/// Native selectable toggle chip: icon + label. Tuned for the Warm Aurora
+/// gradient — a translucent-white glass pill unselected, a solid warm-amber
+/// pill (dark ink) when selected. Depth via layered fills, not borders.
 class OnboardingChip extends StatelessWidget {
   const OnboardingChip({
     super.key,
@@ -21,9 +25,9 @@ class OnboardingChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.tint.resolveFrom(context);
-    final label0 = QColors.label.resolveFrom(context);
-    final fg = selected ? tint : label0;
+    // Selected: warm amber fill with dark ink for punch. Unselected: frosted
+    // white glass with white ink — always readable on the gradient.
+    final fg = selected ? const Color(0xFF2A0A06) : CupertinoColors.white;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -41,9 +45,15 @@ class OnboardingChip extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: selected
-              ? tint.withValues(alpha: 0.16)
-              : QColors.secondaryFill.resolveFrom(context),
+              ? _warmAccent
+              : CupertinoColors.white.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(QRadius.capsule),
+          border: Border.all(
+            color: selected
+                ? _warmAccent
+                : CupertinoColors.white.withValues(alpha: 0.22),
+            width: 1,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 
@@ -25,12 +26,18 @@ class _AppearancePageState extends State<AppearancePage> {
 
   @override
   Widget build(BuildContext context) {
+    final brightness = MediaQuery.platformBrightnessOf(context);
     return CupertinoPageScaffold(
-      backgroundColor: QColors.bgGrouped.resolveFrom(context),
-      child: CustomScrollView(
+      backgroundColor: const Color(0x00000000),
+      child: GradientBackground(
+        gradient: QGradients.page(brightness),
+        child: CustomScrollView(
         slivers: [
           const CupertinoSliverNavigationBar(
-              previousPageTitle: 'You', largeTitle: Text('Appearance')),
+              previousPageTitle: 'You',
+              largeTitle: Text('Appearance'),
+              backgroundColor: Color(0x00000000),
+              border: null),
           SliverList(
             delegate: SliverChildListDelegate([
               const SizedBox(height: QSpace.md),
@@ -66,6 +73,7 @@ class _AppearancePageState extends State<AppearancePage> {
             ]),
           ),
         ],
+        ),
       ),
     );
   }
@@ -102,7 +110,7 @@ class _PreviewCard extends StatelessWidget {
                       height: 40,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: QColors.tint.resolveFrom(ctx),
+                        color: QColors.breakColor.resolveFrom(ctx),
                       ),
                       child: const Icon(CupertinoIcons.timer,
                           color: CupertinoColors.white, size: 22),

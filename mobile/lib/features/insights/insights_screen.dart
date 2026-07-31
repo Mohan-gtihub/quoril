@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/data/mock_data.dart';
 import '../../core/models/models.dart';
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/widgets/common.dart';
@@ -49,24 +50,124 @@ class _InsightsBodyState extends State<_InsightsBody> {
 
   @override
   Widget build(BuildContext context) {
+    final brightness =
+        MediaQuery.maybeOf(context)?.platformBrightness ?? Brightness.light;
     return CupertinoPageScaffold(
       backgroundColor: QColors.bgGrouped.resolveFrom(context),
-      child: CustomScrollView(
-        physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics(),
+      child: GradientBackground(
+        gradient: QGradients.page(brightness),
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
+          slivers: [
+            const CupertinoSliverNavigationBar(
+              largeTitle: Text('Insights'),
+              backgroundColor: Color(0x00000000),
+              border: null,
+            ),
+            SliverToBoxAdapter(child: _hero(context)),
+            SliverToBoxAdapter(child: _controls(context)),
+            if (_tab == _Tab.reports)
+              ..._reports(context)
+            else
+              ..._screenTime(context),
+            const SliverToBoxAdapter(child: SizedBox(height: QSpace.xxl)),
+          ],
         ),
-        slivers: [
-          const CupertinoSliverNavigationBar(largeTitle: Text('Insights')),
-          SliverToBoxAdapter(child: _controls(context)),
-          if (_tab == _Tab.reports)
-            ..._reports(context)
-          else
-            ..._screenTime(context),
-          const SliverToBoxAdapter(child: SizedBox(height: QSpace.xxl)),
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------- HERO
+  /// Warm gradient summary hero — today's focus, productivity score, and
+  /// streak as big tabular stats on the signature Warm Aurora wash.
+  Widget _hero(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.xs, QSpace.md, 0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(QRadius.glass),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(gradient: QGradients.warm),
+          child: Padding(
+            padding: const EdgeInsets.all(QSpace.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(CupertinoIcons.chart_bar_alt_fill,
+                        size: 15, color: CupertinoColors.white),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Today at a glance',
+                      style: QType.footnote.copyWith(
+                        color: CupertinoColors.white.withValues(alpha: 0.85),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: QSpace.md),
+                Row(
+                  children: [
+                    _heroStat(
+                      value: fmtHm(Mock.focusTodaySeconds),
+                      label: 'Focused',
+                    ),
+                    _heroDivider(),
+                    _heroStat(
+                      value: '${Mock.productivityScore}%',
+                      label: 'Score',
+                    ),
+                    _heroDivider(),
+                    _heroStat(
+                      value: '${Mock.streakDays}d',
+                      label: 'Streak',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _heroStat({required String value, required String label}) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: QType.title1.copyWith(
+              color: CupertinoColors.white,
+              letterSpacing: -0.5,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: QType.caption.copyWith(
+              color: CupertinoColors.white.withValues(alpha: 0.82),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
   }
+
+  Widget _heroDivider() => Container(
+        width: 0.5,
+        height: 34,
+        margin: const EdgeInsets.symmetric(horizontal: QSpace.sm),
+        color: CupertinoColors.white.withValues(alpha: 0.28),
+      );
 
   // ------------------------------------------------------------- CONTROLS
   Widget _controls(BuildContext context) {
@@ -175,7 +276,7 @@ class _InsightsBodyState extends State<_InsightsBody> {
         label: 'Productivity Score',
         delta: '5 pts',
         deltaUp: true,
-        valueColor: QColors.tint,
+        valueColor: QColors.breakColor,
         icon: CupertinoIcons.gauge,
       ),
       KpiCard(
@@ -223,7 +324,10 @@ class _InsightsBodyState extends State<_InsightsBody> {
             trailing: isDay ? 'Today' : 'This week',
             child: SizedBox(
               height: 150,
-              child: TrendLineChart(values: Mock.weekTrend),
+              child: TrendLineChart(
+                values: Mock.weekTrend,
+                color: QColors.breakColor,
+              ),
             ),
           ),
           top: QSpace.lg,
@@ -241,7 +345,7 @@ class _InsightsBodyState extends State<_InsightsBody> {
                   label: 'Deep Work',
                   valueLabel: '2h 12m',
                   fraction: 1.0,
-                  color: QColors.tint.resolveFrom(context),
+                  color: QColors.breakColor.resolveFrom(context),
                 ),
                 HBarRow(
                   label: 'Design',
@@ -254,7 +358,8 @@ class _InsightsBodyState extends State<_InsightsBody> {
                   label: 'Meetings',
                   valueLabel: '42m',
                   fraction: 0.32,
-                  color: QColors.breakColor.resolveFrom(context),
+                  color: CupertinoDynamicColor.resolve(
+                      QColors.workspacePalette[7], context),
                 ),
                 HBarRow(
                   label: 'Admin',
@@ -500,7 +605,7 @@ class _InsightsBodyState extends State<_InsightsBody> {
             children: [
               InsetRow(
                 icon: CupertinoIcons.bell_fill,
-                iconColor: QColors.tint,
+                iconColor: QColors.breakColor,
                 title: 'Intervention history',
                 onTap: () {
                   HapticFeedback.selectionClick();

@@ -6,12 +6,17 @@ import '../../../core/theme/typography.dart';
 
 /// Pomodoro configuration carried out of the session type sheet.
 class PomodoroConfig {
-  const PomodoroConfig({this.workMinutes = 25, this.breakMinutes = 5, this.cycles = 4});
+  const PomodoroConfig({
+    this.workMinutes = 25,
+    this.breakMinutes = 5,
+    this.cycles = 4,
+  });
   final int workMinutes;
   final int breakMinutes;
   final int cycles;
 
-  PomodoroConfig copyWith({int? workMinutes, int? breakMinutes, int? cycles}) => PomodoroConfig(
+  PomodoroConfig copyWith({int? workMinutes, int? breakMinutes, int? cycles}) =>
+      PomodoroConfig(
         workMinutes: workMinutes ?? this.workMinutes,
         breakMinutes: breakMinutes ?? this.breakMinutes,
         cycles: cycles ?? this.cycles,
@@ -26,11 +31,11 @@ class SessionTypeResult {
 }
 
 String sessionTypeSubtitle(SessionType t) => switch (t) {
-      SessionType.regular => 'Open-ended timer, no target',
-      SessionType.deepWork => '90 minutes, distractions blocked',
-      SessionType.quickSprint => '15 minute burst',
-      SessionType.pomodoro => 'Work / break intervals',
-    };
+  SessionType.regular => 'Open-ended timer, no target',
+  SessionType.deepWork => '90 minutes, distractions blocked',
+  SessionType.quickSprint => '15 minute burst',
+  SessionType.pomodoro => 'Work / break intervals',
+};
 
 Future<SessionTypeResult?> showSessionTypeSheet(
   BuildContext context, {
@@ -61,12 +66,19 @@ class _SessionTypeSheetState extends State<_SessionTypeSheet> {
     return Container(
       decoration: BoxDecoration(
         color: QColors.bgGrouped.resolveFrom(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(QRadius.glass)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(QRadius.glass),
+        ),
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.sm, QSpace.md, QSpace.md),
+          padding: const EdgeInsets.fromLTRB(
+            QSpace.md,
+            QSpace.sm,
+            QSpace.md,
+            QSpace.md,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -139,7 +151,11 @@ class _SessionTypeSheetState extends State<_SessionTypeSheet> {
 }
 
 class _TypeRow extends StatelessWidget {
-  const _TypeRow({required this.type, required this.selected, required this.onTap});
+  const _TypeRow({
+    required this.type,
+    required this.selected,
+    required this.onTap,
+  });
   final SessionType type;
   final bool selected;
   final VoidCallback onTap;
@@ -151,7 +167,10 @@ class _TypeRow extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: QSpace.sm),
+        padding: const EdgeInsets.symmetric(
+          horizontal: QSpace.md,
+          vertical: QSpace.sm,
+        ),
         child: Row(
           children: [
             Container(
@@ -201,17 +220,24 @@ class _PomodoroSteppers extends StatelessWidget {
         color: QColors.surface.resolveFrom(context),
         borderRadius: BorderRadius.circular(QRadius.card),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: QSpace.xs),
+      padding: const EdgeInsets.symmetric(
+        horizontal: QSpace.md,
+        vertical: QSpace.xs,
+      ),
       child: Column(
         children: [
           _StepperRow(
             label: 'Work',
             value: '${config.workMinutes} min',
             onDec: config.workMinutes > 5
-                ? () => onChanged(config.copyWith(workMinutes: config.workMinutes - 5))
+                ? () => onChanged(
+                    config.copyWith(workMinutes: config.workMinutes - 5),
+                  )
                 : null,
             onInc: config.workMinutes < 60
-                ? () => onChanged(config.copyWith(workMinutes: config.workMinutes + 5))
+                ? () => onChanged(
+                    config.copyWith(workMinutes: config.workMinutes + 5),
+                  )
                 : null,
           ),
           _divider(context),
@@ -219,10 +245,14 @@ class _PomodoroSteppers extends StatelessWidget {
             label: 'Break',
             value: '${config.breakMinutes} min',
             onDec: config.breakMinutes > 1
-                ? () => onChanged(config.copyWith(breakMinutes: config.breakMinutes - 1))
+                ? () => onChanged(
+                    config.copyWith(breakMinutes: config.breakMinutes - 1),
+                  )
                 : null,
             onInc: config.breakMinutes < 30
-                ? () => onChanged(config.copyWith(breakMinutes: config.breakMinutes + 1))
+                ? () => onChanged(
+                    config.copyWith(breakMinutes: config.breakMinutes + 1),
+                  )
                 : null,
           ),
           _divider(context),
@@ -264,11 +294,15 @@ class _StepperRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: Text(label, style: QType.body)),
-          Text(value, style: QType.body.copyWith(color: QColors.labelSecondary.resolveFrom(context))),
+          Text(
+            value,
+            style: QType.body.copyWith(
+              color: QColors.labelSecondary.resolveFrom(context),
+            ),
+          ),
           const SizedBox(width: QSpace.sm),
           CupertinoButton(
             padding: EdgeInsets.zero,
-            minSize: 30,
             onPressed: onDec == null
                 ? null
                 : () {
@@ -276,10 +310,10 @@ class _StepperRow extends StatelessWidget {
                     onDec!();
                   },
             child: const Icon(CupertinoIcons.minus_circle_fill, size: 26),
+            minimumSize: Size(30, 30),
           ),
           CupertinoButton(
             padding: EdgeInsets.zero,
-            minSize: 30,
             onPressed: onInc == null
                 ? null
                 : () {
@@ -287,6 +321,7 @@ class _StepperRow extends StatelessWidget {
                     onInc!();
                   },
             child: const Icon(CupertinoIcons.plus_circle_fill, size: 26),
+            minimumSize: Size(30, 30),
           ),
         ],
       ),

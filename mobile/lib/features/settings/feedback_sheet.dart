@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/data/providers.dart';
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/widgets/inset_list.dart';
@@ -78,7 +79,7 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
       heightFactor: 0.82,
       child: Container(
         decoration: BoxDecoration(
-          color: QColors.bgGrouped.resolveFrom(context),
+          gradient: QGradients.page(MediaQuery.platformBrightnessOf(context)),
           borderRadius:
               const BorderRadius.vertical(top: Radius.circular(QRadius.glass)),
         ),

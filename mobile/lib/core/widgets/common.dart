@@ -1,6 +1,63 @@
 import 'package:flutter/cupertino.dart';
+import '../models/models.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
+
+/// Overlapping cluster of colored initials avatars (reference task/event cards).
+class AvatarStack extends StatelessWidget {
+  const AvatarStack({
+    super.key,
+    required this.people,
+    this.size = 30,
+    this.max = 3,
+    this.ringColor,
+  });
+
+  final List<Assignee> people;
+  final double size;
+  final int max;
+
+  /// Border color separating overlapping avatars (defaults to card surface).
+  final Color? ringColor;
+
+  @override
+  Widget build(BuildContext context) {
+    if (people.isEmpty) return const SizedBox.shrink();
+    final shown = people.take(max).toList();
+    final overlap = size * 0.42;
+    final ring = ringColor ?? QColors.surface.resolveFrom(context);
+    return SizedBox(
+      width: size + overlap * (shown.length - 1),
+      height: size,
+      child: Stack(
+        children: [
+          for (var i = 0; i < shown.length; i++)
+            Positioned(
+              left: i * overlap,
+              child: Container(
+                width: size,
+                height: size,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: shown[i].color,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: ring, width: 2),
+                ),
+                child: Text(
+                  shown[i].initials,
+                  style: QType.caption.copyWith(
+                    color: CupertinoColors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: size * 0.34,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
 
 /// Centered empty state: symbol + line + optional action.
 class EmptyState extends StatelessWidget {
@@ -72,4 +129,12 @@ String fmtClock(int seconds) {
   final m = seconds ~/ 60;
   final s = seconds % 60;
   return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+}
+
+/// HH:MM:SS clock format used by the Session timer + session list rows.
+String fmtHms(int seconds) {
+  final h = seconds ~/ 3600;
+  final m = (seconds % 3600) ~/ 60;
+  final s = seconds % 60;
+  return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
 }

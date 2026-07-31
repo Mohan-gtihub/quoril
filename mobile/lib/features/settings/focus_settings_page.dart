@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/models/models.dart';
@@ -78,12 +79,18 @@ class _FocusSettingsPageState extends State<FocusSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final brightness = MediaQuery.platformBrightnessOf(context);
     return CupertinoPageScaffold(
-      backgroundColor: QColors.bgGrouped.resolveFrom(context),
-      child: CustomScrollView(
+      backgroundColor: const Color(0x00000000),
+      child: GradientBackground(
+        gradient: QGradients.page(brightness),
+        child: CustomScrollView(
         slivers: [
           const CupertinoSliverNavigationBar(
-              previousPageTitle: 'You', largeTitle: Text('Focus & Pomodoro')),
+              previousPageTitle: 'You',
+              largeTitle: Text('Focus & Pomodoro'),
+              backgroundColor: Color(0x00000000),
+              border: null),
           SliverList(
             delegate: SliverChildListDelegate([
               const SizedBox(height: QSpace.xs),
@@ -92,7 +99,7 @@ class _FocusSettingsPageState extends State<FocusSettingsPage> {
                 children: [
                   InsetRow(
                     icon: _defaultType.icon,
-                    iconColor: QColors.focus,
+                    iconColor: QColors.breakColor,
                     title: 'Default session',
                     value: _defaultType.label,
                     onTap: _pickDefaultType,
@@ -106,7 +113,7 @@ class _FocusSettingsPageState extends State<FocusSettingsPage> {
                 children: [
                   _stepperRow(
                     icon: CupertinoIcons.timer,
-                    color: QColors.focus,
+                    color: QColors.breakColor,
                     title: 'Work',
                     value: '$_work min',
                     onMinus: () => setState(() => _work = (_work - 5).clamp(5, 90)),
@@ -114,7 +121,7 @@ class _FocusSettingsPageState extends State<FocusSettingsPage> {
                   ),
                   _stepperRow(
                     icon: CupertinoIcons.pause_circle,
-                    color: QColors.breakColor,
+                    color: QColors.warn,
                     title: 'Short break',
                     value: '$_brk min',
                     onMinus: () => setState(() => _brk = (_brk - 1).clamp(1, 30)),
@@ -160,7 +167,7 @@ class _FocusSettingsPageState extends State<FocusSettingsPage> {
                   ),
                   InsetRow(
                     icon: CupertinoIcons.speaker_2_fill,
-                    iconColor: QColors.tint,
+                    iconColor: QColors.breakColor,
                     title: 'Alert sound',
                     showChevron: false,
                     trailing: CupertinoSwitch(
@@ -190,6 +197,7 @@ class _FocusSettingsPageState extends State<FocusSettingsPage> {
             ]),
           ),
         ],
+        ),
       ),
     );
   }
