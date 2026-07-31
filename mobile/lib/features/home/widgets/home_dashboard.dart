@@ -1,105 +1,149 @@
-import 'dart:math' as math;
-
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/data/mock_data.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
+import '../../focus/focus_screen.dart';
 
 /// Apple Fitness–style "Summary" components: the triple Activity Rings and a
 /// dark Activity card with big colored metric labels. Pure black canvas, SF
 /// type, tabular numerals — clean and Apple-native.
 
-// Ring gradients (Fitness palette, adapted to Quoril's three metrics).
-const _focusA = Color(0xFFFA114F); // Focus  — magenta→coral
+// Focus accent gradient (magenta → coral) — the hero + trend brand color.
+const _focusA = Color(0xFFFA114F);
 const _focusB = Color(0xFFFF6482);
-const _sessA = Color(0xFF7DE028); // Sessions — green
-const _sessB = Color(0xFFB6F84A);
-const _protA = Color(0xFF17E0E8); // Protected — cyan
-const _protB = Color(0xFF00B8D4);
 
-class ActivityData {
-  const ActivityData({
-    required this.focusFrac,
-    required this.sessionsFrac,
-    required this.protectedFrac,
-  });
-  final double focusFrac;
-  final double sessionsFrac;
-  final double protectedFrac;
+// ---------------------------------------------------------------------------
+// Primary focus CTA — a full-width white pill on the gradient hero. A gentle
+// breathing halo around the play glyph signals "tap me" the moment the app
+// opens; press-scale gives it a tactile, alive feel. Launches a focus session.
+// ---------------------------------------------------------------------------
+
+class StartFocusButton extends StatefulWidget {
+  const StartFocusButton({super.key, this.label = 'Start Focus'});
+
+  final String label;
+
+  @override
+  State<StartFocusButton> createState() => _StartFocusButtonState();
 }
 
-// ---------------------------------------------------------------------------
-// The three concentric activity rings.
-// ---------------------------------------------------------------------------
+class _StartFocusButtonState extends State<StartFocusButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1700),
+  )..repeat(reverse: true);
 
-class ActivityRings extends StatelessWidget {
-  const ActivityRings({super.key, required this.data, this.size = 150});
-  final ActivityData data;
-  final double size;
+  bool _pressed = false;
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  void _start() {
+    HapticFeedback.mediumImpact();
+    Navigator.of(context, rootNavigator: true).push(
+      CupertinoPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const FocusScreen(task: null),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(painter: _RingsPainter(data)),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: _start,
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: Container(
+          height: 54,
+          decoration: BoxDecoration(
+            color: CupertinoColors.white,
+            borderRadius: BorderRadius.circular(QRadius.capsule),
+            boxShadow: [
+              BoxShadow(
+                color: CupertinoColors.black.withValues(alpha: 0.16),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedBuilder(
+                animation: _pulse,
+                builder: (context, child) {
+                  final t = Curves.easeInOut.transform(_pulse.value);
+                  return SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: 30 + 10 * t,
+                          height: 30 + 10 * t,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _focusA.withValues(alpha: 0.16 * (1 - t)),
+                          ),
+                        ),
+                        child!,
+                      ],
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [_focusB, _focusA],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.play_arrow_solid,
+                    color: CupertinoColors.white,
+                    size: 15,
+                  ),
+                ),
+              ),
+              const SizedBox(width: QSpace.xs),
+              Text(
+                widget.label,
+                style: QType.headline.copyWith(
+                  color: _focusA,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
 
-class _RingsPainter extends CustomPainter {
-  _RingsPainter(this.data);
-  final ActivityData data;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final stroke = size.width * 0.115;
-    final gap = stroke * 0.34;
-    final r0 = (size.width - stroke) / 2;
-    final r1 = r0 - stroke - gap;
-    final r2 = r1 - stroke - gap;
-
-    _ring(canvas, center, r0, stroke, data.focusFrac, _focusA, _focusB);
-    _ring(canvas, center, r1, stroke, data.sessionsFrac, _sessA, _sessB);
-    _ring(canvas, center, r2, stroke, data.protectedFrac, _protA, _protB);
-  }
-
-  void _ring(Canvas canvas, Offset c, double r, double stroke, double frac,
-      Color a, Color b) {
-    // Recessed track (the ring color, dimmed).
-    final track = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..color = a.withValues(alpha: 0.22);
-    canvas.drawCircle(c, r, track);
-
-    final f = frac.clamp(0.0, 1.0);
-    if (f <= 0) return;
-
-    final rect = Rect.fromCircle(center: c, radius: r);
-    final arc = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.round
-      ..shader = SweepGradient(
-        colors: [a, b, a],
-        stops: const [0.0, 0.5, 1.0],
-        transform: const GradientRotation(-math.pi / 2),
-      ).createShader(rect);
-    canvas.drawArc(rect, -math.pi / 2, 2 * math.pi * f, false, arc);
-  }
-
-  @override
-  bool shouldRepaint(covariant _RingsPainter old) =>
-      old.data.focusFrac != data.focusFrac ||
-      old.data.sessionsFrac != data.sessionsFrac ||
-      old.data.protectedFrac != data.protectedFrac;
-}
-
 // ---------------------------------------------------------------------------
-// Activity card — rings + three colored metric rows (Fitness layout).
+// Focus hero — the premium "what to do now" card: today's focus progress with
+// an animated fill bar, a streak chip, a compact stat row, and the primary
+// Start-Focus CTA. Bold gradient surface, glossy white controls.
 // ---------------------------------------------------------------------------
 
 class ActivityCard extends StatelessWidget {
@@ -108,46 +152,117 @@ class ActivityCard extends StatelessWidget {
   final int tasksTotal;
 
   static const _focusGoalMin = 240;
-  static const _protGoalMin = 60;
   static const _sessGoal = 5;
+
+  /// Consecutive days (ending today) with any focus logged — a light "streak".
+  int get _streak {
+    var s = 0;
+    for (final v in Mock.weekTrend.reversed) {
+      if (v <= 0) break;
+      s++;
+    }
+    return s;
+  }
 
   @override
   Widget build(BuildContext context) {
     final focusMin = Mock.focusTodaySeconds ~/ 60;
     final protMin = Mock.savedSeconds ~/ 60;
     final sessDone = Mock.recentSessions.length;
-
-    final data = ActivityData(
-      focusFrac: focusMin / _focusGoalMin,
-      sessionsFrac: sessDone / _sessGoal,
-      protectedFrac: protMin / _protGoalMin,
-    );
+    final frac = (focusMin / _focusGoalMin).clamp(0.0, 1.0);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
       child: Container(
         padding: const EdgeInsets.all(QSpace.lg),
         decoration: BoxDecoration(
-          color: QColors.surface.resolveFrom(context),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _Metric(label: 'FOCUS', value: '$focusMin', goal: '/$_focusGoalMin', unit: 'MIN', color: _focusB),
-                  const SizedBox(height: QSpace.md),
-                  _Metric(label: 'SESSIONS', value: '$sessDone', goal: '/$_sessGoal', unit: '', color: _sessB),
-                  const SizedBox(height: QSpace.md),
-                  _Metric(label: 'PROTECTED', value: '$protMin', goal: '/$_protGoalMin', unit: 'MIN', color: _protB),
-                ],
-              ),
+          borderRadius: BorderRadius.circular(24),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_focusB, _focusA],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _focusA.withValues(alpha: 0.32),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
             ),
-            const SizedBox(width: QSpace.md),
-            ActivityRings(data: data, size: 148),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "TODAY'S FOCUS",
+                        style: QType.caption.copyWith(
+                          color: CupertinoColors.white.withValues(alpha: 0.8),
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: '$focusMin',
+                              style: QType.largeTitle.copyWith(
+                                color: CupertinoColors.white,
+                                fontWeight: FontWeight.w800,
+                                fontFeatures: const [FontFeature.tabularFigures()],
+                              ),
+                            ),
+                            TextSpan(
+                              text: '  / $_focusGoalMin min',
+                              style: QType.headline.copyWith(
+                                color: CupertinoColors.white.withValues(alpha: 0.8),
+                                fontWeight: FontWeight.w600,
+                                fontFeatures: const [FontFeature.tabularFigures()],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_streak > 0) _StreakChip(days: _streak),
+              ],
+            ),
+            const SizedBox(height: QSpace.lg),
+            _AnimatedFocusBar(fraction: frac),
+            const SizedBox(height: QSpace.lg),
+            Row(
+              children: [
+                _HeroStat(
+                  icon: CupertinoIcons.bolt_fill,
+                  value: '$sessDone/$_sessGoal',
+                  label: 'Sessions',
+                ),
+                const _HeroDivider(),
+                _HeroStat(
+                  icon: CupertinoIcons.shield_lefthalf_fill,
+                  value: '${protMin}m',
+                  label: 'Protected',
+                ),
+                const _HeroDivider(),
+                _HeroStat(
+                  icon: CupertinoIcons.checkmark_seal_fill,
+                  value: '$tasksDone/$tasksTotal',
+                  label: 'Tasks',
+                ),
+              ],
+            ),
+            const SizedBox(height: QSpace.lg),
+            const StartFocusButton(),
           ],
         ),
       ),
@@ -155,58 +270,133 @@ class ActivityCard extends StatelessWidget {
   }
 }
 
-class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.label,
-    required this.value,
-    required this.goal,
-    required this.unit,
-    required this.color,
-  });
-  final String label;
-  final String value;
-  final String goal;
-  final String unit;
-  final Color color;
+/// A flame streak pill on the hero.
+class _StreakChip extends StatelessWidget {
+  const _StreakChip({required this.days});
+  final int days;
 
   @override
   Widget build(BuildContext context) {
-    final white = QColors.label.resolveFrom(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: QType.caption.copyWith(
-            color: color,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.6,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: CupertinoColors.white.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(QRadius.capsule),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(CupertinoIcons.flame_fill, size: 14, color: CupertinoColors.white),
+          const SizedBox(width: 4),
+          Text(
+            '$days',
+            style: QType.footnote.copyWith(
+              color: CupertinoColors.white,
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
-        ),
-        const SizedBox(height: 1),
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: value,
-                style: QType.title1.copyWith(
-                  color: white,
-                  fontWeight: FontWeight.w700,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-              TextSpan(
-                text: '$goal${unit.isEmpty ? '' : ' $unit'}',
-                style: QType.headline.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Glossy progress bar that animates from empty to [fraction] on first build.
+class _AnimatedFocusBar extends StatelessWidget {
+  const _AnimatedFocusBar({required this.fraction});
+  final double fraction;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        return Container(
+          height: 12,
+          decoration: BoxDecoration(
+            color: CupertinoColors.white.withValues(alpha: 0.24),
+            borderRadius: BorderRadius.circular(QRadius.capsule),
           ),
-        ),
-      ],
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: fraction),
+              duration: const Duration(milliseconds: 900),
+              curve: Curves.easeOutCubic,
+              builder: (context, t, _) {
+                return Container(
+                  width: (c.maxWidth * t).clamp(12.0, c.maxWidth),
+                  height: 12,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        CupertinoColors.white.withValues(alpha: 0.85),
+                        CupertinoColors.white,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(QRadius.capsule),
+                    boxShadow: [
+                      BoxShadow(
+                        color: CupertinoColors.white.withValues(alpha: 0.5),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// One compact icon + value + label stat inside the hero stat row.
+class _HeroStat extends StatelessWidget {
+  const _HeroStat({required this.icon, required this.value, required this.label});
+  final IconData icon;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, size: 16, color: CupertinoColors.white.withValues(alpha: 0.9)),
+          const SizedBox(height: 5),
+          Text(
+            value,
+            style: QType.subhead.copyWith(
+              color: CupertinoColors.white,
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(height: 1),
+          Text(
+            label,
+            style: QType.caption.copyWith(
+              color: CupertinoColors.white.withValues(alpha: 0.75),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroDivider extends StatelessWidget {
+  const _HeroDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 30,
+      color: CupertinoColors.white.withValues(alpha: 0.22),
     );
   }
 }

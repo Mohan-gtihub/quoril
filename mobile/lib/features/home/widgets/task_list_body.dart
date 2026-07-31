@@ -6,6 +6,7 @@ import '../../../core/models/models.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/widgets/common.dart';
+import '../../focus/focus_screen.dart';
 import '../sheets/task_editor_sheet.dart';
 import 'task_card.dart';
 
@@ -92,6 +93,9 @@ class TaskListSliver extends ConsumerWidget {
             onMoveNext: idx < _order.length - 1 ? () => _move(ref, t, 1) : null,
             onTap: () => showTaskEditorSheet(context, ref, task: t),
             onEdit: () => showTaskEditorSheet(context, ref, task: t),
+            onFocus: () => Navigator.of(context, rootNavigator: true).push(
+              CupertinoPageRoute(fullscreenDialog: true, builder: (_) => FocusScreen(task: t)),
+            ),
             onDelete: () => ref.read(tasksProvider.notifier).remove(t),
             onSubtaskToggle: (s) {
               s.done = !s.done;

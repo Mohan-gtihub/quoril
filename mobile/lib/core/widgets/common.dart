@@ -1,7 +1,91 @@
+import 'dart:ui';
+
 import 'package:flutter/cupertino.dart';
 import '../models/models.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
+
+/// Reusable "Liquid Glass" surface — a frosted, backdrop-blurred panel with a
+/// specular top highlight, a hairline light border, and a soft ambient shadow.
+/// This is the shared building block for translucent cards layered over the
+/// warm-aurora [GradientBackground].
+class GlassPanel extends StatelessWidget {
+  const GlassPanel({
+    super.key,
+    required this.child,
+    this.padding,
+    this.radius = QRadius.glass,
+    this.blur = 18,
+    this.fillAlpha = 0.16,
+    this.borderAlpha = 0.24,
+    this.onTap,
+    this.shadow = true,
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final double radius;
+  final double blur;
+
+  /// Base translucency of the glass fill (a vertical gradient is layered on top).
+  final double fillAlpha;
+  final double borderAlpha;
+  final VoidCallback? onTap;
+  final bool shadow;
+
+  @override
+  Widget build(BuildContext context) {
+    final panel = DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: shadow
+            ? [
+                BoxShadow(
+                  color: CupertinoColors.black.withValues(alpha: 0.22),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ]
+            : null,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+          child: Container(
+            padding: padding,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(radius),
+              // Specular sheen: brighter at the top edge, settling lower down.
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  CupertinoColors.white.withValues(alpha: fillAlpha + 0.08),
+                  CupertinoColors.white.withValues(alpha: fillAlpha),
+                  CupertinoColors.white.withValues(alpha: fillAlpha - 0.04),
+                ],
+                stops: const [0.0, 0.45, 1.0],
+              ),
+              border: Border.all(
+                color: CupertinoColors.white.withValues(alpha: borderAlpha),
+                width: 1,
+              ),
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+
+    if (onTap == null) return panel;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: panel,
+    );
+  }
+}
 
 /// Overlapping cluster of colored initials avatars (reference task/event cards).
 class AvatarStack extends StatelessWidget {
@@ -121,7 +205,7 @@ class QChip extends StatelessWidget {
 String fmtHm(int seconds) {
   final h = seconds ~/ 3600;
   final m = (seconds % 3600) ~/ 60;
-  if (h > 0) return '${h}h ${m}m';
+  if (h > 0) return m > 0 ? '${h}h ${m}m' : '${h}h';
   return '${m}m';
 }
 

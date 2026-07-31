@@ -1,39 +1,38 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/data/mock_data.dart';
+import '../../core/data/providers.dart';
 import '../../core/models/models.dart';
 import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/widgets/common.dart';
+import '../focus/focus_screen.dart';
+import '../home/sheets/task_editor_sheet.dart';
 
-/// The Calendar screen — a working month calendar on the warm aurora gradient.
+/// The Calendar screen — a working month calendar wired to the user's TASKS.
 ///
-/// Real dates: the grid is built from actual month math, month navigation moves
-/// through time, days carrying events are dotted, and tapping a day filters the
-/// event list below. Events are sourced from [Mock.events]; swapping that for a
-/// repository call is the only change needed to go live.
-class CalendarScreen extends StatefulWidget {
+/// Each task is placed on its scheduled day (its `dueAt`, or the bucket's
+/// default day for Today/This-week tasks). Days carrying tasks are dotted, and
+/// the agenda below lists the selected day's tasks — each can be opened for
+/// editing or started as a focus session, so the calendar, board, and timer all
+/// operate on the same data.
+class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
 
   @override
-  State<CalendarScreen> createState() => _CalendarScreenState();
+  ConsumerState<CalendarScreen> createState() => _CalendarScreenState();
 }
 
-class _CalendarScreenState extends State<CalendarScreen> {
+class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   static const _monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
   ];
 
   late final DateTime _today;
-  late final List<CalendarEvent> _events;
-
-  /// First-of-month for the month currently on screen.
   late DateTime _visibleMonth;
-
-  /// Currently selected day (midnight-normalized).
   late DateTime _selected;
 
   @override
@@ -41,43 +40,52 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.initState();
     final now = DateTime.now();
     _today = DateTime(now.year, now.month, now.day);
-    _events = Mock.events();
     _visibleMonth = DateTime(now.year, now.month);
     _selected = _today;
   }
 
-  /// Days in [_visibleMonth].
   int get _daysInMonth => DateTime(_visibleMonth.year, _visibleMonth.month + 1, 0).day;
 
-  /// Leading blank cells before day 1, with Sunday as the first column
-  /// (Dart's weekday is Mon=1..Sun=7 → Sunday maps to 0).
   int get _leadingBlanks => DateTime(_visibleMonth.year, _visibleMonth.month, 1).weekday % 7;
 
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  /// Count of events on [day] — powers the under-cell dot.
-  int _eventCountOn(DateTime day) =>
-      _events.where((e) => _isSameDay(e.day, day)).length;
+  /// The calendar day a task belongs to: explicit due date, else the bucket's
+  /// default day (Today → today, This-week → +5d, mirroring the backend).
+  DateTime? _taskDay(Task t) {
+    final due = t.dueAt;
+    if (due != null) return DateTime(due.year, due.month, due.day);
+    return switch (t.bucket) {
+      TaskBucket.today => _today,
+      TaskBucket.week => _today.add(const Duration(days: 5)),
+      TaskBucket.backlog || TaskBucket.done => null,
+    };
+  }
 
-  List<CalendarEvent> get _selectedEvents {
-    final list = _events.where((e) => _isSameDay(e.day, _selected)).toList()
-      ..sort((a, b) => a.start.compareTo(b.start));
+  int _taskCountOn(List<Task> tasks, DateTime day) =>
+      tasks.where((t) => _dayEquals(_taskDay(t), day)).length;
+
+  bool _dayEquals(DateTime? a, DateTime b) => a != null && _isSameDay(a, b);
+
+  List<Task> _tasksOn(List<Task> tasks, DateTime day) {
+    final list = tasks.where((t) => _dayEquals(_taskDay(t), day)).toList();
+    list.sort((a, b) {
+      final ta = a.dueAt, tb = b.dueAt;
+      if (ta != null && tb != null) return ta.compareTo(tb);
+      return a.title.compareTo(b.title);
+    });
     return list;
   }
 
   void _shiftMonth(int delta) {
     HapticFeedback.selectionClick();
-    setState(() {
-      _visibleMonth = DateTime(_visibleMonth.year, _visibleMonth.month + delta);
-    });
+    setState(() => _visibleMonth = DateTime(_visibleMonth.year, _visibleMonth.month + delta));
   }
 
   void _selectDay(int day) {
     HapticFeedback.selectionClick();
-    setState(() {
-      _selected = DateTime(_visibleMonth.year, _visibleMonth.month, day);
-    });
+    setState(() => _selected = DateTime(_visibleMonth.year, _visibleMonth.month, day));
   }
 
   void _jumpToToday() {
@@ -91,10 +99,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
   bool get _showingCurrentMonth =>
       _visibleMonth.year == _today.year && _visibleMonth.month == _today.month;
 
+  void _startFocus(Task task) {
+    HapticFeedback.mediumImpact();
+    Navigator.of(context, rootNavigator: true).push(
+      CupertinoPageRoute(fullscreenDialog: true, builder: (_) => FocusScreen(task: task)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final tasks = ref.watch(tasksProvider).valueOrNull ?? const <Task>[];
     final monthLabel = _monthNames[_visibleMonth.month - 1];
-    final selectedEvents = _selectedEvents;
+    final selectedTasks = _tasksOn(tasks, _selected);
 
     return CupertinoPageScaffold(
       backgroundColor: const Color(0x00000000),
@@ -106,52 +122,56 @@ class _CalendarScreenState extends State<CalendarScreen> {
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                      QSpace.lg, QSpace.xs, QSpace.lg, QSpace.xxl),
+                  padding: const EdgeInsets.fromLTRB(QSpace.lg, QSpace.xs, QSpace.lg, 140),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _CalendarHeader(
                         showTodayButton: !_showingCurrentMonth,
                         onToday: _jumpToToday,
-                      ),
-                      const SizedBox(height: QSpace.xl),
-                      _MonthNavRow(
-                        label: '$monthLabel ${_visibleMonth.year}',
-                        onPrev: () => _shiftMonth(-1),
-                        onNext: () => _shiftMonth(1),
+                        onAdd: () => showTaskEditorSheet(context, ref),
                       ),
                       const SizedBox(height: QSpace.lg),
-                      const _WeekdayRow(),
-                      const SizedBox(height: QSpace.sm),
-                      _MonthGrid(
-                        leadingBlanks: _leadingBlanks,
-                        daysInMonth: _daysInMonth,
-                        isSelected: (d) => _isSameDay(
-                          DateTime(_visibleMonth.year, _visibleMonth.month, d),
-                          _selected,
+                      GlassPanel(
+                        padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.md, QSpace.md, QSpace.lg),
+                        child: Column(
+                          children: [
+                            _MonthNavRow(
+                              label: '$monthLabel ${_visibleMonth.year}',
+                              onPrev: () => _shiftMonth(-1),
+                              onNext: () => _shiftMonth(1),
+                            ),
+                            const SizedBox(height: QSpace.lg),
+                            const _WeekdayRow(),
+                            const SizedBox(height: QSpace.sm),
+                            _MonthGrid(
+                              leadingBlanks: _leadingBlanks,
+                              daysInMonth: _daysInMonth,
+                              isSelected: (d) => _isSameDay(
+                                  DateTime(_visibleMonth.year, _visibleMonth.month, d), _selected),
+                              isToday: (d) => _isSameDay(
+                                  DateTime(_visibleMonth.year, _visibleMonth.month, d), _today),
+                              taskCount: (d) => _taskCountOn(
+                                  tasks, DateTime(_visibleMonth.year, _visibleMonth.month, d)),
+                              onSelect: _selectDay,
+                            ),
+                          ],
                         ),
-                        isToday: (d) => _isSameDay(
-                          DateTime(_visibleMonth.year, _visibleMonth.month, d),
-                          _today,
-                        ),
-                        eventCount: (d) => _eventCountOn(
-                          DateTime(_visibleMonth.year, _visibleMonth.month, d),
-                        ),
-                        onSelect: _selectDay,
                       ),
                       const SizedBox(height: QSpace.xl),
-                      _AgendaHeader(
-                        date: _selected,
-                        count: selectedEvents.length,
-                      ),
+                      _AgendaHeader(date: _selected, count: selectedTasks.length),
                       const SizedBox(height: QSpace.md),
-                      if (selectedEvents.isEmpty)
+                      if (selectedTasks.isEmpty)
                         const _EmptyAgenda()
                       else
-                        for (var i = 0; i < selectedEvents.length; i++) ...[
-                          if (i > 0) const SizedBox(height: QSpace.md),
-                          _EventCard(event: selectedEvents[i]),
+                        for (var i = 0; i < selectedTasks.length; i++) ...[
+                          if (i > 0) const SizedBox(height: QSpace.sm),
+                          _AgendaTaskCard(
+                            task: selectedTasks[i],
+                            onToggle: () => ref.read(tasksProvider.notifier).toggleDone(selectedTasks[i]),
+                            onFocus: () => _startFocus(selectedTasks[i]),
+                            onTap: () => showTaskEditorSheet(context, ref, task: selectedTasks[i]),
+                          ),
                         ],
                     ],
                   ),
@@ -173,59 +193,54 @@ class _CalendarHeader extends StatelessWidget {
   const _CalendarHeader({
     required this.showTodayButton,
     required this.onToday,
+    required this.onAdd,
   });
-
   final bool showTodayButton;
   final VoidCallback onToday;
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         Expanded(
-          child: Text(
-            'Calendar',
-            style: QType.largeTitle.copyWith(color: CupertinoColors.white),
-          ),
+          child: Text('Calendar', style: QType.largeTitle.copyWith(color: CupertinoColors.white)),
         ),
         if (showTodayButton) ...[
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
+          GlassPanel(
+            radius: QRadius.capsule,
+            fillAlpha: 0.18,
+            shadow: false,
             onTap: onToday,
-            child: Container(
-              height: 34,
-              padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: CupertinoColors.white.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(QRadius.capsule),
-              ),
-              child: Text(
-                'Today',
-                style: QType.footnote.copyWith(
-                  color: CupertinoColors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: 8),
+            child: Text('Today',
+                style: QType.footnote.copyWith(color: CupertinoColors.white, fontWeight: FontWeight.w600)),
           ),
           const SizedBox(width: QSpace.sm),
         ],
-        Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: CupertinoColors.white.withValues(alpha: 0.18),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            CupertinoIcons.bell,
-            size: 20,
-            color: CupertinoColors.white,
-          ),
-        ),
+        _GlassCircleButton(icon: CupertinoIcons.add, onTap: onAdd),
       ],
+    );
+  }
+}
+
+class _GlassCircleButton extends StatelessWidget {
+  const _GlassCircleButton({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassPanel(
+      radius: QRadius.capsule,
+      fillAlpha: 0.18,
+      shadow: false,
+      onTap: onTap,
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: Center(child: Icon(icon, size: 22, color: CupertinoColors.white)),
+      ),
     );
   }
 }
@@ -235,12 +250,7 @@ class _CalendarHeader extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _MonthNavRow extends StatelessWidget {
-  const _MonthNavRow({
-    required this.label,
-    required this.onPrev,
-    required this.onNext,
-  });
-
+  const _MonthNavRow({required this.label, required this.onPrev, required this.onNext});
   final String label;
   final VoidCallback onPrev;
   final VoidCallback onNext;
@@ -254,10 +264,7 @@ class _MonthNavRow extends StatelessWidget {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: QType.title3.copyWith(
-              color: CupertinoColors.white,
-              fontWeight: FontWeight.w600,
-            ),
+            style: QType.title3.copyWith(color: CupertinoColors.white, fontWeight: FontWeight.w600),
           ),
         ),
         _NavChevron(icon: CupertinoIcons.chevron_right, onTap: onNext),
@@ -268,7 +275,6 @@ class _MonthNavRow extends StatelessWidget {
 
 class _NavChevron extends StatelessWidget {
   const _NavChevron({required this.icon, required this.onTap});
-
   final IconData icon;
   final VoidCallback onTap;
 
@@ -277,16 +283,16 @@ class _NavChevron extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: SizedBox(
-        width: 44,
-        height: 44,
-        child: Center(
-          child: Icon(
-            icon,
-            size: 20,
-            color: CupertinoColors.white.withValues(alpha: 0.85),
-          ),
+      child: Container(
+        width: 36,
+        height: 36,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: CupertinoColors.white.withValues(alpha: 0.12),
+          shape: BoxShape.circle,
+          border: Border.all(color: CupertinoColors.white.withValues(alpha: 0.18), width: 1),
         ),
+        child: Icon(icon, size: 18, color: CupertinoColors.white.withValues(alpha: 0.9)),
       ),
     );
   }
@@ -298,7 +304,6 @@ class _NavChevron extends StatelessWidget {
 
 class _WeekdayRow extends StatelessWidget {
   const _WeekdayRow();
-
   static const _labels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   @override
@@ -332,7 +337,7 @@ class _MonthGrid extends StatelessWidget {
     required this.daysInMonth,
     required this.isSelected,
     required this.isToday,
-    required this.eventCount,
+    required this.taskCount,
     required this.onSelect,
   });
 
@@ -340,14 +345,13 @@ class _MonthGrid extends StatelessWidget {
   final int daysInMonth;
   final bool Function(int day) isSelected;
   final bool Function(int day) isToday;
-  final int Function(int day) eventCount;
+  final int Function(int day) taskCount;
   final ValueChanged<int> onSelect;
 
   @override
   Widget build(BuildContext context) {
     final totalCells = leadingBlanks + daysInMonth;
     final rows = (totalCells / 7.0).ceil();
-
     return Column(
       children: [
         for (var r = 0; r < rows; r++)
@@ -355,8 +359,7 @@ class _MonthGrid extends StatelessWidget {
             padding: EdgeInsets.only(bottom: r == rows - 1 ? 0 : QSpace.xs),
             child: Row(
               children: [
-                for (var c = 0; c < 7; c++)
-                  Expanded(child: _cellAt(r * 7 + c)),
+                for (var c = 0; c < 7; c++) Expanded(child: _cellAt(r * 7 + c)),
               ],
             ),
           ),
@@ -368,12 +371,11 @@ class _MonthGrid extends StatelessWidget {
     if (index < leadingBlanks) return const _DayCell.blank();
     final day = index - leadingBlanks + 1;
     if (day > daysInMonth) return const _DayCell.blank();
-
     return _DayCell(
       day: day,
       selected: isSelected(day),
       today: isToday(day),
-      events: eventCount(day),
+      tasks: taskCount(day),
       onTap: () => onSelect(day),
     );
   }
@@ -384,7 +386,7 @@ class _DayCell extends StatelessWidget {
     required this.day,
     required this.selected,
     required this.today,
-    required this.events,
+    required this.tasks,
     required this.onTap,
   }) : blank = false;
 
@@ -392,14 +394,14 @@ class _DayCell extends StatelessWidget {
       : day = 0,
         selected = false,
         today = false,
-        events = 0,
+        tasks = 0,
         onTap = null,
         blank = true;
 
   final int day;
   final bool selected;
   final bool today;
-  final int events;
+  final int tasks;
   final bool blank;
   final VoidCallback? onTap;
 
@@ -408,9 +410,7 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (blank) {
-      return const SizedBox(height: 48);
-    }
+    if (blank) return const SizedBox(height: 48);
 
     Border? border;
     Color fill = const Color(0x00000000);
@@ -423,29 +423,18 @@ class _DayCell extends StatelessWidget {
       textColor = CupertinoColors.white;
       weight = FontWeight.w700;
       shadow = [
-        BoxShadow(
-          color: CupertinoColors.black.withValues(alpha: 0.35),
-          blurRadius: 14,
-          offset: const Offset(0, 5),
-        ),
+        BoxShadow(color: CupertinoColors.black.withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 5)),
       ];
     } else if (today) {
-      // Today (unselected) gets the warm accent ring.
       border = Border.all(color: _orange, width: 2);
       textColor = CupertinoColors.white;
       weight = FontWeight.w700;
     } else {
-      border = Border.all(
-        color: CupertinoColors.white.withValues(alpha: 0.85),
-        width: 1.2,
-      );
+      border = Border.all(color: CupertinoColors.white.withValues(alpha: 0.85), width: 1.2);
       textColor = CupertinoColors.white;
     }
 
-    // Dot color: inverted under the dark selected pill for contrast.
-    final dotColor = selected
-        ? CupertinoColors.white
-        : _orange;
+    final dotColor = selected ? CupertinoColors.white : _orange;
 
     return GestureDetector(
       onTap: onTap,
@@ -459,12 +448,7 @@ class _DayCell extends StatelessWidget {
               width: 39,
               height: 39,
               alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: fill,
-                shape: BoxShape.circle,
-                border: border,
-                boxShadow: shadow,
-              ),
+              decoration: BoxDecoration(color: fill, shape: BoxShape.circle, border: border, boxShadow: shadow),
               child: Text(
                 '$day',
                 style: QType.subhead.copyWith(
@@ -477,15 +461,8 @@ class _DayCell extends StatelessWidget {
             const SizedBox(height: 4),
             SizedBox(
               height: 5,
-              child: events > 0
-                  ? Container(
-                      width: 5,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: dotColor,
-                        shape: BoxShape.circle,
-                      ),
-                    )
+              child: tasks > 0
+                  ? Container(width: 5, height: 5, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle))
                   : null,
             ),
           ],
@@ -501,45 +478,26 @@ class _DayCell extends StatelessWidget {
 
 class _AgendaHeader extends StatelessWidget {
   const _AgendaHeader({required this.date, required this.count});
-
   final DateTime date;
   final int count;
 
-  static const _weekdays = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday',
-    'Friday', 'Saturday', 'Sunday',
-  ];
-  static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
+  static const _weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  static const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   @override
   Widget build(BuildContext context) {
     final label = '${_weekdays[date.weekday - 1]}, ${_months[date.month - 1]} ${date.day}';
-    final countLabel = count == 0
-        ? 'No events'
-        : '$count event${count == 1 ? '' : 's'}';
-
+    final countLabel = count == 0 ? 'No tasks' : '$count task${count == 1 ? '' : 's'}';
     return Row(
       crossAxisAlignment: CrossAxisAlignment.baseline,
       textBaseline: TextBaseline.alphabetic,
       children: [
         Expanded(
-          child: Text(
-            label,
-            style: QType.title3.copyWith(
-              color: CupertinoColors.white,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          child: Text(label, style: QType.title3.copyWith(color: CupertinoColors.white, fontWeight: FontWeight.w700)),
         ),
         Text(
           countLabel,
-          style: QType.footnote.copyWith(
-            color: CupertinoColors.white.withValues(alpha: 0.65),
-            fontWeight: FontWeight.w600,
-          ),
+          style: QType.footnote.copyWith(color: CupertinoColors.white.withValues(alpha: 0.65), fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -551,31 +509,16 @@ class _EmptyAgenda extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
+    return GlassPanel(
+      fillAlpha: 0.10,
       padding: const EdgeInsets.symmetric(vertical: QSpace.xxl),
-      decoration: BoxDecoration(
-        color: CupertinoColors.white.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(QRadius.glass),
-        border: Border.all(
-          color: CupertinoColors.white.withValues(alpha: 0.14),
-          width: 1,
-        ),
-      ),
       child: Column(
         children: [
-          Icon(
-            CupertinoIcons.calendar,
-            size: 34,
-            color: CupertinoColors.white.withValues(alpha: 0.55),
-          ),
+          Icon(CupertinoIcons.calendar, size: 34, color: CupertinoColors.white.withValues(alpha: 0.55)),
           const SizedBox(height: QSpace.sm),
           Text(
             'Nothing scheduled',
-            style: QType.subhead.copyWith(
-              color: CupertinoColors.white.withValues(alpha: 0.75),
-              fontWeight: FontWeight.w600,
-            ),
+            style: QType.subhead.copyWith(color: CupertinoColors.white.withValues(alpha: 0.75), fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -584,111 +527,98 @@ class _EmptyAgenda extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Event card
+// Agenda task card — the calendar's task row, with edit-on-tap and a play
+// button that starts a focus session on that task.
 // ---------------------------------------------------------------------------
 
-class _EventCard extends StatelessWidget {
-  const _EventCard({required this.event});
+class _AgendaTaskCard extends StatelessWidget {
+  const _AgendaTaskCard({
+    required this.task,
+    required this.onToggle,
+    required this.onFocus,
+    required this.onTap,
+  });
 
-  final CalendarEvent event;
+  final Task task;
+  final VoidCallback onToggle;
+  final VoidCallback onFocus;
+  final VoidCallback onTap;
+
+  String _meta() {
+    final t = task;
+    if (t.startLabel != null && t.finishLabel != null) return '${t.startLabel} – ${t.finishLabel}';
+    final e = t.estimateMinutes;
+    if (e != null) {
+      final h = e ~/ 60, m = e % 60;
+      return h > 0 ? (m > 0 ? 'Est ${h}h ${m}m' : 'Est ${h}h') : 'Est ${m}m';
+    }
+    return t.priority.label;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final done = task.done;
+    return GlassPanel(
+      onTap: onTap,
       padding: const EdgeInsets.all(QSpace.md),
-      decoration: BoxDecoration(
-        color: CupertinoColors.white.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(QRadius.glass),
-        border: Border.all(
-          color: CupertinoColors.white.withValues(alpha: 0.18),
-          width: 1,
-        ),
-      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Accent spine keyed to the event color.
-          Container(
-            width: 4,
-            decoration: BoxDecoration(
-              color: event.color,
-              borderRadius: BorderRadius.circular(QRadius.capsule),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              HapticFeedback.heavyImpact();
+              onToggle();
+            },
+            child: Icon(
+              done ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.circle,
+              size: 26,
+              color: done ? CupertinoColors.white : CupertinoColors.white.withValues(alpha: 0.6),
             ),
           ),
-          const SizedBox(width: QSpace.md),
+          const SizedBox(width: QSpace.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        event.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: QType.title3.copyWith(
-                          color: CupertinoColors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    if (event.assignees.isNotEmpty) ...[
-                      const SizedBox(width: QSpace.sm),
-                      AvatarStack(
-                        people: event.assignees,
-                        size: 32,
-                        ringColor: const Color(0xFFF37A1E),
-                      ),
-                    ],
-                  ],
+                Text(
+                  task.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: QType.headline.copyWith(
+                    color: CupertinoColors.white,
+                    fontWeight: FontWeight.w700,
+                    decoration: done ? TextDecoration.lineThrough : null,
+                  ),
                 ),
-                const SizedBox(height: QSpace.md),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    _TimeStat(label: 'Start', value: event.startLabel),
-                    const SizedBox(width: QSpace.xl),
-                    _TimeStat(label: 'Finish', value: event.finishLabel),
-                  ],
+                const SizedBox(height: 2),
+                Text(
+                  _meta(),
+                  style: QType.footnote.copyWith(
+                    color: CupertinoColors.white.withValues(alpha: 0.7),
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: QSpace.sm),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onFocus,
+            child: Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: CupertinoColors.white.withValues(alpha: 0.16),
+                shape: BoxShape.circle,
+                border: Border.all(color: CupertinoColors.white.withValues(alpha: 0.3), width: 1),
+              ),
+              child: const Icon(CupertinoIcons.play_fill, size: 16, color: CupertinoColors.white),
+            ),
+          ),
         ],
       ),
-    );
-  }
-}
-
-class _TimeStat extends StatelessWidget {
-  const _TimeStat({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: QType.caption.copyWith(
-            color: CupertinoColors.white.withValues(alpha: 0.6),
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: QType.headline.copyWith(
-            color: CupertinoColors.white,
-            fontWeight: FontWeight.w700,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-        ),
-      ],
     );
   }
 }

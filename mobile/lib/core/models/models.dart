@@ -155,40 +155,6 @@ class Task {
   }
 }
 
-/// A scheduled calendar event — the unit rendered on the Calendar screen.
-class CalendarEvent {
-  const CalendarEvent({
-    required this.id,
-    required this.title,
-    required this.start,
-    required this.finish,
-    this.color = const Color(0xFFF37A1E),
-    this.assignees = const [],
-  });
-
-  final String id;
-  final String title;
-
-  /// Concrete start / finish instants — the day is derived from [start].
-  final DateTime start;
-  final DateTime finish;
-
-  final Color color;
-  final List<Assignee> assignees;
-
-  /// Calendar day (midnight-normalized) this event belongs to.
-  DateTime get day => DateTime(start.year, start.month, start.day);
-
-  /// "09:24" style label in 24h time.
-  static String hhmm(DateTime t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-
-  String get startLabel => hhmm(start);
-  String get finishLabel => hhmm(finish);
-
-  Duration get duration => finish.difference(start);
-}
-
 enum SessionType { regular, deepWork, quickSprint, pomodoro }
 
 extension SessionTypeX on SessionType {

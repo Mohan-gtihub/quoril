@@ -23,6 +23,7 @@ class TaskCard extends StatefulWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onSubtaskToggle,
+    this.onFocus,
   });
 
   final Task task;
@@ -35,6 +36,9 @@ class TaskCard extends StatefulWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final void Function(Subtask) onSubtaskToggle;
+
+  /// Start a focus session on this task (adds a "Start focus" context action).
+  final VoidCallback? onFocus;
 
   @override
   State<TaskCard> createState() => _TaskCardState();
@@ -129,6 +133,15 @@ class _TaskCardState extends State<TaskCard> {
     return CupertinoContextMenu.builder(
       enableHapticFeedback: true,
       actions: [
+        if (widget.onFocus != null)
+          CupertinoContextMenuAction(
+            onPressed: () {
+              Navigator.pop(context);
+              widget.onFocus!();
+            },
+            trailingIcon: CupertinoIcons.play_circle,
+            child: const Text('Start focus'),
+          ),
         CupertinoContextMenuAction(
           onPressed: () {
             Navigator.pop(context);

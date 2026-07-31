@@ -120,17 +120,17 @@ class _RingPainter extends CustomPainter {
       old.stroke != stroke;
 }
 
-/// A large analog CLOCK-FACE timer with tick marks + hour numerals, a bold
-/// amber progress arc riding a recessed track with a rounded dark knob at its
-/// leading edge, and big tabular numerals in the center. Designed to sit on the
-/// warm gradient — ticks/numerals are translucent white, the arc is amber.
+/// A large, clean focus dial: one bold progress ring with a rounded glowing
+/// head, a subtle minute bezel just inside it, and big tabular time in the
+/// center. No competing hour numerals — practical and readable. Designed to sit
+/// on the warm gradient (white ink, amber progress).
 class ClockFaceTimer extends StatelessWidget {
   const ClockFaceTimer({
     super.key,
     required this.progress,
     required this.label,
     this.sublabel,
-    this.size = 300,
+    this.size = 320,
     this.arcColor,
     this.tickColor,
     this.knobColor,
@@ -142,11 +142,13 @@ class ClockFaceTimer extends StatelessWidget {
   final double size;
   final Color? arcColor;
   final Color? tickColor;
+
+  /// Retained for source compatibility; the head now uses [arcColor].
   final Color? knobColor;
 
   @override
   Widget build(BuildContext context) {
-    final arc = arcColor ?? const Color(0xFFFFB13D);
+    final arc = arcColor ?? const Color(0xFFFFC24B);
     final tick = tickColor ?? CupertinoColors.white;
     return SizedBox(
       width: size,
@@ -156,32 +158,39 @@ class ClockFaceTimer extends StatelessWidget {
           progress: progress.clamp(0.0, 1.0),
           arc: arc,
           tick: tick,
-          textDirection: Directionality.of(context),
         ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: QType.timer.copyWith(
-                  fontSize: size * 0.2,
-                  letterSpacing: -1.0,
-                  color: CupertinoColors.white,
-                ),
-              ),
-              if (sublabel != null) ...[
-                const SizedBox(height: QSpace.xxs),
-                Text(
-                  sublabel!.toUpperCase(),
-                  style: QType.footnote.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.4,
-                    color: CupertinoColors.white.withValues(alpha: 0.7),
+        child: Padding(
+          // Keep the center label clear of the ring + bezel band.
+          padding: EdgeInsets.all(size * 0.2),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    style: QType.timer.copyWith(
+                      fontSize: size * 0.19,
+                      letterSpacing: -1.5,
+                      color: CupertinoColors.white,
+                    ),
                   ),
                 ),
+                if (sublabel != null) ...[
+                  const SizedBox(height: QSpace.xs),
+                  Text(
+                    sublabel!.toUpperCase(),
+                    style: QType.footnote.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.6,
+                      color: CupertinoColors.white.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -194,100 +203,75 @@ class _ClockFacePainter extends CustomPainter {
     required this.progress,
     required this.arc,
     required this.tick,
-    required this.textDirection,
   });
 
   final double progress;
   final Color arc;
   final Color tick;
-  final TextDirection textDirection;
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
     final r = size.shortestSide / 2;
+    final stroke = r * 0.09; // proportional ring weight
+    final ringRadius = r - stroke / 2 - 1;
+    final rect = Rect.fromCircle(center: center, radius: ringRadius);
 
-    // --- Hour numerals 1..12, OUTSIDE the bezel (12 top, 3 right...). ------
-    final numRadius = r - 12;
-    for (var h = 1; h <= 12; h++) {
-      final angle = -math.pi / 2 + (h / 12) * 2 * math.pi;
-      final tp = TextPainter(
-        text: TextSpan(
-          text: '$h',
-          style: QType.footnote.copyWith(
-            fontWeight: FontWeight.w700,
-            color: tick,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-        ),
-        textDirection: textDirection,
-      )..layout();
-      final pos = center +
-          Offset(math.cos(angle), math.sin(angle)) * numRadius -
-          Offset(tp.width / 2, tp.height / 2);
-      tp.paint(canvas, pos);
-    }
-
-    // --- White stopwatch BEZEL: a dense ring of fine radial ticks that
-    //     reads as a near-solid white band, just inside the numerals. ------
-    final bezelOuter = r - 30;
-    const bezelDepth = 16.0;
-    final bezelInner = bezelOuter - bezelDepth;
-    const tickCount = 120;
-    for (var i = 0; i < tickCount; i++) {
-      final isMajor = i % 10 == 0;
-      final angle = (i / tickCount) * 2 * math.pi;
-      final dir = Offset(math.cos(angle), math.sin(angle));
-      final paint = Paint()
-        ..strokeCap = StrokeCap.butt
-        ..strokeWidth = isMajor ? 2.4 : 1.6
-        ..color = tick.withValues(alpha: isMajor ? 1.0 : 0.85);
-      canvas.drawLine(
-        center + dir * bezelOuter,
-        center + dir * bezelInner,
-        paint,
-      );
-    }
-
-    // (The warm gradient shows through the center inside the bezel.)
-
-    // --- Bold BLACK progress arc riding the OUTER rim (over the bezel top),
-    //     thick with rounded caps, sweeping from ~10 o'clock through 12. ---
-    final arcRadius = bezelOuter + 2;
-    const arcStroke = 12.0;
-    if (progress > 0) {
-      final arcPaint = Paint()
+    // --- Faint full track. -------------------------------------------------
+    canvas.drawCircle(
+      center,
+      ringRadius,
+      Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = arcStroke
+        ..strokeWidth = stroke
         ..strokeCap = StrokeCap.round
-        ..color = CupertinoColors.black;
-      // Start at ~10 o'clock so progress reads as a band riding the rim.
-      const start = -math.pi / 2 - (2 * math.pi) * (2 / 12);
-      final sweep = 2 * math.pi * progress;
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: arcRadius),
-        start,
-        sweep,
-        false,
-        arcPaint,
-      );
+        ..color = tick.withValues(alpha: 0.16),
+    );
 
-      // Small ORANGE tick/marker at the START of the arc (~10 o'clock).
-      final startDir = Offset(math.cos(start), math.sin(start));
-      final markerCenter = center + startDir * arcRadius;
-      canvas.drawCircle(
-        markerCenter,
-        6.5,
-        Paint()..color = arc,
+    // --- Subtle minute bezel just inside the ring (60 ticks). --------------
+    final tickOuter = ringRadius - stroke / 2 - r * 0.03;
+    for (var i = 0; i < 60; i++) {
+      final isMajor = i % 5 == 0;
+      final angle = (i / 60) * 2 * math.pi;
+      final dir = Offset(math.cos(angle), math.sin(angle));
+      final len = isMajor ? r * 0.055 : r * 0.03;
+      canvas.drawLine(
+        center + dir * tickOuter,
+        center + dir * (tickOuter - len),
+        Paint()
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = isMajor ? 2.0 : 1.0
+          ..color = tick.withValues(alpha: isMajor ? 0.5 : 0.22),
       );
     }
+
+    if (progress <= 0) return;
+
+    // --- Bold amber progress arc + rounded glowing head. -------------------
+    const start = -math.pi / 2;
+    final sweep = 2 * math.pi * progress;
+    canvas.drawArc(
+      rect,
+      start,
+      sweep,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.round
+        ..color = arc,
+    );
+
+    // Head: a bright white cap with an amber core at the leading edge.
+    final headAngle = start + sweep;
+    final head = center + Offset(math.cos(headAngle), math.sin(headAngle)) * ringRadius;
+    canvas.drawCircle(head, stroke * 0.62, Paint()..color = CupertinoColors.white);
+    canvas.drawCircle(head, stroke * 0.30, Paint()..color = arc);
   }
 
   @override
   bool shouldRepaint(covariant _ClockFacePainter old) =>
-      old.progress != progress ||
-      old.arc != arc ||
-      old.tick != tick;
+      old.progress != progress || old.arc != arc || old.tick != tick;
 }
 
 /// An empty outline ring used in an idle / ready state.

@@ -18,77 +18,11 @@ class Mock {
     Assignee(name: 'Priya Shah', color: Color(0xFF7B61FF)),
   ];
 
-  /// Seed calendar events anchored to *today* so the Calendar screen always has
-  /// live-looking data regardless of the real date. Times are on the local day.
-  static List<CalendarEvent> events() {
+  /// Due-date helper anchored to *today* so the calendar always has live-looking
+  /// data regardless of the real date.
+  static DateTime _due(int dayOffset, [int h = 9, int m = 0]) {
     final now = DateTime.now();
-    DateTime at(int dayOffset, int h, int m) {
-      final d = DateTime(now.year, now.month, now.day + dayOffset);
-      return DateTime(d.year, d.month, d.day, h, m);
-    }
-
-    return [
-      CalendarEvent(
-        id: 'e1',
-        title: 'Campaign Strategy Call',
-        start: at(0, 9, 24),
-        finish: at(0, 12, 41),
-        color: const Color(0xFFF37A1E),
-        assignees: const [
-          Assignee(name: 'Ava Reyes', color: Color(0xFFF37A1E)),
-          Assignee(name: 'Noah Kim', color: Color(0xFF2E86D8)),
-          Assignee(name: 'Mia Chen', color: Color(0xFF37E6C4)),
-        ],
-      ),
-      CalendarEvent(
-        id: 'e2',
-        title: 'Client Presentation',
-        start: at(0, 14, 0),
-        finish: at(0, 15, 30),
-        color: const Color(0xFFFF5E8A),
-        assignees: const [
-          Assignee(name: 'Liam Ford', color: Color(0xFFFF5E8A)),
-          Assignee(name: 'Zoe Park', color: Color(0xFF7E57C2)),
-        ],
-      ),
-      CalendarEvent(
-        id: 'e3',
-        title: 'Design Review',
-        start: at(1, 10, 0),
-        finish: at(1, 11, 0),
-        color: const Color(0xFF7B61FF),
-        assignees: _team,
-      ),
-      CalendarEvent(
-        id: 'e4',
-        title: 'Sprint Planning',
-        start: at(2, 9, 0),
-        finish: at(2, 10, 30),
-        color: const Color(0xFF2E86D8),
-        assignees: const [
-          Assignee(name: 'Marcus Kane', color: Color(0xFFDD4B39)),
-          Assignee(name: 'Priya Shah', color: Color(0xFF7B61FF)),
-        ],
-      ),
-      CalendarEvent(
-        id: 'e5',
-        title: '1:1 with Manager',
-        start: at(-1, 16, 0),
-        finish: at(-1, 16, 30),
-        color: const Color(0xFF37E6C4),
-        assignees: const [
-          Assignee(name: 'Olivia Reed', color: Color(0xFFE8A13A)),
-        ],
-      ),
-      CalendarEvent(
-        id: 'e6',
-        title: 'Quarterly Roadmap',
-        start: at(4, 13, 0),
-        finish: at(4, 14, 30),
-        color: const Color(0xFFF37A1E),
-        assignees: _team,
-      ),
-    ];
+    return DateTime(now.year, now.month, now.day + dayOffset, h, m);
   }
 
   static List<Task> tasks() => [
@@ -99,6 +33,7 @@ class Mock {
           priority: Priority.high,
           estimateMinutes: 25,
           spentSeconds: 18 * 60,
+          dueAt: _due(0, 8, 2),
           startLabel: '08:02',
           finishLabel: '10:39',
           assignees: _team,
@@ -112,6 +47,7 @@ class Mock {
           title: 'First Screen Design',
           bucket: TaskBucket.today,
           priority: Priority.critical,
+          dueAt: _due(0, 11, 0),
           startLabel: '11:00',
           finishLabel: '13:30',
           assignees: [_team[0], _team[1]],
@@ -122,12 +58,34 @@ class Mock {
           bucket: TaskBucket.week,
           priority: Priority.medium,
           estimateMinutes: 45,
+          dueAt: _due(2, 10, 0),
+          startLabel: '10:00',
+          finishLabel: '10:45',
           subtasks: [Subtask(id: 's3', title: 'Deep link callback'), Subtask(id: 's4', title: 'Token refresh')],
         ),
-        Task(id: 't4', title: 'Sketch the icon set', bucket: TaskBucket.week, priority: Priority.low),
-        Task(id: 't5', title: 'Research Screen Time API', bucket: TaskBucket.backlog, priority: Priority.medium),
+        Task(
+          id: 't4',
+          title: 'Sketch the icon set',
+          bucket: TaskBucket.week,
+          priority: Priority.low,
+          dueAt: _due(4, 14, 0),
+        ),
+        Task(
+          id: 't5',
+          title: 'Research Screen Time API',
+          bucket: TaskBucket.backlog,
+          priority: Priority.medium,
+          dueAt: _due(9, 13, 0),
+        ),
         Task(id: 't6', title: 'Set up CI', bucket: TaskBucket.backlog, priority: Priority.low),
-        Task(id: 't7', title: 'Finalize color tokens', bucket: TaskBucket.done, priority: Priority.medium, done: true),
+        Task(
+          id: 't7',
+          title: 'Finalize color tokens',
+          bucket: TaskBucket.done,
+          priority: Priority.medium,
+          done: true,
+          dueAt: _due(-1, 16, 0),
+        ),
       ];
 
   static final recentSessions = <FocusSession>[

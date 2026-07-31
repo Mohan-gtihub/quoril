@@ -65,6 +65,7 @@ class _InsightsBodyState extends State<_InsightsBody> {
               largeTitle: Text('Insights'),
               backgroundColor: Color(0x00000000),
               border: null,
+              transitionBetweenRoutes: false,
             ),
             SliverToBoxAdapter(child: _hero(context)),
             SliverToBoxAdapter(child: _controls(context)),

@@ -46,6 +46,12 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
   int _remaining = _defaultSeconds;
   int _saves = 0;
 
+  /// Total seconds actually focused this session (accumulates across blocks) and
+  /// how many of those have already been written to the task. This is what binds
+  /// the clock to the task — every worked second flows to the task's spent time.
+  int _workedSeconds = 0;
+  int _credited = 0;
+
   /// Elapsed (in seconds) at the start of the current lap/block; Lap Time is
   /// measured from here so it resets whenever the block is reset.
   int _lapStartElapsed = 0;
@@ -59,7 +65,23 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
   @override
   void initState() {
     super.initState();
+    // Bind the block length to the task's estimate (Quoril desktop behavior).
+    final est = widget.task?.estimateMinutes;
+    if (est != null && est > 0) {
+      _totalSeconds = est * 60;
+      _remaining = _totalSeconds;
+    }
     _runTicker();
+  }
+
+  /// Write any not-yet-credited focused time onto the task.
+  void _creditFocus() {
+    final task = widget.task;
+    final delta = _workedSeconds - _credited;
+    if (task != null && delta > 0) {
+      _credited = _workedSeconds;
+      ref.read(tasksProvider.notifier).logFocus(task.id, delta);
+    }
   }
 
   @override
@@ -81,7 +103,10 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       if (_remaining > 0) {
-        setState(() => _remaining--);
+        setState(() {
+          _remaining--;
+          _workedSeconds++;
+        });
       } else {
         _onTimeUp();
       }
@@ -90,6 +115,8 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
 
   void _onTimeUp() {
     _ticker?.cancel();
+    // Natural end of a block: credit the focused time to the task, then break.
+    _creditFocus();
     _startBreak();
   }
 
@@ -120,7 +147,8 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
   Future<void> _finish() async {
     _ticker?.cancel();
     HapticFeedback.heavyImpact();
-    final seconds = _elapsed == 0 ? _totalSeconds : _elapsed;
+    // The real focused length this session (accumulated across blocks).
+    final seconds = _workedSeconds > 0 ? _workedSeconds : _elapsed;
     try {
       await ref.read(apiProvider).logSession(
             type: SessionType.deepWork,
@@ -130,6 +158,8 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
     } catch (_) {
       // Non-fatal: celebration still shows even if logging fails offline.
     }
+    // Flush any remaining focused time onto the task.
+    _creditFocus();
     if (!mounted) return;
     _showCelebration(seconds);
   }
@@ -138,7 +168,8 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
 
   Future<void> _requestClose() async {
     HapticFeedback.selectionClick();
-    if (_elapsed <= 60) {
+    if (_workedSeconds <= 60) {
+      _creditFocus(); // credit even a short stint before leaving
       Navigator.of(context).pop();
       return;
     }
@@ -146,7 +177,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
       context: context,
       builder: (ctx) => CupertinoActionSheet(
         title: const Text('End this session?'),
-        message: Text("You've focused for ${fmtHm(_elapsed)}."),
+        message: Text("You've focused for ${fmtHm(_workedSeconds)}."),
         actions: [
           CupertinoActionSheetAction(
             isDestructiveAction: true,
@@ -161,7 +192,18 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
         ),
       ),
     );
-    if (leave == true && mounted) Navigator.of(context).pop();
+    if (leave == true && mounted) {
+      // Persist the partial focus: record the session + credit the task.
+      try {
+        await ref.read(apiProvider).logSession(
+              type: SessionType.deepWork,
+              seconds: _workedSeconds,
+              taskId: widget.task?.id,
+            );
+      } catch (_) {}
+      _creditFocus();
+      if (mounted) Navigator.of(context).pop();
+    }
   }
 
   // ---- pomodoro break ------------------------------------------------------
@@ -252,6 +294,15 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
         durationSeconds: durationSeconds,
         saves: _saves,
         reduceMotion: reduceMotion,
+        taskTitle: widget.task?.title,
+        onMarkDone: (widget.task != null && !widget.task!.done)
+            ? () {
+                HapticFeedback.mediumImpact();
+                ref.read(tasksProvider.notifier).toggleDone(widget.task!);
+                Navigator.pop(ctx); // celebration
+                if (mounted) Navigator.of(context).pop(); // focus screen
+              }
+            : null,
         onDone: () {
           Navigator.pop(ctx); // celebration
           if (mounted) Navigator.of(context).pop(); // focus screen
@@ -296,6 +347,8 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                     ClockFaceTimer(
                       progress: progress,
                       label: fmtHms(_elapsed),
+                      size: math.min(
+                          MediaQuery.of(context).size.width - 40, 360),
                       sublabel:
                           _phase == _Phase.paused ? 'Paused' : 'Deep Work',
                     ),
@@ -673,12 +726,16 @@ class _CelebrationOverlay extends StatelessWidget {
     required this.reduceMotion,
     required this.onDone,
     required this.onAnother,
+    this.taskTitle,
+    this.onMarkDone,
   });
   final int durationSeconds;
   final int saves;
   final bool reduceMotion;
   final VoidCallback onDone;
   final VoidCallback onAnother;
+  final String? taskTitle;
+  final VoidCallback? onMarkDone;
 
   @override
   Widget build(BuildContext context) {
@@ -704,7 +761,9 @@ class _CelebrationOverlay extends StatelessWidget {
                 style: QType.title1, textAlign: TextAlign.center),
             const SizedBox(height: QSpace.xs),
             Text(
-              'You focused for ${fmtHm(durationSeconds)}.',
+              taskTitle == null
+                  ? 'You focused for ${fmtHm(durationSeconds)}.'
+                  : 'You focused for ${fmtHm(durationSeconds)} on “$taskTitle”.',
               style: QType.body
                   .copyWith(color: QColors.labelSecondary.resolveFrom(context)),
               textAlign: TextAlign.center,
@@ -735,13 +794,24 @@ class _CelebrationOverlay extends StatelessWidget {
               ],
             ),
             const SizedBox(height: QSpace.xl),
-            PrimaryButton(label: 'Done', onPressed: onDone),
-            const SizedBox(height: QSpace.sm),
-            PrimaryButton(
-              label: 'Start another',
-              style: QButtonStyle.tinted,
-              onPressed: onAnother,
-            ),
+            if (onMarkDone != null) ...[
+              PrimaryButton(
+                label: 'Mark task complete',
+                icon: CupertinoIcons.checkmark_alt,
+                color: QColors.wellbeing,
+                onPressed: onMarkDone,
+              ),
+              const SizedBox(height: QSpace.sm),
+              PrimaryButton(label: 'Keep it open', style: QButtonStyle.tinted, onPressed: onDone),
+            ] else ...[
+              PrimaryButton(label: 'Done', onPressed: onDone),
+              const SizedBox(height: QSpace.sm),
+              PrimaryButton(
+                label: 'Start another',
+                style: QButtonStyle.tinted,
+                onPressed: onAnother,
+              ),
+            ],
           ],
         ),
       ),

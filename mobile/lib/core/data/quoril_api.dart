@@ -124,6 +124,14 @@ class QuorilApi {
     });
   }
 
+  /// Add focused time to a task's cumulative `spent_s` (read-modify-write).
+  Future<void> addTaskSpent(String taskId, int seconds) async {
+    final rows = await _db.from('tasks').select('spent_s').eq('id', taskId).limit(1);
+    final list = (rows as List).cast<Map<String, dynamic>>();
+    final current = list.isEmpty ? 0 : ((list.first['spent_s'] as num?)?.toInt() ?? 0);
+    await _db.from('tasks').update({'spent_s': current + seconds}).eq('id', taskId);
+  }
+
   Future<List<FocusSession>> fetchSessions({int limit = 20}) async {
     final rows = await _db
         .from('focus_sessions')

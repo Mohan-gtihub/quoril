@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,17 +7,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/data/mock_data.dart';
 import '../../core/data/providers.dart';
 import '../../core/models/models.dart';
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
+import '../../core/widgets/app_kit.dart';
 import '../../core/widgets/common.dart';
-import 'sheets/task_editor_sheet.dart';
-import 'widgets/bucket_tabs.dart';
-import 'widgets/home_dashboard.dart';
-import 'widgets/task_list_body.dart';
+import '../focus/focus_screen.dart';
+import '../timeline/create_task_sheet.dart';
+import '../timeline/timeline_day_section.dart';
 
-/// Quoril home — an Apple Fitness "Summary"-style dashboard: a black canvas,
-/// the triple Activity Rings, dark metric cards, then the task board. Rendered
-/// in forced dark so every semantic surface resolves to the Fitness palette.
+/// Quoril home — greeting hero, a live "Today" focus card, and the Structured
+/// timeline for today. Everything below the greeting is real, useful data.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -24,188 +26,134 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  TaskBucket _bucket = TaskBucket.today;
+  String get _greeting {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
 
-  List<Workspace> _allWorkspaces() {
-    return ref.watch(workspacesProvider).valueOrNull ?? Mock.workspaces;
+  void _launchSession(Task? task) {
+    HapticFeedback.mediumImpact();
+    Navigator.of(context, rootNavigator: true).push(
+      CupertinoPageRoute(fullscreenDialog: true, builder: (_) => FocusScreen(task: task)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final tasksAsync = ref.watch(tasksProvider);
-    final workspaces = _allWorkspaces();
-    final all = tasksAsync.valueOrNull ?? const <Task>[];
-    final inBucket = all.where((t) => t.bucket == _bucket).toList();
-    final doneCount = inBucket.where((t) => t.done).length;
-
+    final all = ref.watch(tasksProvider).valueOrNull ?? const <Task>[];
     final todayTasks = all.where((t) => t.bucket == TaskBucket.today).toList();
+    final todayCount = todayTasks.length;
     final todayDone = todayTasks.where((t) => t.done).length;
+    final focusedToday = todayTasks.fold<int>(0, (a, t) => a + t.spentSeconds);
 
-    final profile = ref.watch(profileProvider).valueOrNull;
-    final email = ref.watch(authServiceProvider).user?.email;
-    final name = _firstName(profile?['name']?.toString() ?? email) ?? 'there';
+    final brightness = MediaQuery.maybeOf(context)?.platformBrightness ?? Brightness.light;
 
-    final mq = MediaQuery.of(context);
-
-    // Force the Fitness look: pure-black canvas, dark-resolved surfaces.
-    return MediaQuery(
-      data: mq.copyWith(platformBrightness: Brightness.dark),
-      child: CupertinoTheme(
-        data: const CupertinoThemeData(brightness: Brightness.dark),
-        child: CupertinoPageScaffold(
-          backgroundColor: CupertinoColors.black,
-          child: Stack(
-            children: [
-              SafeArea(
-                bottom: false,
-                child: CustomScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  slivers: [
-                    CupertinoSliverRefreshControl(
-                      onRefresh: () async {
-                        HapticFeedback.selectionClick();
-                        ref.invalidate(tasksProvider);
-                        await ref.read(tasksProvider.future);
+    return CupertinoPageScaffold(
+      backgroundColor: QColors.bgGrouped.resolveFrom(context),
+      child: GradientBackground(
+        gradient: QGradients.page(brightness),
+        child: SafeArea(
+          bottom: false,
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              CupertinoSliverRefreshControl(
+                onRefresh: () async {
+                  HapticFeedback.selectionClick();
+                  ref.invalidate(tasksProvider);
+                  await ref.read(tasksProvider.future);
+                },
+              ),
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Greeting(greeting: _greeting, taskCount: todayCount),
+                    const SizedBox(height: QSpace.lg),
+                    _TodayCard(
+                      focusedSeconds: focusedToday,
+                      tasksDone: todayDone,
+                      tasksTotal: todayCount,
+                      onStart: () => _launchSession(null),
+                    ),
+                    const SizedBox(height: QSpace.xl),
+                    TimelineDaySection(
+                      title: "Today's plan",
+                      onAdd: () {
+                        final n = DateTime.now();
+                        showCreateTask(context, day: DateTime(n.year, n.month, n.day));
                       },
                     ),
-                    SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _SummaryHeader(name: name),
-                          const SizedBox(height: QSpace.md),
-                          ActivityCard(tasksDone: todayDone, tasksTotal: todayTasks.length),
-                          const SizedBox(height: QSpace.md),
-                          const FocusTrendCard(),
-                          const SizedBox(height: QSpace.xl),
-                          const _SectionHeader('Your board'),
-                          const SizedBox(height: QSpace.sm),
-                          BucketTabs(active: _bucket, onChanged: (b) => setState(() => _bucket = b)),
-                          const SizedBox(height: QSpace.sm),
-                          BucketProgress(done: doneCount, total: inBucket.length),
-                          const SizedBox(height: QSpace.sm),
-                        ],
-                      ),
-                    ),
-                    tasksAsync.when(
-                      loading: () => const SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Center(child: CupertinoActivityIndicator()),
-                      ),
-                      error: (_, _) => const SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: EmptyState(icon: CupertinoIcons.exclamationmark_triangle, title: 'Could not load tasks'),
-                      ),
-                      data: (_) => TaskListSliver(tasks: all, workspaces: workspaces, bucket: _bucket),
-                    ),
+                    // Clears the floating tab bar so the last row isn't hidden.
+                    const SizedBox(height: 96),
                   ],
                 ),
               ),
-              _quickAddFab(context),
             ],
           ),
         ),
       ),
     );
   }
-
-  Widget _quickAddFab(BuildContext context) {
-    // Quick-add task FAB, lifted to clear the shell's floating tab bar.
-    return Positioned(
-      right: QSpace.md,
-      bottom: 0,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 84),
-          child: Container(
-            decoration: BoxDecoration(
-              color: CupertinoColors.white,
-              shape: BoxShape.circle,
-              boxShadow: QElevation.floating(context),
-            ),
-            child: CupertinoButton(
-              padding: const EdgeInsets.all(14),
-              borderRadius: BorderRadius.circular(QRadius.capsule),
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                showTaskEditorSheet(context, ref, task: null);
-              },
-              child: const Icon(CupertinoIcons.add, color: CupertinoColors.black, size: 24),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  static String? _firstName(String? source) {
-    if (source == null || source.trim().isEmpty) return null;
-    final head = source.trim().split(RegExp(r'[\s@.]+')).firstWhere(
-          (p) => p.isNotEmpty,
-          orElse: () => '',
-        );
-    if (head.isEmpty) return null;
-    return head[0].toUpperCase() + head.substring(1);
-  }
 }
 
-/// Large "Summary" title + a circular profile avatar (Fitness nav idiom).
-class _SummaryHeader extends StatelessWidget {
-  const _SummaryHeader({required this.name});
-  final String name;
+// ---------------------------------------------------------------------------
+// Greeting hero
+// ---------------------------------------------------------------------------
 
-  static const _weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  static const _months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-  ];
+/// Plain editorial greeting — an Ember date eyebrow, a large greeting, and a
+/// quiet task-count subline. No gradient card, so the warm Today card below is
+/// the single color moment.
+class _Greeting extends ConsumerWidget {
+  const _Greeting({required this.greeting, required this.taskCount});
+  final String greeting;
+  final int taskCount;
+
+  static const _weekdays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+  static const _months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(profileProvider).valueOrNull;
+    final email = ref.watch(authServiceProvider).user?.email;
+    final name = _firstName(profile?['name']?.toString() ?? email) ?? 'there';
     final now = DateTime.now();
-    final date = '${_weekdays[now.weekday - 1].toUpperCase()}, ${_months[now.month - 1].toUpperCase()} ${now.day}';
-    final initial = name.isEmpty ? '?' : name[0].toUpperCase();
+    final eyebrow = '${_weekdays[now.weekday - 1]}, ${_months[now.month - 1]} ${now.day}';
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.md, QSpace.md, 0),
+      padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.xs, QSpace.md, 0),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(eyebrow, style: QType.caption.copyWith(color: kAccent, fontWeight: FontWeight.w700, letterSpacing: 0.6)),
+                const SizedBox(height: 4),
+                Text('$greeting, $name', style: QType.largeTitle, maxLines: 2, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 4),
                 Text(
-                  date,
-                  style: QType.footnote.copyWith(
-                    color: const Color(0xFFFF6482),
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.4,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Summary',
-                  style: QType.largeTitle.copyWith(color: CupertinoColors.white),
+                  taskCount == 0 ? 'No tasks planned today' : '$taskCount ${taskCount == 1 ? 'task' : 'tasks'} planned today',
+                  style: QType.subhead,
                 ),
               ],
             ),
           ),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => HapticFeedback.selectionClick(),
-            child: Container(
-              width: 38,
-              height: 38,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: QColors.tertiaryFill.resolveFrom(context),
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                initial,
-                style: QType.headline.copyWith(color: CupertinoColors.white, fontWeight: FontWeight.w700),
+          const SizedBox(width: QSpace.sm),
+          Padding(
+            padding: const EdgeInsets.only(top: QSpace.sm),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => HapticFeedback.selectionClick(),
+              child: Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: QColors.fill.resolveFrom(context), shape: BoxShape.circle),
+                child: Icon(CupertinoIcons.bell, size: 19, color: QColors.label.resolveFrom(context)),
               ),
             ),
           ),
@@ -213,20 +161,181 @@ class _SummaryHeader extends StatelessWidget {
       ),
     );
   }
+
+  static String? _firstName(String? source) {
+    if (source == null || source.trim().isEmpty) return null;
+    final head = source.trim().split(RegExp(r'[\s@.]+')).firstWhere((p) => p.isNotEmpty, orElse: () => '');
+    if (head.isEmpty) return null;
+    return head[0].toUpperCase() + head.substring(1);
+  }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.title);
-  final String title;
+// ---------------------------------------------------------------------------
+// "Today" focus card — live focus progress toward a daily goal + Start Focus.
+// ---------------------------------------------------------------------------
+
+class _TodayCard extends StatelessWidget {
+  const _TodayCard({
+    required this.focusedSeconds,
+    required this.tasksDone,
+    required this.tasksTotal,
+    required this.onStart,
+  });
+
+  final int focusedSeconds;
+  final int tasksDone;
+  final int tasksTotal;
+  final VoidCallback onStart;
+
+  static const _goalSeconds = 4 * 3600;
 
   @override
   Widget build(BuildContext context) {
+    final frac = (focusedSeconds / _goalSeconds).clamp(0.0, 1.0);
+    const white = CupertinoColors.white;
+    final soft = white.withValues(alpha: 0.8);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
-      child: Text(
-        title,
-        style: QType.title2.copyWith(color: CupertinoColors.white, fontWeight: FontWeight.w700),
+      child: Container(
+        padding: const EdgeInsets.all(QSpace.lg),
+        decoration: BoxDecoration(
+          gradient: QGradients.warm,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(color: const Color(0xFF7E2412).withValues(alpha: 0.22), blurRadius: 20, offset: const Offset(0, 8)),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("TODAY'S FOCUS",
+                style: QType.caption.copyWith(color: white.withValues(alpha: 0.75), fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+            const SizedBox(height: QSpace.md),
+            Row(
+              children: [
+                _Ring(fraction: frac, size: 84, center: fmtHm(focusedSeconds), caption: 'focused'),
+                const SizedBox(width: QSpace.lg),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _Stat(icon: CupertinoIcons.checkmark_alt_circle_fill, label: 'Tasks done', value: '$tasksDone of $tasksTotal'),
+                      const SizedBox(height: QSpace.sm),
+                      _Stat(icon: CupertinoIcons.flame_fill, label: 'Streak', value: '${Mock.streakDays} days'),
+                      const SizedBox(height: QSpace.sm),
+                      _Stat(icon: CupertinoIcons.shield_fill, label: 'Blocked', value: fmtHm(Mock.savedSeconds)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: QSpace.md),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onStart,
+              child: Container(
+                height: 48,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: white, borderRadius: BorderRadius.circular(QRadius.capsule)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(CupertinoIcons.play_arrow_solid, size: 16, color: Color(0xFF7E2412)),
+                    const SizedBox(width: 6),
+                    Text('Start Focus', style: QType.headline.copyWith(color: const Color(0xFF7E2412), fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text('${fmtHm(focusedSeconds)} of ${fmtHm(_goalSeconds)} daily goal',
+                style: QType.caption.copyWith(color: soft, fontFeatures: const [FontFeature.tabularFigures()])),
+          ],
+        ),
       ),
     );
   }
+}
+
+class _Stat extends StatelessWidget {
+  const _Stat({required this.icon, required this.label, required this.value});
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    const white = CupertinoColors.white;
+    final soft = white.withValues(alpha: 0.75);
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: soft),
+        const SizedBox(width: 6),
+        Text('$label  ', style: QType.footnote.copyWith(color: soft)),
+        Text(value,
+            style: QType.footnote.copyWith(color: white, fontWeight: FontWeight.w700, fontFeatures: const [FontFeature.tabularFigures()])),
+      ],
+    );
+  }
+}
+
+class _Ring extends StatelessWidget {
+  const _Ring({required this.fraction, required this.size, required this.center, required this.caption});
+  final double fraction;
+  final double size;
+  final String center;
+  final String caption;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(
+        painter: _RingPainter(fraction),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(center,
+                  style: QType.headline.copyWith(color: CupertinoColors.white, fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()])),
+              Text(caption, style: QType.caption.copyWith(color: CupertinoColors.white.withValues(alpha: 0.7))),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  _RingPainter(this.fraction);
+  final double fraction;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    const stroke = 8.0;
+    final r = (size.shortestSide - stroke) / 2;
+    canvas.drawCircle(center, r, Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..color = CupertinoColors.white.withValues(alpha: 0.22));
+    if (fraction <= 0) return;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: r),
+      -math.pi / 2,
+      2 * math.pi * fraction,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.round
+        ..color = CupertinoColors.white,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingPainter old) => old.fraction != fraction;
 }

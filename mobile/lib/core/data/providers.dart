@@ -103,6 +103,52 @@ class TasksNotifier extends AsyncNotifier<List<Task>> {
     state = AsyncData([created, ..._current]);
   }
 
+  /// Move an existing task to a specific start time + duration (drag-to-schedule
+  /// / AI plan). Patches dueAt, startLabel and estimate optimistically.
+  Future<void> scheduleTask(Task task, DateTime startAt, {int? durationMinutes}) async {
+    final label =
+        '${startAt.hour.toString().padLeft(2, '0')}:${startAt.minute.toString().padLeft(2, '0')}';
+    _patch(task.id, (t) {
+      t.dueAt = startAt;
+      t.startLabel = label;
+      t.bucket = Task.bucketFrom(t.done ? 'done' : null, startAt);
+      if (durationMinutes != null) t.estimateMinutes = durationMinutes;
+    });
+    if (_api.signedIn) {
+      try {
+        await _api.updateTask(_current.firstWhere((t) => t.id == task.id));
+      } catch (_) {}
+    }
+  }
+
+  /// Create a task scheduled at a specific time with a duration (Structured
+  /// create flow). Optimistic local insert; best-effort backend write.
+  Future<void> addScheduled({
+    required String title,
+    required DateTime startAt,
+    int durationMinutes = 30,
+    Priority priority = Priority.medium,
+  }) async {
+    final id = 'local-${DateTime.now().microsecondsSinceEpoch}';
+    final startLabel =
+        '${startAt.hour.toString().padLeft(2, '0')}:${startAt.minute.toString().padLeft(2, '0')}';
+    final task = Task(
+      id: id,
+      title: title,
+      estimateMinutes: durationMinutes,
+      priority: priority,
+      bucket: Task.bucketFrom(null, startAt),
+      dueAt: startAt,
+      startLabel: startLabel,
+    );
+    state = AsyncData([task, ..._current]);
+    if (_api.signedIn) {
+      try {
+        await _api.createTask(title, estimateMinutes: durationMinutes, priority: priority, bucket: task.bucket);
+      } catch (_) {}
+    }
+  }
+
   Future<void> updateTask(Task task) async {
     _patch(task.id, (t) {
       t.title = task.title;
@@ -114,6 +160,18 @@ class TasksNotifier extends AsyncNotifier<List<Task>> {
     if (_api.signedIn) {
       try {
         await _api.updateTask(task);
+      } catch (_) {}
+    }
+  }
+
+  /// Record focused time against a task (updates its cumulative spent time so
+  /// the board, calendar, and Summary rings all reflect the session).
+  Future<void> logFocus(String taskId, int seconds) async {
+    if (seconds <= 0) return;
+    _patch(taskId, (t) => t.spentSeconds += seconds);
+    if (_api.signedIn) {
+      try {
+        await _api.addTaskSpent(taskId, seconds);
       } catch (_) {}
     }
   }

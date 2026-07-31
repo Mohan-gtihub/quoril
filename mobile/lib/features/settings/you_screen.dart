@@ -40,6 +40,7 @@ class YouScreen extends ConsumerWidget {
             largeTitle: Text('You'),
             backgroundColor: Color(0x00000000),
             border: null,
+            transitionBetweenRoutes: false,
           ),
           SliverList(
             delegate: SliverChildListDelegate([
