@@ -400,8 +400,6 @@ export const useListStore = create<ListState>()(
                 await get().update(id, data)
             },
 
-
-
             getListStats: async (listId) => {
 
                 try {

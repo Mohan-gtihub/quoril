@@ -1,7 +1,7 @@
 name: CI
 
-# release-verify.yml only runs on v* tags, so until now nothing checked a
-# branch before it was tagged — a broken merge stayed green until release day.
+# release.yml only runs on v* tags, so without this nothing would check a
+# branch before it was tagged — a broken merge would stay green until release day.
 on:
   push:
     branches: ["**"]

@@ -28,15 +28,11 @@ class SyncManager {
         this.userId = id
         // Note: We no longer set the session here because main process sync is disabled.
         // The renderer process (dataSyncService.ts) handles all synchronization.
-        if (id) {
-            console.log('[SyncManager] User set (Sync managed by renderer)')
-        }
     }
 
     start() {
         // DISABLED: Sync is now handled by renderer's dataSyncService.ts
         // This main process sync was causing duplicate attempts and session conflicts
-        console.log('[SyncManager] Sync handled by renderer process (dataSyncService.ts)')
     }
 
     stop() {

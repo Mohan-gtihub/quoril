@@ -1,124 +1,251 @@
 name: Release
 
-# Publishes artifacts to the GitHub release for a v* tag.
+# Push a v* tag; everything else is automatic.
 #
-# Each platform builds on its own runner because this app has native modules
-# (better-sqlite3, active-win's helper binary). They are compiled for the host,
-# so a macOS machine cannot produce a working Linux or Windows build — it would
-# package Mach-O binaries into a Linux AppImage and fail at runtime, not at
-# build time.
+#   verify  -> draft -> build (mac | win | linux) -> publish
 #
-# The jobs are independent: each attaches its own artifacts to the one release
-# the tag created (QUORIL_CI_ATTACH tells publish-release.mjs that an existing
-# release is expected here, unlike a manual run).
+# Artifacts land on a DRAFT release while the matrix runs, and the draft is only
+# flipped live once all three platforms succeed. A failed platform therefore
+# leaves an invisible draft rather than a half-published release that some
+# users' updaters can see and others cannot.
 #
-# Relationship to release-verify.yml: that one proves a build is signed and
-# notarized correctly and uploads artifacts for inspection. This one publishes.
+# Each platform builds on its own runner because better-sqlite3 and active-win
+# ship native binaries compiled for the host; a cross-built artifact fails at
+# runtime, not at build time.
 
 on:
   push:
-    tags:
-      - "v*"
-  # A tag created server-side — `gh release create v1.1.5`, or the "Draft a new
-  # release" UI — fires `create`/`release`, never `push`, so the tag trigger
-  # above silently misses that flow. v1.1.4 shipped that way and got no build
-  # from CI at all. Both triggers are kept because either flow may be used, and
-  # only one of them fires per release.
-  release:
-    types: [published]
+    tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing v* tag to build and release"
+        required: true
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  # Signing secrets may not be configured. Rather than let the mac job fail on
-  # every release and train everyone to ignore a red X, decide up front whether
-  # it can run. The secrets context is not available in a job-level `if`, so it
-  # has to be resolved into an output here.
-  capabilities:
+  verify:
     runs-on: ubuntu-latest
     outputs:
-      mac: ${{ steps.check.outputs.mac }}
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.tag.outputs.version }}
     steps:
-      - id: check
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # The tag is the contract: it must name exactly the version in
+      # package.json, or the release page, the update feed and the binary all
+      # disagree about what shipped.
+      - id: tag
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "::error::Tag $TAG does not match package.json version $VERSION."
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - run: npm run check:lockfile
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+
+      # Fails when CHANGELOG.md has no section for this version, so a release
+      # can never ship blank "what's new" text to the in-app update prompt.
+      - run: npm run release:notes
+
+  # Create the draft up front so the three build jobs attach to one release
+  # instead of racing to create it.
+  draft:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run release:notes
+
+      - name: Create or reset the draft release
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.verify.outputs.tag }}
+        run: |
+          # A published release must never be rebuilt: electron-builder would
+          # overwrite its assets, leaving two different binaries under one
+          # version number, and clients that already updated would never
+          # re-download. Re-running against a still-draft release is fine.
+          STATE=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null || echo "none")
+          case "$STATE" in
+            false)
+              echo "::error::$TAG is already published. Bump the version instead."
+              exit 1
+              ;;
+            true)
+              gh release edit "$TAG" --notes-file build/release-notes.md
+              ;;
+            *)
+              gh release create "$TAG" --draft \
+                --title "Quoril ${{ needs.verify.outputs.version }}" \
+                --notes-file build/release-notes.md
+              ;;
+          esac
+
+  build:
+    needs: [verify, draft]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            platform: mac
+          - os: windows-latest
+            platform: win
+          - os: ubuntu-latest
+            platform: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run release:notes
+
+      # Signing is not optional for macOS: Gatekeeper refuses to auto-update an
+      # unsigned app, so an unsigned build would install once and then never
+      # update again. Fail here rather than shipping that.
+      - name: Check macOS signing credentials
+        if: matrix.platform == 'mac'
+        env:
+          CSC_LINK: ${{ secrets.MACOS_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          CSC_LINK: ${{ secrets.MACOS_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
         run: |
-          if [ -n "$APPLE_ID" ] && [ -n "$APPLE_APP_SPECIFIC_PASSWORD" ] \
-             && [ -n "$APPLE_TEAM_ID" ] && [ -n "$CSC_LINK" ] && [ -n "$CSC_KEY_PASSWORD" ]; then
-            echo "mac=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "mac=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::macOS release skipped — signing secrets not configured." \
-                 "Publish macOS locally with 'npm run ship:mac', or add the secrets."
+          MISSING=""
+          for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            [ -n "${!v}" ] || MISSING="$MISSING $v"
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::Missing macOS signing secrets:$MISSING — see docs/RELEASING.md"
+            exit 1
           fi
 
-  # AppImage needs no signing, so this works today with nothing configured.
-  linux:
+      - name: Build, sign and publish (${{ matrix.platform }})
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          QUORIL_RELEASE_BUILD: "true"
+          # Linux AppImage is not signed, so it gets neither.
+          CSC_LINK: ${{ matrix.platform == 'mac' && secrets.MACOS_CSC_LINK || matrix.platform == 'win' && secrets.WINDOWS_CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.platform == 'mac' && secrets.MACOS_CSC_KEY_PASSWORD || matrix.platform == 'win' && secrets.WINDOWS_CSC_KEY_PASSWORD || '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npm run build:app && npx electron-builder --${{ matrix.platform }} --publish always
+
+      # A universal binary is what makes the arch impossible to get wrong: there
+      # is one macOS download, and it runs natively on both chips. Verify that
+      # every Mach-O the app actually loads really does carry both slices —
+      # @electron/universal silently falls back to the x64 copy for files it
+      # cannot merge, which would put Apple Silicon users back on Rosetta.
+      - name: Verify the macOS build is universal, signed and notarized
+        if: matrix.platform == 'mac'
+        run: |
+          APP="release/mac-universal/Quoril.app"
+          test -d "$APP" || { echo "::error::missing $APP"; exit 1; }
+
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          xcrun stapler validate "$APP"
+
+          for bin in "$APP/Contents/MacOS/Quoril" \
+                     $(find "$APP" \( -name "*.node" -o -name "*.dylib" \)); do
+            ARCHS=$(lipo -archs "$bin" 2>/dev/null || echo "")
+            case "$ARCHS" in
+              *x86_64*arm64*|*arm64*x86_64*) ;;
+              *) echo "::error::$bin is not universal (archs: ${ARCHS:-unknown})"; exit 1 ;;
+            esac
+          done
+
+          # electron-updater picks a download by filename. Anything containing
+          # "arm64" makes it filter by architecture; a universal feed must not,
+          # or Intel Macs would match nothing and fail with
+          # ERR_UPDATER_ZIP_FILE_NOT_FOUND.
+          test -f release/latest-mac.yml || { echo "::error::no latest-mac.yml"; exit 1; }
+          if grep -q "arm64" release/latest-mac.yml; then
+            echo "::error::latest-mac.yml names an arch — Intel Macs would get no update"
+            exit 1
+          fi
+
+      # Windows ships unsigned today — NSIS installs and auto-updates fine
+      # without a certificate, users just see a SmartScreen warning once. So the
+      # installer must exist, but its signature is only checked when a cert is
+      # actually configured. (The `secrets` context is not available in `if`,
+      # hence the check inside the script.)
+      - name: Verify the Windows installer
+        if: matrix.platform == 'win'
+        shell: pwsh
+        env:
+          CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+        run: |
+          $installer = Get-ChildItem "release/Quoril-Setup-*.exe" | Select-Object -First 1
+          if ($null -eq $installer) { throw "Windows installer was not generated" }
+          if ([string]::IsNullOrEmpty($env:CSC_LINK)) {
+            Write-Host "::notice::Windows build is unsigned - users will see a SmartScreen warning."
+            exit 0
+          }
+          $signature = Get-AuthenticodeSignature $installer.FullName
+          if ($signature.Status -ne 'Valid') {
+            throw "Authenticode verification failed: $($signature.Status)"
+          }
+
+  # Nothing is visible to users until every platform has uploaded. This is the
+  # only step that makes a release real.
+  publish:
+    needs: [verify, build]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - name: Publish Linux AppImage
+      - name: Publish the release
         env:
-          # electron-builder authenticates with GH_TOKEN; the workflow token has
-          # contents:write, which is all it needs to attach release assets.
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          QUORIL_CI_ATTACH: "true"
-        run: npm run publish:linux
+          # This job does no checkout, so gh has no git remote to infer from.
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.verify.outputs.tag }}
+        run: |
+          ASSETS=$(gh release view "$TAG" --json assets --jq '[.assets[].name]')
+          echo "Assets: $ASSETS"
 
-  # NSIS needs no code signing to install or auto-update (users just see a
-  # SmartScreen warning on first run), so this runs unconditionally — same
-  # footing as linux. Before this job existed every .exe was published by hand
-  # from a Windows machine, which is how win and mac drifted onto separate tags
-  # and left each platform's updater staring at a release with no feed for it.
-  windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - name: Publish Windows installer
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          QUORIL_CI_ATTACH: "true"
-        run: npm run publish:win
+          # Each platform's updater reads its own feed file. A release missing
+          # one is invisible to that platform's installed base, which is the
+          # failure mode that let Windows and macOS drift onto separate tags.
+          for feed in latest-mac.yml latest.yml latest-linux.yml; do
+            echo "$ASSETS" | grep -q "\"$feed\"" || {
+              echo "::error::$TAG has no $feed — refusing to publish a partial release"
+              exit 1
+            }
+          done
 
-  macos:
-    needs: capabilities
-    if: needs.capabilities.outputs.mac == 'true'
-    runs-on: macos-14
-    env:
-      QUORIL_RELEASE_BUILD: "true"
-      # CI has no iCloud, so build in-tree. Locally this defaults outside
-      # ~/Documents — see scripts/release-mac.mjs.
-      QUORIL_RELEASE_OUT: release
-      CSC_LINK: ${{ secrets.MACOS_CSC_LINK }}
-      CSC_KEY_PASSWORD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
-      APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - name: Build, sign, notarize and publish (arm64 + x64)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          QUORIL_CI_ATTACH: "true"
-        run: npm run release:mac -- --publish
+          gh release edit "$TAG" --draft=false --latest
+          echo "Published $TAG"

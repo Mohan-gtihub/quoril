@@ -5,7 +5,7 @@ below depends on real TCC behaviour — permission prompts, whether a grant is
 visible to a running process, and whether `active-win`'s helper binary is
 attributed to Quoril. **None of it is verified by `npm test`.**
 
-Run this against a **signed, installed build** (`npm run release:mac`, then
+Run this against a **signed, installed build** (a CI release build, then
 install the DMG). A `npm run dev` build is a different binary with a different
 signing identity, so its permission grants say nothing about the shipped app.
 

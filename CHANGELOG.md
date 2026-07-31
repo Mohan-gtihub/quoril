@@ -11,6 +11,15 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ## [Unreleased]
 
+### Fixed
+
+- macOS is now a single universal download that runs natively on both Intel and
+  Apple Silicon. Previously there were two builds, and the Intel one was the
+  only file with no architecture in its name — which made it the most obvious
+  one to click on the releases page, so Apple Silicon users who picked it were
+  asked to install Rosetta and later warned that Intel app support is ending.
+  There is now one file and no way to pick the wrong one.
+
 ## [1.1.6] - 2026-07-28
 
 ### Fixed

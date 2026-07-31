@@ -33,6 +33,9 @@ class SessionManager {
 
     async start() {
         if (!this.isInitialized) {
+            // Logged deliberately: "tracking did not resume after sleep" is a
+            // recurring report, and these two lines are what distinguish the
+            // event never firing from tracking failing to restart afterwards.
             powerMonitor.on('suspend', () => {
                 console.log('[SessionManager] System suspending, stopping tracking...')
                 this.stop()

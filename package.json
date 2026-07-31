@@ -14,7 +14,7 @@
     "dev:web": "VITE_TARGET=web vite",
     "dev:electron": "vite",
     "build:app": "tsc && vite build",
-    "build": "tsc && vite build && electron-builder",
+    "build": "npm run build:app && electron-builder --publish never",
     "build:web": "VITE_TARGET=web tsc && VITE_TARGET=web vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "check:lockfile": "node scripts/check-lockfile.mjs",
@@ -24,18 +24,8 @@
     "test:watch": "vitest",
     "test:rls": "node scripts/verify-rls.mjs",
     "test:sync-recovery": "node scripts/verify-sync-recovery.mjs",
-    "dist": "npm run build",
-    "dist:win": "npm run build:app && npm run package:win",
-    "dist:mac": "npm run build -- --mac",
-    "dist:linux": "npm run build:app && npm run package:linux",
-    "package:win": "node scripts/package-cross-platform.mjs win",
-    "package:linux": "node scripts/package-cross-platform.mjs linux",
-    "publish:win": "npm run build:app && node scripts/publish-release.mjs win",
-    "publish:linux": "npm run build:app && node scripts/publish-release.mjs linux",
-    "release:preflight": "node scripts/release-preflight.mjs",
-    "release:mac": "npm run build:app && node scripts/release-mac.mjs",
-    "ship:mac": "node scripts/ship-mac.mjs",
-    "release:win": "npm run build:app && node scripts/release-preflight.mjs win && npm run package:win",
+    "release:notes": "node scripts/release-notes.mjs",
+    "release": "node scripts/release.mjs",
     "postinstall": "electron-builder install-app-deps",
     "check:web": "node scripts/check-web-bundle.mjs"
   },
@@ -155,7 +145,7 @@
         "provider": "github",
         "owner": "Mohan-gtihub",
         "repo": "quoril",
-        "releaseType": "release"
+        "releaseType": "draft"
       }
     ],
     "releaseInfo": {
@@ -188,9 +178,20 @@
     },
     "mac": {
       "icon": "build/icon.icns",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
       ],
       "category": "public.app-category.productivity",
       "hardenedRuntime": true,

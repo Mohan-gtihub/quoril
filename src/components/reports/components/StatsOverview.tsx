@@ -2,8 +2,6 @@
 import { HabitConsistencyCard } from './HabitConsistencyCard'
 import type { ComprehensiveReportStats as ReportStats } from '../types/reports.types'
 
-
-
 interface StatsOverviewProps {
     stats: ReportStats
     dailyFocusGoalMinutes: number

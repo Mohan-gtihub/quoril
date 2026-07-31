@@ -103,10 +103,12 @@ Launches the Vite dev server and Electron app with hot module replacement.
 ### Production Build
 
 ```bash
-npm run dist:win    # Windows (.exe installer)
-npm run dist:mac    # macOS (.dmg)
-npm run dist:linux  # Linux (.AppImage)
+npm run build       # package for this machine, unsigned, into release/
+npm run release     # cut a release: CI builds and signs all three platforms
 ```
+
+Cross-building is not supported — native modules are compiled for the host. See
+[docs/RELEASING.md](docs/RELEASING.md).
 
 ---
 
@@ -790,12 +792,14 @@ quoril/
 
 ```bash
 npm run dev          # Development with HMR
-npm run build        # TypeScript check + Vite build + electron-builder
-npm run dist:win     # Build Windows installer (.exe)
-npm run dist:mac     # Build macOS disk image (.dmg)
-npm run dist:linux   # Build Linux AppImage
+npm run build        # Package for this machine, unsigned, into release/
+npm run release      # Bump, tag, push — CI builds and signs every platform
+npm run release:notes # Preview the notes this version would publish
 npm run lint         # ESLint check
+npm test             # Vitest
 ```
+
+Releases are built entirely by CI. See [docs/RELEASING.md](docs/RELEASING.md).
 
 ### Electron Builder Configuration
 

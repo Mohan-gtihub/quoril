@@ -57,14 +57,12 @@ This will:
 npm run build
 ```
 
-Creates distributable packages in `release/` folder.
+Creates an unsigned package for the current machine in `release/`.
 
-### Platform-Specific Builds
-```bash
-npm run dist:win    # Windows installer
-npm run dist:mac    # macOS DMG
-npm run dist:linux  # Linux AppImage
-```
+Cross-building is not supported — `better-sqlite3` and `active-win` compile
+native binaries for the host, so a Windows package built on a Mac fails at
+runtime rather than at build time. Signed builds for all three platforms come
+from CI: see [RELEASING.md](RELEASING.md).
 
 ## Key Features
 
