@@ -559,7 +559,8 @@ function exitPill() {
 /* ---------------- WINDOW RESTORATION ---------------- */
 
 function restoreWindow() {
-    if (!mainWindow) {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+        mainWindow = null
         createWindow()
         return
     }
