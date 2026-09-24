@@ -2,11 +2,12 @@ import type { Platform } from './types'
 import { UNAVAILABLE } from './types'
 import { supabase } from '@/services/supabase'
 import { webCanvas } from './webCanvas'
+import { generateViaEdge, isReportSummary } from '@/services/insights/insightClient'
 
 const hasPiP = typeof window !== 'undefined' && 'documentPictureInPicture' in window
 
 export const webPlatform: Platform = {
-  capabilities: { appTracking: false, nativeOverlay: false, pictureInPicture: hasPiP, localDb: false, aiInsights: false },
+  capabilities: { appTracking: false, nativeOverlay: false, pictureInPicture: hasPiP, localDb: false, aiInsights: true },
   data: {
     async listTasks() { const { data } = await supabase.from('tasks').select('*'); return data ?? [] },
     async saveTask(t) { const { data } = await supabase.from('tasks').upsert(t).select().single(); return data },
@@ -81,10 +82,25 @@ export const webPlatform: Platform = {
   },
   canvas: webCanvas,
   insights: {
-    // Web/mobile without a proxy can't hold the key; a future target implements
-    // this against an HTTPS endpoint. Until then it degrades gracefully.
-    async generate() {
-      return { ok: false as const, error: 'AI insights are only available in the Quoril desktop app.' }
+    // Briefing and planning insights work on the web too: the `quoril-insights`
+    // edge function holds the key server-side and authenticates with the user's
+    // Supabase session, so no client key is needed. There is no Groq fallback on
+    // web (that path lives in the desktop main process), and the reports modal's
+    // report-summary shape isn't an edge concern.
+    async generate(summary) {
+      if (isReportSummary(summary)) {
+        return { ok: false as const, error: 'AI report insights are only available in the Quoril desktop app.' }
+      }
+      const edge = await generateViaEdge(summary)
+      if (edge.ok) return { ok: true as const, result: edge.result, model: edge.model }
+      return { ok: false as const, error: edge.error }
     },
+  },
+  calendar: {
+    // Calendar events are a desktop-only, on-device schedule (not synced).
+    async list() { return [] },
+    async save(ev) { return ev },
+    async update(_id, patch) { return patch },
+    async remove() {},
   },
 }

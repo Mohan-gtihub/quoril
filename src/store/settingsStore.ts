@@ -9,6 +9,12 @@ interface SettingsState {
     // AI — Generate Insights on the Reports page (can be turned off entirely).
     aiInsightsEnabled: boolean
 
+    // AI Insights — opt-in consent to include anonymous activity-pattern signals
+    // (context switches, category shares) in the briefing payload. Off by default.
+    shareActivityPatterns: boolean
+    // AI — show plain-language explanations for planner suggestions. Off by default.
+    planningAIExplanationsEnabled: boolean
+
     // Blitz mode / Focus Settings
     pomodorosEnabled: boolean
     pomodoroLength: number // minutes
@@ -46,6 +52,8 @@ export const useSettingsStore = create<SettingsState>()(
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 
             aiInsightsEnabled: true,
+            shareActivityPatterns: false,
+            planningAIExplanationsEnabled: false,
 
             pomodorosEnabled: false,
             pomodoroLength: 25,

@@ -6,6 +6,7 @@
 
 import type { Platform } from './types'
 import { UNAVAILABLE } from './types'
+import { generateViaEdge, isReportSummary } from '@/services/insights/insightClient'
 
 const api = () => (window as any).electronAPI
 const legacy = () => (window as any).electron
@@ -143,10 +144,41 @@ export const electronPlatform: Platform = {
     unfurlLink: (url) => api().canvas.unfurlLink(url),
   },
   insights: {
+    // Pin-to-pin with Quoril-Swift: briefing and planning insights go to the
+    // shared `quoril-insights` Supabase Edge Function (NVIDIA, server-side key,
+    // per-user daily quota). The legacy Groq path (electron main → landing
+    // /api/insights) is kept as a fallback for transient edge failures, and is
+    // the ONLY backend for the reports modal's report-summary shape, which the
+    // edge function doesn't speak.
     async generate(summary) {
-      const fn = api()?.insights?.generate
-      if (typeof fn !== 'function') return { ok: false as const, error: 'AI insights are unavailable in this build.' }
-      return fn(summary)
+      const groq = async () => {
+        const fn = api()?.insights?.generate
+        if (typeof fn !== 'function') {
+          return { ok: false as const, error: 'AI insights are unavailable in this build.' }
+        }
+        return fn(summary)
+      }
+
+      // Report summaries have their own result schema — never route them to the
+      // edge function; go straight to the legacy backend.
+      if (isReportSummary(summary)) return groq()
+
+      const edge = await generateViaEdge(summary)
+      if (edge.ok) return { ok: true as const, result: edge.result, model: edge.model }
+      // A quota (or other authoritative answer) must be surfaced, not bypassed.
+      if (!edge.retryable) return { ok: false as const, error: edge.error }
+
+      // Transient edge failure — try the Groq fallback, but keep the edge error
+      // if the fallback is also unavailable.
+      const fallback = await groq()
+      if (fallback.ok) return fallback
+      return { ok: false as const, error: edge.error }
     },
+  },
+  calendar: {
+    async list(userId, fromISO, toISO) { return api().db.getCalendarEvents?.(userId, fromISO, toISO) ?? [] },
+    async save(ev) { return api().db.saveCalendarEvent?.(ev) },
+    async update(id, patch) { return api().db.updateCalendarEvent?.(id, patch) },
+    async remove(id) { await api().db.deleteCalendarEvent?.(id) },
   },
 }

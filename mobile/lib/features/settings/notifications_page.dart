@@ -1,10 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
-import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
-import '../../core/widgets/inset_list.dart';
+import '../../core/widgets/app_kit.dart';
+import '../../core/widgets/editorial.dart';
+import 'settings_widgets.dart';
 
 /// E5 — Notifications.
 class NotificationsPage extends StatefulWidget {
@@ -29,162 +30,135 @@ class _NotificationsPageState extends State<NotificationsPage> {
   void _pickQuiet(bool start) {
     HapticFeedback.selectionClick();
     final initial = start ? _quietStart : _quietEnd;
+    var draft = initial;
     showCupertinoModalPopup<void>(
       context: context,
-      builder: (ctx) => Container(
-        height: 280,
-        color: QColors.surface.resolveFrom(ctx),
-        child: SafeArea(
-          top: false,
-          child: CupertinoDatePicker(
-            mode: CupertinoDatePickerMode.time,
-            use24hFormat: true,
-            initialDateTime: DateTime(2026, 1, 1, initial ~/ 60, initial % 60),
-            onDateTimeChanged: (d) => setState(() {
-              final m = d.hour * 60 + d.minute;
-              if (start) {
-                _quietStart = m;
-              } else {
-                _quietEnd = m;
-              }
-            }),
-          ),
+      builder: (ctx) => SheetPickerScaffold(
+        title: start ? 'Quiet from' : 'Quiet until',
+        onCancel: () => Navigator.pop(ctx),
+        onDone: () {
+          HapticFeedback.selectionClick();
+          setState(() {
+            if (start) {
+              _quietStart = draft;
+            } else {
+              _quietEnd = draft;
+            }
+          });
+          Navigator.pop(ctx);
+        },
+        child: CupertinoDatePicker(
+          mode: CupertinoDatePickerMode.time,
+          use24hFormat: true,
+          initialDateTime: DateTime(2026, 1, 1, initial ~/ 60, initial % 60),
+          onDateTimeChanged: (d) => draft = d.hour * 60 + d.minute,
         ),
       ),
     );
   }
 
-  CupertinoSwitch _sw(bool value, ValueChanged<bool> onChanged) =>
-      CupertinoSwitch(
-        value: value,
-        onChanged: (v) {
-          HapticFeedback.selectionClick();
-          onChanged(v);
-        },
-      );
-
   @override
   Widget build(BuildContext context) {
-    final brightness = MediaQuery.platformBrightnessOf(context);
-    return CupertinoPageScaffold(
+    return SettingsAmbientBackground(
+      child: AppScaffold(
+      title: 'Notifications',
       backgroundColor: const Color(0x00000000),
-      child: GradientBackground(
-        gradient: QGradients.page(brightness),
-        child: CustomScrollView(
-        slivers: [
-          const CupertinoSliverNavigationBar(
-            previousPageTitle: 'You',
-            largeTitle: Text('Notifications'),
-            backgroundColor: Color(0x00000000),
-            border: null,
-          ),
-          SliverList(
-            delegate: SliverChildListDelegate([
-              const SizedBox(height: QSpace.xs),
-              InsetSection(
-                header: 'Permission',
-                footer: _authorized
-                    ? 'Quoril can send you focus alerts and nudges.'
-                    : 'Enable notifications in iOS Settings to receive nudges.',
-                children: [
-                  InsetRow(
-                    icon: _authorized
-                        ? CupertinoIcons.checkmark_seal_fill
-                        : CupertinoIcons.exclamationmark_triangle_fill,
-                    iconColor: _authorized ? QColors.wellbeing : QColors.warn,
-                    title: 'Notifications',
-                    value: _authorized ? 'Allowed' : 'Not allowed',
-                    showChevron: false,
-                    trailing: _authorized
-                        ? null
-                        : CupertinoButton(
-                            padding: EdgeInsets.zero,
-                            onPressed: () {
-                              HapticFeedback.selectionClick();
-                              setState(() => _authorized = true);
-                            },
-                            child: const Text('Enable'),
-                            minimumSize: Size(0, 0),
-                          ),
-                  ),
-                ],
-              ),
+      transitionBetweenRoutes: true,
+      slivers: [
+        SliverPagePadding(
+          top: QSpace.xs,
+          child: QStagger(children: [
+              const QSectionHeader(label: 'Permission'),
+              FrostedGroup(children: [
+                SettingsRow(
+                  icon: _authorized
+                      ? CupertinoIcons.checkmark_seal_fill
+                      : CupertinoIcons.exclamationmark_triangle_fill,
+                  iconColor: _authorized ? QColors.wellbeing : QColors.warn,
+                  title: 'Notifications',
+                  value: _authorized ? 'Allowed' : null,
+                  chevron: false,
+                  trailing: _authorized
+                      ? null
+                      : CupertinoButton(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: QSpace.sm),
+                          minimumSize: const Size(44, 44),
+                          onPressed: () {
+                            HapticFeedback.selectionClick();
+                            setState(() => _authorized = true);
+                          },
+                          child: const Text('Enable'),
+                        ),
+                ),
+              ]),
+              SettingsFootnote(_authorized
+                  ? 'Quoril can send you focus alerts and nudges.'
+                  : 'Enable notifications in iOS Settings to receive nudges.'),
               const SizedBox(height: QSpace.xl),
-              InsetSection(
-                header: 'Alerts',
-                children: [
-                  InsetRow(
-                    icon: CupertinoIcons.hand_raised_fill,
-                    iconColor: QColors.breakColor,
-                    title: 'Distraction nudges',
-                    showChevron: false,
-                    trailing: _sw(_nudges, (v) => setState(() => _nudges = v)),
-                  ),
-                  InsetRow(
-                    icon: CupertinoIcons.checkmark_circle_fill,
-                    iconColor: QColors.wellbeing,
-                    title: 'Session complete',
-                    showChevron: false,
-                    trailing: _sw(
-                      _sessionComplete,
-                      (v) => setState(() => _sessionComplete = v),
-                    ),
-                  ),
-                  InsetRow(
-                    icon: CupertinoIcons.speaker_2_fill,
-                    iconColor: QColors.breakColor,
-                    title: 'Sound',
-                    showChevron: false,
-                    trailing: _sw(_sound, (v) => setState(() => _sound = v)),
-                  ),
-                ],
-              ),
+              const QSectionHeader(label: 'Alerts'),
+              FrostedGroup(children: [
+                SettingsSwitchRow(
+                  icon: CupertinoIcons.hand_raised_fill,
+                  iconColor: QColors.breakColor,
+                  title: 'Distraction nudges',
+                  value: _nudges,
+                  onChanged: (v) => setState(() => _nudges = v),
+                ),
+                SettingsSwitchRow(
+                  icon: CupertinoIcons.checkmark_circle_fill,
+                  iconColor: QColors.wellbeing,
+                  title: 'Session complete',
+                  value: _sessionComplete,
+                  onChanged: (v) => setState(() => _sessionComplete = v),
+                ),
+                SettingsSwitchRow(
+                  icon: CupertinoIcons.speaker_2_fill,
+                  iconColor: QColors.breakColor,
+                  title: 'Sound',
+                  value: _sound,
+                  onChanged: (v) => setState(() => _sound = v),
+                ),
+              ]),
               const SizedBox(height: QSpace.xl),
-              InsetSection(
-                header: 'Quiet Hours',
-                children: [
-                  InsetRow(
-                    icon: CupertinoIcons.moon_fill,
-                    iconColor: QColors.workspacePalette[2],
-                    title: 'Quiet hours',
-                    showChevron: false,
-                    trailing: _sw(
-                      _quietHours,
-                      (v) => setState(() => _quietHours = v),
+              const QSectionHeader(label: 'Quiet hours'),
+              FrostedGroup(children: [
+                SettingsSwitchRow(
+                  icon: CupertinoIcons.moon_fill,
+                  iconColor: QColors.workspacePalette[2],
+                  title: 'Quiet hours',
+                  value: _quietHours,
+                  onChanged: (v) => setState(() => _quietHours = v),
+                ),
+                if (_quietHours)
+                  SettingsRow(
+                    icon: CupertinoIcons.clock_fill,
+                    iconColor: QColors.labelSecondary,
+                    title: 'From – To',
+                    chevron: false,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _Chip(
+                          label: _hm(_quietStart),
+                          onTap: () => _pickQuiet(true),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 6),
+                          child: Text('–'),
+                        ),
+                        _Chip(
+                          label: _hm(_quietEnd),
+                          onTap: () => _pickQuiet(false),
+                        ),
+                      ],
                     ),
                   ),
-                  if (_quietHours)
-                    InsetRow(
-                      icon: CupertinoIcons.clock_fill,
-                      iconColor: QColors.labelSecondary,
-                      title: 'From – To',
-                      showChevron: false,
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _Chip(
-                            label: _hm(_quietStart),
-                            onTap: () => _pickQuiet(true),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 6),
-                            child: Text('–'),
-                          ),
-                          _Chip(
-                            label: _hm(_quietEnd),
-                            onTap: () => _pickQuiet(false),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: QSpace.xxl),
-            ]),
-          ),
-        ],
+              ]),
+              ]),
         ),
-      ),
+      ],
+    ),
     );
   }
 }
@@ -196,7 +170,7 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: QSpace.sm, vertical: 5),

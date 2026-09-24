@@ -1,80 +1,59 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
+import '../../core/widgets/app_kit.dart';
+import '../../core/widgets/editorial.dart';
+import 'settings_widgets.dart';
+import 'theme_mode_provider.dart';
 
-enum _Appearance { system, light, dark }
-
-/// E6 — Appearance.
-class AppearancePage extends StatefulWidget {
+/// E6 — Appearance. Wired to [themeModeProvider] so the choice takes effect
+/// globally (see the TODO in theme_mode_provider.dart for the app-root read).
+class AppearancePage extends ConsumerWidget {
   const AppearancePage({super.key});
 
   @override
-  State<AppearancePage> createState() => _AppearancePageState();
-}
-
-class _AppearancePageState extends State<AppearancePage> {
-  _Appearance _mode = _Appearance.system;
-
-  Brightness? get _forced => switch (_mode) {
-        _Appearance.system => null,
-        _Appearance.light => Brightness.light,
-        _Appearance.dark => Brightness.dark,
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    final brightness = MediaQuery.platformBrightnessOf(context);
-    return CupertinoPageScaffold(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeModeProvider);
+    return SettingsAmbientBackground(
+      child: AppScaffold(
+      title: 'Appearance',
       backgroundColor: const Color(0x00000000),
-      child: GradientBackground(
-        gradient: QGradients.page(brightness),
-        child: CustomScrollView(
-        slivers: [
-          const CupertinoSliverNavigationBar(
-              previousPageTitle: 'You',
-              largeTitle: Text('Appearance'),
-              backgroundColor: Color(0x00000000),
-              border: null),
-          SliverList(
-            delegate: SliverChildListDelegate([
-              const SizedBox(height: QSpace.md),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
-                child: CupertinoSlidingSegmentedControl<_Appearance>(
-                  groupValue: _mode,
-                  onValueChanged: (v) {
-                    if (v == null) return;
-                    HapticFeedback.selectionClick();
-                    setState(() => _mode = v);
-                  },
-                  children: const {
-                    _Appearance.system: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 6),
-                        child: Text('System')),
-                    _Appearance.light: Text('Light'),
-                    _Appearance.dark: Text('Dark'),
-                  },
-                ),
-              ),
-              const SizedBox(height: QSpace.xl),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    QSpace.md + QSpace.xs, 0, QSpace.md, QSpace.xs),
-                child: Text('PREVIEW', style: QType.sectionHeader),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
-                child: _PreviewCard(forced: _forced),
-              ),
-              const SizedBox(height: QSpace.xxl),
-            ]),
-          ),
-        ],
+      transitionBetweenRoutes: true,
+      slivers: [
+        SliverPagePadding(
+          child: QStagger(children: [
+                    const QSectionHeader(label: 'Theme'),
+                    QSegmentedControl<QThemeMode>(
+                      groupValue: mode,
+                      accent: QSection.settings,
+                      onValueChanged: (v) {
+                        if (v == null) return;
+                        HapticFeedback.selectionClick();
+                        ref.read(themeModeProvider.notifier).set(v);
+                      },
+                      children: const {
+                        QThemeMode.system: Text('System'),
+                        QThemeMode.light: Text('Light'),
+                        QThemeMode.dark: Text('Dark'),
+                      },
+                    ),
+                    const SizedBox(height: QSpace.xs),
+                    Text(
+                      mode == QThemeMode.system
+                          ? 'Quoril follows your device appearance.'
+                          : 'Quoril stays in ${mode == QThemeMode.light ? 'light' : 'dark'} regardless of your device.',
+                      style: QType.footnote,
+                    ),
+                    const SizedBox(height: QSpace.xl),
+                    const QSectionHeader(label: 'Preview'),
+                    _PreviewCard(forced: mode.forcedBrightness),
+                  ]),
         ),
-      ),
+      ],
+    ),
     );
   }
 }
@@ -87,7 +66,7 @@ class _PreviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final effective = forced ?? MediaQuery.platformBrightnessOf(context);
     return AnimatedContainer(
-      duration: QMotion.base,
+      duration: QMotion.duration(context, QMotion.base),
       curve: QMotion.standard,
       child: CupertinoTheme(
         data: CupertinoThemeData(brightness: effective),
@@ -97,24 +76,17 @@ class _PreviewCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: QColors.bgGrouped.resolveFrom(ctx),
               borderRadius: BorderRadius.circular(QRadius.glass),
-              border: Border.all(
-                  color: QColors.separator.resolveFrom(ctx), width: 0.5),
+              boxShadow: QElevation.card(ctx),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: QColors.breakColor.resolveFrom(ctx),
-                      ),
-                      child: const Icon(CupertinoIcons.timer,
-                          color: CupertinoColors.white, size: 22),
-                    ),
+                    QIconTile(
+                        icon: CupertinoIcons.timer,
+                        color: QColors.brand,
+                        size: 40),
                     const SizedBox(width: QSpace.sm),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,6 +107,7 @@ class _PreviewCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: QColors.surface.resolveFrom(ctx),
                     borderRadius: BorderRadius.circular(QRadius.card),
+                    boxShadow: QElevation.card(ctx),
                   ),
                   child: Row(
                     children: [

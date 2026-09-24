@@ -1,10 +1,9 @@
+import 'dart:ui';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
-
-/// Warm-accent amber used across the onboarding "Warm Aurora" gradient screens.
-const Color _warmAccent = Color(0xFFFF9E3D);
 
 /// Native selectable toggle chip: icon + label. Tuned for the Warm Aurora
 /// gradient — a translucent-white glass pill unselected, a solid warm-amber
@@ -28,6 +27,7 @@ class OnboardingChip extends StatelessWidget {
     // Selected: warm amber fill with dark ink for punch. Unselected: frosted
     // white glass with white ink — always readable on the gradient.
     final fg = selected ? const Color(0xFF2A0A06) : CupertinoColors.white;
+    final warmAccent = QColors.brandBright.resolveFrom(context);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -35,22 +35,28 @@ class OnboardingChip extends StatelessWidget {
         HapticFeedback.selectionClick();
         onTap();
       },
-      child: AnimatedContainer(
+      // Real frost behind the pill so the unselected state refracts the ember
+      // wash; the animated fill turns solid amber (the bold moment) on select.
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(QRadius.capsule),
+        child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: AnimatedContainer(
         duration: QMotion.fast,
         curve: QMotion.standard,
         constraints: const BoxConstraints(minHeight: 44),
         padding: const EdgeInsets.symmetric(
-          horizontal: QSpace.md,
+          horizontal: QSpace.lg,
           vertical: QSpace.sm,
         ),
         decoration: BoxDecoration(
           color: selected
-              ? _warmAccent
+              ? warmAccent
               : CupertinoColors.white.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(QRadius.capsule),
           border: Border.all(
             color: selected
-                ? _warmAccent
+                ? warmAccent
                 : CupertinoColors.white.withValues(alpha: 0.22),
             width: 1,
           ),
@@ -72,6 +78,8 @@ class OnboardingChip extends StatelessWidget {
               ),
             ),
           ],
+        ),
+        ),
         ),
       ),
     );

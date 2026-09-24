@@ -6,7 +6,9 @@ import '../../../core/models/models.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
 import '../../../core/widgets/common.dart';
+import '../../../core/widgets/primary_button.dart';
 import '../../focus/focus_screen.dart';
+import '../sheets/quick_add_sheet.dart';
 import '../sheets/task_editor_sheet.dart';
 import 'task_card.dart';
 
@@ -44,6 +46,43 @@ class TaskListSliver extends ConsumerWidget {
     );
   }
 
+  static String _headerLabel(TaskBucket b, int n) {
+    final noun = switch (b) {
+      TaskBucket.today => n == 1 ? 'task today' : 'tasks today',
+      TaskBucket.week => n == 1 ? 'task this week' : 'tasks this week',
+      TaskBucket.backlog => n == 1 ? 'task in backlog' : 'tasks in backlog',
+      TaskBucket.done => n == 1 ? 'task done' : 'tasks done',
+    };
+    return '$n $noun';
+  }
+
+  static _EmptyCopy _emptyCopy(TaskBucket b) => switch (b) {
+        TaskBucket.today => const _EmptyCopy(
+            icon: CupertinoIcons.sun_max_fill,
+            title: 'Today is clear',
+            message: 'Line up one thing to focus on — a clear plan makes it easy to start.',
+            cta: 'Add a task for today',
+          ),
+        TaskBucket.week => const _EmptyCopy(
+            icon: CupertinoIcons.calendar,
+            title: 'Nothing on deck this week',
+            message: 'Park what\'s coming up here so today stays uncluttered.',
+            cta: 'Plan this week',
+          ),
+        TaskBucket.backlog => const _EmptyCopy(
+            icon: CupertinoIcons.tray_full_fill,
+            title: 'Backlog is empty',
+            message: 'Capture ideas and someday-tasks here without cluttering today.',
+            cta: 'Add to backlog',
+          ),
+        TaskBucket.done => const _EmptyCopy(
+            icon: CupertinoIcons.checkmark_seal_fill,
+            title: 'Nothing finished yet',
+            message: 'Completed tasks land here. Your first win of the day shows up soon.',
+            cta: '',
+          ),
+      };
+
   void _move(WidgetRef ref, Task t, int dir) {
     final i = _order.indexOf(t.bucket);
     final ni = (i + dir).clamp(0, _order.length - 1);
@@ -56,12 +95,12 @@ class TaskListSliver extends ConsumerWidget {
     final filtered = tasks.where((t) => t.bucket == bucket).toList();
 
     if (filtered.isEmpty) {
-      return const SliverFillRemaining(
+      final copy = _emptyCopy(bucket);
+      return SliverFillRemaining(
         hasScrollBody: false,
-        child: EmptyState(
-          icon: CupertinoIcons.tray,
-          title: 'Nothing here yet',
-          message: 'Add a task or move one into this bucket.',
+        child: _BucketEmpty(
+          copy: copy,
+          onAdd: bucket == TaskBucket.done ? null : () => showQuickAddSheet(context, ref, bucket: bucket),
         ),
       );
     }
@@ -73,11 +112,13 @@ class TaskListSliver extends ConsumerWidget {
         separatorBuilder: (_, _) => const SizedBox(height: QSpace.sm),
         itemBuilder: (context, i) {
           if (i == 0) {
+            // A proper section header aligned to the card edge — the same idiom
+            // Home + workspace_detail share (was smuggled in as list row 0).
             return Padding(
-              padding: const EdgeInsets.only(left: QSpace.xxs, bottom: 2),
+              padding: const EdgeInsets.only(left: QSpace.xxs, bottom: QSpace.xxs),
               child: Text(
-                '${filtered.length} scheduled tasks',
-                style: QType.footnote,
+                _headerLabel(bucket, filtered.length),
+                style: QType.eyebrow,
               ),
             );
           }
@@ -104,6 +145,45 @@ class TaskListSliver extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// Per-bucket empty state: a brand-tinted glyph (not gray), human copy, and a
+/// scoped quick-add CTA. Encouraging, never shaming.
+class _EmptyCopy {
+  const _EmptyCopy({required this.icon, required this.title, required this.message, required this.cta});
+  final IconData icon;
+  final String title;
+  final String message;
+  final String cta;
+}
+
+class _BucketEmpty extends StatelessWidget {
+  const _BucketEmpty({required this.copy, this.onAdd});
+  final _EmptyCopy copy;
+  final VoidCallback? onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    // Board empty state — the shared primitive tinted with the workspaces (mint)
+    // section accent, with a quiet tinted CTA pill.
+    final mint = QSection.workspaces.resolveFrom(context);
+    return EmptyState(
+      icon: copy.icon,
+      title: copy.title,
+      message: copy.message,
+      accent: mint,
+      action: (onAdd != null && copy.cta.isNotEmpty)
+          ? PrimaryButton(
+              label: copy.cta,
+              icon: CupertinoIcons.add,
+              style: QButtonStyle.tinted,
+              color: mint,
+              expand: false,
+              onPressed: onAdd,
+            )
+          : null,
     );
   }
 }

@@ -6,6 +6,8 @@ import '../../../core/data/providers.dart';
 import '../../../core/models/models.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
+import '../../../core/widgets/primary_button.dart';
+import 'q_sheet.dart';
 
 /// Compact, autofocused quick-add sheet. Stays open for rapid entry.
 Future<void> showQuickAddSheet(
@@ -64,47 +66,49 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final mint = QSection.workspaces.resolveFrom(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
       child: Container(
-        decoration: BoxDecoration(
-          color: QColors.bgGrouped.resolveFrom(context),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(QRadius.glass)),
-        ),
+        decoration: qSheetDecoration(context),
         child: SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.sm, QSpace.md, QSpace.md),
+            padding: const EdgeInsets.fromLTRB(QSpace.md, 0, QSpace.md, QSpace.md),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Grabber(),
+                const QGrabber(),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: [
-                    Text('Quick add', style: QType.headline),
+                    Text('Quick add', style: QType.title3),
                     const Spacer(),
                     if (_added > 0)
-                      Text('$_added added', style: QType.footnote.copyWith(color: QColors.tint.resolveFrom(context))),
+                      Text(
+                        '$_added added',
+                        style: QType.meta.copyWith(color: mint),
+                      ),
                   ],
                 ),
-                const SizedBox(height: QSpace.sm),
-                CupertinoTextField(
+                const SizedBox(height: QSpace.md),
+                // One fast field — the title is the header, this is the input.
+                CupertinoTextField.borderless(
                   controller: _controller,
                   focusNode: _focus,
                   autofocus: true,
-                  placeholder: 'Task name',
-                  style: QType.body,
-                  padding: const EdgeInsets.all(QSpace.sm),
-                  decoration: BoxDecoration(
-                    color: QColors.surface.resolveFrom(context),
-                    borderRadius: BorderRadius.circular(QRadius.row),
-                  ),
+                  placeholder: 'What needs doing?',
+                  placeholderStyle: QType.title3.copyWith(color: QColors.labelTertiary.resolveFrom(context)),
+                  style: QType.title3,
+                  padding: EdgeInsets.zero,
+                  cursorColor: mint,
                   onSubmitted: (_) => _submit(),
                   textInputAction: TextInputAction.done,
                 ),
-                const SizedBox(height: QSpace.sm),
+                const SizedBox(height: QSpace.md),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -140,14 +144,11 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
                   ),
                 ),
                 const SizedBox(height: QSpace.md),
-                SizedBox(
-                  width: double.infinity,
-                  child: CupertinoButton.filled(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    borderRadius: BorderRadius.circular(QRadius.capsule),
-                    onPressed: _submit,
-                    child: const Text('Add task'),
-                  ),
+                PrimaryButton(
+                  label: 'Add task',
+                  icon: CupertinoIcons.add,
+                  color: mint,
+                  onPressed: _submit,
                 ),
               ],
             ),
@@ -167,7 +168,7 @@ class _MiniChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = (color ?? QColors.tint).resolveFrom(context);
+    final c = (color ?? QSection.workspaces).resolveFrom(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -189,19 +190,3 @@ class _MiniChip extends StatelessWidget {
   }
 }
 
-class _Grabber extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 36,
-        height: 5,
-        margin: const EdgeInsets.only(bottom: QSpace.sm),
-        decoration: BoxDecoration(
-          color: QColors.labelTertiary.resolveFrom(context),
-          borderRadius: BorderRadius.circular(QRadius.capsule),
-        ),
-      ),
-    );
-  }
-}

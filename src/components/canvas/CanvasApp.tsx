@@ -45,7 +45,10 @@ export function CanvasApp() {
     const setActive = useCanvasStore((s) => s.setActiveCanvas)
     const fullName = useProfileStore((s) => s.fullName)
     const avatarUrl = useProfileStore((s) => s.avatarUrl)
-    const [showMeta, setShowMeta] = useState(false)
+    // Switcher visibility lives in the store so the shared top Back button can
+    // step board → switcher → previous route (see useNavHistory).
+    const showMeta = useCanvasStore((s) => s.showSwitcher)
+    const setShowMeta = useCanvasStore((s) => s.setShowSwitcher)
     const [shareOpen, setShareOpen] = useState(false)
     const navigate = useNavigate()
 
@@ -126,7 +129,11 @@ export function CanvasApp() {
             const meta = e.metaKey || e.ctrlKey
             const t = e.target as HTMLElement | null
             if (t && (t.isContentEditable || /^(INPUT|TEXTAREA)$/.test(t.tagName))) return
-            if (meta && e.key.toLowerCase() === 'k') { e.preventDefault(); setShowMeta((v) => !v) }
+            if (meta && e.key.toLowerCase() === 'k') {
+                e.preventDefault()
+                const s = useCanvasStore.getState()
+                s.setShowSwitcher(!s.showSwitcher)
+            }
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
@@ -233,7 +240,7 @@ export function CanvasApp() {
                     title="All canvases (⌘K)"
                 >
                     <ArrowLeft size={14} />
-                    Canvases
+                    Canvas
                 </button>
 
                 {active && (() => {

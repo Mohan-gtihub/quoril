@@ -104,19 +104,29 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
                 return
             }
 
-            // Get unique dates YYYY-MM-DD sorted descending (newest first)
+            // Get unique dates YYYY-MM-DD sorted descending (newest first).
+            // start_time can be null on partially-synced rows, so drop those
+            // rather than letting one bad row throw out the whole streak.
             const uniqueDates = Array.from(new Set(
-                (data as any[]).map((s: any) => s.start_time.split('T')[0])
-            )).sort((a: any, b: any) => (b as string).localeCompare(a as string))
+                (data as any[])
+                    .map((s: any) => (typeof s?.start_time === 'string' ? s.start_time.split('T')[0] : null))
+                    .filter((d): d is string => Boolean(d))
+            )).sort((a, b) => b.localeCompare(a))
 
             if (uniqueDates.length === 0) {
                 set({ streak: 0 })
                 return
             }
 
-            const today = new Date().toISOString().split('T')[0]
-            const yesterdayDate = new Date(Date.now() - 86400000)
-            const yesterday = yesterdayDate.toISOString().split('T')[0]
+            // Compare in local time. start_time is a local-clock timestamp, so
+            // deriving "today" from toISOString() (UTC) rolls over at the wrong
+            // moment for any non-UTC user and drops a day from the streak.
+            const localDay = (d: Date) => {
+                const pad = (n: number) => String(n).padStart(2, '0')
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+            }
+            const today = localDay(new Date())
+            const yesterday = localDay(new Date(Date.now() - 86400000))
 
             // Check if streak is active (activity today or yesterday)
             const lastActive = uniqueDates[0]
@@ -136,27 +146,36 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
 
             streak = 1 // We have at least today or yesterday
 
-            // Iterate remaining dates
-            let prevDateToCompare = new Date(currentStr)
+            // Iterate remaining dates. Parse as local midnight (new Date("YYYY-MM-DD")
+            // parses as UTC, which then disagrees with the local getDate()/setDate()
+            // arithmetic below).
+            const parseLocalDay = (s: string) => {
+                const [y, m, d] = s.split('-').map(Number)
+                return new Date(y, m - 1, d)
+            }
+            let prevDateToCompare = parseLocalDay(currentStr)
 
             for (let i = 1; i < uniqueDates.length; i++) {
                 const thisDateStr = uniqueDates[i]
                 const expectedDate = new Date(prevDateToCompare)
                 expectedDate.setDate(prevDateToCompare.getDate() - 1)
-                const expectedStr = expectedDate.toISOString().split('T')[0]
+                const expectedStr = localDay(expectedDate)
 
                 if (thisDateStr === expectedStr) {
                     streak++
-                    prevDateToCompare = new Date(thisDateStr)
+                    prevDateToCompare = parseLocalDay(thisDateStr)
                 } else {
-                    break // formatting gap = streak broken
+                    break // gap = streak broken
                 }
             }
 
             set({ streak })
 
         } catch (error) {
+            // Leaving the previous value in place would show a stale streak
+            // indefinitely; 0 is the honest fallback.
             console.error("Streak calc error:", error)
+            set({ streak: 0 })
         }
     }
 }))

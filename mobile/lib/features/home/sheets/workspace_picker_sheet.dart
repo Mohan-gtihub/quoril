@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../core/models/models.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
+import 'q_sheet.dart';
 
 /// Result of the workspace picker: null id = "All lists".
 class WorkspacePick {
@@ -44,16 +45,13 @@ class _WorkspacePickerSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.72),
-      decoration: BoxDecoration(
-        color: QColors.bgGrouped.resolveFrom(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(QRadius.glass)),
-      ),
+      decoration: qSheetDecoration(context),
       child: SafeArea(
         top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _grabber(context),
+            const QGrabber(),
             Padding(
               padding: const EdgeInsets.fromLTRB(QSpace.md, 0, QSpace.md, QSpace.sm),
               child: Row(
@@ -110,9 +108,9 @@ class _WorkspacePickerSheet extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: QSpace.sm, vertical: QSpace.sm),
                       child: Row(
                         children: [
-                          Icon(CupertinoIcons.add_circled, size: 26, color: QColors.tint.resolveFrom(context)),
+                          Icon(CupertinoIcons.add_circled, size: 26, color: QSection.workspaces.resolveFrom(context)),
                           const SizedBox(width: QSpace.sm),
-                          Text('New workspace', style: QType.body.copyWith(color: QColors.tint.resolveFrom(context))),
+                          Text('New workspace', style: QType.body.copyWith(color: QSection.workspaces.resolveFrom(context))),
                         ],
                       ),
                     ),
@@ -156,7 +154,7 @@ class _WorkspacePickerSheet extends StatelessWidget {
             Icon(
               CupertinoIcons.checkmark_alt,
               size: 20,
-              color: selected ? QColors.tint.resolveFrom(context) : CupertinoColors.transparent,
+              color: selected ? QSection.workspaces.resolveFrom(context) : CupertinoColors.transparent,
             ),
           ],
         ),
@@ -178,15 +176,6 @@ class _WorkspacePickerSheet extends StatelessWidget {
     );
   }
 
-  Widget _grabber(BuildContext context) => Container(
-        width: 36,
-        height: 5,
-        margin: const EdgeInsets.symmetric(vertical: QSpace.sm),
-        decoration: BoxDecoration(
-          color: QColors.labelTertiary.resolveFrom(context),
-          borderRadius: BorderRadius.circular(QRadius.capsule),
-        ),
-      );
 }
 
 /// Small name + color sheet to create a workspace. Returns a local Workspace
@@ -221,26 +210,16 @@ class _NewWorkspaceSheetState extends State<_NewWorkspaceSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: bottom),
       child: Container(
-        decoration: BoxDecoration(
-          color: QColors.bgGrouped.resolveFrom(context),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(QRadius.glass)),
-        ),
+        decoration: qSheetDecoration(context),
         child: SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.all(QSpace.md),
+            padding: const EdgeInsets.fromLTRB(QSpace.md, 0, QSpace.md, QSpace.md),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 5,
-                    margin: const EdgeInsets.only(bottom: QSpace.md),
-                    decoration: BoxDecoration(color: QColors.labelTertiary.resolveFrom(context), borderRadius: BorderRadius.circular(QRadius.capsule)),
-                  ),
-                ),
+                const QGrabber(),
                 Text('New workspace', style: QType.headline),
                 const SizedBox(height: QSpace.sm),
                 CupertinoTextField(
@@ -283,7 +262,8 @@ class _NewWorkspaceSheetState extends State<_NewWorkspaceSheet> {
                 const SizedBox(height: QSpace.lg),
                 SizedBox(
                   width: double.infinity,
-                  child: CupertinoButton.filled(
+                  child: CupertinoButton(
+                    color: QSection.workspaces.resolveFrom(context),
                     borderRadius: BorderRadius.circular(QRadius.capsule),
                     onPressed: () {
                       final name = _c.text.trim();

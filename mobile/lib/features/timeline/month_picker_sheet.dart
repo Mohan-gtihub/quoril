@@ -3,25 +3,25 @@ import 'package:flutter/services.dart';
 
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
-import '../../core/widgets/app_kit.dart';
+import 'timeline_components.dart';
 
-/// Structured-style month picker: a full month grid with per-day density pills
-/// and a coral selected day. Returns the tapped date (or null if dismissed).
+/// Structured-style month picker: a full month grid with a small per-day
+/// busyness indicator and a brand selected day. Returns the tapped date.
 Future<DateTime?> showMonthPicker(
   BuildContext context, {
   required DateTime initial,
-  required List<Color> Function(DateTime) densityFor,
+  required int Function(DateTime) countFor,
 }) {
   return showCupertinoModalPopup<DateTime>(
     context: context,
-    builder: (_) => _MonthPickerSheet(initial: initial, densityFor: densityFor),
+    builder: (_) => _MonthPickerSheet(initial: initial, countFor: countFor),
   );
 }
 
 class _MonthPickerSheet extends StatefulWidget {
-  const _MonthPickerSheet({required this.initial, required this.densityFor});
+  const _MonthPickerSheet({required this.initial, required this.countFor});
   final DateTime initial;
-  final List<Color> Function(DateTime) densityFor;
+  final int Function(DateTime) countFor;
 
   @override
   State<_MonthPickerSheet> createState() => _MonthPickerSheetState();
@@ -52,13 +52,14 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final bg = QColors.bg.resolveFrom(context);
+    final accent = QSection.calendar.resolveFrom(context);
     final totalCells = _leadingBlanks + _daysInMonth;
     final rows = (totalCells / 7).ceil();
 
     return Container(
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: SafeArea(
         top: false,
@@ -76,12 +77,17 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
                   ),
                   const SizedBox(width: QSpace.sm),
                   Text('${_months[_month.month - 1]} ', style: QType.title2.copyWith(fontWeight: FontWeight.w800)),
-                  Text('${_month.year}', style: QType.title2.copyWith(fontWeight: FontWeight.w800, color: kAccent)),
+                  Text('${_month.year}',
+                      style: QType.title2.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: accent,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      )),
                   const SizedBox(width: 2),
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => setState(() => _month = DateTime(_month.year, _month.month + 1)),
-                    child: Icon(CupertinoIcons.chevron_right, size: 20, color: kAccent),
+                    child: Icon(CupertinoIcons.chevron_right, size: 20, color: accent),
                   ),
                   const Spacer(),
                   GestureDetector(
@@ -124,7 +130,8 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
     if (day > _daysInMonth) return const SizedBox(height: 54);
     final date = DateTime(_month.year, _month.month, day);
     final sel = _same(date, _selected);
-    final density = widget.densityFor(date);
+    final count = widget.countFor(date);
+    final accent = QSection.calendar.resolveFrom(context);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -141,7 +148,7 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
               width: 34,
               height: 34,
               alignment: Alignment.center,
-              decoration: BoxDecoration(color: sel ? kAccent : const Color(0x00000000), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: sel ? accent : const Color(0x00000000), shape: BoxShape.circle),
               child: Text('$day',
                   style: QType.subhead.copyWith(
                     fontWeight: FontWeight.w700,
@@ -150,21 +157,7 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
                   )),
             ),
             const SizedBox(height: 3),
-            SizedBox(
-              height: 5,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  for (final col in density)
-                    Container(
-                      width: 5,
-                      height: 5,
-                      margin: const EdgeInsets.symmetric(horizontal: 0.7),
-                      decoration: BoxDecoration(color: col, borderRadius: BorderRadius.circular(2)),
-                    ),
-                ],
-              ),
-            ),
+            SizedBox(height: 10, child: DensityDots(count: count, color: QSection.calendar)),
           ],
         ),
       ),

@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import '../../../core/models/models.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
+import '../../../core/widgets/glass.dart';
+import '../../../core/widgets/primary_button.dart';
 
 /// Pomodoro configuration carried out of the session type sheet.
 class PomodoroConfig {
@@ -67,8 +69,9 @@ class _SessionTypeSheetState extends State<_SessionTypeSheet> {
       decoration: BoxDecoration(
         color: QColors.bgGrouped.resolveFrom(context),
         borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(QRadius.glass),
+          top: Radius.circular(28),
         ),
+        boxShadow: QElevation.floating(context),
       ),
       child: SafeArea(
         top: false,
@@ -94,13 +97,18 @@ class _SessionTypeSheetState extends State<_SessionTypeSheet> {
                 ),
               ),
               const SizedBox(height: QSpace.md),
-              Text('Session Type', style: QType.title3),
-              const SizedBox(height: QSpace.md),
-              Container(
-                decoration: BoxDecoration(
-                  color: QColors.surface.resolveFrom(context),
-                  borderRadius: BorderRadius.circular(QRadius.card),
+              Text(
+                'FOCUS',
+                style: QType.eyebrow.copyWith(
+                  color: QSection.focus.resolveFrom(context),
                 ),
+              ),
+              const SizedBox(height: QSpace.xxs),
+              Text('Session Type', style: QType.title2),
+              const SizedBox(height: QSpace.lg),
+              GlassCard(
+                padding: EdgeInsets.zero,
+                tint: QSection.focus.resolveFrom(context),
                 child: Column(
                   children: [
                     for (final t in SessionType.values) ...[
@@ -132,15 +140,12 @@ class _SessionTypeSheetState extends State<_SessionTypeSheet> {
                 ),
               ],
               const SizedBox(height: QSpace.lg),
-              SizedBox(
-                width: double.infinity,
-                child: CupertinoButton.filled(
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    Navigator.of(context).pop(SessionTypeResult(_type, _pomo));
-                  },
-                  child: const Text('Set Type'),
-                ),
+              PrimaryButton(
+                label: 'Set type',
+                color: QSection.focus,
+                onPressed: () {
+                  Navigator.of(context).pop(SessionTypeResult(_type, _pomo));
+                },
               ),
             ],
           ),
@@ -162,7 +167,7 @@ class _TypeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.focus.resolveFrom(context);
+    final tint = QSection.focus.resolveFrom(context);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -178,7 +183,7 @@ class _TypeRow extends StatelessWidget {
               height: 28,
               decoration: BoxDecoration(
                 color: tint.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(QRadius.iconTile),
               ),
               child: Icon(type.icon, size: 17, color: tint),
             ),
@@ -215,11 +220,8 @@ class _PomodoroSteppers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: QColors.surface.resolveFrom(context),
-        borderRadius: BorderRadius.circular(QRadius.card),
-      ),
+    return GlassCard(
+      tint: QSection.focus.resolveFrom(context),
       padding: const EdgeInsets.symmetric(
         horizontal: QSpace.md,
         vertical: QSpace.xs,
@@ -298,6 +300,7 @@ class _StepperRow extends StatelessWidget {
             value,
             style: QType.body.copyWith(
               color: QColors.labelSecondary.resolveFrom(context),
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
           const SizedBox(width: QSpace.sm),
@@ -309,8 +312,14 @@ class _StepperRow extends StatelessWidget {
                     HapticFeedback.selectionClick();
                     onDec!();
                   },
-            child: const Icon(CupertinoIcons.minus_circle_fill, size: 26),
-            minimumSize: Size(30, 30),
+            minimumSize: const Size(30, 30),
+            child: Icon(
+              CupertinoIcons.minus_circle_fill,
+              size: 26,
+              color: onDec == null
+                  ? QColors.tertiaryFill.resolveFrom(context)
+                  : QSection.focus.resolveFrom(context),
+            ),
           ),
           CupertinoButton(
             padding: EdgeInsets.zero,
@@ -320,8 +329,14 @@ class _StepperRow extends StatelessWidget {
                     HapticFeedback.selectionClick();
                     onInc!();
                   },
-            child: const Icon(CupertinoIcons.plus_circle_fill, size: 26),
-            minimumSize: Size(30, 30),
+            minimumSize: const Size(30, 30),
+            child: Icon(
+              CupertinoIcons.plus_circle_fill,
+              size: 26,
+              color: onInc == null
+                  ? QColors.tertiaryFill.resolveFrom(context)
+                  : QSection.focus.resolveFrom(context),
+            ),
           ),
         ],
       ),

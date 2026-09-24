@@ -7,8 +7,10 @@ import '../../core/models/models.dart';
 import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
-import '../../core/widgets/common.dart';
+import '../../core/widgets/editorial.dart';
+import '../../core/widgets/glass.dart';
 import '../focus/focus_screen.dart';
+import '../shell/app_shell.dart';
 import '../home/sheets/task_editor_sheet.dart';
 
 /// The Calendar screen — a working month calendar wired to the user's TASKS.
@@ -18,6 +20,11 @@ import '../home/sheets/task_editor_sheet.dart';
 /// the agenda below lists the selected day's tasks — each can be opened for
 /// editing or started as a focus session, so the calendar, board, and timer all
 /// operate on the same data.
+///
+/// Refined Apple-native: a very faint grape (calendar section accent) ambient
+/// wash behind the body, an airy borderless month grid, today rendered as the
+/// one solid grape focal circle, a quiet neutral selection ring, per-priority
+/// task dots, and the agenda as frosted glass cards that refract that wash.
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
 
@@ -51,6 +58,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
+  bool _isWeekend(int day) {
+    final wd = DateTime(_visibleMonth.year, _visibleMonth.month, day).weekday;
+    return wd == DateTime.saturday || wd == DateTime.sunday;
+  }
+
   /// The calendar day a task belongs to: explicit due date, else the bucket's
   /// default day (Today → today, This-week → +5d, mirroring the backend).
   DateTime? _taskDay(Task t) {
@@ -63,9 +75,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     };
   }
 
-  int _taskCountOn(List<Task> tasks, DateTime day) =>
-      tasks.where((t) => _dayEquals(_taskDay(t), day)).length;
-
   bool _dayEquals(DateTime? a, DateTime b) => a != null && _isSameDay(a, b);
 
   List<Task> _tasksOn(List<Task> tasks, DateTime day) {
@@ -76,6 +85,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       return a.title.compareTo(b.title);
     });
     return list;
+  }
+
+  /// Up to three per-priority dot colors for a day, ordered highest-priority
+  /// first so the day's most urgent work reads at the top of the cluster.
+  List<Color> _dotColorsOn(List<Task> tasks, DateTime day) {
+    final onDay = tasks.where((t) => _dayEquals(_taskDay(t), day)).toList()
+      ..sort((a, b) => b.priority.index.compareTo(a.priority.index));
+    return [for (final t in onDay.take(3)) t.priority.color];
   }
 
   void _shiftMonth(int delta) {
@@ -111,73 +128,96 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final tasks = ref.watch(tasksProvider).valueOrNull ?? const <Task>[];
     final monthLabel = _monthNames[_visibleMonth.month - 1];
     final selectedTasks = _tasksOn(tasks, _selected);
+    final accent = QSection.calendar.resolveFrom(context);
+
+    final brightness =
+        MediaQuery.maybeOf(context)?.platformBrightness ?? Brightness.light;
 
     return CupertinoPageScaffold(
-      backgroundColor: const Color(0x00000000),
+      backgroundColor: QColors.bgGrouped.resolveFrom(context),
+      // AMBIENT WASH: a very faint grape (calendar section) tint fading to the
+      // grouped page ground, so the frosted agenda cards have something to
+      // refract. Kept barely-there to preserve the airy grid.
       child: GradientBackground(
-        gradient: QGradients.warm,
+        gradient: QGradients.ambient(accent, brightness),
         child: SafeArea(
           bottom: false,
           child: CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(QSpace.lg, QSpace.xs, QSpace.lg, 140),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _CalendarHeader(
-                        showTodayButton: !_showingCurrentMonth,
-                        onToday: _jumpToToday,
-                        onAdd: () => showTaskEditorSheet(context, ref),
-                      ),
-                      const SizedBox(height: QSpace.lg),
-                      GlassPanel(
-                        padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.md, QSpace.md, QSpace.lg),
-                        child: Column(
-                          children: [
-                            _MonthNavRow(
-                              label: '$monthLabel ${_visibleMonth.year}',
-                              onPrev: () => _shiftMonth(-1),
-                              onNext: () => _shiftMonth(1),
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                    QSpace.md, QSpace.xs, QSpace.md, QShellInsets.of(context) + QSpace.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _CalendarHeader(
+                      accent: accent,
+                      showTodayButton: !_showingCurrentMonth,
+                      onToday: _jumpToToday,
+                      onAdd: () => showTaskEditorSheet(context, ref),
+                    ),
+                    const SizedBox(height: QSpace.lg),
+                    // Borderless editorial month grid — no boxes. The month title
+                    // carries the air; today's grape circle is the one focal
+                    // point on the screen.
+                    _MonthNavRow(
+                      accent: accent,
+                      label: '$monthLabel ${_visibleMonth.year}',
+                      onPrev: () => _shiftMonth(-1),
+                      onNext: () => _shiftMonth(1),
+                    ),
+                    const SizedBox(height: QSpace.lg),
+                    const _WeekdayRow(),
+                    const SizedBox(height: QSpace.xs),
+                    _MonthGrid(
+                      key: ValueKey('${_visibleMonth.year}-${_visibleMonth.month}'),
+                      accent: accent,
+                      leadingBlanks: _leadingBlanks,
+                      daysInMonth: _daysInMonth,
+                      isSelected: (d) => _isSameDay(
+                          DateTime(_visibleMonth.year, _visibleMonth.month, d), _selected),
+                      isToday: (d) => _isSameDay(
+                          DateTime(_visibleMonth.year, _visibleMonth.month, d), _today),
+                      isWeekend: _isWeekend,
+                      dotColors: (d) => _dotColorsOn(
+                          tasks, DateTime(_visibleMonth.year, _visibleMonth.month, d)),
+                      onSelect: _selectDay,
+                    ),
+                    const SizedBox(height: QSpace.xl),
+                    _AgendaHeader(
+                      accent: accent,
+                      date: _selected,
+                      count: selectedTasks.length,
+                    ),
+                    const SizedBox(height: QSpace.md),
+                    if (selectedTasks.isEmpty)
+                      const _EmptyAgenda()
+                    else
+                      QStagger(
+                        children: [
+                          for (var i = 0; i < selectedTasks.length; i++)
+                            Padding(
+                              padding: EdgeInsets.only(top: i == 0 ? 0 : QSpace.sm),
+                              child: _AgendaTaskCard(
+                                accent: accent,
+                                task: selectedTasks[i],
+                                onToggle: () => ref
+                                    .read(tasksProvider.notifier)
+                                    .toggleDone(selectedTasks[i]),
+                                onFocus: () => _startFocus(selectedTasks[i]),
+                                onTap: () => showTaskEditorSheet(context, ref,
+                                    task: selectedTasks[i]),
+                              ),
                             ),
-                            const SizedBox(height: QSpace.lg),
-                            const _WeekdayRow(),
-                            const SizedBox(height: QSpace.sm),
-                            _MonthGrid(
-                              leadingBlanks: _leadingBlanks,
-                              daysInMonth: _daysInMonth,
-                              isSelected: (d) => _isSameDay(
-                                  DateTime(_visibleMonth.year, _visibleMonth.month, d), _selected),
-                              isToday: (d) => _isSameDay(
-                                  DateTime(_visibleMonth.year, _visibleMonth.month, d), _today),
-                              taskCount: (d) => _taskCountOn(
-                                  tasks, DateTime(_visibleMonth.year, _visibleMonth.month, d)),
-                              onSelect: _selectDay,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: QSpace.xl),
-                      _AgendaHeader(date: _selected, count: selectedTasks.length),
-                      const SizedBox(height: QSpace.md),
-                      if (selectedTasks.isEmpty)
-                        const _EmptyAgenda()
-                      else
-                        for (var i = 0; i < selectedTasks.length; i++) ...[
-                          if (i > 0) const SizedBox(height: QSpace.sm),
-                          _AgendaTaskCard(
-                            task: selectedTasks[i],
-                            onToggle: () => ref.read(tasksProvider.notifier).toggleDone(selectedTasks[i]),
-                            onFocus: () => _startFocus(selectedTasks[i]),
-                            onTap: () => showTaskEditorSheet(context, ref, task: selectedTasks[i]),
-                          ),
                         ],
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               ),
-            ],
+            ),
+          ],
           ),
         ),
       ),
@@ -191,10 +231,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
 class _CalendarHeader extends StatelessWidget {
   const _CalendarHeader({
+    required this.accent,
     required this.showTodayButton,
     required this.onToday,
     required this.onAdd,
   });
+  final Color accent;
   final bool showTodayButton;
   final VoidCallback onToday;
   final VoidCallback onAdd;
@@ -202,44 +244,77 @@ class _CalendarHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: Text('Calendar', style: QType.largeTitle.copyWith(color: CupertinoColors.white)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text('PLAN', style: QType.eyebrow.copyWith(color: accent)),
+              ),
+              Text('Calendar', style: QType.largeTitle),
+            ],
+          ),
         ),
         if (showTodayButton) ...[
-          GlassPanel(
-            radius: QRadius.capsule,
-            fillAlpha: 0.18,
-            shadow: false,
-            onTap: onToday,
-            padding: const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: 8),
-            child: Text('Today',
-                style: QType.footnote.copyWith(color: CupertinoColors.white, fontWeight: FontWeight.w600)),
-          ),
+          _PillButton(accent: accent, label: 'Today', onTap: onToday),
           const SizedBox(width: QSpace.sm),
         ],
-        _GlassCircleButton(icon: CupertinoIcons.add, onTap: onAdd),
+        _AccentCircleButton(accent: accent, icon: CupertinoIcons.add, onTap: onAdd),
       ],
     );
   }
 }
 
-class _GlassCircleButton extends StatelessWidget {
-  const _GlassCircleButton({required this.icon, required this.onTap});
+/// A quiet accent-tinted capsule (used for the "Today" jump). Neutral surface,
+/// accent ink — no glass on content chrome.
+class _PillButton extends StatelessWidget {
+  const _PillButton({required this.accent, required this.label, required this.onTap});
+  final Color accent;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: 9),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(QRadius.capsule),
+        ),
+        child: Text(
+          label,
+          style: QType.footnote.copyWith(color: accent, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+}
+
+/// A 44pt accent-tinted circular action (the add button). Uses a soft accent
+/// fill on the neutral page — the one place the CTA reads.
+class _AccentCircleButton extends StatelessWidget {
+  const _AccentCircleButton({required this.accent, required this.icon, required this.onTap});
+  final Color accent;
   final IconData icon;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GlassPanel(
-      radius: QRadius.capsule,
-      fillAlpha: 0.18,
-      shadow: false,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: SizedBox(
+      child: Container(
         width: 44,
         height: 44,
-        child: Center(child: Icon(icon, size: 22, color: CupertinoColors.white)),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+        child: Icon(icon, size: 22, color: CupertinoColors.white),
       ),
     );
   }
@@ -250,7 +325,13 @@ class _GlassCircleButton extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _MonthNavRow extends StatelessWidget {
-  const _MonthNavRow({required this.label, required this.onPrev, required this.onNext});
+  const _MonthNavRow({
+    required this.accent,
+    required this.label,
+    required this.onPrev,
+    required this.onNext,
+  });
+  final Color accent;
   final String label;
   final VoidCallback onPrev;
   final VoidCallback onNext;
@@ -259,22 +340,25 @@ class _MonthNavRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _NavChevron(icon: CupertinoIcons.chevron_left, onTap: onPrev),
         Expanded(
           child: Text(
             label,
-            textAlign: TextAlign.center,
-            style: QType.title3.copyWith(color: CupertinoColors.white, fontWeight: FontWeight.w600),
+            style: QType.title1.copyWith(
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
         ),
-        _NavChevron(icon: CupertinoIcons.chevron_right, onTap: onNext),
+        _NavChevron(accent: accent, icon: CupertinoIcons.chevron_left, onTap: onPrev),
+        const SizedBox(width: QSpace.xs),
+        _NavChevron(accent: accent, icon: CupertinoIcons.chevron_right, onTap: onNext),
       ],
     );
   }
 }
 
 class _NavChevron extends StatelessWidget {
-  const _NavChevron({required this.icon, required this.onTap});
+  const _NavChevron({required this.accent, required this.icon, required this.onTap});
+  final Color accent;
   final IconData icon;
   final VoidCallback onTap;
 
@@ -283,16 +367,22 @@ class _NavChevron extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: CupertinoColors.white.withValues(alpha: 0.12),
-          shape: BoxShape.circle,
-          border: Border.all(color: CupertinoColors.white.withValues(alpha: 0.18), width: 1),
+      // 44pt hit area around a 36pt visual disc.
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: Center(
+          child: Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: QColors.fill.resolveFrom(context).withValues(alpha: 0.5),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 18, color: accent),
+          ),
         ),
-        child: Icon(icon, size: 18, color: CupertinoColors.white.withValues(alpha: 0.9)),
       ),
     );
   }
@@ -316,7 +406,7 @@ class _WeekdayRow extends StatelessWidget {
               l,
               textAlign: TextAlign.center,
               style: QType.footnote.copyWith(
-                color: CupertinoColors.white.withValues(alpha: 0.55),
+                color: QColors.labelTertiary.resolveFrom(context),
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1.0,
               ),
@@ -333,19 +423,24 @@ class _WeekdayRow extends StatelessWidget {
 
 class _MonthGrid extends StatelessWidget {
   const _MonthGrid({
+    super.key,
+    required this.accent,
     required this.leadingBlanks,
     required this.daysInMonth,
     required this.isSelected,
     required this.isToday,
-    required this.taskCount,
+    required this.isWeekend,
+    required this.dotColors,
     required this.onSelect,
   });
 
+  final Color accent;
   final int leadingBlanks;
   final int daysInMonth;
   final bool Function(int day) isSelected;
   final bool Function(int day) isToday;
-  final int Function(int day) taskCount;
+  final bool Function(int day) isWeekend;
+  final List<Color> Function(int day) dotColors;
   final ValueChanged<int> onSelect;
 
   @override
@@ -355,13 +450,10 @@ class _MonthGrid extends StatelessWidget {
     return Column(
       children: [
         for (var r = 0; r < rows; r++)
-          Padding(
-            padding: EdgeInsets.only(bottom: r == rows - 1 ? 0 : QSpace.xs),
-            child: Row(
-              children: [
-                for (var c = 0; c < 7; c++) Expanded(child: _cellAt(r * 7 + c)),
-              ],
-            ),
+          Row(
+            children: [
+              for (var c = 0; c < 7; c++) Expanded(child: _cellAt(r * 7 + c)),
+            ],
           ),
       ],
     );
@@ -372,10 +464,12 @@ class _MonthGrid extends StatelessWidget {
     final day = index - leadingBlanks + 1;
     if (day > daysInMonth) return const _DayCell.blank();
     return _DayCell(
+      accent: accent,
       day: day,
       selected: isSelected(day),
       today: isToday(day),
-      tasks: taskCount(day),
+      weekend: isWeekend(day),
+      dots: dotColors(day),
       onTap: () => onSelect(day),
     );
   }
@@ -383,87 +477,108 @@ class _MonthGrid extends StatelessWidget {
 
 class _DayCell extends StatelessWidget {
   const _DayCell({
+    required this.accent,
     required this.day,
     required this.selected,
     required this.today,
-    required this.tasks,
+    required this.weekend,
+    required this.dots,
     required this.onTap,
   }) : blank = false;
 
   const _DayCell.blank()
-      : day = 0,
+      : accent = const Color(0x00000000),
+        day = 0,
         selected = false,
         today = false,
-        tasks = 0,
+        weekend = false,
+        dots = const <Color>[],
         onTap = null,
         blank = true;
 
+  final Color accent;
   final int day;
   final bool selected;
   final bool today;
-  final int tasks;
+  final bool weekend;
+  final List<Color> dots;
   final bool blank;
   final VoidCallback? onTap;
-
-  static const _orange = Color(0xFFFF9E3D);
-  static const _selectedFill = Color(0xFF1A1A1A);
 
   @override
   Widget build(BuildContext context) {
     if (blank) return const SizedBox(height: 48);
 
-    Border? border;
+    // Bare numerals in a borderless grid. TODAY is the one grape focal point —
+    // a filled 34pt grape disc with a white numeral. SELECTED (but not today)
+    // is a quiet neutral system-fill circle. Weekends recede to tertiary ink.
     Color fill = const Color(0x00000000);
     Color textColor;
     FontWeight weight = FontWeight.w500;
-    List<BoxShadow>? shadow;
 
-    if (selected) {
-      fill = _selectedFill;
+    if (today) {
+      fill = accent;
       textColor = CupertinoColors.white;
       weight = FontWeight.w700;
-      shadow = [
-        BoxShadow(color: CupertinoColors.black.withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 5)),
-      ];
-    } else if (today) {
-      border = Border.all(color: _orange, width: 2);
-      textColor = CupertinoColors.white;
-      weight = FontWeight.w700;
+    } else if (selected) {
+      fill = QColors.fill.resolveFrom(context).withValues(alpha: 0.5);
+      textColor = QColors.label.resolveFrom(context);
+      weight = FontWeight.w600;
     } else {
-      border = Border.all(color: CupertinoColors.white.withValues(alpha: 0.85), width: 1.2);
-      textColor = CupertinoColors.white;
+      textColor = (weekend ? QColors.labelTertiary : QColors.label)
+          .resolveFrom(context);
     }
 
-    final dotColor = selected ? CupertinoColors.white : _orange;
+    // 1–3 tiny 4pt per-priority category dots. On today's grape disc dots read
+    // white so they stay legible on the accent fill.
+    final dotCount = dots.length.clamp(0, 3);
 
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
+      // Full 48pt-tall cell is the tap target (>= 44pt hit area).
       child: SizedBox(
         height: 48,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 39,
-              height: 39,
+              width: 34,
+              height: 34,
               alignment: Alignment.center,
-              decoration: BoxDecoration(color: fill, shape: BoxShape.circle, border: border, boxShadow: shadow),
+              decoration: BoxDecoration(color: fill, shape: BoxShape.circle),
               child: Text(
                 '$day',
-                style: QType.subhead.copyWith(
+                style: QType.body.copyWith(
                   color: textColor,
                   fontWeight: weight,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             SizedBox(
-              height: 5,
-              child: tasks > 0
-                  ? Container(width: 5, height: 5, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle))
-                  : null,
+              height: 4,
+              child: dotCount == 0
+                  ? null
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        for (var i = 0; i < dotCount; i++) ...[
+                          if (i > 0) const SizedBox(width: 3),
+                          Container(
+                            width: 4,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: today
+                                  ? CupertinoColors.white
+                                  : dots[i].resolveFrom(context),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
             ),
           ],
         ),
@@ -477,7 +592,8 @@ class _DayCell extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _AgendaHeader extends StatelessWidget {
-  const _AgendaHeader({required this.date, required this.count});
+  const _AgendaHeader({required this.accent, required this.date, required this.count});
+  final Color accent;
   final DateTime date;
   final int count;
 
@@ -489,15 +605,36 @@ class _AgendaHeader extends StatelessWidget {
     final label = '${_weekdays[date.weekday - 1]}, ${_months[date.month - 1]} ${date.day}';
     final countLabel = count == 0 ? 'No tasks' : '$count task${count == 1 ? '' : 's'}';
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Text(label, style: QType.title3.copyWith(color: CupertinoColors.white, fontWeight: FontWeight.w700)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text('AGENDA', style: QType.eyebrow.copyWith(color: accent)),
+              ),
+              Text(
+                label,
+                style: QType.title3.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
         ),
-        Text(
-          countLabel,
-          style: QType.footnote.copyWith(color: CupertinoColors.white.withValues(alpha: 0.65), fontWeight: FontWeight.w600),
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Text(
+            countLabel,
+            style: QType.footnote.copyWith(
+              color: QColors.labelSecondary.resolveFrom(context),
+              fontWeight: FontWeight.w600,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
         ),
       ],
     );
@@ -509,16 +646,23 @@ class _EmptyAgenda extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassPanel(
-      fillAlpha: 0.10,
-      padding: const EdgeInsets.symmetric(vertical: QSpace.xxl),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: QSpace.xl),
       child: Column(
         children: [
-          Icon(CupertinoIcons.calendar, size: 34, color: CupertinoColors.white.withValues(alpha: 0.55)),
-          const SizedBox(height: QSpace.sm),
+          Icon(CupertinoIcons.calendar,
+              size: 40, color: QColors.labelTertiary.resolveFrom(context)),
+          const SizedBox(height: QSpace.md),
           Text(
-            'Nothing scheduled',
-            style: QType.subhead.copyWith(color: CupertinoColors.white.withValues(alpha: 0.75), fontWeight: FontWeight.w600),
+            'Nothing planned',
+            style: QType.title3,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: QSpace.xs),
+          Text(
+            'Add something for this day.',
+            style: QType.subhead,
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -528,17 +672,21 @@ class _EmptyAgenda extends StatelessWidget {
 
 // ---------------------------------------------------------------------------
 // Agenda task card — the calendar's task row, with edit-on-tap and a play
-// button that starts a focus session on that task.
+// button that starts a focus session on that task. Rendered as the shared
+// FROSTED GlassCard material with a whisper of grape (calendar) tint so it
+// refracts the faint ambient wash behind the screen.
 // ---------------------------------------------------------------------------
 
 class _AgendaTaskCard extends StatelessWidget {
   const _AgendaTaskCard({
+    required this.accent,
     required this.task,
     required this.onToggle,
     required this.onFocus,
     required this.onTap,
   });
 
+  final Color accent;
   final Task task;
   final VoidCallback onToggle;
   final VoidCallback onFocus;
@@ -558,8 +706,9 @@ class _AgendaTaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final done = task.done;
-    return GlassPanel(
+    return GlassCard(
       onTap: onTap,
+      tint: accent,
       padding: const EdgeInsets.all(QSpace.md),
       child: Row(
         children: [
@@ -572,7 +721,9 @@ class _AgendaTaskCard extends StatelessWidget {
             child: Icon(
               done ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.circle,
               size: 26,
-              color: done ? CupertinoColors.white : CupertinoColors.white.withValues(alpha: 0.6),
+              color: done
+                  ? QColors.wellbeing.resolveFrom(context)
+                  : QColors.labelTertiary.resolveFrom(context),
             ),
           ),
           const SizedBox(width: QSpace.sm),
@@ -585,8 +736,9 @@ class _AgendaTaskCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: QType.headline.copyWith(
-                    color: CupertinoColors.white,
-                    fontWeight: FontWeight.w700,
+                    color: done
+                        ? QColors.labelSecondary.resolveFrom(context)
+                        : QColors.label.resolveFrom(context),
                     decoration: done ? TextDecoration.lineThrough : null,
                   ),
                 ),
@@ -594,7 +746,7 @@ class _AgendaTaskCard extends StatelessWidget {
                 Text(
                   _meta(),
                   style: QType.footnote.copyWith(
-                    color: CupertinoColors.white.withValues(alpha: 0.7),
+                    color: QColors.labelSecondary.resolveFrom(context),
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
@@ -610,11 +762,10 @@ class _AgendaTaskCard extends StatelessWidget {
               height: 40,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: CupertinoColors.white.withValues(alpha: 0.16),
+                color: accent.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
-                border: Border.all(color: CupertinoColors.white.withValues(alpha: 0.3), width: 1),
               ),
-              child: const Icon(CupertinoIcons.play_fill, size: 16, color: CupertinoColors.white),
+              child: Icon(CupertinoIcons.play_fill, size: 16, color: accent),
             ),
           ),
         ],

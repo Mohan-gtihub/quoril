@@ -1,6 +1,6 @@
 import Reveal from "@/components/Reveal";
 import Waitlist from "@/components/Waitlist";
-import AppMockup from "@/components/AppMockup";
+import HeroShowcase from "@/components/HeroShowcase";
 import FocusPill from "@/components/FocusPill";
 import { Heatmap, FOCUS, BREAK, WELLBEING } from "@/components/Charts";
 import {
@@ -18,6 +18,10 @@ import {
   IconClock,
   IconGlobe,
 } from "@/components/icons";
+import Aurora from "@/components/reactbits/Aurora";
+import SplitText from "@/components/reactbits/SplitText";
+import BlurText from "@/components/reactbits/BlurText";
+import GradientText from "@/components/reactbits/GradientText";
 
 const COMPARISON = [
   {
@@ -50,54 +54,74 @@ const COMPARISON = [
 export default function Home() {
   return (
     <>
-      {/* ───────── HERO ───────── */}
-      <header className="dotgrid relative overflow-hidden px-5 pb-14 pt-[120px] text-center sm:px-6 sm:pb-20 sm:pt-[150px]">
-        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[440px] bg-gradient-to-b from-paper to-transparent dark:hidden" />
-        <div className="aurora pointer-events-none absolute inset-x-0 top-0 -z-10 hidden h-[660px] dark:block" />
+      {/* ───────── HERO · APP IN ORBIT (centered statement · tilted 3D window) ───────── */}
+      <header className="dotgrid relative overflow-hidden pb-24 pt-[124px] text-center sm:pt-[150px] lg:pb-32">
+        {/* Aurora backdrop (React Bits · WebGL) — tinted from brand tokens */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[900px] [mask-image:radial-gradient(80%_58%_at_50%_6%,#000_0%,transparent_76%)]">
+          <Aurora
+            colorStops={["#5B8DEF", "#10C49A", "#F5A623"]}
+            amplitude={1.1}
+            blend={0.5}
+            speed={0.45}
+            className="opacity-55 dark:opacity-90"
+          />
+        </div>
+        {/* paper wash keeps the copy crisp over the aurora */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] bg-gradient-to-b from-paper/80 via-paper/25 to-transparent" />
 
-        <Reveal delay={0.05}>
-          {/* <div className="mx-auto inline-flex items-center gap-2 rounded-pill border border-line-strong bg-surface px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-ink shadow-soft">
-            <span className="h-2 w-2 rounded-full bg-[var(--brand-accent,#a3e635)]" />
-            V1 is free before launch
-          </div> */}
-          <h1 className="mx-auto mt-6 max-w-[18ch] font-heading text-[clamp(40px,6.4vw,78px)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink">
-            Plan your day. Stay focused. See where your time went.
-          </h1>
-        </Reveal>
-
-        <Reveal delay={0.1}>
-          <p className="mx-auto mt-6 max-w-[650px] text-[clamp(16px,2vw,20px)] leading-relaxed text-ink-muted">
-            Quoril combines tasks, focus sessions and private time insights in
-            one native desktop app—so you can do the work without managing four
-            different tools.
-          </p>
-        </Reveal>
-
-        <Reveal delay={0.15}>
-          <div className="mt-8 flex flex-col items-center">
-            <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Button href="/waitlist" className="px-7 py-3.5 text-[15.5px]">
-                Get V1 free <IconArrow className="h-4 w-4" />
-              </Button>
-              <Button
-                href="#how-it-works"
-                variant="secondary"
-                className="px-7 py-3.5 text-[15.5px]"
-              >
-                See how it works
-              </Button>
+        <Container className="relative">
+          <Reveal delay={0.05}>
+            <div className="mx-auto inline-flex items-center gap-2 rounded-pill border border-line bg-surface/70 px-3.5 py-1.5 text-[11.5px] font-semibold uppercase tracking-[0.14em] text-ink-muted shadow-soft backdrop-blur">
+              <span className="h-1.5 w-1.5 rounded-full bg-wellbeing animate-pulse2" />
+              V1 free before launch
             </div>
-            <p className="mt-4 text-[13.5px] text-ink-faint">
-              No card. No trial. One email when V1 is ready.
-            </p>
-          </div>
-        </Reveal>
+          </Reveal>
 
-        <Reveal delay={0.2}>
-          <div className="mt-10 sm:mt-14">
-            <AppMockup />
-          </div>
-        </Reveal>
+          <h1 className="mx-auto mt-7 max-w-[18ch] font-heading text-[clamp(44px,7vw,86px)] font-semibold leading-[1.0] tracking-[-0.05em] text-ink">
+            <SplitText text="Plan your day." delay={32} className="inline" />{" "}
+            <GradientText
+              className="font-heading"
+              colors={["#5B8DEF", "#10C49A", "#2DD4A7", "#5B8DEF"]}
+              animationSpeed={7}
+            >
+              Stay focused.
+            </GradientText>{" "}
+            <SplitText
+              text="See where your time went."
+              delay={20}
+              startDelay={0.5}
+              className="inline"
+            />
+          </h1>
+
+          <Reveal delay={0.1}>
+            <p className="mx-auto mt-7 max-w-[640px] text-[clamp(18px,1.8vw,22px)] leading-relaxed text-ink-muted">
+              <BlurText
+                text="Quoril combines tasks, focus sessions and private time insights in one native desktop app—so you can do the work without managing four different tools."
+                delay={24}
+              />
+            </p>
+          </Reveal>
+
+          <Reveal delay={0.15}>
+            <div className="mt-10 flex flex-col items-center">
+              <div className="flex flex-col items-center justify-center gap-x-8 gap-y-4 sm:flex-row">
+                <Button href="/waitlist" className="px-8 py-3.5">
+                  Get V1 free
+                </Button>
+                <Button href="#how-it-works" variant="link">
+                  See how it works
+                </Button>
+              </div>
+              <p className="mt-5 text-[13.5px] text-ink-faint">
+                No card. No trial. One email when V1 is ready.
+              </p>
+            </div>
+          </Reveal>
+        </Container>
+
+        {/* The product, tilted in 3D with real UI chips orbiting it */}
+        <HeroShowcase />
       </header>
 
       {/* ───────── OUTCOME STRIP ───────── */}
@@ -121,7 +145,7 @@ export default function Home() {
       </Container>
 
       {/* ───────── PRODUCT STORY ───────── */}
-      <section id="how-it-works" className="scroll-mt-24 py-14 sm:py-20">
+      <section id="how-it-works" className="scroll-mt-24 py-20 sm:py-32">
         <Container>
           <SectionHead
             eyebrow="One simple loop"
@@ -218,7 +242,7 @@ export default function Home() {
       </section>
 
       {/* ───────── PRIVACY ───────── */}
-      <section className="border-y border-line bg-surface py-16 sm:py-24">
+      <section className="border-y border-line bg-surface py-20 sm:py-32">
         <Container>
           <div className="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
             <Reveal>
@@ -235,8 +259,8 @@ export default function Home() {
                 your data.
               </p>
               <div className="mt-7">
-                <Button href="/security" variant="secondary">
-                  Read how privacy works <IconArrow className="h-4 w-4" />
+                <Button href="/security" variant="link">
+                  Read how privacy works
                 </Button>
               </div>
             </Reveal>
@@ -268,7 +292,7 @@ export default function Home() {
       </section>
 
       {/* ───────── COMPARISON ───────── */}
-      <section className="py-16 sm:py-24">
+      <section className="py-20 sm:py-32">
         <Container>
           <SectionHead
             eyebrow="Why Quoril"

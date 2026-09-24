@@ -1,0 +1,33 @@
+display_information:
+  name: Quoril
+  description: Turn Slack messages into focused Quoril work.
+  background_color: "#111113"
+features:
+  bot_user:
+    display_name: Quoril
+    always_online: false
+  shortcuts:
+    - name: Send to Quoril
+      type: message
+      callback_id: send_to_quoril
+      description: Create a Quoril task from this message
+oauth_config:
+  redirect_urls:
+    - https://izxoyfydqsopvaywrtuz.supabase.co/functions/v1/slack-integration
+  scopes:
+    bot:
+      - commands
+      - app_mentions:read
+      - chat:write
+settings:
+  event_subscriptions:
+    request_url: https://izxoyfydqsopvaywrtuz.supabase.co/functions/v1/slack-events
+    bot_events:
+      - app_mention
+  interactivity:
+    is_enabled: true
+    request_url: https://izxoyfydqsopvaywrtuz.supabase.co/functions/v1/slack-events
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
+

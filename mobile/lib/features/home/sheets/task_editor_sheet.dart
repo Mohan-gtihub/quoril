@@ -6,9 +6,16 @@ import '../../../core/data/providers.dart';
 import '../../../core/models/models.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
+import '../../../core/widgets/editorial.dart';
+import '../../../core/widgets/glass.dart';
+import '../../../core/widgets/primary_button.dart';
+import 'q_sheet.dart';
 
-/// Native draggable bottom sheet mirroring Blitzit's edit sheet.
-/// New task -> notifier.add; existing -> notifier.update (+ Delete).
+/// The app's canonical task creator/editor — a modal detent sheet built to the
+/// Ember Editorial sheet recipe. Opened from Home *and* the Calendar, so it is
+/// the reference for every other sheet in the app.
+///
+/// New task -> notifier.add; existing -> notifier.updateTask (+ Delete).
 Future<void> showTaskEditorSheet(
   BuildContext context,
   WidgetRef ref, {
@@ -39,6 +46,7 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
   late String? _listId;
   late List<Subtask> _subtasks;
 
+  bool _canSave = false;
   bool get _isEdit => widget.task != null;
 
   @override
@@ -52,6 +60,11 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
     _bucket = t?.bucket ?? TaskBucket.today;
     _listId = t?.listId ?? t?.workspaceId;
     _subtasks = [for (final s in t?.subtasks ?? const <Subtask>[]) Subtask(id: s.id, title: s.title, done: s.done)];
+    _canSave = _title.text.trim().isNotEmpty;
+    _title.addListener(() {
+      final can = _title.text.trim().isNotEmpty;
+      if (can != _canSave) setState(() => _canSave = can);
+    });
   }
 
   @override
@@ -69,19 +82,23 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
     showCupertinoModalPopup<void>(
       context: context,
       builder: (_) => Container(
-        height: 280,
-        color: QColors.bgGrouped.resolveFrom(context),
+        height: 288,
+        decoration: const BoxDecoration(
+          color: CupertinoColors.systemGroupedBackground,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
         child: SafeArea(
           top: false,
           child: Column(
             children: [
+              const QGrabber(),
               CupertinoButton(
                 onPressed: () {
                   HapticFeedback.selectionClick();
                   setState(() => _estMinutes = (h * 60 + m).clamp(0, 24 * 60));
                   Navigator.pop(context);
                 },
-                child: const Text('Done'),
+                child: Text('Done', style: QType.headline.copyWith(color: QColors.brand.resolveFrom(context))),
               ),
               Expanded(
                 child: Row(
@@ -183,37 +200,42 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
     final currentWs = _listId == null
         ? null
         : workspaces.where((w) => w.id == _listId).cast<Workspace?>().firstWhere((w) => true, orElse: () => null);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.72,
+      initialChildSize: 0.74,
       minChildSize: 0.5,
       maxChildSize: 0.94,
       builder: (context, scrollController) {
         return Container(
-          decoration: BoxDecoration(
-            color: QColors.bgGrouped.resolveFrom(context),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(QRadius.glass)),
-          ),
+          decoration: qSheetDecoration(context),
           child: Column(
             children: [
-              _Grabber(),
+              const QGrabber(),
+              // Cancel (plain, left) / Save (right). No center title — the title
+              // field below IS the header.
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
+                padding: const EdgeInsets.fromLTRB(QSpace.xs, 0, QSpace.xs, QSpace.xs),
                 child: Row(
                   children: [
                     CupertinoButton(
-                      padding: EdgeInsets.zero,
+                      padding: const EdgeInsets.symmetric(horizontal: QSpace.sm, vertical: 4),
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child: Text('Cancel', style: QType.body.copyWith(color: QColors.labelSecondary.resolveFrom(context))),
                     ),
                     const Spacer(),
-                    Text(_isEdit ? 'Edit task' : 'New task', style: QType.headline),
-                    const Spacer(),
                     CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: _save,
-                      child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w600)),
+                      padding: const EdgeInsets.symmetric(horizontal: QSpace.sm, vertical: 4),
+                      onPressed: _canSave ? _save : null,
+                      child: Text(
+                        'Save',
+                        style: QType.headline.copyWith(
+                          color: _canSave
+                              ? QColors.brand.resolveFrom(context)
+                              : QColors.labelTertiary.resolveFrom(context),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -221,40 +243,45 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
               Expanded(
                 child: ListView(
                   controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.xs, QSpace.md, QSpace.xl),
+                  padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.xs, QSpace.md, QSpace.xxl),
                   children: [
-                    _field(
-                      context,
-                      child: CupertinoTextField.borderless(
-                        controller: _title,
-                        placeholder: 'Task name',
-                        style: QType.title3,
-                        padding: const EdgeInsets.all(QSpace.md),
-                        autofocus: !_isEdit,
-                      ),
-                    ),
-                    const SizedBox(height: QSpace.md),
-                    _rowTile(
-                      context,
-                      icon: CupertinoIcons.clock,
-                      label: 'Est time',
-                      value: _estMinutes == 0 ? 'None' : _fmtEst(_estMinutes),
-                      onTap: _openEstPicker,
-                    ),
-                    _divider(context),
-                    _rowTile(
-                      context,
-                      icon: CupertinoIcons.square_stack_3d_up,
-                      label: 'List',
-                      value: currentWs?.name ?? 'No list',
-                      valueColor: currentWs?.color,
-                      onTap: () => _openListPicker(workspaces),
-                    ),
-                    const SizedBox(height: QSpace.md),
+                    // The title field acts as the sheet header (title2).
                     Padding(
                       padding: const EdgeInsets.only(left: QSpace.xxs, bottom: QSpace.xs),
-                      child: Text('PRIORITY', style: QType.sectionHeader),
+                      child: CupertinoTextField.borderless(
+                        controller: _title,
+                        placeholder: 'What needs doing?',
+                        placeholderStyle: QType.title2.copyWith(color: QColors.labelTertiary.resolveFrom(context)),
+                        style: QType.title2,
+                        padding: EdgeInsets.zero,
+                        maxLines: null,
+                        autofocus: !_isEdit,
+                        cursorColor: QColors.brand.resolveFrom(context),
+                        textInputAction: TextInputAction.next,
+                      ),
                     ),
+                    const SizedBox(height: QSpace.lg),
+
+                    // Est time / List — inset grouped rows.
+                    QGroup(children: [
+                      QRow(
+                        icon: CupertinoIcons.clock,
+                        label: 'Est time',
+                        value: _estMinutes == 0 ? 'None' : _fmtEst(_estMinutes),
+                        onTap: _openEstPicker,
+                      ),
+                      QRow(
+                        icon: CupertinoIcons.square_stack_3d_up,
+                        label: 'List',
+                        value: currentWs?.name ?? 'No list',
+                        valueColor: currentWs?.color,
+                        onTap: () => _openListPicker(workspaces),
+                      ),
+                    ]),
+                    const SizedBox(height: QSpace.lg),
+
+                    // Priority.
+                    const QSectionHeader(label: 'Priority'),
                     CupertinoSlidingSegmentedControl<Priority>(
                       groupValue: _priority,
                       onValueChanged: (p) {
@@ -266,15 +293,20 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
                         for (final p in Priority.values)
                           p: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Text(p.label, style: QType.footnote.copyWith(color: p.color.resolveFrom(context), fontWeight: FontWeight.w600)),
+                            child: Text(
+                              p.label,
+                              style: QType.footnote.copyWith(
+                                color: _priority == p ? p.color.resolveFrom(context) : QColors.labelSecondary.resolveFrom(context),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                       },
                     ),
-                    const SizedBox(height: QSpace.md),
-                    Padding(
-                      padding: const EdgeInsets.only(left: QSpace.xxs, bottom: QSpace.xs),
-                      child: Text('WHEN', style: QType.sectionHeader),
-                    ),
+                    const SizedBox(height: QSpace.lg),
+
+                    // When.
+                    const QSectionHeader(label: 'When'),
                     CupertinoSlidingSegmentedControl<TaskBucket>(
                       groupValue: _bucket,
                       onValueChanged: (b) {
@@ -290,30 +322,23 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
                           ),
                       },
                     ),
-                    const SizedBox(height: QSpace.md),
-                    Padding(
-                      padding: const EdgeInsets.only(left: QSpace.xxs, bottom: QSpace.xs),
-                      child: Text('SUBTASKS', style: QType.sectionHeader),
-                    ),
+                    const SizedBox(height: QSpace.lg),
+
+                    // Subtasks — ghost placeholder until the first is added.
+                    const QSectionHeader(label: 'Subtasks'),
                     _subtaskEditor(context),
-                    const SizedBox(height: QSpace.md),
-                    _field(
-                      context,
-                      child: CupertinoTextField.borderless(
-                        controller: _notes,
-                        placeholder: 'Notes',
-                        style: QType.body,
-                        padding: const EdgeInsets.all(QSpace.md),
-                        maxLines: 4,
-                        minLines: 3,
-                      ),
-                    ),
+                    const SizedBox(height: QSpace.lg),
+
+                    // Notes.
+                    const QSectionHeader(label: 'Notes'),
+                    _NotesField(controller: _notes),
+
                     if (_isEdit) ...[
-                      const SizedBox(height: QSpace.lg),
+                      const SizedBox(height: QSpace.xl),
                       SizedBox(
                         width: double.infinity,
                         child: CupertinoButton(
-                          color: QColors.danger.resolveFrom(context).withValues(alpha: 0.14),
+                          color: QColors.danger.resolveFrom(context).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(QRadius.capsule),
                           onPressed: _delete,
                           child: Text('Delete task', style: QType.headline.copyWith(color: QColors.danger.resolveFrom(context))),
@@ -321,6 +346,15 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
                       ),
                     ],
                   ],
+                ),
+              ),
+
+              // Pinned primary pill above the keyboard, on a blurred hairline bar.
+              _PinnedBar(
+                bottomInset: bottomInset,
+                child: PrimaryButton(
+                  label: _isEdit ? 'Save task' : 'Add task',
+                  onPressed: _canSave ? _save : null,
                 ),
               ),
             ],
@@ -331,111 +365,108 @@ class _TaskEditorSheetState extends State<_TaskEditorSheet> {
   }
 
   Widget _subtaskEditor(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: QColors.surface.resolveFrom(context),
-        borderRadius: BorderRadius.circular(QRadius.card),
-      ),
-      child: Column(
-        children: [
-          for (var i = 0; i < _subtasks.length; i++) ...[
-            if (i > 0) _divider(context),
-            _SubtaskEditorRow(
-              key: ValueKey(_subtasks[i].id),
-              subtask: _subtasks[i],
-              onToggle: () {
-                HapticFeedback.selectionClick();
-                setState(() => _subtasks[i].done = !_subtasks[i].done);
-              },
-              onChanged: (v) => _subtasks[i].title = v,
-              onDelete: () {
-                HapticFeedback.selectionClick();
-                setState(() => _subtasks.removeAt(i));
-              },
-            ),
-          ],
-          if (_subtasks.isNotEmpty) _divider(context),
-          CupertinoButton(
-            padding: const EdgeInsets.all(QSpace.sm),
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              setState(() => _subtasks.add(Subtask(id: 'local-${DateTime.now().microsecondsSinceEpoch}', title: '')));
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Icon(CupertinoIcons.add_circled, size: 20, color: QColors.tint.resolveFrom(context)),
-                const SizedBox(width: QSpace.xs),
-                Text('Add subtask', style: QType.callout.copyWith(color: QColors.tint.resolveFrom(context))),
-                const Spacer(),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _field(BuildContext context, {required Widget child}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: QColors.surface.resolveFrom(context),
-        borderRadius: BorderRadius.circular(QRadius.card),
-      ),
-      child: child,
-    );
-  }
-
-  Widget _rowTile(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String value,
-    Color? valueColor,
-    required VoidCallback onTap,
-  }) {
-    final decorFirst = label == 'Est time';
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 48),
-        decoration: BoxDecoration(
-          color: QColors.surface.resolveFrom(context),
-          borderRadius: decorFirst
-              ? const BorderRadius.vertical(top: Radius.circular(QRadius.card))
-              : const BorderRadius.vertical(bottom: Radius.circular(QRadius.card)),
+    final rows = <Widget>[
+      for (var i = 0; i < _subtasks.length; i++)
+        _SubtaskEditorRow(
+          key: ValueKey(_subtasks[i].id),
+          subtask: _subtasks[i],
+          onToggle: () {
+            HapticFeedback.selectionClick();
+            setState(() => _subtasks[i].done = !_subtasks[i].done);
+          },
+          onChanged: (v) => _subtasks[i].title = v,
+          onDelete: () {
+            HapticFeedback.selectionClick();
+            setState(() => _subtasks.removeAt(i));
+          },
         ),
-        padding: const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: QSpace.sm),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: QColors.labelSecondary.resolveFrom(context)),
-            const SizedBox(width: QSpace.sm),
-            Text(label, style: QType.body),
-            const Spacer(),
-            Text(
-              value,
-              style: QType.body.copyWith(color: (valueColor ?? QColors.labelSecondary).resolveFrom(context)),
-            ),
-            const SizedBox(width: QSpace.xs),
-            Icon(CupertinoIcons.chevron_right, size: 16, color: QColors.labelTertiary.resolveFrom(context)),
-          ],
-        ),
-      ),
-    );
+      _AddSubtaskRow(onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _subtasks.add(Subtask(id: 'local-${DateTime.now().microsecondsSinceEpoch}', title: '')));
+      }),
+    ];
+    return QGroup(children: rows);
   }
-
-  Widget _divider(BuildContext context) => Container(
-        height: 0.5,
-        margin: const EdgeInsets.only(left: QSpace.md),
-        color: QColors.separator.resolveFrom(context),
-      );
 
   static String _fmtEst(int minutes) {
     final h = minutes ~/ 60;
     final m = minutes % 60;
     if (h > 0) return m > 0 ? '${h}h ${m}m' : '${h}h';
     return '${m}m';
+  }
+}
+
+/// A ghost/placeholder notes field that grounds on the surface card.
+class _NotesField extends StatelessWidget {
+  const _NotesField({required this.controller});
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: QColors.surface.resolveFrom(context),
+        borderRadius: BorderRadius.circular(QRadius.card),
+      ),
+      child: CupertinoTextField.borderless(
+        controller: controller,
+        placeholder: 'Add notes…',
+        placeholderStyle: QType.body.copyWith(color: QColors.labelTertiary.resolveFrom(context)),
+        style: QType.body,
+        padding: const EdgeInsets.all(QSpace.md),
+        maxLines: 5,
+        minLines: 3,
+      ),
+    );
+  }
+}
+
+/// A blurred hairline bar pinning the primary pill above the keyboard.
+class _PinnedBar extends StatelessWidget {
+  const _PinnedBar({required this.child, required this.bottomInset});
+  final Widget child;
+  final double bottomInset;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassSurface(
+      radius: 0,
+      tint: QColors.bgGrouped,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          QSpace.md,
+          QSpace.sm,
+          QSpace.md,
+          bottomInset > 0 ? bottomInset + QSpace.sm : MediaQuery.of(context).padding.bottom + QSpace.sm,
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _AddSubtaskRow extends StatelessWidget {
+  const _AddSubtaskRow({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final brand = QColors.brand.resolveFrom(context);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 48),
+        padding: const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: QSpace.sm),
+        child: Row(
+          children: [
+            Icon(CupertinoIcons.add_circled, size: 20, color: brand),
+            const SizedBox(width: QSpace.sm),
+            Text('Add subtask', style: QType.body.copyWith(color: brand)),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -467,8 +498,9 @@ class _SubtaskEditorRowState extends State<_SubtaskEditorRow> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: QSpace.sm, vertical: 2),
+    return Container(
+      constraints: const BoxConstraints(minHeight: 48),
+      padding: const EdgeInsets.symmetric(horizontal: QSpace.sm),
       child: Row(
         children: [
           GestureDetector(
@@ -479,7 +511,7 @@ class _SubtaskEditorRowState extends State<_SubtaskEditorRow> {
               child: Icon(
                 widget.subtask.done ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.circle,
                 size: 22,
-                color: widget.subtask.done ? QColors.tint.resolveFrom(context) : QColors.labelTertiary.resolveFrom(context),
+                color: widget.subtask.done ? QColors.brand.resolveFrom(context) : QColors.labelTertiary.resolveFrom(context),
               ),
             ),
           ),
@@ -501,23 +533,6 @@ class _SubtaskEditorRowState extends State<_SubtaskEditorRow> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _Grabber extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 36,
-        height: 5,
-        margin: const EdgeInsets.symmetric(vertical: QSpace.sm),
-        decoration: BoxDecoration(
-          color: QColors.labelTertiary.resolveFrom(context),
-          borderRadius: BorderRadius.circular(QRadius.capsule),
-        ),
       ),
     );
   }

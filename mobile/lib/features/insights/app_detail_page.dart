@@ -6,8 +6,8 @@ import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/widgets/common.dart';
+import '../../core/widgets/editorial.dart';
 import '../../core/widgets/glass.dart';
-import '../../core/widgets/inset_list.dart';
 import '../../core/widgets/primary_button.dart';
 import 'widgets/charts.dart';
 
@@ -25,6 +25,10 @@ class _AppDetailPageState extends State<AppDetailPage> {
   bool _watched = false;
 
   // Deterministic mock derivations from the app's minutes.
+  // TODO(data): AppUsage has no per-app trend field, so every app's 7-day
+  // shape is the same algebraic multiple of `minutes` (only the amplitude
+  // differs). Add a `List<int> trend` to AppUsage in core/models to give each
+  // app a distinct curve once real Screen Time data is wired.
   List<int> get _trend {
     final base = widget.app.minutes;
     return [
@@ -41,101 +45,107 @@ class _AppDetailPageState extends State<AppDetailPage> {
   @override
   Widget build(BuildContext context) {
     final app = widget.app;
-    final accent = (app.distracting ? QColors.danger : QColors.breakColor).resolveFrom(context);
+    final accent = (app.distracting ? QColors.danger : QColors.breakColor)
+        .resolveFrom(context);
     final opens = (app.minutes / 6).round() + 3;
     final nudges = app.distracting ? (app.minutes / 12).round() : 0;
+
+    final sky = QSection.insights.resolveFrom(context);
     final brightness =
         MediaQuery.maybeOf(context)?.platformBrightness ?? Brightness.light;
-
     return CupertinoPageScaffold(
-      backgroundColor: QColors.bgGrouped.resolveFrom(context),
+      // Transparent so the faint sky ambient wash behind gives the frosted
+      // content cards something to refract.
+      backgroundColor: CupertinoColors.transparent,
       child: GradientBackground(
-        gradient: QGradients.page(brightness),
+        gradient: QGradients.ambient(sky, brightness),
         child: CustomScrollView(
         slivers: [
           CupertinoSliverNavigationBar(
             largeTitle: Text(app.name),
             previousPageTitle: 'Insights',
+            backgroundColor:
+                QColors.bgGrouped.resolveFrom(context).withValues(alpha: 0.7),
+            border: null,
+            transitionBetweenRoutes: true,
           ),
-          SliverList(
-            delegate: SliverChildListDelegate([
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
+            sliver: SliverToBoxAdapter(
+              child: QStagger(
+                children: [
               const SizedBox(height: QSpace.sm),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
-                child: GlassCard(
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Icon(app.icon, color: accent, size: 26),
+              QCard(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      const SizedBox(width: QSpace.md),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(fmtHm(app.minutes * 60),
-                              style: QType.title1.copyWith(color: accent, letterSpacing: -0.5)),
-                          Text(app.distracting ? 'Distracting · today' : 'Productive · today',
-                              style: QType.footnote),
-                        ],
-                      ),
-                    ],
-                  ),
+                      child: Icon(app.icon, color: accent, size: 26),
+                    ),
+                    const SizedBox(width: QSpace.md),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(fmtHm(app.minutes * 60),
+                            style: QType.largeTitle
+                                .copyWith(color: accent, letterSpacing: -0.6)),
+                        Text(
+                            app.distracting
+                                ? 'Distracting · today'
+                                : 'Productive · today',
+                            style: QType.meta),
+                      ],
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: QSpace.md),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
-                child: GlassCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('7-day trend', style: QType.headline),
-                      const SizedBox(height: QSpace.md),
-                      SizedBox(
-                          height: 130,
-                          child: TrendLineChart(values: _trend, color: accent)),
-                    ],
-                  ),
+              QCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const QSectionHeader(
+                        label: '7-day trend', padding: EdgeInsets.zero),
+                    const SizedBox(height: QSpace.sm),
+                    SizedBox(
+                        height: 130,
+                        child: TrendLineChart(values: _trend, color: accent)),
+                  ],
                 ),
               ),
               const SizedBox(height: QSpace.lg),
-              InsetSection(
-                header: 'Activity',
+              const QSectionHeader(label: 'Activity'),
+              _FrostedGroup(
+                tint: sky,
                 children: [
-                  InsetRow(
+                  QRow(
                     icon: CupertinoIcons.hand_draw,
-                    iconColor: QColors.breakColor,
-                    title: 'Opens',
+                    label: 'Opens',
                     value: '$opens',
-                    showChevron: false,
+                    chevron: false,
                   ),
-                  InsetRow(
+                  QRow(
                     icon: CupertinoIcons.bell,
-                    iconColor: QColors.warn,
-                    title: 'Nudges sent',
+                    label: 'Nudges sent',
                     value: '$nudges',
-                    showChevron: false,
+                    chevron: false,
                   ),
-                  InsetRow(
+                  QRow(
                     icon: CupertinoIcons.clock,
-                    iconColor: QColors.labelSecondary,
-                    title: 'Avg per open',
+                    label: 'Avg per open',
                     value: fmtHm(((app.minutes / opens) * 60).round()),
-                    showChevron: false,
+                    chevron: false,
                   ),
                 ],
               ),
               const SizedBox(height: QSpace.lg),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
-                child: _watched
-                    ? GlassCard(
+              _watched
+                    ? QCard(
                         child: Row(
                           children: [
                             Icon(CupertinoIcons.checkmark_seal_fill,
@@ -158,13 +168,45 @@ class _AppDetailPageState extends State<AppDetailPage> {
                           setState(() => _watched = true);
                         },
                       ),
-              ),
               const SizedBox(height: QSpace.xxl),
-            ]),
+                ],
+              ),
+            ),
           ),
         ],
         ),
       ),
+    );
+  }
+}
+
+/// An inset-grouped list on the frosted [GlassCard] material: the same hairline
+/// row separators + 44pt rows as [QGroup], but the container itself is frosted
+/// glass so it refracts the ambient wash. Rows stay legible on neutral ink.
+class _FrostedGroup extends StatelessWidget {
+  const _FrostedGroup({required this.children, this.tint});
+
+  final List<Widget> children;
+  final Color? tint;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    for (var i = 0; i < children.length; i++) {
+      if (i > 0) {
+        rows.add(Container(
+          height: 0.5,
+          margin: const EdgeInsets.only(left: QSpace.md),
+          color: QColors.separator.resolveFrom(context).withValues(alpha: 0.6),
+        ));
+      }
+      rows.add(children[i]);
+    }
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      tint: tint,
+      interactive: false,
+      child: Column(children: rows),
     );
   }
 }

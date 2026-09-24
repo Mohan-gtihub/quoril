@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,14 +8,18 @@ import '../../core/models/models.dart';
 import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
-import '../../core/widgets/app_kit.dart';
-import '../../core/widgets/common.dart';
+import '../../core/widgets/glass.dart';
 import '../focus/focus_screen.dart';
-import '../timeline/create_task_sheet.dart';
-import '../timeline/timeline_day_section.dart';
+import '../shell/app_shell.dart';
+import 'data/productivity.dart';
+import 'sheets/task_editor_sheet.dart';
+import 'widgets/activity_rings.dart';
+import 'widgets/ring_calendar.dart';
+import 'widgets/workspace_section.dart';
 
-/// Quoril home — greeting hero, a live "Today" focus card, and the Structured
-/// timeline for today. Everything below the greeting is real, useful data.
+/// Quoril home — greeting hero, a live "Today" rings card, a 3-week ring
+/// calendar, and collapsible per-workspace task sections. Everything below the
+/// greeting is real, useful data.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -26,13 +28,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  String get _greeting {
-    final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
-
   void _launchSession(Task? task) {
     HapticFeedback.mediumImpact();
     Navigator.of(context, rootNavigator: true).push(
@@ -40,217 +35,272 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  static const String _inboxId = '__inbox';
+
   @override
   Widget build(BuildContext context) {
     final all = ref.watch(tasksProvider).valueOrNull ?? const <Task>[];
     final todayTasks = all.where((t) => t.bucket == TaskBucket.today).toList();
-    final todayCount = todayTasks.length;
     final todayDone = todayTasks.where((t) => t.done).length;
-    final focusedToday = todayTasks.fold<int>(0, (a, t) => a + t.spentSeconds);
 
+    final goals = ref.watch(goalsProvider);
+    final stats = ref.watch(dailyStatsProvider).valueOrNull;
+    // Today's focus seconds: prefer the last daily-stats entry; fall back to the
+    // sum of today's tasks' spent time.
+    final todayFocusSeconds = (stats != null && stats.isNotEmpty)
+        ? stats.last.focusSeconds
+        : todayTasks.fold<int>(0, (a, t) => a + t.spentSeconds);
+
+    final focusGoalSeconds = (goals.focusHoursGoal * 3600).clamp(1, 1 << 30);
+    final taskGoal = goals.dailyTaskGoal.clamp(1, 1 << 30);
+    final focusFraction = todayFocusSeconds / focusGoalSeconds;
+    final taskFraction = todayDone / taskGoal;
+
+    final workspaces = ref.watch(workspacesProvider).valueOrNull ?? const <Workspace>[];
+    final sections = _buildSections(context, workspaces, all);
+
+    final ember = QSection.home.resolveFrom(context);
+    final bottomInset = QShellInsets.of(context) + QSpace.md;
     final brightness = MediaQuery.maybeOf(context)?.platformBrightness ?? Brightness.light;
 
     return CupertinoPageScaffold(
       backgroundColor: QColors.bgGrouped.resolveFrom(context),
+      // Faint ember ambient wash so the frosted content cards have something to
+      // refract; fades to the neutral grouped bg by ~42% height.
       child: GradientBackground(
-        gradient: QGradients.page(brightness),
+        gradient: QGradients.ambient(ember, brightness),
         child: SafeArea(
-          bottom: false,
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              CupertinoSliverRefreshControl(
-                onRefresh: () async {
-                  HapticFeedback.selectionClick();
-                  ref.invalidate(tasksProvider);
-                  await ref.read(tasksProvider.future);
-                },
-              ),
-              SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _Greeting(greeting: _greeting, taskCount: todayCount),
-                    const SizedBox(height: QSpace.lg),
-                    _TodayCard(
-                      focusedSeconds: focusedToday,
-                      tasksDone: todayDone,
-                      tasksTotal: todayCount,
-                      onStart: () => _launchSession(null),
+        bottom: false,
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            CupertinoSliverRefreshControl(
+              onRefresh: () async {
+                HapticFeedback.selectionClick();
+                ref.invalidate(tasksProvider);
+                ref.invalidate(dailyStatsProvider);
+                await ref.read(tasksProvider.future);
+              },
+            ),
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: QSpace.sm),
+                  // The ONE ember hero — the single color moment on Home.
+                  _TodayCard(
+                    focusFraction: focusFraction,
+                    taskFraction: taskFraction,
+                    focusSeconds: todayFocusSeconds,
+                    focusHoursGoal: goals.focusHoursGoal,
+                    tasksDone: todayDone,
+                    tasksTarget: taskGoal,
+                    onStart: () => _launchSession(null),
+                  ),
+                  const SizedBox(height: QSpace.xxl),
+                  // Ring calendar, grounded on a frosted glass card with a
+                  // whisper of the ember section hue.
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
+                    child: GlassCard(
+                      padding: const EdgeInsets.all(QSpace.md),
+                      tint: ember,
+                      child: RingCalendar(
+                        onDaySelected: (_) => HapticFeedback.selectionClick(),
+                      ),
                     ),
-                    const SizedBox(height: QSpace.xl),
-                    TimelineDaySection(
-                      title: "Today's plan",
-                      onAdd: () {
-                        final n = DateTime.now();
-                        showCreateTask(context, day: DateTime(n.year, n.month, n.day));
-                      },
+                  ),
+                  const SizedBox(height: QSpace.xxl),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(QSpace.md, 0, QSpace.md, QSpace.sm),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 2),
+                                child: Text('YOUR LISTS',
+                                    style: QType.eyebrow.copyWith(color: ember)),
+                              ),
+                              const Text('Workspaces', style: QType.title3Emphasized),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    // Clears the floating tab bar so the last row isn't hidden.
-                    const SizedBox(height: 96),
-                  ],
-                ),
+                  ),
+                  for (var i = 0; i < sections.length; i++)
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        QSpace.md,
+                        0,
+                        QSpace.md,
+                        i == sections.length - 1 ? 0 : QSpace.sm,
+                      ),
+                      child: WorkspaceSection(
+                        workspace: sections[i].workspace,
+                        tasks: sections[i].tasks,
+                        initiallyExpanded: i == 0,
+                        onToggleDone: (t) => ref.read(tasksProvider.notifier).toggleDone(t),
+                        onOpen: (t) => showTaskEditorSheet(context, ref, task: t),
+                        onFocus: (t) => _launchSession(t),
+                      ),
+                    ),
+                  SizedBox(height: bottomInset),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Greeting hero
-// ---------------------------------------------------------------------------
-
-/// Plain editorial greeting — an Ember date eyebrow, a large greeting, and a
-/// quiet task-count subline. No gradient card, so the warm Today card below is
-/// the single color moment.
-class _Greeting extends ConsumerWidget {
-  const _Greeting({required this.greeting, required this.taskCount});
-  final String greeting;
-  final int taskCount;
-
-  static const _weekdays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
-  static const _months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(profileProvider).valueOrNull;
-    final email = ref.watch(authServiceProvider).user?.email;
-    final name = _firstName(profile?['name']?.toString() ?? email) ?? 'there';
-    final now = DateTime.now();
-    final eyebrow = '${_weekdays[now.weekday - 1]}, ${_months[now.month - 1]} ${now.day}';
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.xs, QSpace.md, 0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(eyebrow, style: QType.caption.copyWith(color: kAccent, fontWeight: FontWeight.w700, letterSpacing: 0.6)),
-                const SizedBox(height: 4),
-                Text('$greeting, $name', style: QType.largeTitle, maxLines: 2, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 4),
-                Text(
-                  taskCount == 0 ? 'No tasks planned today' : '$taskCount ${taskCount == 1 ? 'task' : 'tasks'} planned today',
-                  style: QType.subhead,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: QSpace.sm),
-          Padding(
-            padding: const EdgeInsets.only(top: QSpace.sm),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => HapticFeedback.selectionClick(),
-              child: Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(color: QColors.fill.resolveFrom(context), shape: BoxShape.circle),
-                child: Icon(CupertinoIcons.bell, size: 19, color: QColors.label.resolveFrom(context)),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
 
-  static String? _firstName(String? source) {
-    if (source == null || source.trim().isEmpty) return null;
-    final head = source.trim().split(RegExp(r'[\s@.]+')).firstWhere((p) => p.isNotEmpty, orElse: () => '');
-    if (head.isEmpty) return null;
-    return head[0].toUpperCase() + head.substring(1);
+  /// Groups tasks by workspace using the (listId ?? workspaceId) predicate, then
+  /// appends a synthetic "Inbox" section for any task that matched no workspace.
+  List<_Section> _buildSections(
+    BuildContext context,
+    List<Workspace> workspaces,
+    List<Task> tasks,
+  ) {
+    final matched = <String>{};
+    final sections = <_Section>[];
+
+    for (final ws in workspaces) {
+      final wsTasks = tasks.where((t) => (t.listId ?? t.workspaceId) == ws.id).toList();
+      for (final t in wsTasks) {
+        matched.add(t.id);
+      }
+      sections.add(_Section(ws, wsTasks));
+    }
+
+    final orphans = tasks.where((t) => !matched.contains(t.id)).toList();
+    final inbox = Workspace(
+      id: _inboxId,
+      name: 'Inbox',
+      color: QColors.labelSecondary.resolveFrom(context),
+    );
+    sections.add(_Section(inbox, orphans));
+
+    return sections;
   }
 }
 
+class _Section {
+  const _Section(this.workspace, this.tasks);
+  final Workspace workspace;
+  final List<Task> tasks;
+}
+
 // ---------------------------------------------------------------------------
-// "Today" focus card — live focus progress toward a daily goal + Start Focus.
+// "Today" rings card — live focus + tasks progress toward daily goals.
 // ---------------------------------------------------------------------------
 
+/// Warm ember hero: a large [ActivityRings] (focus outer / tasks inner) with the
+/// focus-hours goal in its center, two quiet supporting stats, and the white
+/// Start Focus button.
 class _TodayCard extends StatelessWidget {
   const _TodayCard({
-    required this.focusedSeconds,
+    required this.focusFraction,
+    required this.taskFraction,
+    required this.focusSeconds,
+    required this.focusHoursGoal,
     required this.tasksDone,
-    required this.tasksTotal,
+    required this.tasksTarget,
     required this.onStart,
   });
 
-  final int focusedSeconds;
+  final double focusFraction;
+  final double taskFraction;
+  final int focusSeconds;
+  final int focusHoursGoal;
   final int tasksDone;
-  final int tasksTotal;
+  final int tasksTarget;
   final VoidCallback onStart;
-
-  static const _goalSeconds = 4 * 3600;
 
   @override
   Widget build(BuildContext context) {
-    final frac = (focusedSeconds / _goalSeconds).clamp(0.0, 1.0);
     const white = CupertinoColors.white;
-    final soft = white.withValues(alpha: 0.8);
+    final focusLabel = '${(focusSeconds / 3600).toStringAsFixed(1)}/${focusHoursGoal}h';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
       child: Container(
-        padding: const EdgeInsets.all(QSpace.lg),
+        padding: const EdgeInsets.all(QSpace.xl),
         decoration: BoxDecoration(
           gradient: QGradients.warm,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(QRadius.glass),
           boxShadow: [
-            BoxShadow(color: const Color(0xFF7E2412).withValues(alpha: 0.22), blurRadius: 20, offset: const Offset(0, 8)),
+            BoxShadow(
+              color: QColors.brandDeep.resolveFrom(context).withValues(alpha: 0.30),
+              blurRadius: 28,
+              offset: const Offset(0, 12),
+            ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("TODAY'S FOCUS",
-                style: QType.caption.copyWith(color: white.withValues(alpha: 0.75), fontWeight: FontWeight.w700, letterSpacing: 0.8)),
-            const SizedBox(height: QSpace.md),
+            Text('TODAY\'S FOCUS', style: QType.eyebrow.copyWith(color: white.withValues(alpha: 0.82))),
+            const SizedBox(height: QSpace.xl),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _Ring(fraction: frac, size: 84, center: fmtHm(focusedSeconds), caption: 'focused'),
-                const SizedBox(width: QSpace.lg),
+                ActivityRings(
+                  focusFraction: focusFraction,
+                  taskFraction: taskFraction,
+                  size: 120,
+                  center: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        focusLabel,
+                        style: QType.title3Emphasized.copyWith(
+                          color: white,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      Text('focused', style: QType.caption2.copyWith(color: white.withValues(alpha: 0.7))),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: QSpace.xl),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _Stat(icon: CupertinoIcons.checkmark_alt_circle_fill, label: 'Tasks done', value: '$tasksDone of $tasksTotal'),
-                      const SizedBox(height: QSpace.sm),
-                      _Stat(icon: CupertinoIcons.flame_fill, label: 'Streak', value: '${Mock.streakDays} days'),
-                      const SizedBox(height: QSpace.sm),
-                      _Stat(icon: CupertinoIcons.shield_fill, label: 'Blocked', value: fmtHm(Mock.savedSeconds)),
+                      _Stat(label: 'Tasks done', value: '$tasksDone of $tasksTarget'),
+                      const SizedBox(height: QSpace.lg),
+                      _Stat(label: 'Streak', value: '${Mock.streakDays} days'),
                     ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: QSpace.md),
+            const SizedBox(height: QSpace.xl),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onStart,
               child: Container(
-                height: 48,
+                height: 52,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(color: white, borderRadius: BorderRadius.circular(QRadius.capsule)),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(CupertinoIcons.play_arrow_solid, size: 16, color: Color(0xFF7E2412)),
-                    const SizedBox(width: 6),
-                    Text('Start Focus', style: QType.headline.copyWith(color: const Color(0xFF7E2412), fontWeight: FontWeight.w700)),
+                    Icon(CupertinoIcons.play_arrow_solid, size: 16, color: QColors.brandDeep.resolveFrom(context)),
+                    const SizedBox(width: 7),
+                    Text('Start Focus',
+                        style: QType.headline.copyWith(
+                            color: QColors.brandDeep.resolveFrom(context), fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 4),
-            Text('${fmtHm(focusedSeconds)} of ${fmtHm(_goalSeconds)} daily goal',
-                style: QType.caption.copyWith(color: soft, fontFeatures: const [FontFeature.tabularFigures()])),
           ],
         ),
       ),
@@ -259,83 +309,22 @@ class _TodayCard extends StatelessWidget {
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat({required this.icon, required this.label, required this.value});
-  final IconData icon;
+  const _Stat({required this.label, required this.value});
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
     const white = CupertinoColors.white;
-    final soft = white.withValues(alpha: 0.75);
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 15, color: soft),
-        const SizedBox(width: 6),
-        Text('$label  ', style: QType.footnote.copyWith(color: soft)),
         Text(value,
-            style: QType.footnote.copyWith(color: white, fontWeight: FontWeight.w700, fontFeatures: const [FontFeature.tabularFigures()])),
+            style: QType.title3Emphasized.copyWith(
+                color: white, fontFeatures: const [FontFeature.tabularFigures()])),
+        const SizedBox(height: 1),
+        Text(label, style: QType.footnote.copyWith(color: white.withValues(alpha: 0.72))),
       ],
     );
   }
-}
-
-class _Ring extends StatelessWidget {
-  const _Ring({required this.fraction, required this.size, required this.center, required this.caption});
-  final double fraction;
-  final double size;
-  final String center;
-  final String caption;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(
-        painter: _RingPainter(fraction),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(center,
-                  style: QType.headline.copyWith(color: CupertinoColors.white, fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()])),
-              Text(caption, style: QType.caption.copyWith(color: CupertinoColors.white.withValues(alpha: 0.7))),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RingPainter extends CustomPainter {
-  _RingPainter(this.fraction);
-  final double fraction;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    const stroke = 8.0;
-    final r = (size.shortestSide - stroke) / 2;
-    canvas.drawCircle(center, r, Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..color = CupertinoColors.white.withValues(alpha: 0.22));
-    if (fraction <= 0) return;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: r),
-      -math.pi / 2,
-      2 * math.pi * fraction,
-      false,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke
-        ..strokeCap = StrokeCap.round
-        ..color = CupertinoColors.white,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _RingPainter old) => old.fraction != fraction;
 }

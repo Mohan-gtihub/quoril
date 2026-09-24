@@ -1,13 +1,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
-import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/models/models.dart';
 import '../../core/data/mock_data.dart';
-import '../../core/widgets/inset_list.dart';
+import '../../core/widgets/app_kit.dart';
+import '../../core/widgets/editorial.dart';
 import '../../core/widgets/common.dart';
+import 'settings_widgets.dart';
 import 'watched_app_sheet.dart';
 
 /// E2 — Distraction Rules.
@@ -50,26 +51,29 @@ class _DistractionRulesPageState extends State<DistractionRulesPage> {
   void _pickTime(bool start) {
     HapticFeedback.selectionClick();
     final initial = start ? _startMin : _endMin;
+    // Draft the value locally; only commit on Done.
+    var draft = initial;
     showCupertinoModalPopup<void>(
       context: context,
-      builder: (ctx) => Container(
-        height: 280,
-        color: QColors.surface.resolveFrom(ctx),
-        child: SafeArea(
-          top: false,
-          child: CupertinoDatePicker(
-            mode: CupertinoDatePickerMode.time,
-            use24hFormat: true,
-            initialDateTime: DateTime(2026, 1, 1, initial ~/ 60, initial % 60),
-            onDateTimeChanged: (d) => setState(() {
-              final m = d.hour * 60 + d.minute;
-              if (start) {
-                _startMin = m;
-              } else {
-                _endMin = m;
-              }
-            }),
-          ),
+      builder: (ctx) => SheetPickerScaffold(
+        title: start ? 'Start time' : 'End time',
+        onCancel: () => Navigator.pop(ctx),
+        onDone: () {
+          HapticFeedback.selectionClick();
+          setState(() {
+            if (start) {
+              _startMin = draft;
+            } else {
+              _endMin = draft;
+            }
+          });
+          Navigator.pop(ctx);
+        },
+        child: CupertinoDatePicker(
+          mode: CupertinoDatePickerMode.time,
+          use24hFormat: true,
+          initialDateTime: DateTime(2026, 1, 1, initial ~/ 60, initial % 60),
+          onDateTimeChanged: (d) => draft = d.hour * 60 + d.minute,
         ),
       ),
     );
@@ -77,72 +81,55 @@ class _DistractionRulesPageState extends State<DistractionRulesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = MediaQuery.platformBrightnessOf(context);
-    return CupertinoPageScaffold(
+    return SettingsAmbientBackground(
+      child: AppScaffold(
+      title: 'Distraction Rules',
       backgroundColor: const Color(0x00000000),
-      child: GradientBackground(
-        gradient: QGradients.page(brightness),
-        child: CustomScrollView(
-        slivers: [
-          const CupertinoSliverNavigationBar(
-              previousPageTitle: 'You',
-              largeTitle: Text('Distraction Rules'),
-              backgroundColor: Color(0x00000000),
-              border: null),
-          SliverList(
-            delegate: SliverChildListDelegate([
-              const SizedBox(height: QSpace.xs),
-              InsetSection(
-                header: 'Watched Apps',
-                footer:
-                    'A gentle nudge appears after the grace period when you open a watched app during focus hours.',
-                children: [
-                  for (final app in _apps)
-                    InsetRow(
-                      icon: app.icon,
-                      iconColor: QColors.breakColor,
-                      title: app.name,
-                      value: fmtHm(app.graceSeconds).replaceAll(' ', ''),
-                      onTap: () => _editApp(app),
-                    ),
-                  InsetRow(
-                    icon: CupertinoIcons.add,
+      transitionBetweenRoutes: true,
+      slivers: [
+        SliverPagePadding(
+          top: QSpace.xs,
+          child: QStagger(children: [
+              const QSectionHeader(label: 'Watched apps'),
+              FrostedGroup(children: [
+                for (final app in _apps)
+                  SettingsRow(
+                    icon: app.icon,
                     iconColor: QColors.breakColor,
-                    title: 'Add app',
-                    showChevron: false,
-                    onTap: _addApp,
+                    title: app.name,
+                    value: fmtHm(app.graceSeconds).replaceAll(' ', ''),
+                    onTap: () => _editApp(app),
                   ),
-                ],
-              ),
-              const SizedBox(height: QSpace.xl),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    QSpace.md + QSpace.xs, 0, QSpace.md + QSpace.xs, QSpace.xs),
-                child: Text('NUDGE INTENSITY', style: QType.sectionHeader),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
-                child: CupertinoSlidingSegmentedControl<NudgeIntensity>(
-                  groupValue: _intensity,
-                  onValueChanged: (v) {
-                    if (v == null) return;
-                    HapticFeedback.selectionClick();
-                    setState(() => _intensity = v);
-                  },
-                  children: const {
-                    NudgeIntensity.gentle: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 6),
-                        child: Text('Gentle')),
-                    NudgeIntensity.firm: Text('Firm'),
-                    NudgeIntensity.toughLove: Text('Tough-love'),
-                  },
+                SettingsRow(
+                  icon: CupertinoIcons.add,
+                  iconColor: QColors.breakColor,
+                  title: 'Add app',
+                  chevron: false,
+                  onTap: _addApp,
                 ),
+              ]),
+              const SettingsFootnote(
+                  'A gentle nudge appears after the grace period when you open a watched app during focus hours.'),
+              const SizedBox(height: QSpace.xl),
+              const QSectionHeader(label: 'Nudge intensity'),
+              QSegmentedControl<NudgeIntensity>(
+                groupValue: _intensity,
+                accent: QSection.settings,
+                onValueChanged: (v) {
+                  if (v == null) return;
+                  HapticFeedback.selectionClick();
+                  setState(() => _intensity = v);
+                },
+                children: const {
+                  NudgeIntensity.gentle: Text('Gentle'),
+                  NudgeIntensity.firm: Text('Firm'),
+                  NudgeIntensity.toughLove: Text('Tough-love'),
+                },
               ),
               const SizedBox(height: QSpace.xl),
-              InsetSection(
-                header: 'Schedule',
-                children: [
-                  InsetRow(
+              const QSectionHeader(label: 'Schedule'),
+              FrostedGroup(children: [
+                  SettingsRow(
                     icon: CupertinoIcons.clock_fill,
                     iconColor: QColors.breakColor,
                     title: 'Focus hours',
@@ -156,23 +143,16 @@ class _DistractionRulesPageState extends State<DistractionRulesPage> {
                         _TimeChip(label: _hm(_endMin), onTap: () => _pickTime(false)),
                       ],
                     ),
-                    showChevron: false,
+                    chevron: false,
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
                         QSpace.md, QSpace.sm, QSpace.md, QSpace.sm),
                     child: Row(
                       children: [
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: QColors.wellbeing.resolveFrom(context),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Icon(CupertinoIcons.calendar,
-                              size: 17, color: CupertinoColors.white),
-                        ),
+                        QIconTile(
+                            icon: CupertinoIcons.calendar,
+                            color: QColors.wellbeing),
                         const SizedBox(width: QSpace.sm),
                         Text('Days', style: QType.body),
                         const Spacer(),
@@ -190,14 +170,11 @@ class _DistractionRulesPageState extends State<DistractionRulesPage> {
                       ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: QSpace.xxl),
-            ]),
-          ),
-        ],
+                ]),
+              ]),
         ),
-      ),
+      ],
+    ),
     );
   }
 }
@@ -209,7 +186,7 @@ class _TimeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: QSpace.sm, vertical: 5),

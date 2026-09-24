@@ -56,6 +56,13 @@ export interface CanvasMember {
 interface CanvasState {
     canvases: Canvas[]
     activeCanvasId: string | null
+    /**
+     * Whether the canvas section is showing the switcher (all canvases) rather
+     * than the open board. Lives in the store — not local component state — so
+     * the shared top Back button can peel the canvas one level at a time
+     * (board → switcher → previous route) instead of leaving /canvas outright.
+     */
+    showSwitcher: boolean
     viewport: Viewport
     selectedBlockIds: string[]
     mode: Mode
@@ -69,6 +76,7 @@ interface CanvasState {
     upsertCanvas: (c: Canvas) => void
     removeCanvas: (id: string) => void
     setActiveCanvas: (id: string | null) => void
+    setShowSwitcher: (v: boolean) => void
     setViewport: (v: Viewport) => void
     setSelected: (ids: string[]) => void
     toggleSelected: (id: string, additive?: boolean) => void
@@ -88,6 +96,7 @@ interface CanvasState {
 export const useCanvasStore = create<CanvasState>((set, get) => ({
     canvases: [],
     activeCanvasId: null,
+    showSwitcher: false,
     viewport: { x: 0, y: 0, zoom: 1 },
     selectedBlockIds: [],
     mode: 'select',
@@ -111,6 +120,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
             : s.viewport,
         selectedBlockIds: [],
     })),
+    setShowSwitcher: (v) => set({ showSwitcher: v }),
     setViewport: (v) => set({ viewport: v }),
     setSelected: (ids) => set({ selectedBlockIds: ids }),
     toggleSelected: (id, additive = false) => set((s) => {

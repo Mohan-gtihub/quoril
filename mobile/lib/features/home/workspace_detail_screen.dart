@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/data/providers.dart';
 import '../../core/models/models.dart';
+import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/primary_button.dart';
 import '../focus/focus_screen.dart';
@@ -34,17 +35,25 @@ class _WorkspaceDetailScreenState extends ConsumerState<WorkspaceDetailScreen> {
     final inBucket = mine.where((t) => t.bucket == _bucket).toList();
     final doneCount = inBucket.where((t) => t.done).length;
 
+    final bg = QColors.bgGrouped.resolveFrom(context);
+    final mint = QSection.workspaces.resolveFrom(context);
+    final brightness = MediaQuery.maybeOf(context)?.platformBrightness ?? Brightness.light;
     return CupertinoPageScaffold(
-      backgroundColor: QColors.bgGrouped.resolveFrom(context),
-      child: Stack(
+      backgroundColor: bg,
+      // Faint mint ambient wash so the frosted board task cards have something
+      // to refract; fades to the neutral grouped bg by ~42% height.
+      child: GradientBackground(
+        gradient: QGradients.ambient(mint, brightness),
+        child: Stack(
         children: [
           CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
               CupertinoSliverNavigationBar(
                 largeTitle: Text(widget.workspace.name),
-                backgroundColor: QColors.bgGrouped.resolveFrom(context).withValues(alpha: 0.9),
+                backgroundColor: bg.withValues(alpha: 0.7),
                 border: null,
+                transitionBetweenRoutes: true,
               ),
               CupertinoSliverRefreshControl(
                 onRefresh: () async {
@@ -58,9 +67,9 @@ class _WorkspaceDetailScreenState extends ConsumerState<WorkspaceDetailScreen> {
                   children: [
                     const SizedBox(height: QSpace.xs),
                     BucketTabs(active: _bucket, onChanged: (b) => setState(() => _bucket = b)),
-                    const SizedBox(height: QSpace.sm),
+                    const SizedBox(height: QSpace.md),
                     BucketProgress(done: doneCount, total: inBucket.length),
-                    const SizedBox(height: QSpace.sm),
+                    const SizedBox(height: QSpace.md),
                   ],
                 ),
               ),
@@ -70,10 +79,12 @@ class _WorkspaceDetailScreenState extends ConsumerState<WorkspaceDetailScreen> {
           _bottomBar(context),
         ],
       ),
+      ),
     );
   }
 
   Widget _bottomBar(BuildContext context) {
+    final mint = QSection.workspaces.resolveFrom(context);
     return Positioned(
       left: QSpace.md,
       right: QSpace.md,
@@ -88,6 +99,7 @@ class _WorkspaceDetailScreenState extends ConsumerState<WorkspaceDetailScreen> {
                 child: PrimaryButton(
                   label: 'Start Focus',
                   icon: CupertinoIcons.bolt_fill,
+                  color: mint,
                   onPressed: () {
                     HapticFeedback.mediumImpact();
                     Navigator.of(context, rootNavigator: true).push(
@@ -99,9 +111,9 @@ class _WorkspaceDetailScreenState extends ConsumerState<WorkspaceDetailScreen> {
               const SizedBox(width: QSpace.sm),
               Container(
                 decoration: BoxDecoration(
-                  color: QColors.tint.resolveFrom(context),
+                  color: mint,
                   shape: BoxShape.circle,
-                  boxShadow: QElevation.floating(context),
+                  boxShadow: QElevation.glow(mint, alpha: 0.30),
                 ),
                 child: CupertinoButton(
                   padding: const EdgeInsets.all(14),

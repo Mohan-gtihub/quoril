@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,11 +10,12 @@ import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/theme/gradients.dart';
 import '../../core/widgets/primary_button.dart';
+import '../onboarding/widgets/brand.dart';
 
 // ── Warm Aurora foreground palette (over QGradients.warm) ────────────────────
-const Color _fgPrimary = CupertinoColors.white;
-final Color _fgSecondary = CupertinoColors.white.withValues(alpha: 0.78);
-final Color _glassBorder = CupertinoColors.white.withValues(alpha: 0.24);
+// Shared white-ink-on-gradient consts live in onboarding/widgets/brand.dart.
+const Color _fgPrimary = kFgPrimary;
+final Color _fgSecondary = kFgSecondary;
 
 /// Auth entry point — native iOS Sign In / Create Account wired to Supabase.
 ///
@@ -72,16 +75,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _validEmail(String v) =>
       RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim());
 
-  // Password rule checks (used for both hints and Sign Up validation).
-  bool _ruleLength(String v) => v.length >= 12;
-  bool _ruleMixedCase(String v) =>
-      v.contains(RegExp(r'[a-z]')) && v.contains(RegExp(r'[A-Z]'));
+  // Consumer-grade password bar: 8+ characters with at least one number.
+  bool _ruleLength(String v) => v.length >= 8;
   bool _ruleNumber(String v) => v.contains(RegExp(r'[0-9]'));
-  bool _ruleSpecial(String v) =>
-      v.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>_\-\[\]/\\+=~`]'));
 
-  bool _passwordMeetsRules(String v) =>
-      _ruleLength(v) && _ruleMixedCase(v) && _ruleNumber(v) && _ruleSpecial(v);
+  bool _passwordMeetsRules(String v) => _ruleLength(v) && _ruleNumber(v);
 
   /// Client-side validation. Returns true when the form is clean.
   bool _validate() {
@@ -172,6 +170,30 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
   }
 
+  Future<void> _continueWithApple() async {
+    final auth = ref.read(authServiceProvider);
+    HapticFeedback.lightImpact();
+    setState(() => _loading = true);
+    try {
+      // App Store 4.8 requires Sign in with Apple when other social logins are
+      // offered. Routed through the same Supabase OAuth client as Google.
+      await auth.client.auth.signInWithOAuth(
+        OAuthProvider.apple,
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      HapticFeedback.heavyImpact();
+      _showErrorAlert(e.message);
+    } catch (e) {
+      if (!mounted) return;
+      HapticFeedback.heavyImpact();
+      _showErrorAlert('Could not start Apple sign-in. Please try again.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   void _showErrorAlert(String message) {
     showCupertinoDialog<void>(
       context: context,
@@ -214,46 +236,50 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
-                      QSpace.lg, QSpace.xl, QSpace.lg, QSpace.xxl),
+                      QSpace.lg, QSpace.xxl, QSpace.lg, QSpace.xxl),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _buildWordmark(context),
-                      const SizedBox(height: QSpace.lg),
-                  _buildModeToggle(context),
-                  const SizedBox(height: QSpace.xl),
-                  _buildFields(context),
-                  AnimatedSize(
-                    duration: MediaQuery.of(context).disableAnimations
-                        ? Duration.zero
-                        : QMotion.fast,
-                    curve: QMotion.standard,
-                    child: _isSignUp
-                        ? Padding(
-                            padding: const EdgeInsets.only(top: QSpace.md),
-                            child: _PasswordRules(
-                              length: _ruleLength(_passwordCtrl.text),
-                              mixedCase: _ruleMixedCase(_passwordCtrl.text),
-                              number: _ruleNumber(_passwordCtrl.text),
-                              special: _ruleSpecial(_passwordCtrl.text),
-                            ),
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                  const SizedBox(height: QSpace.xl),
-                  PrimaryButton(
-                    label: _isSignUp ? 'Create Account' : 'Sign In',
-                    color: CupertinoColors.white,
-                    foreground: const Color(0xFF2A0A06),
-                    loading: _loading,
-                    onPressed: _loading ? null : _submit,
-                  ),
-                  const SizedBox(height: QSpace.xl),
-                  _buildDivider(context),
-                  const SizedBox(height: QSpace.xl),
-                  _GoogleButton(
-                    onPressed: _loading ? null : _continueWithGoogle,
-                  ),
+                      const SizedBox(height: QSpace.xxl),
+                      // Social auth is the PRIMARY path — Apple first (on-brand
+                      // + App Store 4.8), then Google, above the email form.
+                      _AppleButton(
+                        onPressed: _loading ? null : _continueWithApple,
+                      ),
+                      const SizedBox(height: QSpace.sm),
+                      _GoogleButton(
+                        onPressed: _loading ? null : _continueWithGoogle,
+                      ),
+                      const SizedBox(height: QSpace.xl),
+                      _buildDivider(context),
+                      const SizedBox(height: QSpace.xl),
+                      _buildModeToggle(context),
+                      const SizedBox(height: QSpace.xl),
+                      _buildFields(context),
+                      AnimatedSize(
+                        duration: MediaQuery.of(context).disableAnimations
+                            ? Duration.zero
+                            : QMotion.fast,
+                        curve: QMotion.standard,
+                        child: _isSignUp
+                            ? Padding(
+                                padding: const EdgeInsets.only(top: QSpace.md),
+                                child: _PasswordRules(
+                                  length: _ruleLength(_passwordCtrl.text),
+                                  number: _ruleNumber(_passwordCtrl.text),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      const SizedBox(height: QSpace.xl),
+                      PrimaryButton(
+                        label: _isSignUp ? 'Create Account' : 'Sign In',
+                        color: CupertinoColors.white,
+                        foreground: const Color(0xFF2A0A06),
+                        loading: _loading,
+                        onPressed: _loading ? null : _submit,
+                      ),
                     ],
                   ),
                 ),
@@ -266,52 +292,23 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 
   Widget _buildWordmark(BuildContext context) {
+    // ONE hero header shared with onboarding (mark + wordmark + largeTitle +
+    // subtitle) — same layout grid, no hand-rolled fontSize.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Compact brand row — mark + wordmark, left-aligned (editorial, not a
-        // centered logo box).
-        Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: CupertinoColors.white.withValues(alpha: 0.16),
-                border: Border.all(color: _glassBorder, width: 1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(CupertinoIcons.bolt_fill,
-                  size: 18, color: CupertinoColors.white),
-            ),
-            const SizedBox(width: QSpace.xs),
-            Text(
-              'Quoril',
-              style: QType.headline.copyWith(
-                color: _fgPrimary,
-                letterSpacing: 0.5,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: QSpace.xl),
+        const BrandWordmark(),
+        const SizedBox(height: QSpace.xxl),
         Text(
           _isSignUp ? 'Create your\naccount.' : 'Welcome\nback.',
-          style: QType.largeTitle.copyWith(
-            color: _fgPrimary,
-            fontSize: 40,
-            height: 1.05,
-            fontWeight: FontWeight.w700,
-          ),
+          style: QType.hero.copyWith(color: _fgPrimary),
         ),
         const SizedBox(height: QSpace.sm),
         Text(
           _isSignUp
               ? 'Set up your space to focus deeply and keep distractions out.'
               : 'Pick up right where your focus left off.',
-          style: QType.body.copyWith(color: _fgSecondary, height: 1.3),
+          style: QType.body.copyWith(color: _fgSecondary, height: 1.35),
         ),
       ],
     );
@@ -498,10 +495,7 @@ class _AuthField extends StatelessWidget {
       errorTextColor = QColors.danger.resolveFrom(context);
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
+    final field = Container(
           constraints: const BoxConstraints(minHeight: 52),
           decoration: BoxDecoration(
             color: fill,
@@ -540,7 +534,25 @@ class _AuthField extends StatelessWidget {
               ],
             ],
           ),
-        ),
+        );
+
+    // On the ember gradient, back the field with a real BackdropFilter so the
+    // translucent-white fill reads as frosted glass (not a flat scrim). On the
+    // neutral sheet variant the opaque surface fill needs no blur.
+    final Widget surface = onGradient
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(QRadius.row),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: field,
+            ),
+          )
+        : field;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        surface,
         if (hasError) ...[
           const SizedBox(height: QSpace.xs),
           Padding(
@@ -560,25 +572,19 @@ class _AuthField extends StatelessWidget {
 class _PasswordRules extends StatelessWidget {
   const _PasswordRules({
     required this.length,
-    required this.mixedCase,
     required this.number,
-    required this.special,
   });
 
   final bool length;
-  final bool mixedCase;
   final bool number;
-  final bool special;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _rule(context, '12+ characters', length),
-        _rule(context, 'Upper & lowercase letters', mixedCase),
+        _rule(context, 'At least 8 characters', length),
         _rule(context, 'At least one number', number),
-        _rule(context, 'At least one special character', special),
       ],
     );
   }
@@ -608,6 +614,76 @@ class _PasswordRules extends StatelessWidget {
   }
 }
 
+/// Solid white "Sign in with Apple" button — the primary, on-brand social
+/// option. High-contrast (dark ink on white) per Apple's HIG.
+class _AppleButton extends StatelessWidget {
+  const _AppleButton({required this.onPressed});
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: CupertinoButton(
+        padding: EdgeInsets.zero,
+        borderRadius: BorderRadius.circular(QRadius.capsule),
+        color: CupertinoColors.white,
+        onPressed: onPressed,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 18,
+              height: 20,
+              child: CustomPaint(painter: _AppleLogoPainter()),
+            ),
+            const SizedBox(width: QSpace.sm),
+            Text(
+              'Sign in with Apple',
+              style: QType.headline.copyWith(color: const Color(0xFF1A1A1A)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Minimal Apple logo silhouette (no asset / font dependency).
+class _AppleLogoPainter extends CustomPainter {
+  const _AppleLogoPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final p = Paint()
+      ..color = const Color(0xFF1A1A1A)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    // Body — two overlapping lobes forming the rounded apple.
+    final body = Path();
+    body.addOval(Rect.fromLTWH(0, h * 0.28, w * 0.56, h * 0.66));
+    body.addOval(Rect.fromLTWH(w * 0.44, h * 0.28, w * 0.56, h * 0.66));
+    // Notch bite via a small oval on the right — approximated by the two lobes.
+    canvas.drawPath(body, p);
+
+    // Leaf.
+    final leaf = Path()
+      ..moveTo(w * 0.56, h * 0.06)
+      ..quadraticBezierTo(w * 0.74, h * 0.02, w * 0.72, h * 0.24)
+      ..quadraticBezierTo(w * 0.54, h * 0.26, w * 0.56, h * 0.06)
+      ..close();
+    canvas.drawPath(leaf, p);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
 /// Bordered "Continue with Google" button with a Google glyph.
 class _GoogleButton extends StatelessWidget {
   const _GoogleButton({required this.onPressed});
@@ -618,7 +694,13 @@ class _GoogleButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 52,
-      child: CupertinoButton(
+      // Real frost behind the translucent-white button so it reads as glass on
+      // the ember gradient, matching the frosted email fields below.
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(QRadius.capsule),
+        child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: CupertinoButton(
         padding: EdgeInsets.zero,
         borderRadius: BorderRadius.circular(QRadius.capsule),
         color: CupertinoColors.white.withValues(alpha: 0.12),
@@ -654,6 +736,8 @@ class _GoogleButton extends StatelessWidget {
               ),
             ],
           ),
+        ),
+        ),
         ),
       ),
     );
@@ -826,9 +910,9 @@ class _ForgotPasswordSheetState extends ConsumerState<_ForgotPasswordSheet> {
         const SizedBox(height: QSpace.xs),
         Text(
           'Enter your account email and we’ll send you a link to reset your password.',
-          style: QType.subhead,
+          style: QType.subhead.copyWith(height: 1.35),
         ),
-        const SizedBox(height: QSpace.lg),
+        const SizedBox(height: QSpace.xl),
         _AuthField(
           controller: _emailCtrl,
           placeholder: 'Email',
@@ -877,10 +961,10 @@ class _ForgotPasswordSheetState extends ConsumerState<_ForgotPasswordSheet> {
         const SizedBox(height: QSpace.xs),
         Text(
           'We sent a reset link to ${_emailCtrl.text.trim()}. Follow it to choose a new password.',
-          style: QType.subhead,
+          style: QType.subhead.copyWith(height: 1.35),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: QSpace.lg),
+        const SizedBox(height: QSpace.xl),
         PrimaryButton(
           label: 'Done',
           onPressed: () => Navigator.pop(context),

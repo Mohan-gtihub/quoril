@@ -34,9 +34,31 @@ class FocusScreen extends ConsumerStatefulWidget {
 
 enum _Phase { running, paused }
 
-class _FocusScreenState extends ConsumerState<FocusScreen> {
+/// The one immersive color moment of the app — a deep flame ground for the
+/// focus session. Hotter and more urgent than the ember home surface: near-black
+/// root → deep flame → bright flame. This is the section's single hero surface;
+/// everything on top stays neutral white ink + the flame accent used sparingly.
+const _flameGround = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    Color(0xFF2A0A03), // near-black flame root
+    Color(0xFF7A1E08), // deep flame
+    Color(0xFFC93318), // flame
+    Color(0xFFF5482B), // bright flame (section accent)
+  ],
+  stops: [0.0, 0.34, 0.72, 1.0],
+);
+
+class _FocusScreenState extends ConsumerState<FocusScreen>
+    with SingleTickerProviderStateMixin {
   static const _defaultSeconds = 25 * 60; // one Pomodoro-style work block
   static const _breakSeconds = 5 * 60;
+
+  /// The SIGNATURE moment — a one-shot orchestrated ignition on session start:
+  /// the ground calms toward near-black while the ring blooms an ember halo.
+  /// Gated on Reduce Motion (jumps to settled). Runs exactly once, on entry.
+  late final AnimationController _igniteCtrl;
 
   Timer? _ticker;
   Timer? _breakTicker;
@@ -51,10 +73,6 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
   /// the clock to the task — every worked second flows to the task's spent time.
   int _workedSeconds = 0;
   int _credited = 0;
-
-  /// Elapsed (in seconds) at the start of the current lap/block; Lap Time is
-  /// measured from here so it resets whenever the block is reset.
-  int _lapStartElapsed = 0;
 
   // Overlays
   bool _showNudge = false;
@@ -71,7 +89,25 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
       _totalSeconds = est * 60;
       _remaining = _totalSeconds;
     }
+    _igniteCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
     _runTicker();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Fire the ignition exactly once, after MediaQuery (Reduce Motion) is ready.
+    if (_igniteCtrl.status == AnimationStatus.dismissed &&
+        _igniteCtrl.value == 0) {
+      if (QMotion.reduced(context)) {
+        _igniteCtrl.value = 1.0; // settled, no motion
+      } else {
+        _igniteCtrl.forward();
+      }
+    }
   }
 
   /// Write any not-yet-credited focused time onto the task.
@@ -88,13 +124,11 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
   void dispose() {
     _ticker?.cancel();
     _breakTicker?.cancel();
+    _igniteCtrl.dispose();
     super.dispose();
   }
 
   int get _elapsed => _totalSeconds - _remaining;
-
-  /// Time since the current lap/block started.
-  int get _lapElapsed => (_elapsed - _lapStartElapsed).clamp(0, _totalSeconds);
 
   // ---- session control ----------------------------------------------------
 
@@ -107,6 +141,10 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
           _remaining--;
           _workedSeconds++;
         });
+        // Soft ticks in the final 3s (skip 0 — completion has its own beat).
+        if (_remaining > 0 && _remaining <= 3) {
+          HapticFeedback.selectionClick();
+        }
       } else {
         _onTimeUp();
       }
@@ -115,6 +153,8 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
 
   void _onTimeUp() {
     _ticker?.cancel();
+    // Success beat at natural block completion (previously silent).
+    HapticFeedback.mediumImpact();
     // Natural end of a block: credit the focused time to the task, then break.
     _creditFocus();
     _startBreak();
@@ -138,7 +178,6 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
     HapticFeedback.mediumImpact();
     setState(() {
       _remaining = _totalSeconds;
-      _lapStartElapsed = 0;
       _phase = _Phase.running;
     });
     _runTicker();
@@ -146,7 +185,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
 
   Future<void> _finish() async {
     _ticker?.cancel();
-    HapticFeedback.heavyImpact();
+    HapticFeedback.mediumImpact();
     // The real focused length this session (accumulated across blocks).
     final seconds = _workedSeconds > 0 ? _workedSeconds : _elapsed;
     try {
@@ -231,7 +270,6 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
       _showBreak = false;
       _remaining = _defaultSeconds;
       _totalSeconds = _defaultSeconds;
-      _lapStartElapsed = 0;
       _phase = _Phase.running;
     });
     _runTicker();
@@ -253,7 +291,8 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
   }
 
   void _takeBreath() {
-    HapticFeedback.heavyImpact();
+    // A calm resolution — soft, not a thud.
+    HapticFeedback.lightImpact();
     setState(() {
       _saves++;
       _showFriction = false;
@@ -289,6 +328,8 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
     final reduceMotion = MediaQuery.of(context).disableAnimations;
     showCupertinoModalPopup<void>(
       context: context,
+      // Non-dismissible: don't let a tap-away skip the win.
+      barrierDismissible: false,
       barrierColor: QColors.bg.resolveFrom(context).withValues(alpha: 0.97),
       builder: (ctx) => _CelebrationOverlay(
         durationSeconds: durationSeconds,
@@ -313,7 +354,6 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
           setState(() {
             _totalSeconds = _defaultSeconds;
             _remaining = _defaultSeconds;
-            _lapStartElapsed = 0;
             _saves = 0;
             _phase = _Phase.running;
           });
@@ -327,53 +367,56 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Stopwatch look: progress fills as time elapses.
-    final progress = _totalSeconds == 0 ? 0.0 : _elapsed / _totalSeconds;
+    // Countdown: the ring DRAINS as time remaining shrinks (remaining/total).
+    final progress = _totalSeconds == 0 ? 0.0 : _remaining / _totalSeconds;
+    final paused = _phase == _Phase.paused;
     final title = widget.task?.title ?? 'Focus session';
 
     return CupertinoPageScaffold(
       backgroundColor: QColors.bg.resolveFrom(context),
       child: Stack(
         children: [
-          GradientBackground(
-            gradient: QGradients.warm,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: QSpace.lg),
-                child: Column(
-                  children: [
-                    _TopBar(onClose: _requestClose, onMenu: _openMenu),
-                    const Spacer(),
-                    ClockFaceTimer(
-                      progress: progress,
-                      label: fmtHms(_elapsed),
-                      size: math.min(
-                          MediaQuery.of(context).size.width - 40, 360),
-                      sublabel:
-                          _phase == _Phase.paused ? 'Paused' : 'Deep Work',
+          AnimatedBuilder(
+            animation: _igniteCtrl,
+            builder: (context, child) {
+              // t: 0 at entry → 1 settled. The ground calms toward near-black
+              // as the session takes hold; the ring halo blooms then recedes.
+              final t = Curves.easeOutCubic.transform(_igniteCtrl.value);
+              // Halo blooms in fast, then eases back down to a resting ember.
+              final ignite = math.sin(t * math.pi) * 0.85 + t * 0.15;
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  const DecoratedBox(
+                    decoration: BoxDecoration(gradient: _flameGround),
+                    child: SizedBox.expand(),
+                  ),
+                  // Calming veil: darkens the warm ground toward near-black so
+                  // the ignited ring becomes the single focal point.
+                  IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.black.withValues(alpha: 0.34 * t),
+                      ),
                     ),
-                    const SizedBox(height: QSpace.xl),
-                    _TaskChip(title: title, hasTask: widget.task != null),
-                    const SizedBox(height: QSpace.lg),
-                    _LapTotalRow(
-                      lap: _lapElapsed,
-                      total: _elapsed,
-                      lapStart: _lapStartElapsed,
-                    ),
-                    const SizedBox(height: QSpace.md),
-                    _ProtectedRow(saves: _saves),
-                    const Spacer(),
-                    _TransportPill(
-                      paused: _phase == _Phase.paused,
-                      onPlayPause: _togglePause,
-                      onRecord: _finish,
-                      onReset: _reset,
-                    ),
-                    const SizedBox(height: QSpace.xl),
-                  ],
-                ),
-              ),
-            ),
+                  ),
+                  _FocusBody(
+                    progress: progress,
+                    remaining: _remaining,
+                    paused: paused,
+                    ignite: ignite,
+                    title: title,
+                    hasTask: widget.task != null,
+                    saves: _saves,
+                    onClose: _requestClose,
+                    onMenu: _openMenu,
+                    onPlayPause: _togglePause,
+                    onFinish: _finish,
+                    onReset: _reset,
+                  ),
+                ],
+              );
+            },
           ),
           if (_showNudge)
             Positioned(
@@ -408,6 +451,76 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Focus body — the ring, task chip, protected row, transport pill.
+// ---------------------------------------------------------------------------
+
+class _FocusBody extends StatelessWidget {
+  const _FocusBody({
+    required this.progress,
+    required this.remaining,
+    required this.paused,
+    required this.ignite,
+    required this.title,
+    required this.hasTask,
+    required this.saves,
+    required this.onClose,
+    required this.onMenu,
+    required this.onPlayPause,
+    required this.onFinish,
+    required this.onReset,
+  });
+
+  final double progress;
+  final int remaining;
+  final bool paused;
+  final double ignite;
+  final String title;
+  final bool hasTask;
+  final int saves;
+  final VoidCallback onClose;
+  final VoidCallback onMenu;
+  final VoidCallback onPlayPause;
+  final VoidCallback onFinish;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: QSpace.lg),
+        child: Column(
+          children: [
+            _TopBar(onClose: onClose, onMenu: onMenu),
+            const Spacer(flex: 3),
+            ClockFaceTimer(
+              // Primary numeral is REMAINING time (a countdown).
+              progress: progress,
+              label: fmtHms(remaining),
+              paused: paused,
+              ignite: ignite,
+              size: math.min(MediaQuery.of(context).size.width - 40, 360),
+              sublabel: paused ? 'Paused' : 'Deep Work',
+            ),
+            const SizedBox(height: QSpace.xxl),
+            _TaskChip(title: title, hasTask: hasTask),
+            const SizedBox(height: QSpace.sm),
+            _ProtectedRow(saves: saves),
+            const Spacer(flex: 4),
+            _TransportPill(
+              paused: paused,
+              onPlayPause: onPlayPause,
+              onFinish: onFinish,
+              onReset: onReset,
+            ),
+            const SizedBox(height: QSpace.xl),
+          ],
+        ),
       ),
     );
   }
@@ -505,92 +618,6 @@ class _TaskChip extends StatelessWidget {
   }
 }
 
-/// "Lap Time / Total Time" — two columns, each with TWO tabular-figure rows
-/// (current + a prior/last value), like a small lap list.
-class _LapTotalRow extends StatelessWidget {
-  const _LapTotalRow({
-    required this.lap,
-    required this.total,
-    required this.lapStart,
-  });
-  final int lap;
-  final int total;
-
-  /// Elapsed at which the current lap began — used as the "previous" row.
-  final int lapStart;
-
-  @override
-  Widget build(BuildContext context) {
-    // Second row: for Lap show where the lap started; for Total show the
-    // portion before the current lap. Kept simple + non-crashing.
-    final prevTotal = (total - lap).clamp(0, total);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _TimeColumn(
-          label: 'Lap Time',
-          primary: fmtHms(lap),
-          secondary: fmtHms(lapStart),
-        ),
-        Container(
-          width: 1,
-          height: 56,
-          margin: const EdgeInsets.symmetric(horizontal: QSpace.xl),
-          color: CupertinoColors.white.withValues(alpha: 0.2),
-        ),
-        _TimeColumn(
-          label: 'Total Time',
-          primary: fmtHms(total),
-          secondary: fmtHms(prevTotal),
-        ),
-      ],
-    );
-  }
-}
-
-class _TimeColumn extends StatelessWidget {
-  const _TimeColumn({
-    required this.label,
-    required this.primary,
-    required this.secondary,
-  });
-  final String label;
-  final String primary;
-  final String secondary;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: QType.caption.copyWith(
-            letterSpacing: 1.0,
-            fontWeight: FontWeight.w600,
-            color: CupertinoColors.white.withValues(alpha: 0.6),
-          ),
-        ),
-        const SizedBox(height: QSpace.xxs),
-        Text(
-          primary,
-          style: QType.title3.copyWith(
-            color: CupertinoColors.white,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          secondary,
-          style: QType.subhead.copyWith(
-            color: CupertinoColors.white.withValues(alpha: 0.55),
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _ProtectedRow extends StatelessWidget {
   const _ProtectedRow({required this.saves});
   final int saves;
@@ -614,18 +641,18 @@ class _ProtectedRow extends StatelessWidget {
 }
 
 /// Translucent rounded pill holding three transport controls: play/pause
-/// (outlined) · a white filled RECORD button with an orange dot · reset
-/// (outlined circular arrow).
+/// (outlined) · a filled DONE/FINISH button (ember checkmark) · reset
+/// (outlined circular arrow). No stopwatch "record" — this is a focus session.
 class _TransportPill extends StatelessWidget {
   const _TransportPill({
     required this.paused,
     required this.onPlayPause,
-    required this.onRecord,
+    required this.onFinish,
     required this.onReset,
   });
   final bool paused;
   final VoidCallback onPlayPause;
-  final VoidCallback onRecord;
+  final VoidCallback onFinish;
   final VoidCallback onReset;
 
   @override
@@ -643,7 +670,7 @@ class _TransportPill extends StatelessWidget {
               onTap: onPlayPause,
             ),
             const SizedBox(width: QSpace.xl),
-            _RecordButton(onTap: onRecord),
+            _FinishButton(onTap: onFinish),
             const SizedBox(width: QSpace.xl),
             _OutlinedControl(
               icon: CupertinoIcons.arrow_counterclockwise,
@@ -684,9 +711,10 @@ class _OutlinedControl extends StatelessWidget {
   }
 }
 
-/// White filled RECORD button with a centered orange dot.
-class _RecordButton extends StatelessWidget {
-  const _RecordButton({required this.onTap});
+/// White filled FINISH button with an ember checkmark — end the session, log
+/// it, and celebrate. Unambiguous "done", not a stopwatch record dot.
+class _FinishButton extends StatelessWidget {
+  const _FinishButton({required this.onTap});
   final VoidCallback onTap;
 
   @override
@@ -702,13 +730,10 @@ class _RecordButton extends StatelessWidget {
           shape: BoxShape.circle,
           color: CupertinoColors.white,
         ),
-        child: Container(
-          width: 22,
-          height: 22,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Color(0xFFF37A1E),
-          ),
+        child: Icon(
+          CupertinoIcons.checkmark_alt,
+          size: 32,
+          color: QSection.focus.resolveFrom(context),
         ),
       ),
     );
@@ -739,80 +764,101 @@ class _CelebrationOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(QSpace.lg),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(
-              height: 96,
-              child: reduceMotion
-                  ? Center(
-                      child: Icon(CupertinoIcons.checkmark_seal_fill,
-                          size: 72,
-                          color: QColors.wellbeing.resolveFrom(context)),
-                    )
-                  : const _Confetti(),
-            ),
-            const SizedBox(height: QSpace.md),
-            Text('Session complete',
-                style: QType.title1, textAlign: TextAlign.center),
-            const SizedBox(height: QSpace.xs),
-            Text(
-              taskTitle == null
-                  ? 'You focused for ${fmtHm(durationSeconds)}.'
-                  : 'You focused for ${fmtHm(durationSeconds)} on “$taskTitle”.',
-              style: QType.body
-                  .copyWith(color: QColors.labelSecondary.resolveFrom(context)),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: QSpace.xl),
-            Row(
-              children: [
-                Expanded(
-                    child: _StatCard(
-                        icon: CupertinoIcons.shield_fill,
-                        value: '$saves',
-                        label: 'Saves',
-                        color: QColors.wellbeing)),
-                const SizedBox(width: QSpace.sm),
-                Expanded(
-                    child: _StatCard(
-                        icon: CupertinoIcons.chart_bar_fill,
-                        value: '${Mock.productivityScore}',
-                        label: 'Score',
-                        color: QColors.focus)),
-                const SizedBox(width: QSpace.sm),
-                Expanded(
-                    child: _StatCard(
-                        icon: CupertinoIcons.flame_fill,
-                        value: '${Mock.streakDays}',
-                        label: 'Streak',
-                        color: QColors.breakColor)),
+    final brightness =
+        MediaQuery.maybeOf(context)?.platformBrightness ?? Brightness.light;
+    // Faint flame-tinted ambient wash so the frosted stat cards have something
+    // to refract; fades to the neutral grouped page bg — keeps the airy feel.
+    return GradientBackground(
+      gradient: QGradients.ambient(
+        QSection.focus.resolveFrom(context),
+        brightness,
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(QSpace.lg),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: 96,
+                child: reduceMotion
+                    ? Center(
+                        child: Icon(CupertinoIcons.checkmark_seal_fill,
+                            size: 72,
+                            color: QColors.wellbeing.resolveFrom(context)),
+                      )
+                    : const _Confetti(),
+              ),
+              const SizedBox(height: QSpace.md),
+              Text(
+                'FOCUS SESSION',
+                style: QType.eyebrow.copyWith(
+                  color: QSection.focus.resolveFrom(context),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: QSpace.xs),
+              Text('Session complete',
+                  style: QType.title1, textAlign: TextAlign.center),
+              const SizedBox(height: QSpace.xs),
+              Text(
+                taskTitle == null
+                    ? 'You focused for ${fmtHm(durationSeconds)}.'
+                    : 'You focused for ${fmtHm(durationSeconds)} on “$taskTitle”.',
+                style: QType.body.copyWith(
+                    color: QColors.labelSecondary.resolveFrom(context)),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: QSpace.xl),
+              Row(
+                children: [
+                  Expanded(
+                      child: _StatCard(
+                          icon: CupertinoIcons.timer,
+                          value: fmtHm(durationSeconds),
+                          label: 'Focused',
+                          color: QSection.focus)),
+                  const SizedBox(width: QSpace.sm),
+                  Expanded(
+                      child: _StatCard(
+                          icon: CupertinoIcons.shield_fill,
+                          value: '$saves',
+                          label: 'Saves',
+                          color: QColors.wellbeing)),
+                  const SizedBox(width: QSpace.sm),
+                  Expanded(
+                      child: _StatCard(
+                          icon: CupertinoIcons.flame_fill,
+                          value: '${Mock.streakDays}',
+                          label: 'Streak',
+                          color: QSection.focus)),
+                ],
+              ),
+              const SizedBox(height: QSpace.xl),
+              if (onMarkDone != null) ...[
+                PrimaryButton(
+                  label: 'Mark task complete',
+                  icon: CupertinoIcons.checkmark_alt,
+                  color: QColors.wellbeing,
+                  onPressed: onMarkDone,
+                ),
+                const SizedBox(height: QSpace.sm),
+                PrimaryButton(
+                    label: 'Keep it open',
+                    style: QButtonStyle.tinted,
+                    onPressed: onDone),
+              ] else ...[
+                PrimaryButton(label: 'Done', onPressed: onDone),
+                const SizedBox(height: QSpace.sm),
+                PrimaryButton(
+                  label: 'Start another',
+                  style: QButtonStyle.tinted,
+                  onPressed: onAnother,
+                ),
               ],
-            ),
-            const SizedBox(height: QSpace.xl),
-            if (onMarkDone != null) ...[
-              PrimaryButton(
-                label: 'Mark task complete',
-                icon: CupertinoIcons.checkmark_alt,
-                color: QColors.wellbeing,
-                onPressed: onMarkDone,
-              ),
-              const SizedBox(height: QSpace.sm),
-              PrimaryButton(label: 'Keep it open', style: QButtonStyle.tinted, onPressed: onDone),
-            ] else ...[
-              PrimaryButton(label: 'Done', onPressed: onDone),
-              const SizedBox(height: QSpace.sm),
-              PrimaryButton(
-                label: 'Start another',
-                style: QButtonStyle.tinted,
-                onPressed: onAnother,
-              ),
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -834,7 +880,10 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = color.resolveFrom(context);
+    // Frosted content material — a whisper of the flame section tint refracts
+    // the ambient wash behind the celebration; neutral ink stays legible.
     return GlassCard(
+      tint: QSection.focus.resolveFrom(context),
       padding: const EdgeInsets.symmetric(vertical: QSpace.md),
       child: Column(
         children: [
@@ -844,6 +893,7 @@ class _StatCard extends StatelessWidget {
               style: QType.title2.copyWith(
                 fontFeatures: const [FontFeature.tabularFigures()],
               )),
+          const SizedBox(height: 2),
           Text(label, style: QType.caption),
         ],
       ),
@@ -909,9 +959,10 @@ class _BreakOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final orange = QColors.breakColor.resolveFrom(context);
+    // Break is a different, cooler room — teal identity, not louder orange.
+    final teal = QColors.breakColor.resolveFrom(context);
     return DecoratedBox(
-      decoration: BoxDecoration(color: orange.withValues(alpha: 0.97)),
+      decoration: const BoxDecoration(gradient: QGradients.cool),
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(QSpace.lg),
@@ -922,6 +973,14 @@ class _BreakOverlay extends StatelessWidget {
               const Icon(CupertinoIcons.leaf_arrow_circlepath,
                   size: 44, color: CupertinoColors.white),
               const SizedBox(height: QSpace.md),
+              Text(
+                'A COOLER ROOM',
+                style: QType.eyebrow.copyWith(
+                  color: CupertinoColors.white.withValues(alpha: 0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: QSpace.xs),
               Text('Break time',
                   style: QType.title1.copyWith(color: CupertinoColors.white),
                   textAlign: TextAlign.center),
@@ -930,11 +989,16 @@ class _BreakOverlay extends StatelessWidget {
                   style: QType.body.copyWith(
                       color: CupertinoColors.white.withValues(alpha: 0.9)),
                   textAlign: TextAlign.center),
-              const SizedBox(height: QSpace.xl),
+              const SizedBox(height: QSpace.xxl),
+              // Huge, clean tabular break countdown.
               Text(
                 fmtClock(remaining),
-                style: QType.timer
-                    .copyWith(fontSize: 72, color: CupertinoColors.white),
+                style: QType.timer.copyWith(
+                  fontSize: 76,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: -2.0,
+                  color: CupertinoColors.white,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: QSpace.xxl),
@@ -949,7 +1013,7 @@ class _BreakOverlay extends StatelessWidget {
                     onAddFive();
                   },
                   child: Text('+5 min',
-                      style: QType.headline.copyWith(color: orange)),
+                      style: QType.headline.copyWith(color: teal)),
                 ),
               ),
               const SizedBox(height: QSpace.sm),

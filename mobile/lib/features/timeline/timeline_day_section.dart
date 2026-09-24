@@ -8,7 +8,8 @@ import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../focus/focus_screen.dart';
 import '../home/sheets/task_editor_sheet.dart';
-import 'timeline_style.dart';
+import 'create_task_sheet.dart';
+import 'timeline_components.dart';
 
 /// An embeddable Structured-style timeline for a single day (defaults to today).
 /// Non-scrolling Column — drop it into a parent scroll view (e.g. Home, below
@@ -103,218 +104,31 @@ class TimelineDaySection extends ConsumerWidget {
             ),
           ),
           if (ordered.isEmpty)
-            _empty(context)
+            PlannerEmptyState(
+              compact: true,
+              icon: CupertinoIcons.calendar_badge_plus,
+              title: 'Nothing planned today',
+              subtitle: onAdd != null ? 'Capture your first task for today.' : null,
+              actionLabel: onAdd != null ? 'Add task' : null,
+              onAction: onAdd != null
+                  ? () => showCreateTask(context, day: _today)
+                  : null,
+            )
           else
             for (var i = 0; i < ordered.length; i++)
-              _Row(
+              TimelineRow(
+                compact: true,
                 task: ordered[i],
-                start: _startMinutes(ordered[i]),
+                startMinutes: _startMinutes(ordered[i]),
                 durationMin: _dur(ordered[i]),
                 nowMin: nowMin,
+                isToday: true,
                 first: i == 0,
                 last: i == ordered.length - 1,
                 onToggle: () => ref.read(tasksProvider.notifier).toggleDone(ordered[i]),
                 onTap: () => showTaskEditorSheet(context, ref, task: ordered[i]),
                 onFocus: () => _focus(context, ordered[i]),
               ),
-        ],
-      ),
-    );
-  }
-
-  Widget _empty(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: QSpace.xl),
-      decoration: BoxDecoration(
-        color: QColors.surface.resolveFrom(context),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Icon(CupertinoIcons.calendar_badge_plus, size: 30, color: QColors.labelTertiary.resolveFrom(context)),
-          const SizedBox(height: QSpace.xs),
-          Text('Nothing planned today', style: QType.subhead),
-        ],
-      ),
-    );
-  }
-}
-
-class _Row extends StatelessWidget {
-  const _Row({
-    required this.task,
-    required this.start,
-    required this.durationMin,
-    required this.nowMin,
-    required this.first,
-    required this.last,
-    required this.onToggle,
-    required this.onTap,
-    required this.onFocus,
-  });
-
-  final Task task;
-  final int? start;
-  final int durationMin;
-  final int nowMin;
-  final bool first;
-  final bool last;
-  final VoidCallback onToggle;
-  final VoidCallback onTap;
-  final VoidCallback onFocus;
-
-  String _fmt(int mins) {
-    final h = (mins ~/ 60) % 24;
-    final m = mins % 60;
-    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
-  }
-
-  String _durLabel(int m) {
-    final h = m ~/ 60, mm = m % 60;
-    if (h > 0) return mm > 0 ? '${h}h ${mm}m' : '${h}h';
-    return '${m}m';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = timelineColorFor(task);
-    final done = task.done;
-    final active = start != null && nowMin >= start! && nowMin < start! + durationMin;
-    final markerH = active ? 84.0 : 44.0;
-    // The card subtitle carries the detail; the left column carries the time.
-    final String subtitle;
-    if (active) {
-      subtitle = '${(start! + durationMin - nowMin).clamp(0, durationMin)}m left';
-    } else if (start != null) {
-      subtitle = '${_fmt(start!)} – ${_fmt(start! + durationMin)}';
-    } else {
-      subtitle = _durLabel(durationMin);
-    }
-
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Time rail — a real time, or a quiet "Anytime", always the same width
-          // so every marker lines up.
-          SizedBox(
-            width: 52,
-            child: Padding(
-              padding: EdgeInsets.only(top: markerH / 2 - 7, right: QSpace.xs),
-              child: Text(
-                start == null ? 'Anytime' : _fmt(start!),
-                textAlign: TextAlign.right,
-                maxLines: 1,
-                style: QType.caption.copyWith(
-                  color: active ? QColors.label.resolveFrom(context) : QColors.labelTertiary.resolveFrom(context),
-                  fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          // Marker + colored spine.
-          SizedBox(
-            width: 46,
-            child: Column(
-              children: [
-                Container(
-                  width: 44,
-                  height: markerH,
-                  alignment: active ? Alignment.topCenter : Alignment.center,
-                  padding: EdgeInsets.only(top: active ? 11 : 0),
-                  decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(active ? 22 : 999)),
-                  child: Icon(timelineIconFor(task.title), size: 22, color: CupertinoColors.white),
-                ),
-                Expanded(
-                  child: Center(
-                    child: Container(
-                      width: 5,
-                      decoration: BoxDecoration(
-                        color: last ? const Color(0x00000000) : c.withValues(alpha: done ? 0.3 : 0.85),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: QSpace.sm),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: QSpace.md),
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onTap,
-                child: Container(
-                  padding: const EdgeInsets.all(QSpace.md),
-                  decoration: BoxDecoration(color: QColors.surface.resolveFrom(context), borderRadius: BorderRadius.circular(14)),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(subtitle,
-                                style: QType.caption.copyWith(
-                                  color: active ? c : QColors.labelSecondary.resolveFrom(context),
-                                  fontWeight: active ? FontWeight.w700 : FontWeight.w400,
-                                  fontFeatures: const [FontFeature.tabularFigures()],
-                                )),
-                            const SizedBox(height: 2),
-                            Text(
-                              task.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: QType.headline.copyWith(
-                                fontWeight: FontWeight.w700,
-                                decoration: done ? TextDecoration.lineThrough : null,
-                                color: done ? QColors.labelTertiary.resolveFrom(context) : QColors.label.resolveFrom(context),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: QSpace.sm),
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: onFocus,
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(color: c.withValues(alpha: 0.15), shape: BoxShape.circle),
-                          child: Icon(CupertinoIcons.play_fill, size: 13, color: c),
-                        ),
-                      ),
-                      const SizedBox(width: QSpace.xs),
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          onToggle();
-                        },
-                        child: Container(
-                          width: 24,
-                          height: 24,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: done ? c : const Color(0x00000000),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: done ? c : c.withValues(alpha: 0.55), width: 2),
-                          ),
-                          child: done ? const Icon(CupertinoIcons.checkmark_alt, size: 13, color: CupertinoColors.white) : null,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );

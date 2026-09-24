@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../../core/models/models.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
+import '../../../core/widgets/glass.dart';
 
 /// A single task row — a clean, native inset card built on [CupertinoListTile].
 /// Leading check circle, title (+ priority flame), an estimate/subtask subtitle,
@@ -47,21 +48,20 @@ class TaskCard extends StatefulWidget {
 class _TaskCardState extends State<TaskCard> {
   bool _expanded = false;
 
-  String? _metaLine() {
-    final parts = <String>[];
+  String? _estLabel() {
     final e = widget.task.estimateMinutes;
-    if (e != null) {
-      final h = e ~/ 60;
-      final m = e % 60;
-      parts.add(h > 0 ? (m > 0 ? 'Est ${h}h ${m}m' : 'Est ${h}h') : 'Est ${m}m');
-    }
+    if (e == null) return null;
+    final h = e ~/ 60;
+    final m = e % 60;
+    return h > 0 ? (m > 0 ? '${h}h ${m}m' : '${h}h') : '${m}m';
+  }
+
+  String? _spentLabel() {
     final s = widget.task.spentSeconds;
-    if (s > 0) {
-      final m = s ~/ 60;
-      final h = m ~/ 60;
-      parts.add(h > 0 ? '${h}h ${m % 60}m done' : '${m}m done');
-    }
-    return parts.isEmpty ? null : parts.join('  ·  ');
+    if (s <= 0) return null;
+    final m = s ~/ 60;
+    final h = m ~/ 60;
+    return h > 0 ? '${h}h ${m % 60}m done' : '${m}m done';
   }
 
   @override
@@ -71,62 +71,96 @@ class _TaskCardState extends State<TaskCard> {
     final hasSubs = t.subtasks.isNotEmpty;
     final accent = t.priority.color.resolveFrom(context);
     final radius = BorderRadius.circular(QRadius.taskCard);
-    final meta = _metaLine();
+    final rail = widget.badgeColor.resolveFrom(context);
+    final est = _estLabel();
+    final spent = _spentLabel();
     final isHot = t.priority == Priority.high || t.priority == Priority.critical;
 
-    final tile = CupertinoListTile(
-      padding: const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: QSpace.xs),
-      backgroundColor: QColors.surface.resolveFrom(context),
-      backgroundColorActivated: QColors.secondaryFill.resolveFrom(context),
-      leading: _CheckCircle(done: done, onTap: widget.onToggle),
-      title: Row(
-        children: [
-          if (isHot) ...[
-            Icon(CupertinoIcons.flame_fill, size: 13, color: accent),
-            const SizedBox(width: 5),
-          ],
-          Flexible(
-            child: Text(
-              t.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: QType.body.copyWith(
-                fontWeight: FontWeight.w600,
-                decoration: done ? TextDecoration.lineThrough : null,
-                color: done
-                    ? QColors.labelTertiary.resolveFrom(context)
-                    : QColors.label.resolveFrom(context),
+    // Completed rows dim + relax; a spring on the check handles the "pop".
+    final row = AnimatedOpacity(
+      duration: QMotion.duration(context, QMotion.fast),
+      opacity: done ? 0.55 : 1.0,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.sm + 2, QSpace.md, QSpace.sm + 2),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _CheckCircle(done: done, onTap: widget.onToggle),
+              const SizedBox(width: QSpace.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        if (isHot) ...[
+                          Icon(CupertinoIcons.flame_fill, size: 13, color: accent),
+                          const SizedBox(width: 5),
+                        ],
+                        Flexible(
+                          child: Text(
+                            t.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: QType.body.copyWith(
+                              fontWeight: FontWeight.w600,
+                              decoration: done ? TextDecoration.lineThrough : null,
+                              color: done
+                                  ? QColors.labelTertiary.resolveFrom(context)
+                                  : QColors.label.resolveFrom(context),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (spent != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          spent,
+                          style: QType.meta.copyWith(
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
+              if (est != null) ...[
+                const SizedBox(width: QSpace.sm),
+                _EstChip(label: est),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Frosted glass task card with a whisper of the mint (workspaces/board)
+    // section hue. Zero padding — the row + rail manage their own insets.
+    final card = GlassCard(
+      padding: EdgeInsets.zero,
+      radius: QRadius.taskCard,
+      tint: QSection.workspaces.resolveFrom(context),
+      // A 3pt left rail carries workspace identity (replaces the far-right badge).
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(width: 3, color: rail.withValues(alpha: done ? 0.35 : 0.9)),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                row,
+                if (hasSubs) _subtasks(context, t),
+              ],
             ),
           ),
         ],
-      ),
-      subtitle: meta == null
-          ? null
-          : Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                meta,
-                style: QType.footnote.copyWith(
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ),
-      trailing: _ListBadge(color: widget.badgeColor, letter: widget.badgeLetter),
-      onTap: widget.onTap,
-    );
-
-    final card = ClipRRect(
-      borderRadius: radius,
-      child: Container(
-        color: QColors.surface.resolveFrom(context),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            tile,
-            if (hasSubs) _subtasks(context, t),
-          ],
-        ),
       ),
     );
 
@@ -179,11 +213,25 @@ class _TaskCardState extends State<TaskCard> {
         ),
       ],
       builder: (context, animation) {
-        final previewing = animation.value >= CupertinoContextMenu.animationOpensAt;
-        // During the context-menu preview the card is lifted onto a plain
-        // background — give it a rounded clip so it doesn't show square corners.
-        if (previewing) return card;
-        return card;
+        // Lift the card as the context-menu preview opens: a subtle scale +
+        // shadow so it reads as physically raised, not a flat duplicate.
+        final t = animation.value.clamp(0.0, 1.0);
+        final lift = Curves.easeOut.transform(t);
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            boxShadow: lift <= 0
+                ? null
+                : [
+                    BoxShadow(
+                      color: CupertinoColors.black.resolveFrom(context).withValues(alpha: 0.18 * lift),
+                      blurRadius: 24 * lift,
+                      offset: Offset(0, 10 * lift),
+                    ),
+                  ],
+          ),
+          child: Transform.scale(scale: 1 + 0.03 * lift, child: card),
+        );
       },
     );
   }
@@ -282,6 +330,7 @@ class _CheckCircle extends StatelessWidget {
         child: Center(
           child: AnimatedSwitcher(
             duration: QMotion.fast,
+            switchInCurve: QMotion.springCurve,
             transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
             child: Icon(
               done ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.circle,
@@ -298,25 +347,24 @@ class _CheckCircle extends StatelessWidget {
   }
 }
 
-class _ListBadge extends StatelessWidget {
-  const _ListBadge({required this.color, required this.letter});
-  final Color color;
-  final String letter;
+/// Right-aligned tabular estimate chip (e.g. "45m", "1h 30m").
+class _EstChip extends StatelessWidget {
+  const _EstChip({required this.label});
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final c = color.resolveFrom(context);
     return Container(
-      width: 24,
-      height: 24,
-      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: QSpace.xs, vertical: 3),
       decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(7),
+        color: QColors.fill.resolveFrom(context).withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(QRadius.chip),
       ),
       child: Text(
-        letter,
-        style: QType.caption.copyWith(color: c, fontWeight: FontWeight.w700),
+        label,
+        style: QType.footnoteEmphasized.copyWith(
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
       ),
     );
   }

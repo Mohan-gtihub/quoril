@@ -2,17 +2,19 @@ import 'package:flutter/cupertino.dart';
 
 import '../../core/models/models.dart';
 import '../../core/theme/tokens.dart';
-import '../../core/theme/typography.dart';
+import 'timeline_components.dart';
 import 'timeline_style.dart';
 
 /// A Structured-style WEEK VIEW: 7 day columns (Mon–Sun) sharing one vertical
 /// time axis. Tasks render as stacked colored rounded pill blocks positioned
 /// proportionally by start/end time, each with a centered white category icon
-/// (tall blocks) or just a color pill (short blocks). Hour labels run down the
-/// far-left gutter. The selected day's column is full-color; the others are
-/// dimmed so the focus is the selected day. A red "now" line crosses the
-/// selected column when it is today.
-class WeekView extends StatelessWidget {
+/// (tall blocks) or just a color pill (short blocks). The FULL 0–24h day is
+/// scrollable — nothing is clipped — and the view auto-scrolls to now−1h on
+/// open. Hour labels run down the far-left gutter (respecting 12/24h). The
+/// selected day's column is full-color; the others are dimmed. A red "now" line
+/// crosses the selected column when it is today, and the in-progress block gets
+/// a "now" ring emphasis.
+class WeekView extends StatefulWidget {
   const WeekView({
     super.key,
     required this.weekStart,
@@ -21,6 +23,7 @@ class WeekView extends StatelessWidget {
     required this.startMinutes,
     required this.durationMinutes,
     required this.onTapTask,
+    this.accent,
   });
 
   /// Monday 00:00 of the visible week.
@@ -38,19 +41,48 @@ class WeekView extends StatelessWidget {
   final int Function(Task) durationMinutes;
   final void Function(Task) onTapTask;
 
-  // Visible window + scale.
-  static const int _startHour = 6;
-  static const int _endHour = 22;
+  /// The one color moment for the canvas (now-line + active block). Defaults to
+  /// the ember brand; the calendar planner passes its section accent (grape).
+  final Color? accent;
+
+  @override
+  State<WeekView> createState() => _WeekViewState();
+}
+
+class _WeekViewState extends State<WeekView> {
+  // Full 0–24h axis so a block at any hour is reachable.
+  static const int _startHour = 0;
+  static const int _endHour = 24;
   static const double _pxPerMin = 0.9;
-  static const double _gutter = 34.0;
+  static const double _gutter = TimelineMetrics.railWidth;
+
+  final _scroll = ScrollController();
 
   double get _laneHeight => (_endHour - _startHour) * 60 * _pxPerMin;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNow());
+  }
+
+  void _scrollToNow() {
+    if (!_scroll.hasClients) return;
+    final now = DateTime.now();
+    final target = ((now.hour - 1) * 60) * _pxPerMin;
+    final max = _scroll.position.maxScrollExtent;
+    _scroll.jumpTo(target.clamp(0.0, max));
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   static bool _sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  /// The day a task belongs to: its `dueAt` date if present, else today when
-  /// bucketed as today, else null (excluded from the grid).
   DateTime? _dayOf(Task t) {
     final due = t.dueAt;
     if (due != null) return DateTime(due.year, due.month, due.day);
@@ -63,12 +95,12 @@ class WeekView extends StatelessWidget {
 
   List<Task> _tasksOn(DateTime day) {
     final out = <Task>[];
-    for (final t in tasks) {
-      if (startMinutes(t) == null) continue;
+    for (final t in widget.tasks) {
+      if (widget.startMinutes(t) == null) continue;
       final d = _dayOf(t);
       if (d != null && _sameDay(d, day)) out.add(t);
     }
-    out.sort((a, b) => startMinutes(a)!.compareTo(startMinutes(b)!));
+    out.sort((a, b) => widget.startMinutes(a)!.compareTo(widget.startMinutes(b)!));
     return out;
   }
 
@@ -78,6 +110,7 @@ class WeekView extends StatelessWidget {
     final nowMin = now.hour * 60 + now.minute;
 
     return SingleChildScrollView(
+      controller: _scroll,
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.only(bottom: 120),
       child: SizedBox(
@@ -85,7 +118,7 @@ class WeekView extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _HourGutter(
+            HourGutter(
               startHour: _startHour,
               endHour: _endHour,
               pxPerMin: _pxPerMin,
@@ -93,7 +126,7 @@ class WeekView extends StatelessWidget {
             ),
             for (var i = 0; i < 7; i++)
               Expanded(
-                child: _buildLane(context, weekStart.add(Duration(days: i)), nowMin),
+                child: _buildLane(context, widget.weekStart.add(Duration(days: i)), nowMin),
               ),
           ],
         ),
@@ -102,7 +135,7 @@ class WeekView extends StatelessWidget {
   }
 
   Widget _buildLane(BuildContext context, DateTime day, int nowMin) {
-    final isSelected = _sameDay(day, selectedDay);
+    final isSelected = _sameDay(day, widget.selectedDay);
     final isToday = _sameDay(day, DateTime.now());
     final dayTasks = _tasksOn(day);
 
@@ -114,13 +147,13 @@ class WeekView extends StatelessWidget {
         color: QColors.separator.resolveFrom(context),
       ),
       for (final t in dayTasks)
-        _positionedBlock(context, t, selected: isSelected),
-      if (isSelected && isToday && nowMin >= _startHour * 60 && nowMin <= _endHour * 60)
+        _positionedBlock(context, t, selected: isSelected, isToday: isToday, nowMin: nowMin),
+      if (isSelected && isToday)
         Positioned(
-          top: (nowMin - _startHour * 60) * _pxPerMin,
+          top: (nowMin - _startHour * 60) * _pxPerMin - 3.5,
           left: 0,
           right: 0,
-          child: Container(height: 2, color: CupertinoColors.systemRed.resolveFrom(context)),
+          child: NowLine(color: widget.accent),
         ),
     ];
 
@@ -136,14 +169,22 @@ class WeekView extends StatelessWidget {
     return Opacity(opacity: 0.45, child: lane);
   }
 
-  Widget _positionedBlock(BuildContext context, Task t, {required bool selected}) {
-    final start = startMinutes(t)!;
-    final dur = durationMinutes(t);
+  Widget _positionedBlock(
+    BuildContext context,
+    Task t, {
+    required bool selected,
+    required bool isToday,
+    required int nowMin,
+  }) {
+    final start = widget.startMinutes(t)!;
+    final dur = widget.durationMinutes(t);
     final top = (start - _startHour * 60) * _pxPerMin;
     final height = (dur * _pxPerMin - 3).clamp(16.0, _laneHeight);
-    final baseColor = timelineColorFor(t);
+    final baseColor = timelineColorFor(t).resolveFrom(context);
     final color = selected ? baseColor : baseColor.withValues(alpha: 0.28);
     final showIcon = height > 34;
+    final active = isToday && selected && nowMin >= start && nowMin < start + dur;
+    final accent = (widget.accent ?? QColors.brand).resolveFrom(context);
 
     return Positioned(
       top: top,
@@ -152,61 +193,28 @@ class WeekView extends StatelessWidget {
       height: height,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => onTapTask(t),
+        onTap: () => widget.onTapTask(t),
         child: Container(
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(TimelineMetrics.blockRadius),
+            border: active
+                ? Border.all(color: accent, width: 1.5)
+                : null,
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.40),
+                      blurRadius: 8,
+                    ),
+                  ]
+                : null,
           ),
           alignment: Alignment.center,
           child: showIcon
               ? Icon(timelineIconFor(t.title), size: 18, color: CupertinoColors.white)
               : null,
         ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Left hour gutter — "13ᵒᵒ 14ᵒᵒ …"
-// ---------------------------------------------------------------------------
-
-class _HourGutter extends StatelessWidget {
-  const _HourGutter({
-    required this.startHour,
-    required this.endHour,
-    required this.pxPerMin,
-    required this.width,
-  });
-
-  final int startHour;
-  final int endHour;
-  final double pxPerMin;
-  final double width;
-
-  @override
-  Widget build(BuildContext context) {
-    final height = (endHour - startHour) * 60 * pxPerMin;
-    return SizedBox(
-      width: width,
-      height: height,
-      child: Stack(
-        children: [
-          for (var h = startHour; h <= endHour; h++)
-            Positioned(
-              top: (h - startHour) * 60 * pxPerMin - 6,
-              right: 4,
-              child: Text(
-                '${h.toString().padLeft(2, '0')}ᵒᵒ',
-                style: QType.caption.copyWith(
-                  fontSize: 10,
-                  color: QColors.labelTertiary.resolveFrom(context),
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ),
-        ],
       ),
     );
   }

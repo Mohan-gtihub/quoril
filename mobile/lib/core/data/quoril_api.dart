@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../models/models.dart';
+import '../../features/home/data/productivity.dart';
 
 /// Data access against the Quoril Supabase backend. All rows are RLS-scoped to
 /// the signed-in user, so no explicit user filters are needed on read.
@@ -145,6 +146,75 @@ class QuorilApi {
           type: '${r['type']}' == 'focus' ? SessionType.pomodoro : SessionType.deepWork,
           durationSeconds: (r['seconds'] as num?)?.toInt() ?? 0,
           startedAt: r['start_time'] != null ? DateTime.tryParse('${r['start_time']}') : null,
+        ),
+    ];
+  }
+
+  // --- Productivity stats ---------------------------------------------------
+
+  /// Roll up focus seconds + tasks completed per calendar day over the last
+  /// [days] days. Returns exactly [days] `DayStat` entries ascending, ending
+  /// today, zero-filled for days with no activity.
+  Future<List<DayStat>> fetchDailyStats({int days = 21}) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final start = today.subtract(Duration(days: days - 1));
+    final startIso = start.toIso8601String();
+    final endIso = today.add(const Duration(days: 1)).toIso8601String();
+
+    // Ordinal day index from `start` (0..days-1), or null if out of range.
+    int? dayIndex(DateTime dt) {
+      final d = DateTime(dt.year, dt.month, dt.day);
+      final idx = d.difference(start).inDays;
+      return (idx >= 0 && idx < days) ? idx : null;
+    }
+
+    final focusByDay = List<int>.filled(days, 0);
+    final tasksByDay = List<int>.filled(days, 0);
+
+    // Focus seconds summed per day (by session start_time).
+    try {
+      final sessionRows = await _db
+          .from('focus_sessions')
+          .select('id,seconds,start_time')
+          .gte('start_time', startIso)
+          .lte('start_time', endIso);
+      for (final r in (sessionRows as List).cast<Map<String, dynamic>>()) {
+        final ts = r['start_time'];
+        if (ts == null) continue;
+        final dt = DateTime.tryParse('$ts')?.toLocal();
+        if (dt == null) continue;
+        final idx = dayIndex(dt);
+        if (idx == null) continue;
+        focusByDay[idx] += (r['seconds'] as num?)?.toInt() ?? 0;
+      }
+    } catch (_) {}
+
+    // Tasks completed per day (status='done', by completed_at).
+    try {
+      final taskRows = await _db
+          .from('tasks')
+          .select('id,completed_at')
+          .eq('status', 'done')
+          .gte('completed_at', startIso)
+          .lte('completed_at', endIso);
+      for (final r in (taskRows as List).cast<Map<String, dynamic>>()) {
+        final ts = r['completed_at'];
+        if (ts == null) continue;
+        final dt = DateTime.tryParse('$ts')?.toLocal();
+        if (dt == null) continue;
+        final idx = dayIndex(dt);
+        if (idx == null) continue;
+        tasksByDay[idx] += 1;
+      }
+    } catch (_) {}
+
+    return [
+      for (var i = 0; i < days; i++)
+        DayStat(
+          date: start.add(Duration(days: i)),
+          focusSeconds: focusByDay[i],
+          tasksDone: tasksByDay[i],
         ),
     ];
   }

@@ -66,6 +66,39 @@ const SUBTASK_COLUMNS = new Set([
     'synced',
 ])
 
+const CALENDAR_EVENT_COLUMNS = new Set([
+    'id',
+    'user_id',
+    'title',
+    'start_at',
+    'end_at',
+    'notes',
+    'url',
+    'alarm_lead_minutes',
+    'is_recurring',
+    'source',
+    'task_id',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'synced',
+])
+
+const CALENDAR_EVENT_UPDATE_COLUMNS = new Set([
+    'title',
+    'start_at',
+    'end_at',
+    'notes',
+    'url',
+    'alarm_lead_minutes',
+    'is_recurring',
+    'source',
+    'task_id',
+    'updated_at',
+    'deleted_at',
+    'synced',
+])
+
 const WORKSPACE_COLUMNS = new Set([
     'id',
     'user_id',
@@ -316,6 +349,22 @@ export function validateFocusSessionRow(value: unknown) {
     const row = assertRow(value, 'focus session', FOCUS_SESSION_COLUMNS, ['id', 'user_id', 'type', 'start_time'])
     assertOptionalFinite(row, 'seconds', 'focus session')
     assertOptionalBooleanish(row, 'synced', 'focus session')
+    return row
+}
+
+export function validateCalendarEventRow(value: unknown) {
+    const row = assertRow(value, 'calendar event', CALENDAR_EVENT_COLUMNS, ['id', 'user_id', 'title', 'start_at', 'end_at'])
+    assertOptionalFinite(row, 'alarm_lead_minutes', 'calendar event')
+    assertOptionalBooleanish(row, 'is_recurring', 'calendar event')
+    assertOptionalBooleanish(row, 'synced', 'calendar event')
+    return row
+}
+
+export function validateCalendarEventUpdate(value: unknown) {
+    const row = assertUpdate(value, 'calendar event updates', CALENDAR_EVENT_UPDATE_COLUMNS)
+    assertOptionalFinite(row, 'alarm_lead_minutes', 'calendar event updates')
+    assertOptionalBooleanish(row, 'is_recurring', 'calendar event updates')
+    assertOptionalBooleanish(row, 'synced', 'calendar event updates')
     return row
 }
 

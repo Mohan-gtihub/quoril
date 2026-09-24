@@ -6,14 +6,19 @@ import '../../core/models/models.dart';
 import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
+import '../../core/widgets/app_kit.dart';
 import '../../core/widgets/common.dart';
-import '../../core/widgets/glass.dart';
-import '../../core/widgets/inset_list.dart';
+import '../../core/widgets/editorial.dart';
 import '../../core/widgets/primary_button.dart';
 import 'app_detail_page.dart';
 import 'intervention_history_page.dart';
 import 'widgets/charts.dart';
 import 'widgets/kpi_card.dart';
+
+/// The single section accent for Insights — sky (data / analytics). Sky is the
+/// only chromatic signal on this screen: chart series, active selection, the
+/// hero focus metric, section eyebrows. Everything else stays neutral system ink.
+const List<Color> _skySpark = [Color(0xFF5CB4FF), Color(0xFF2E9BFF)];
 
 enum _Tab { reports, screenTime }
 
@@ -50,112 +55,59 @@ class _InsightsBodyState extends State<_InsightsBody> {
 
   @override
   Widget build(BuildContext context) {
+    // Faint sky ambient wash behind the body so frosted content cards have
+    // something to refract; the AppScaffold is made transparent to let it show.
     final brightness =
         MediaQuery.maybeOf(context)?.platformBrightness ?? Brightness.light;
-    return CupertinoPageScaffold(
-      backgroundColor: QColors.bgGrouped.resolveFrom(context),
-      child: GradientBackground(
-        gradient: QGradients.page(brightness),
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ),
-          slivers: [
-            const CupertinoSliverNavigationBar(
-              largeTitle: Text('Insights'),
-              backgroundColor: Color(0x00000000),
-              border: null,
-              transitionBetweenRoutes: false,
-            ),
-            SliverToBoxAdapter(child: _hero(context)),
-            SliverToBoxAdapter(child: _controls(context)),
-            if (_tab == _Tab.reports)
-              ..._reports(context)
-            else
-              ..._screenTime(context),
-            const SliverToBoxAdapter(child: SizedBox(height: QSpace.xxl)),
-          ],
-        ),
+    return GradientBackground(
+      gradient: QGradients.ambient(
+        QSection.insights.resolveFrom(context),
+        brightness,
+      ),
+      child: AppScaffold(
+        backgroundColor: CupertinoColors.transparent,
+        title: 'Insights',
+        slivers: [
+        SliverToBoxAdapter(child: _summaryLine(context)),
+        SliverToBoxAdapter(child: _controls(context)),
+          if (_tab == _Tab.reports)
+            ..._reports(context)
+          else
+            ..._screenTime(context),
+          const SliverToBoxAdapter(child: SizedBox(height: QSpace.xxl)),
+        ],
       ),
     );
   }
 
-  // --------------------------------------------------------------- HERO
-  /// Warm gradient summary hero — today's focus, productivity score, and
-  /// streak as big tabular stats on the signature Warm Aurora wash.
-  Widget _hero(BuildContext context) {
+  // --------------------------------------------------------------- SUMMARY
+  /// A single calm meta line under the large title summarizing today. Neutral
+  /// system ink — the one sky focal on this screen is the hero Focus KPI below.
+  Widget _summaryLine(BuildContext context) {
+    final sky = QSection.insights.resolveFrom(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.xs, QSpace.md, 0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(QRadius.glass),
-        child: DecoratedBox(
-          decoration: const BoxDecoration(gradient: QGradients.warm),
-          child: Padding(
-            padding: const EdgeInsets.all(QSpace.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(CupertinoIcons.chart_bar_alt_fill,
-                        size: 15, color: CupertinoColors.white),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Today at a glance',
-                      style: QType.footnote.copyWith(
-                        color: CupertinoColors.white.withValues(alpha: 0.85),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: QSpace.md),
-                Row(
-                  children: [
-                    _heroStat(
-                      value: fmtHm(Mock.focusTodaySeconds),
-                      label: 'Focused',
-                    ),
-                    _heroDivider(),
-                    _heroStat(
-                      value: '${Mock.productivityScore}%',
-                      label: 'Score',
-                    ),
-                    _heroDivider(),
-                    _heroStat(
-                      value: '${Mock.streakDays}d',
-                      label: 'Streak',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _heroStat({required String value, required String label}) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.xxs, QSpace.md, 0),
+      child: Row(
         children: [
-          Text(
-            value,
-            style: QType.title1.copyWith(
-              color: CupertinoColors.white,
-              letterSpacing: -0.5,
-              fontFeatures: const [FontFeature.tabularFigures()],
+          Text('${Mock.streakDays}-day streak',
+              style: QType.eyebrow.copyWith(color: sky)),
+          const SizedBox(width: QSpace.sm),
+          Container(
+            width: 3,
+            height: 3,
+            decoration: BoxDecoration(
+              color: QColors.labelTertiary.resolveFrom(context),
+              shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: QType.caption.copyWith(
-              color: CupertinoColors.white.withValues(alpha: 0.82),
-              fontWeight: FontWeight.w600,
+          const SizedBox(width: QSpace.sm),
+          Expanded(
+            child: Text(
+              '${fmtHm(Mock.focusTodaySeconds)} focused today · '
+              '${Mock.productivityScore}% score',
+              style: QType.footnote,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -163,22 +115,18 @@ class _InsightsBodyState extends State<_InsightsBody> {
     );
   }
 
-  Widget _heroDivider() => Container(
-        width: 0.5,
-        height: 34,
-        margin: const EdgeInsets.symmetric(horizontal: QSpace.sm),
-        color: CupertinoColors.white.withValues(alpha: 0.28),
-      );
-
   // ------------------------------------------------------------- CONTROLS
   Widget _controls(BuildContext context) {
+    final sky = QSection.insights.resolveFrom(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.sm, QSpace.md, QSpace.xs),
+      padding:
+          const EdgeInsets.fromLTRB(QSpace.md, QSpace.lg, QSpace.md, QSpace.xs),
       child: Column(
         children: [
           SizedBox(
             width: double.infinity,
-            child: CupertinoSlidingSegmentedControl<_Tab>(
+            child: QSegmentedControl<_Tab>(
+              accent: sky,
               groupValue: _tab,
               onValueChanged: (v) {
                 if (v == null) return;
@@ -186,19 +134,14 @@ class _InsightsBodyState extends State<_InsightsBody> {
                 setState(() => _tab = v);
               },
               children: const {
-                _Tab.reports: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 6),
-                  child: Text('Reports'),
-                ),
-                _Tab.screenTime: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 6),
-                  child: Text('Screen Time'),
-                ),
+                _Tab.reports: Text('Reports'),
+                _Tab.screenTime: Text('Screen Time'),
               },
             ),
           ),
           const SizedBox(height: QSpace.sm),
-          CupertinoSlidingSegmentedControl<_Range>(
+          QSegmentedControl<_Range>(
+            accent: sky,
             groupValue: _range,
             onValueChanged: (v) {
               if (v == null) return;
@@ -207,11 +150,11 @@ class _InsightsBodyState extends State<_InsightsBody> {
             },
             children: const {
               _Range.day: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 22, vertical: 5),
+                padding: EdgeInsets.symmetric(horizontal: 18),
                 child: Text('Day'),
               ),
               _Range.week: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 22, vertical: 5),
+                padding: EdgeInsets.symmetric(horizontal: 18),
                 child: Text('Week'),
               ),
             },
@@ -221,19 +164,19 @@ class _InsightsBodyState extends State<_InsightsBody> {
     );
   }
 
-  // Section wrapper: grouped card with headline + optional trailing.
+  // Section wrapper: a resting QCard titled by a quiet QSectionHeader (eyebrow)
+  // with an optional trailing meta value.
   Widget _card(BuildContext context, String title,
       {String? trailing, required Widget child}) {
-    return GlassCard(
+    return QCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(title, style: QType.headline),
-              const Spacer(),
-              if (trailing != null) Text(trailing, style: QType.footnote),
-            ],
+          QSectionHeader(
+            label: title,
+            padding: EdgeInsets.zero,
+            trailing:
+                trailing == null ? null : Text(trailing, style: QType.meta),
           ),
           const SizedBox(height: QSpace.md),
           child,
@@ -242,171 +185,246 @@ class _InsightsBodyState extends State<_InsightsBody> {
     );
   }
 
-  Widget _pad(Widget child, {double top = QSpace.md}) => Padding(
-        padding: EdgeInsets.fromLTRB(QSpace.md, top, QSpace.md, 0),
-        child: child,
-      );
-
-  // ---------------------------------------------------------------- REPORTS
-  List<Widget> _reports(BuildContext context) {
-    final isDay = _range == _Range.day;
+  // Distinct Day vs Week datasets so the range toggle actually changes data.
+  _ReportData _reportData(bool isDay) {
     final avgSession = Mock.recentSessions.isEmpty
         ? 0
         : Mock.recentSessions
                 .map((s) => s.durationSeconds)
                 .reduce((a, b) => a + b) ~/
             Mock.recentSessions.length;
+    final top = Mock.topApps
+        .where((a) => a.distracting)
+        .reduce((a, b) => a.minutes >= b.minutes ? a : b);
 
+    if (isDay) {
+      // Today only: last point of the week trend, hour-of-day shape.
+      const dayTrend = [12, 22, 8, 30, 18, 26, 40]; // per 3-hour block, minutes
+      return _ReportData(
+        focusSeconds: Mock.focusTodaySeconds,
+        focusDelta: '18% vs avg',
+        focusSpark: dayTrend,
+        trend: dayTrend,
+        trendLabels: const ['6a', '9a', '12p', '3p', '6p', '9p', '12a'],
+        tasksDone: '8/11',
+        tasksDelta: '2 more than yesterday',
+        productivityScore: Mock.productivityScore,
+        scoreDelta: '5 pts',
+        scoreUp: true,
+        avgSession: avgSession,
+        avgDelta: '4m longer',
+        avgUp: true,
+        appSwitches: 31,
+        switchDelta: '6 more than usual',
+        switchUp: false, // more switching == worse
+        topDistraction: top,
+        categories: [
+          _CatRow('Deep Work', '2h 12m', 1.0, QColors.workspacePalette[2]),
+          _CatRow('Design', '1h 28m', 0.66, QColors.workspacePalette[7]),
+          _CatRow('Meetings', '42m', 0.32, QColors.workspacePalette[0]),
+          _CatRow('Admin', '25m', 0.19, QColors.labelSecondary),
+        ],
+      );
+    }
+
+    // Week aggregate.
+    return _ReportData(
+      focusSeconds: Mock.weekTrend.reduce((a, b) => a + b) * 60,
+      focusDelta: '11% vs last week',
+      focusSpark: Mock.weekTrend,
+      trend: Mock.weekTrend,
+      trendLabels: const ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+      tasksDone: '46/58',
+      tasksDelta: '9 more than last week',
+      productivityScore: 74,
+      scoreDelta: '3 pts',
+      scoreUp: false, // honest: down vs a strong prior week
+      avgSession: avgSession + 120,
+      avgDelta: '2m shorter',
+      avgUp: false,
+      appSwitches: 214,
+      switchDelta: '34 fewer',
+      switchUp: true, // fewer switches == better
+      topDistraction: top,
+      categories: [
+        _CatRow('Deep Work', '11h 5m', 1.0, QColors.workspacePalette[2]),
+        _CatRow('Design', '7h 12m', 0.65, QColors.workspacePalette[7]),
+        _CatRow('Meetings', '4h 40m', 0.42, QColors.workspacePalette[0]),
+        _CatRow('Admin', '2h 18m', 0.21, QColors.labelSecondary),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------- REPORTS
+  List<Widget> _reports(BuildContext context) {
+    final isDay = _range == _Range.day;
+    final d = _reportData(isDay);
+    final sky = QSection.insights.resolveFrom(context);
+
+    // Hero: Focus Time promoted full-width with a sky sparkline — the single
+    // color moment of the Reports tab.
+    final hero = KpiCard(
+      value: fmtHm(d.focusSeconds),
+      label: 'Focus Time',
+      delta: d.focusDelta,
+      deltaUp: true,
+      valueColor: QSection.insights, // the one sky focal
+      accent: sky,
+      icon: CupertinoIcons.timer,
+      hero: true,
+      sparkline: d.focusSpark,
+      sparkGradient: _skySpark,
+    );
+
+    // Demoted 2-up grid. Deltas vary honestly (not all green/up).
     final kpis = <Widget>[
       KpiCard(
-        value: fmtHm(Mock.focusTodaySeconds),
-        label: 'Focus Time',
-        delta: '18% vs avg',
-        deltaUp: true,
-        icon: CupertinoIcons.timer,
-      ),
-      const KpiCard(
-        value: '8/11',
+        value: d.tasksDone,
         label: 'Tasks Done',
-        delta: '2 more',
+        delta: d.tasksDelta,
         deltaUp: true,
         icon: CupertinoIcons.checkmark_circle,
       ),
       KpiCard(
-        value: '${Mock.productivityScore}%',
+        value: '${d.productivityScore}%',
         label: 'Productivity Score',
-        delta: '5 pts',
-        deltaUp: true,
-        valueColor: QColors.breakColor,
+        delta: d.scoreDelta,
+        deltaUp: d.scoreUp,
         icon: CupertinoIcons.gauge,
       ),
       KpiCard(
-        value: fmtHm(avgSession),
+        value: fmtHm(d.avgSession),
         label: 'Avg Session',
-        delta: '4m longer',
-        deltaUp: true,
+        delta: d.avgDelta,
+        deltaUp: d.avgUp,
         icon: CupertinoIcons.circle_grid_hex,
       ),
-      const KpiCard(
-        value: '31',
+      KpiCard(
+        value: '${d.appSwitches}',
         label: 'App Switches',
-        delta: '12 fewer',
-        deltaUp: true,
+        // More switching is worse → fewer is an improvement (down-good = green up-arrow reads wrong);
+        // show honest direction: switches rose today, so this is a regression.
+        delta: d.switchDelta,
+        deltaUp: d.switchUp,
         icon: CupertinoIcons.arrow_2_squarepath,
-      ),
-      const KpiCard(
-        value: 'Instagram',
-        label: 'Top Distraction',
-        delta: '54m today',
-        deltaUp: false,
-        valueColor: QColors.danger,
-        icon: CupertinoIcons.exclamationmark_triangle,
       ),
     ];
 
-    return [
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.sm, QSpace.md, 0),
-        sliver: SliverGrid(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: QSpace.sm,
-            mainAxisSpacing: QSpace.sm,
-            childAspectRatio: 1.55,
-          ),
-          delegate: SliverChildListDelegate(kpis),
-        ),
-      ),
-      SliverToBoxAdapter(
-        child: _pad(
-          _card(
-            context,
-            'Performance',
-            trailing: isDay ? 'Today' : 'This week',
-            child: SizedBox(
-              height: 150,
-              child: TrendLineChart(
-                values: Mock.weekTrend,
-                color: QColors.breakColor,
+    // KPI grid: two calm 2-up rows (compact QCards) under the ember hero.
+    final grid = Column(
+      children: [
+        for (var r = 0; r < kpis.length; r += 2)
+          Padding(
+            padding: EdgeInsets.only(top: r == 0 ? 0 : QSpace.sm),
+            // IntrinsicHeight bounds the cross-axis so `stretch` gives both
+            // cards equal height without forcing infinite height (the row sits
+            // in an unbounded-height scroll view — plain stretch would assert).
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: kpis[r]),
+                  const SizedBox(width: QSpace.sm),
+                  Expanded(
+                      child: r + 1 < kpis.length
+                          ? kpis[r + 1]
+                          : const SizedBox.shrink()),
+                ],
               ),
             ),
           ),
-          top: QSpace.lg,
-        ),
-      ),
-      SliverToBoxAdapter(
-        child: _pad(
-          GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Category breakdown', style: QType.headline),
-                const SizedBox(height: QSpace.xs),
-                HBarRow(
-                  label: 'Deep Work',
-                  valueLabel: '2h 12m',
-                  fraction: 1.0,
-                  color: QColors.breakColor.resolveFrom(context),
-                ),
-                HBarRow(
-                  label: 'Design',
-                  valueLabel: '1h 28m',
-                  fraction: 0.66,
-                  color: CupertinoDynamicColor.resolve(
-                      QColors.workspacePalette[5], context),
-                ),
-                HBarRow(
-                  label: 'Meetings',
-                  valueLabel: '42m',
-                  fraction: 0.32,
-                  color: CupertinoDynamicColor.resolve(
-                      QColors.workspacePalette[7], context),
-                ),
-                HBarRow(
-                  label: 'Admin',
-                  valueLabel: '25m',
-                  fraction: 0.19,
-                  color: QColors.labelSecondary.resolveFrom(context),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      SliverToBoxAdapter(
-        child: _pad(
-          GlassCard(
-            child: Row(
-              children: [
-                _iconBadge(
-                    CupertinoIcons.scope, QColors.wellbeing.resolveFrom(context)),
-                const SizedBox(width: QSpace.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Estimation accuracy', style: QType.subhead),
-                      const SizedBox(height: 2),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            '86%',
-                            style: QType.title2.copyWith(
-                              color: QColors.wellbeing.resolveFrom(context),
-                              fontFeatures: const [FontFeature.tabularFigures()],
-                            ),
-                          ),
-                          const SizedBox(width: QSpace.xs),
-                          Text('on-target estimates', style: QType.footnote),
-                        ],
-                      ),
-                    ],
+      ],
+    );
+
+    // One sliver, one QStagger settle-in for the whole report feed.
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.md, QSpace.md, 0),
+        sliver: SliverToBoxAdapter(
+          child: QStagger(
+            children: [
+              hero,
+              const SizedBox(height: QSpace.md),
+              grid,
+              const SizedBox(height: QSpace.md),
+              DistractionKpiCard(
+                appName: d.topDistraction.name,
+                appIcon: d.topDistraction.icon,
+                detail:
+                    '${d.topDistraction.minutes}m ${isDay ? 'today' : 'daily avg'}',
+              ),
+              const SizedBox(height: QSpace.xl),
+              _card(
+                context,
+                'Performance',
+                trailing: isDay ? 'Today' : 'This week',
+                child: SizedBox(
+                  height: 150,
+                  child: TrendLineChart(
+                    values: d.trend,
+                    gradient: _skySpark, // sky series stroke
+                    color: sky,
+                    labels: d.trendLabels,
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: QSpace.md),
+              QCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const QSectionHeader(
+                        label: 'Category breakdown', padding: EdgeInsets.zero),
+                    const SizedBox(height: QSpace.sm),
+                    // Deliberate category scale (indigo→teal→blue→neutral) — kept
+                    // clear of the sky focal so it stays reserved for focus totals.
+                    for (final cat in d.categories)
+                      HBarRow(
+                        label: cat.label,
+                        valueLabel: cat.valueLabel,
+                        fraction: cat.fraction,
+                        color: cat.color.resolveFrom(context),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: QSpace.md),
+              QCard(
+                child: Row(
+                  children: [
+                    _iconBadge(CupertinoIcons.scope,
+                        QColors.wellbeing.resolveFrom(context)),
+                    const SizedBox(width: QSpace.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Estimation accuracy', style: QType.subhead),
+                          const SizedBox(height: 2),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                '86%',
+                                style: QType.title2.copyWith(
+                                  color: QColors.wellbeing.resolveFrom(context),
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures()
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: QSpace.xs),
+                              Text('on-target estimates', style: QType.footnote),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -424,197 +442,181 @@ class _InsightsBodyState extends State<_InsightsBody> {
         : distracting.map((e) => e.minutes).reduce((a, b) => a > b ? a : b);
 
     return [
-      // Verdict
-      SliverToBoxAdapter(
-        child: _pad(
-          GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Today you lost', style: QType.subhead),
-                const SizedBox(height: 2),
-                Text(
-                  fmtHm(Mock.lostToDistractionSeconds),
-                  style: QType.largeTitle.copyWith(
-                    color: danger,
-                    letterSpacing: -1,
-                    fontSize: 44,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text('to distractions', style: QType.subhead),
-                const SizedBox(height: QSpace.sm),
-                Row(
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.md, QSpace.md, 0),
+        sliver: SliverToBoxAdapter(
+          child: QStagger(
+            children: [
+              // Verdict — the honest cost, in danger red (a semantic state hue).
+              QCard(
+                padding: const EdgeInsets.all(QSpace.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(CupertinoIcons.arrow_down, size: 14, color: green),
-                    const SizedBox(width: 4),
+                    Text('Today you lost', style: QType.subhead),
+                    const SizedBox(height: 2),
                     Text(
-                      '22m better than your average',
-                      style: QType.footnote
-                          .copyWith(color: green, fontWeight: FontWeight.w600),
+                      fmtHm(Mock.lostToDistractionSeconds),
+                      style: QType.hero.copyWith(
+                        color: danger,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text('to distractions', style: QType.subhead),
+                    const SizedBox(height: QSpace.sm),
+                    QChip(
+                      icon: CupertinoIcons.arrow_down,
+                      label: '22m better than your average',
+                      color: QColors.wellbeing,
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          top: QSpace.sm,
-        ),
-      ),
-      // Where it went
-      SliverToBoxAdapter(
-        child: _pad(
-          GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Where it went', style: QType.headline),
-                const SizedBox(height: QSpace.xs),
-                for (final a in distracting)
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => _openApp(a),
-                    child: HBarRow(
-                      label: a.name,
-                      valueLabel: '${a.minutes}m',
-                      fraction: a.minutes / maxMin,
-                      color: danger,
-                      leading: Icon(a.icon, size: 15, color: danger),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      // Win card
-      SliverToBoxAdapter(
-        child: _pad(
-          GlassCard(
-            child: Row(
-              children: [
-                _iconBadge(CupertinoIcons.shield_lefthalf_fill, green),
-                const SizedBox(width: QSpace.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      RichText(
-                        text: TextSpan(
-                          style: QType.callout.copyWith(
-                              color: QColors.label.resolveFrom(context)),
-                          children: [
-                            const TextSpan(text: 'Quoril saved you '),
-                            TextSpan(
-                              text: fmtHm(Mock.savedSeconds),
-                              style: QType.callout.copyWith(
-                                  fontWeight: FontWeight.w700, color: green),
-                            ),
-                          ],
+              ),
+              const SizedBox(height: QSpace.md),
+              // Where it went
+              QCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const QSectionHeader(
+                        label: 'Where it went', padding: EdgeInsets.zero),
+                    const SizedBox(height: QSpace.sm),
+                    for (final a in distracting)
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => _openApp(a),
+                        child: HBarRow(
+                          label: a.name,
+                          valueLabel: '${a.minutes}m',
+                          fraction: a.minutes / maxMin,
+                          color: danger,
+                          leading: Icon(a.icon, size: 15, color: danger),
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Row(
+                  ],
+                ),
+              ),
+              const SizedBox(height: QSpace.md),
+              // Win card
+              QCard(
+                child: Row(
+                  children: [
+                    _iconBadge(CupertinoIcons.shield_lefthalf_fill, green),
+                    const SizedBox(width: QSpace.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(CupertinoIcons.flame_fill,
-                              size: 13, color: QColors.breakColor.resolveFrom(context)),
-                          const SizedBox(width: 4),
-                          Text('${Mock.streakDays}-day streak',
-                              style: QType.footnote),
+                          RichText(
+                            text: TextSpan(
+                              style: QType.callout.copyWith(
+                                  color: QColors.label.resolveFrom(context)),
+                              children: [
+                                const TextSpan(text: 'Quoril saved you '),
+                                TextSpan(
+                                  text: fmtHm(Mock.savedSeconds),
+                                  style: QType.callout.copyWith(
+                                      fontWeight: FontWeight.w700, color: green),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(CupertinoIcons.flame_fill,
+                                  size: 13,
+                                  color: QColors.breakColor.resolveFrom(context)),
+                              const SizedBox(width: 4),
+                              Text('${Mock.streakDays}-day streak',
+                                  style: QType.footnote),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: QSpace.md),
+              // Cost translation
+              QCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('That ≈ finishing 4 focus tasks.',
+                        style: QType.headline),
+                    const SizedBox(height: QSpace.xxs),
+                    Text('Reclaim it by capping your top distractions.',
+                        style: QType.subhead),
+                    const SizedBox(height: QSpace.md),
+                    PrimaryButton(
+                      label: 'Set a limit',
+                      icon: CupertinoIcons.timer,
+                      style: QButtonStyle.tinted,
+                      color: danger,
+                      expand: false,
+                      height: 44,
+                      onPressed: () => _showLimitSheet(context),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: QSpace.md),
+              // Hourly bar chart
+              _card(
+                context,
+                'By hour',
+                child: SizedBox(
+                  height: 130,
+                  child: HourlyBarChart(hourly: Mock.hourly, color: danger),
+                ),
+              ),
+              const SizedBox(height: QSpace.md),
+              // Category donut
+              _card(
+                context,
+                'Category mix',
+                child: const CategoryDonut(
+                  // ONE tuned distraction palette: a graduated warm→muted ramp
+                  // in the red/danger family, not four unrelated system hues.
+                  slices: [
+                    CategorySlice(
+                        label: 'Social',
+                        value: 54,
+                        color: CupertinoColors.systemRed),
+                    CategorySlice(
+                        label: 'Video',
+                        value: 38,
+                        color: CupertinoColors.systemPink),
+                    CategorySlice(
+                        label: 'News',
+                        value: 15,
+                        color: CupertinoColors.systemOrange),
+                    CategorySlice(
+                        label: 'Other',
+                        value: 12,
+                        color: CupertinoColors.systemGrey),
+                  ],
+                ),
+              ),
+              const SizedBox(height: QSpace.lg),
+              // Intervention history entry
+              QGroup(
+                children: [
+                  QRow(
+                    icon: CupertinoIcons.bell_fill,
+                    label: 'Intervention history',
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      Navigator.of(context).push(
+                        CupertinoPageRoute(
+                            builder: (_) => const InterventionHistoryPage()),
+                      );
+                    },
                   ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      // Cost translation
-      SliverToBoxAdapter(
-        child: _pad(
-          GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('That ≈ finishing 4 focus tasks.', style: QType.headline),
-                const SizedBox(height: QSpace.xxs),
-                Text('Reclaim it by capping your top distractions.',
-                    style: QType.subhead),
-                const SizedBox(height: QSpace.md),
-                PrimaryButton(
-                  label: 'Set a limit',
-                  icon: CupertinoIcons.timer,
-                  style: QButtonStyle.tinted,
-                  color: danger,
-                  expand: false,
-                  height: 44,
-                  onPressed: () => _showLimitSheet(context),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      // Hourly bar chart
-      SliverToBoxAdapter(
-        child: _pad(
-          _card(
-            context,
-            'By hour',
-            child: SizedBox(
-              height: 130,
-              child: HourlyBarChart(hourly: Mock.hourly, color: danger),
-            ),
-          ),
-        ),
-      ),
-      // Category donut
-      SliverToBoxAdapter(
-        child: _pad(
-          _card(
-            context,
-            'Category mix',
-            child: const CategoryDonut(
-              slices: [
-                CategorySlice(
-                    label: 'Social', value: 54, color: CupertinoColors.systemRed),
-                CategorySlice(
-                    label: 'Video',
-                    value: 38,
-                    color: CupertinoColors.systemOrange),
-                CategorySlice(
-                    label: 'News',
-                    value: 15,
-                    color: CupertinoColors.systemYellow),
-                CategorySlice(
-                    label: 'Other',
-                    value: 12,
-                    color: CupertinoColors.systemGrey),
-              ],
-            ),
-          ),
-        ),
-      ),
-      // Intervention history entry
-      SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.only(top: QSpace.lg),
-          child: InsetSection(
-            children: [
-              InsetRow(
-                icon: CupertinoIcons.bell_fill,
-                iconColor: QColors.breakColor,
-                title: 'Intervention history',
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  Navigator.of(context).push(
-                    CupertinoPageRoute(
-                        builder: (_) => const InterventionHistoryPage()),
-                  );
-                },
+                ],
               ),
             ],
           ),
@@ -658,4 +660,56 @@ class _InsightsBodyState extends State<_InsightsBody> {
       ),
     );
   }
+}
+
+/// A category breakdown row for the Reports tab.
+class _CatRow {
+  const _CatRow(this.label, this.valueLabel, this.fraction, this.color);
+  final String label;
+  final String valueLabel;
+  final double fraction;
+  final Color color;
+}
+
+/// Range-specific mock dataset backing the Reports tab (Day vs Week).
+class _ReportData {
+  const _ReportData({
+    required this.focusSeconds,
+    required this.focusDelta,
+    required this.focusSpark,
+    required this.trend,
+    required this.trendLabels,
+    required this.tasksDone,
+    required this.tasksDelta,
+    required this.productivityScore,
+    required this.scoreDelta,
+    required this.scoreUp,
+    required this.avgSession,
+    required this.avgDelta,
+    required this.avgUp,
+    required this.appSwitches,
+    required this.switchDelta,
+    required this.switchUp,
+    required this.topDistraction,
+    required this.categories,
+  });
+
+  final int focusSeconds;
+  final String focusDelta;
+  final List<int> focusSpark;
+  final List<int> trend;
+  final List<String> trendLabels;
+  final String tasksDone;
+  final String tasksDelta;
+  final int productivityScore;
+  final String scoreDelta;
+  final bool scoreUp;
+  final int avgSession;
+  final String avgDelta;
+  final bool avgUp;
+  final int appSwitches;
+  final String switchDelta;
+  final bool switchUp;
+  final AppUsage topDistraction;
+  final List<_CatRow> categories;
 }

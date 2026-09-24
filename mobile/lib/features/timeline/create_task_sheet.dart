@@ -5,41 +5,51 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/data/providers.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
+import '../../core/widgets/editorial.dart';
+import '../../core/widgets/glass.dart';
+import '../../core/widgets/primary_button.dart';
+import '../home/sheets/q_sheet.dart';
 import 'timeline_style.dart';
 
-/// Structured-style two-step task creation: name the task (with a suggestion),
-/// then pick its time + duration. Creates a scheduled task on [day].
+/// Schedule a task onto [day]: name it, place it at a time, pick a duration.
+///
+/// Built to the Ember Editorial sheet recipe and made visually consistent with
+/// the home task editor (`showTaskEditorSheet`): a grabber, a `Cancel · Add`
+/// header with the title field acting AS the header (title2), inset grouped
+/// rows, an inline-revealed time wheel, ember duration chips, a live
+/// date · time-range · duration preview, and a pinned primary pill.
 Future<void> showCreateTask(BuildContext context, {required DateTime day}) {
-  return Navigator.of(context, rootNavigator: true).push(
-    CupertinoPageRoute(fullscreenDialog: true, builder: (_) => _CreateTaskFlow(day: day)),
+  return showCupertinoModalPopup<void>(
+    context: context,
+    barrierColor: CupertinoColors.black.withValues(alpha: 0.4),
+    builder: (_) => _CreateTaskSheet(day: day),
   );
 }
 
-class _CreateTaskFlow extends ConsumerStatefulWidget {
-  const _CreateTaskFlow({required this.day});
+class _CreateTaskSheet extends ConsumerStatefulWidget {
+  const _CreateTaskSheet({required this.day});
   final DateTime day;
 
   @override
-  ConsumerState<_CreateTaskFlow> createState() => _CreateTaskFlowState();
+  ConsumerState<_CreateTaskSheet> createState() => _CreateTaskSheetState();
 }
 
-class _CreateTaskFlowState extends ConsumerState<_CreateTaskFlow> {
+class _CreateTaskSheetState extends ConsumerState<_CreateTaskSheet> {
   final _titleCtrl = TextEditingController();
-  int _step = 0;
 
-  // Schedule state.
   late int _startMin; // minute-of-day
   int _durMin = 45;
+  bool _timeOpen = false; // inline time wheel reveal
 
-  static const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   static const _wd = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  static const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   static const _durations = [15, 30, 45, 60, 90];
 
   @override
   void initState() {
     super.initState();
-    // Default to the next round-ish slot.
     final now = DateTime.now();
+    // Default to the next round quarter-hour.
     _startMin = (((now.hour * 60 + now.minute) ~/ 15) + 1) * 15 % (24 * 60);
     _titleCtrl.addListener(() => setState(() {}));
   }
@@ -50,13 +60,14 @@ class _CreateTaskFlowState extends ConsumerState<_CreateTaskFlow> {
     super.dispose();
   }
 
-  Color get _color {
-    final t = _titleCtrl.text.trim();
-    if (t.isEmpty) return kTimelinePalette.first;
-    return kTimelinePalette[t.hashCode.abs() % kTimelinePalette.length];
+  bool get _hasTitle => _titleCtrl.text.trim().isNotEmpty;
+
+  String get _dateLabel {
+    final d = widget.day;
+    return '${_wd[d.weekday - 1]} ${d.day} ${_months[d.month - 1]}';
   }
 
-  String _range(int start, int dur) => '${hhmm(start)} – ${hhmm(start + dur)}';
+  String get _timeLabel => clockLabel(context, _startMin);
 
   void _create() {
     final title = _titleCtrl.text.trim();
@@ -67,353 +78,337 @@ class _CreateTaskFlowState extends ConsumerState<_CreateTaskFlow> {
     Navigator.of(context).pop();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      backgroundColor: QColors.bgGrouped.resolveFrom(context),
-      child: _step == 0 ? _buildName(context) : _buildSchedule(context),
-    );
-  }
-
-  // -- Step 1: name -----------------------------------------------------------
-
-  Widget _buildName(BuildContext context) {
-    final hasTitle = _titleCtrl.text.trim().isNotEmpty;
-    return Column(
-      children: [
-        _Header(color: _color, title: _titleCtrl.text, editable: true, controller: _titleCtrl, onClose: () => Navigator.pop(context)),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(QSpace.md),
+  void _pickCustomDuration() {
+    FocusScope.of(context).unfocus();
+    final steps = [for (var m = 15; m <= 600; m += 15) m];
+    var picked = _durMin;
+    if (!steps.contains(picked)) {
+      picked = steps.reduce((a, b) => (a - _durMin).abs() <= (b - _durMin).abs() ? a : b);
+    }
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (ctx) => Container(
+        height: 288,
+        decoration: const BoxDecoration(
+          color: CupertinoColors.systemGroupedBackground,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
             children: [
-              if (hasTitle) ...[
-                Text('SUGGESTIONS', style: QType.caption.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.6)),
-                const SizedBox(height: QSpace.sm),
-                _SuggestionCard(
-                  color: _color,
-                  icon: timelineIconFor(_titleCtrl.text),
-                  range: _range(_startMin, _durMin),
-                  durMin: _durMin,
-                  title: _titleCtrl.text.trim(),
-                  onTap: () => setState(() => _step = 1),
+              const QGrabber(),
+              CupertinoButton(
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _durMin = picked);
+                  Navigator.of(ctx).pop();
+                },
+                child: Text('Done', style: QType.headline.copyWith(color: QSection.calendar.resolveFrom(ctx))),
+              ),
+              Expanded(
+                child: CupertinoPicker(
+                  scrollController: FixedExtentScrollController(initialItem: steps.indexOf(picked)),
+                  itemExtent: 36,
+                  onSelectedItemChanged: (i) => picked = steps[i],
+                  children: [for (final m in steps) Center(child: Text(durationLabel(m)))],
                 ),
-              ],
+              ),
             ],
           ),
         ),
-        _ContinueBar(
-          color: _color,
-          enabled: hasTitle,
-          onTap: () {
-            FocusScope.of(context).unfocus();
-            setState(() => _step = 1);
-          },
-        ),
-      ],
+      ),
     );
   }
 
-  // -- Step 2: schedule -------------------------------------------------------
-
-  Widget _buildSchedule(BuildContext context) {
-    final d = widget.day;
-    final dateLabel = '${_wd[d.weekday - 1]} ${d.day}. ${_months[d.month - 1]} ${d.year}';
-    return Column(
-      children: [
-        _Header(color: _color, title: _titleCtrl.text, editable: false, onClose: () => Navigator.pop(context), showRing: true, subtitle: _range(_startMin, _durMin)),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(QSpace.md),
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.72,
+      minChildSize: 0.5,
+      maxChildSize: 0.94,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: CupertinoColors.systemGroupedBackground,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
             children: [
-              _Card(
-                child: Row(
+              const QGrabber(),
+              _header(context),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.xs, QSpace.md, QSpace.xxl),
                   children: [
-                    Icon(CupertinoIcons.calendar, size: 18, color: _color),
-                    const SizedBox(width: QSpace.sm),
-                    Text(dateLabel, style: QType.body.copyWith(fontWeight: FontWeight.w600)),
-                    const Spacer(),
-                    Icon(CupertinoIcons.chevron_right, size: 16, color: QColors.labelTertiary.resolveFrom(context)),
+                    _titleField(context),
+                    const SizedBox(height: QSpace.md),
+                    _previewRow(context),
+                    const SizedBox(height: QSpace.lg),
+                    const QSectionHeader(label: 'Schedule'),
+                    _scheduleCard(context),
+                    const SizedBox(height: QSpace.lg),
+                    const QSectionHeader(label: 'Duration'),
+                    _DurationChips(
+                      options: _durations,
+                      selected: _durMin,
+                      onSelect: (v) {
+                        HapticFeedback.selectionClick();
+                        setState(() => _durMin = v);
+                      },
+                      onCustom: _pickCustomDuration,
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: QSpace.lg),
-              Text('Time', style: QType.headline),
-              const SizedBox(height: QSpace.sm),
-              _Card(
-                padding: EdgeInsets.zero,
-                child: SizedBox(
-                  height: 180,
-                  child: CupertinoDatePicker(
-                    mode: CupertinoDatePickerMode.time,
-                    use24hFormat: true,
-                    minuteInterval: 5,
-                    initialDateTime: DateTime(d.year, d.month, d.day, _startMin ~/ 60, _startMin % 60),
-                    onDateTimeChanged: (t) => setState(() => _startMin = t.hour * 60 + t.minute),
-                  ),
+              _PinnedBar(
+                bottomInset: bottomInset,
+                child: PrimaryButton(
+                  label: 'Add task',
+                  color: QSection.calendar,
+                  onPressed: _hasTitle ? _create : null,
                 ),
-              ),
-              const SizedBox(height: QSpace.lg),
-              Text('Duration', style: QType.headline),
-              const SizedBox(height: QSpace.sm),
-              _DurationBar(
-                options: _durations,
-                selected: _durMin,
-                color: _color,
-                onSelect: (v) => setState(() => _durMin = v),
               ),
             ],
           ),
-        ),
-        _ContinueBar(color: _color, enabled: true, onTap: _create),
-      ],
+        );
+      },
     );
+  }
+
+  // -- Header: Cancel (plain, left) / Add (right). Title field IS the header. --
+
+  Widget _header(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(QSpace.xs, 0, QSpace.xs, QSpace.xs),
+      child: Row(
+        children: [
+          CupertinoButton(
+            padding: const EdgeInsets.symmetric(horizontal: QSpace.sm, vertical: 4),
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: QType.body.copyWith(color: QColors.labelSecondary.resolveFrom(context))),
+          ),
+          const Spacer(),
+          CupertinoButton(
+            padding: const EdgeInsets.symmetric(horizontal: QSpace.sm, vertical: 4),
+            onPressed: _hasTitle ? _create : null,
+            child: Text(
+              'Add',
+              style: QType.headline.copyWith(
+                color: _hasTitle ? QSection.calendar.resolveFrom(context) : QColors.labelTertiary.resolveFrom(context),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // -- Title field as the sheet header (title2) -------------------------------
+
+  Widget _titleField(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: QSpace.xxs, bottom: QSpace.xs),
+      child: CupertinoTextField.borderless(
+        controller: _titleCtrl,
+        autofocus: true,
+        placeholder: 'What needs doing?',
+        placeholderStyle: QType.title2.copyWith(color: QColors.labelTertiary.resolveFrom(context)),
+        style: QType.title2,
+        padding: EdgeInsets.zero,
+        maxLines: null,
+        cursorColor: QSection.calendar.resolveFrom(context),
+        onSubmitted: (_) => _create(),
+      ),
+    );
+  }
+
+  // -- Live preview: date · time-range · duration -----------------------------
+
+  Widget _previewRow(BuildContext context) {
+    final ember = QSection.calendar.resolveFrom(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: QSpace.sm),
+      decoration: BoxDecoration(
+        color: ember.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(QRadius.card),
+      ),
+      child: Row(
+        children: [
+          Icon(CupertinoIcons.calendar_today, size: 18, color: ember),
+          const SizedBox(width: QSpace.sm),
+          Expanded(
+            child: Text(
+              '$_dateLabel · ${clockLabel(context, _startMin)} – ${clockLabel(context, _startMin + _durMin)}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: QType.subhead.copyWith(
+                color: QColors.label.resolveFrom(context),
+                fontWeight: FontWeight.w600,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+          const SizedBox(width: QSpace.xs),
+          Text(
+            durationLabel(_durMin),
+            style: QType.meta.copyWith(color: ember, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // -- Schedule card: date row + time row (reveals an inline time wheel) ------
+
+  Widget _scheduleCard(BuildContext context) {
+    final d = widget.day;
+    return QGroup(children: [
+      QRow(
+        icon: CupertinoIcons.calendar,
+        label: 'Date',
+        value: '$_dateLabel ${d.year}',
+        chevron: false,
+      ),
+      QRow(
+        icon: CupertinoIcons.clock,
+        label: 'Starts',
+        value: _timeLabel,
+        valueColor: _timeOpen ? QSection.calendar : null,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          FocusScope.of(context).unfocus();
+          setState(() => _timeOpen = !_timeOpen);
+        },
+        chevron: false,
+      ),
+      if (_timeOpen)
+        SizedBox(
+          height: 180,
+          child: CupertinoDatePicker(
+            mode: CupertinoDatePickerMode.time,
+            use24hFormat: MediaQuery.of(context).alwaysUse24HourFormat,
+            minuteInterval: 5,
+            initialDateTime: DateTime(d.year, d.month, d.day, _startMin ~/ 60, _startMin % 60),
+            onDateTimeChanged: (t) => setState(() => _startMin = t.hour * 60 + t.minute),
+          ),
+        ),
+    ]);
   }
 }
 
 // ---------------------------------------------------------------------------
 
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.color,
-    required this.title,
-    required this.editable,
-    required this.onClose,
-    this.controller,
-    this.showRing = false,
-    this.subtitle,
+/// Ember duration chips: 15 / 30 / 45 / 60 / 90 + a Custom chip. The selected
+/// value is the one ember fill; a custom value shows as an extra selected chip.
+class _DurationChips extends StatelessWidget {
+  const _DurationChips({
+    required this.options,
+    required this.selected,
+    required this.onSelect,
+    required this.onCustom,
   });
+  final List<int> options;
+  final int selected;
+  final ValueChanged<int> onSelect;
+  final VoidCallback onCustom;
 
-  final Color color;
-  final String title;
-  final bool editable;
-  final VoidCallback onClose;
-  final TextEditingController? controller;
-  final bool showRing;
-  final String? subtitle;
+  String _label(int m) => m == 90 ? '1.5h' : durationLabel(m);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: color,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.sm, QSpace.md, QSpace.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onClose,
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(color: CupertinoColors.white.withValues(alpha: 0.25), shape: BoxShape.circle),
-                  child: const Icon(CupertinoIcons.xmark, size: 16, color: CupertinoColors.white),
-                ),
-              ),
-              const SizedBox(height: QSpace.md),
-              Row(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(color: CupertinoColors.white, shape: BoxShape.circle),
-                    child: Icon(timelineIconFor(title.isEmpty ? 'task' : title), size: 26, color: color),
-                  ),
-                  const SizedBox(width: QSpace.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (subtitle != null)
-                          Text(subtitle!, style: QType.footnote.copyWith(color: CupertinoColors.white.withValues(alpha: 0.85))),
-                        editable
-                            ? CupertinoTextField.borderless(
-                                controller: controller,
-                                autofocus: true,
-                                placeholder: 'Task name',
-                                placeholderStyle: QType.title3.copyWith(color: CupertinoColors.white.withValues(alpha: 0.6)),
-                                style: QType.title3.copyWith(color: CupertinoColors.white, fontWeight: FontWeight.w700),
-                                cursorColor: CupertinoColors.white,
-                                padding: EdgeInsets.zero,
-                              )
-                            : Text(
-                                title.isEmpty ? 'Task' : title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: QType.title3.copyWith(color: CupertinoColors.white, fontWeight: FontWeight.w700),
-                              ),
-                      ],
-                    ),
-                  ),
-                  if (showRing) ...[
-                    const SizedBox(width: QSpace.sm),
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: CupertinoColors.white, width: 2),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
+    final ember = QSection.calendar.resolveFrom(context);
+    final shown = options.contains(selected) ? options : [...options, selected]
+      ..sort();
+    final isCustom = !options.contains(selected);
+
+    Widget chip({required String text, required bool active, required VoidCallback onTap}) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: active ? ember : QColors.surface.resolveFrom(context),
+            borderRadius: BorderRadius.circular(QRadius.capsule),
+            boxShadow: active ? null : QElevation.card(context),
+          ),
+          child: Text(
+            text,
+            style: QType.subhead.copyWith(
+              fontWeight: FontWeight.w700,
+              color: active ? CupertinoColors.white : QColors.labelSecondary.resolveFrom(context),
+            ),
           ),
         ),
-      ),
-    );
-  }
-}
+      );
+    }
 
-class _SuggestionCard extends StatelessWidget {
-  const _SuggestionCard({
-    required this.color,
-    required this.icon,
-    required this.range,
-    required this.durMin,
-    required this.title,
-    required this.onTap,
-  });
-
-  final Color color;
-  final IconData icon;
-  final String range;
-  final int durMin;
-  final String title;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Card(
-      onTap: onTap,
-      child: Row(
-        children: [
-          Icon(icon, size: 22, color: color),
-          const SizedBox(width: QSpace.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Wrap(
+      spacing: QSpace.xs,
+      runSpacing: QSpace.xs,
+      children: [
+        for (final m in shown)
+          chip(text: _label(m), active: m == selected, onTap: () => onSelect(m)),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onCustom,
+          child: Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: QColors.surface.resolveFrom(context),
+              borderRadius: BorderRadius.circular(QRadius.capsule),
+              boxShadow: QElevation.card(context),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text('$range  ($durMin min)',
-                    style: QType.caption.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
-                const SizedBox(height: 2),
-                Text(title, style: QType.headline.copyWith(fontWeight: FontWeight.w700)),
+                Text(
+                  'Custom',
+                  style: QType.subhead.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: isCustom ? ember : QColors.labelSecondary.resolveFrom(context),
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Icon(CupertinoIcons.chevron_right, size: 13,
+                    color: isCustom ? ember : QColors.labelTertiary.resolveFrom(context)),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DurationBar extends StatelessWidget {
-  const _DurationBar({required this.options, required this.selected, required this.color, required this.onSelect});
-  final List<int> options;
-  final int selected;
-  final Color color;
-  final ValueChanged<int> onSelect;
-
-  String _label(int m) {
-    if (m < 60) return '${m}m';
-    if (m == 60) return '1h';
-    if (m == 90) return '1.5h';
-    return '${(m / 60).toStringAsFixed(1)}h';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _Card(
-      padding: const EdgeInsets.all(6),
-      child: Row(
-        children: [
-          for (final m in options)
-            Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  onSelect(m);
-                },
-                child: Container(
-                  height: 38,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: m == selected ? color : const Color(0x00000000),
-                    borderRadius: BorderRadius.circular(QRadius.capsule),
-                  ),
-                  child: Text(
-                    _label(m),
-                    style: QType.subhead.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: m == selected ? CupertinoColors.white : QColors.labelSecondary.resolveFrom(context),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Card extends StatelessWidget {
-  const _Card({required this.child, this.padding = const EdgeInsets.all(QSpace.md), this.onTap});
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final card = Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: QColors.surface.resolveFrom(context),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: child,
-    );
-    if (onTap == null) return card;
-    return GestureDetector(behavior: HitTestBehavior.opaque, onTap: onTap, child: card);
-  }
-}
-
-class _ContinueBar extends StatelessWidget {
-  const _ContinueBar({required this.color, required this.enabled, required this.onTap});
-  final Color color;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.xs, QSpace.md, QSpace.sm),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: enabled ? onTap : null,
-          child: Container(
-            height: 52,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: enabled ? color : QColors.fill.resolveFrom(context),
-              borderRadius: BorderRadius.circular(QRadius.capsule),
-            ),
-            child: Text(
-              'Continue',
-              style: QType.headline.copyWith(
-                color: enabled ? CupertinoColors.white : QColors.labelTertiary.resolveFrom(context),
-              ),
-            ),
-          ),
         ),
+      ],
+    );
+  }
+}
+
+/// A blurred hairline bar pinning the primary pill above the keyboard.
+class _PinnedBar extends StatelessWidget {
+  const _PinnedBar({required this.child, required this.bottomInset});
+  final Widget child;
+  final double bottomInset;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassSurface(
+      radius: 0,
+      tint: QColors.bgGrouped,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          QSpace.md,
+          QSpace.sm,
+          QSpace.md,
+          bottomInset > 0 ? bottomInset + QSpace.sm : MediaQuery.of(context).padding.bottom + QSpace.sm,
+        ),
+        child: child,
       ),
     );
   }

@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/tokens.dart';
@@ -5,7 +7,7 @@ import '../../../core/theme/typography.dart';
 import '../../../core/widgets/glass.dart';
 import '../../../core/widgets/primary_button.dart';
 
-/// Level-1 top glass nudge banner: "Instagram 3m — back to <task>?".
+/// Level-1 top glass nudge banner: "Instagram 3m — back to `task`?".
 /// A floating translucent card (the one place a subtle floating shadow is used).
 class NudgeBanner extends StatelessWidget {
   const NudgeBanner({
@@ -73,11 +75,12 @@ class NudgeBanner extends StatelessWidget {
                       HapticFeedback.selectionClick();
                       onDismiss();
                     },
+                    minimumSize: const Size(44, 44),
                     child: Icon(
                       CupertinoIcons.xmark_circle_fill,
                       size: 24,
                       color: QColors.labelTertiary.resolveFrom(context),
-                    ), minimumSize: Size(44, 44),
+                    ),
                   ),
                 ],
               ),
@@ -90,7 +93,12 @@ class NudgeBanner extends StatelessWidget {
 }
 
 /// Full friction overlay shown after continued distraction.
-class FrictionOverlay extends StatelessWidget {
+///
+/// Calm-then-firm: the focus world still glows through a blurred, warm-tinted
+/// backdrop (BackdropFilter, not a flat opaque fill). It leads with a breathing
+/// ember orb and "Take a breath" FIRST; the numbers whisper secondarily in warm
+/// (never red) ink. Entry fades + blooms in ~400ms, gated on Reduce Motion.
+class FrictionOverlay extends StatefulWidget {
   const FrictionOverlay({
     super.key,
     required this.app,
@@ -109,94 +117,196 @@ class FrictionOverlay extends StatelessWidget {
   final VoidCallback onFiveMore;
 
   @override
+  State<FrictionOverlay> createState() => _FrictionOverlayState();
+}
+
+class _FrictionOverlayState extends State<FrictionOverlay>
+    with TickerProviderStateMixin {
+  late final AnimationController _entry;
+  late final AnimationController _breath;
+
+  @override
+  void initState() {
+    super.initState();
+    _entry = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _breath = AnimationController(vsync: this, duration: QMotion.breath);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (QMotion.reduced(context)) {
+      _entry.value = 1.0;
+    } else {
+      if (_entry.status == AnimationStatus.dismissed) _entry.forward();
+      if (!_breath.isAnimating) _breath.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _entry.dispose();
+    _breath.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final danger = QColors.danger.resolveFrom(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: QColors.bg.resolveFrom(context).withValues(alpha: 0.96),
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(QSpace.lg),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: danger.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
+    // The focus section's flame accent carries the breath moment.
+    final ember = QSection.focus.resolveFrom(context);
+    final warmInk = QColors.brandDeep.resolveFrom(context);
+    return AnimatedBuilder(
+      animation: Listenable.merge([_entry, _breath]),
+      builder: (context, _) {
+        final t = Curves.easeOut.transform(_entry.value);
+        final blurAmount = 22.0 * t;
+        final breathing = !QMotion.reduced(context);
+        final orbT = breathing ? _breath.value : 0.5;
+        final orbScale = 0.94 + 0.12 * orbT;
+        return Opacity(
+          opacity: t,
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: blurAmount, sigmaY: blurAmount),
+            child: DecoratedBox(
+              // Warm veil, not a cold flat fill — the focus glow reads through.
+              decoration: BoxDecoration(
+                color: QColors.bg.resolveFrom(context).withValues(alpha: 0.62),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(QSpace.lg),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // --- Calm: the breathing ember orb, first. -----------
+                      Center(
+                        child: Transform.scale(
+                          scale: orbScale,
+                          child: Container(
+                            width: 96,
+                            height: 96,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  ember.withValues(alpha: 0.32),
+                                  ember.withValues(alpha: 0.10),
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: ember.withValues(
+                                      alpha: 0.28 + 0.20 * orbT),
+                                  blurRadius: 32 + 16 * orbT,
+                                ),
+                              ],
+                            ),
+                            child: Icon(CupertinoIcons.wind,
+                                size: 38, color: ember),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: QSpace.xl),
+                      Text('Take a breath',
+                          style: QType.title1, textAlign: TextAlign.center),
+                      const SizedBox(height: QSpace.xs),
+                      Text(
+                        'Notice the pull toward ${widget.app}. '
+                        'It will still be there in a minute.',
+                        style: QType.body.copyWith(
+                            color: QColors.labelSecondary.resolveFrom(context)),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: QSpace.xl),
+                      PrimaryButton(
+                        label: 'Take a breath',
+                        icon: CupertinoIcons.wind,
+                        color: QSection.focus,
+                        onPressed: () {
+                          // Soft, calming — not a thud.
+                          HapticFeedback.lightImpact();
+                          widget.onTakeBreath();
+                        },
+                      ),
+                      const SizedBox(height: QSpace.sm),
+                      PrimaryButton(
+                        label: '5 more minutes',
+                        style: QButtonStyle.plain,
+                        onPressed: () {
+                          HapticFeedback.selectionClick();
+                          widget.onFiveMore();
+                        },
+                      ),
+                      const SizedBox(height: QSpace.xl),
+                      // --- Firm: the numbers whisper, secondarily. ---------
+                      _WhisperStats(
+                        today: widget.todayMinutes,
+                        weeklyAvg: widget.weeklyAvgMinutes,
+                        tasks: widget.focusTasksEquivalent,
+                        ink: warmInk,
+                      ),
+                    ],
                   ),
-                  child: Icon(CupertinoIcons.hand_raised_fill,
-                      size: 34, color: danger),
                 ),
               ),
-              const SizedBox(height: QSpace.lg),
-              Text('Time on $app',
-                  style: QType.title1, textAlign: TextAlign.center),
-              const SizedBox(height: QSpace.xs),
-              Text(
-                "You've spent ${todayMinutes}m here today.",
-                style: QType.body
-                    .copyWith(color: QColors.labelSecondary.resolveFrom(context)),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: QSpace.xl),
-              _StatLine(label: 'Today', value: '${todayMinutes}m'),
-              const SizedBox(height: QSpace.xs),
-              _StatLine(label: 'Weekly average', value: '${weeklyAvgMinutes}m'),
-              const SizedBox(height: QSpace.xs),
-              _StatLine(
-                  label: 'That is about',
-                  value: '≈ $focusTasksEquivalent focus tasks'),
-              const SizedBox(height: QSpace.xl),
-              PrimaryButton(
-                label: 'Take a breath',
-                icon: CupertinoIcons.wind,
-                color: QColors.wellbeing,
-                onPressed: onTakeBreath,
-              ),
-              const SizedBox(height: QSpace.sm),
-              PrimaryButton(
-                label: '5 more minutes',
-                style: QButtonStyle.plain,
-                onPressed: () {
-                  HapticFeedback.selectionClick();
-                  onFiveMore();
-                },
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
-class _StatLine extends StatelessWidget {
-  const _StatLine({required this.label, required this.value});
-  final String label;
-  final String value;
+/// A quiet single line of warm-ink context. Numbers are present but never
+/// shout: no danger red, no cold stats table.
+class _WhisperStats extends StatelessWidget {
+  const _WhisperStats({
+    required this.today,
+    required this.weeklyAvg,
+    required this.tasks,
+    required this.ink,
+  });
+  final int today;
+  final int weeklyAvg;
+  final int tasks;
+  final Color ink;
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
-      padding:
-          const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: QSpace.sm),
-      child: Row(
-        children: [
-          Expanded(child: Text(label, style: QType.body)),
-          Text(
-            value,
-            style: QType.headline.copyWith(
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
+    final tab = const [FontFeature.tabularFigures()];
+    return Column(
+      children: [
+        Text.rich(
+          TextSpan(
+            style: QType.footnote
+                .copyWith(color: ink.withValues(alpha: 0.75)),
+            children: [
+              TextSpan(
+                text: '${today}m',
+                style: QType.footnote.copyWith(
+                    color: ink, fontWeight: FontWeight.w700, fontFeatures: tab),
+              ),
+              const TextSpan(text: ' here today  ·  weekly avg '),
+              TextSpan(
+                text: '${weeklyAvg}m',
+                style:
+                    QType.footnote.copyWith(color: ink, fontFeatures: tab),
+              ),
+            ],
           ),
-        ],
-      ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: QSpace.xxs),
+        Text(
+          '≈ $tasks focus tasks',
+          style: QType.caption.copyWith(color: ink.withValues(alpha: 0.55)),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }

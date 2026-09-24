@@ -3,11 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/data/providers.dart';
-import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
-import '../../core/widgets/inset_list.dart';
+import '../../core/widgets/editorial.dart';
 import '../../core/widgets/primary_button.dart';
+import 'settings_widgets.dart';
 
 /// E9 — Feedback sheet, wired to QuorilApi.submitFeedback.
 Future<void> showFeedbackSheet(BuildContext context) {
@@ -75,31 +75,11 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return FractionallySizedBox(
+    return SettingsSheet(
       heightFactor: 0.82,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: QGradients.page(MediaQuery.platformBrightnessOf(context)),
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(QRadius.glass)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            children: [
-              Container(
-                width: 36,
-                height: 5,
-                margin: const EdgeInsets.only(top: QSpace.sm, bottom: QSpace.sm),
-                decoration: BoxDecoration(
-                  color: QColors.separator.resolveFrom(context),
-                  borderRadius: BorderRadius.circular(QRadius.capsule),
-                ),
-              ),
-              Expanded(child: _sent ? _success(context) : _form(context)),
-            ],
-          ),
-        ),
+      child: SafeArea(
+        top: false,
+        child: _sent ? _success(context) : _form(context),
       ),
     );
   }
@@ -134,16 +114,16 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
       children: [
         Text('Send Feedback', style: QType.title2, textAlign: TextAlign.center),
         const SizedBox(height: QSpace.lg),
-        CupertinoSlidingSegmentedControl<_FbType>(
+        QSegmentedControl<_FbType>(
           groupValue: _type,
+          accent: QSection.settings,
           onValueChanged: (v) {
             if (v == null) return;
             HapticFeedback.selectionClick();
             setState(() => _type = v);
           },
           children: const {
-            _FbType.bug: Padding(
-                padding: EdgeInsets.symmetric(vertical: 6), child: Text('Bug')),
+            _FbType.bug: Text('Bug'),
             _FbType.idea: Text('Idea'),
             _FbType.praise: Text('Praise'),
           },
@@ -172,19 +152,17 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
                   .copyWith(color: QColors.danger.resolveFrom(context))),
         ],
         const SizedBox(height: QSpace.md),
-        InsetSection(
-          children: [
-            InsetRow(
-              icon: CupertinoIcons.paperclip,
-              iconColor: QColors.labelSecondary,
-              title: 'Attach screenshot',
-              onTap: () => HapticFeedback.selectionClick(),
-            ),
-          ],
-        ),
+        FrostedGroup(children: [
+          SettingsRow(
+            icon: CupertinoIcons.paperclip,
+            iconColor: QColors.labelSecondary,
+            title: 'Attach screenshot',
+            onTap: () => HapticFeedback.selectionClick(),
+          ),
+        ]),
         const SizedBox(height: QSpace.lg),
         PrimaryButton(
-          label: 'Send',
+          label: 'Send feedback',
           icon: CupertinoIcons.paperplane_fill,
           loading: _sending,
           onPressed: _send,

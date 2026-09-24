@@ -731,6 +731,46 @@ export const dbOps = {
         return { distractionSeconds, byCategory }
     },
 
+    /* ---- Calendar events (local-only, Quoril-owned schedule) ---- */
+    // These never leave the machine (not in SYNC_TABLES), mirroring how the Swift
+    // build treats the system calendar as device-local. They back the planner
+    // day-fit engine, the calendar timeline, and automation "busy" commitments.
+
+    getCalendarEvents(userId: string, fromISO: string, toISO: string) {
+        return exec(
+            `SELECT * FROM calendar_events
+             WHERE user_id=? AND deleted_at IS NULL
+               AND end_at > ? AND start_at < ?
+             ORDER BY start_at ASC`,
+            [userId, fromISO, toISO]
+        )
+    },
+
+    saveCalendarEvent(ev: any) {
+        ev.updated_at = now()
+        ev.synced = 0
+        if (!ev.created_at) ev.created_at = now()
+        const cols = Object.keys(ev)
+        const vals = sanitize(Object.values(ev))
+        exec(`INSERT OR REPLACE INTO calendar_events (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')})`, vals)
+        const rows = exec('SELECT * FROM calendar_events WHERE id=?', [ev.id]) as any[]
+        return rows?.[0] ?? null
+    },
+
+    updateCalendarEvent(id: string, updates: Record<string, any>) {
+        const CAL_COLUMNS = new Set(['title', 'start_at', 'end_at', 'notes', 'url', 'alarm_lead_minutes', 'is_recurring', 'source', 'task_id', 'updated_at', 'deleted_at', 'synced'])
+        const patch: Record<string, any> = { ...updates, updated_at: now(), synced: 0 }
+        const keys = Object.keys(patch).filter(k => CAL_COLUMNS.has(k))
+        if (!keys.length) return null
+        exec(`UPDATE calendar_events SET ${keys.map(k => `${k}=?`).join(',')} WHERE id=?`, [...keys.map(k => patch[k]), id])
+        const rows = exec('SELECT * FROM calendar_events WHERE id=?', [id]) as any[]
+        return rows?.[0] ?? null
+    },
+
+    deleteCalendarEvent(id: string) {
+        exec('UPDATE calendar_events SET deleted_at=?, synced=0 WHERE id=?', [now(), id])
+    },
+
     /* ---- Screen Time / Digital Wellbeing (one aggregated call) ---- */
 
     getScreenTimeData(date: string) {
@@ -1192,6 +1232,32 @@ function autoMigrate() {
             db.prepare("UPDATE db_meta SET value='12' WHERE key='version'").run()
         })()
         version = 12
+    }
+    if (version < 13) {
+        // Local-only calendar events — the Quoril-owned schedule the planner,
+        // calendar timeline, and automation engine read. Not synced to the cloud.
+        db.transaction(() => {
+            db.exec(`
+                CREATE TABLE IF NOT EXISTS calendar_events (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    start_at TEXT NOT NULL,
+                    end_at TEXT NOT NULL,
+                    notes TEXT,
+                    url TEXT,
+                    alarm_lead_minutes INTEGER,
+                    is_recurring INTEGER DEFAULT 0,
+                    source TEXT DEFAULT 'quoril',
+                    task_id TEXT,
+                    created_at TEXT, updated_at TEXT, deleted_at TEXT,
+                    synced INTEGER DEFAULT 0
+                );
+                CREATE INDEX IF NOT EXISTS idx_calendar_events_range ON calendar_events(user_id, start_at, end_at);
+            `)
+            db.prepare("UPDATE db_meta SET value='13' WHERE key='version'").run()
+        })()
+        version = 13
     }
 }
 

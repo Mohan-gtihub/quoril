@@ -41,17 +41,19 @@ export function SectionHead({
   const a =
     align === "center" ? "mx-auto text-center items-center" : "items-start";
   return (
-    <Reveal className={`mb-10 flex max-w-[680px] flex-col sm:mb-14 ${a}`}>
+    <Reveal className={`mb-12 flex max-w-[720px] flex-col sm:mb-16 ${a}`}>
       {eyebrow && (
         <div className="mb-4">
           <Eyebrow>{eyebrow}</Eyebrow>
         </div>
       )}
-      <h2 className="font-heading text-[clamp(28px,4.2vw,46px)] font-semibold leading-[1.06] tracking-[-0.03em] text-ink">
+      <h2 className="font-heading text-[clamp(32px,5vw,54px)] font-semibold leading-[1.05] tracking-[-0.035em] text-ink">
         {title}
       </h2>
       {sub && (
-        <p className="mt-4 text-[17px] leading-relaxed text-ink-muted">{sub}</p>
+        <p className="mt-5 text-[clamp(17px,1.7vw,21px)] leading-relaxed text-ink-muted">
+          {sub}
+        </p>
       )}
     </Reveal>
   );
@@ -134,7 +136,7 @@ export function Badge({
 type BtnProps = {
   href: string;
   children: React.ReactNode;
-  variant?: "primary" | "secondary";
+  variant?: "primary" | "secondary" | "link";
   className?: string;
 };
 
@@ -144,21 +146,36 @@ export function Button({
   variant = "primary",
   className = "",
 }: BtnProps) {
-  const base =
-    "inline-flex items-center justify-center gap-2 rounded-pill px-5 py-3 text-[14.5px] font-semibold transition active:scale-[0.98]";
+  // Apple-style: pill CTAs with a soft-scale press, plus an inline text link.
+  const isLink = variant === "link";
+  const base = isLink
+    ? "group inline-flex items-center gap-1 text-[15px] font-medium text-accent transition-colors hover:text-accent/80"
+    : "inline-flex items-center justify-center gap-2 rounded-pill px-[22px] py-3 text-[15px] font-medium transition duration-300 active:scale-[0.97]";
   const styles =
     variant === "primary"
-      ? "bg-brand text-white hover:bg-brand/90 hover:shadow-glow shadow-soft"
-      : "border border-line-strong bg-surface text-ink hover:border-white/25 hover:bg-sunken";
+      ? "bg-accent text-white hover:bg-accent/90 hover:shadow-[0_8px_28px_-6px_rgb(var(--c-accent)/0.55)]"
+      : variant === "secondary"
+        ? "border border-line-strong bg-surface/60 text-ink backdrop-blur-md hover:border-white/25 hover:bg-sunken"
+        : "";
   const internal = href.startsWith("/") && !href.startsWith("//");
   const cls = `${base} ${styles} ${className}`;
+  const content = isLink ? (
+    <>
+      {children}
+      <span className="transition-transform duration-300 group-hover:translate-x-0.5">
+        ›
+      </span>
+    </>
+  ) : (
+    children
+  );
   return internal ? (
     <Link href={href} className={cls}>
-      {children}
+      {content}
     </Link>
   ) : (
     <a href={href} className={cls}>
-      {children}
+      {content}
     </a>
   );
 }

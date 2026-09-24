@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
-import '../../core/widgets/inset_list.dart';
+import '../../core/widgets/app_kit.dart';
+import '../../core/widgets/editorial.dart';
+import 'settings_widgets.dart';
 
 /// E10 — About.
 class AboutPage extends StatelessWidget {
@@ -21,31 +23,25 @@ class AboutPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = MediaQuery.platformBrightnessOf(context);
-    return CupertinoPageScaffold(
+    return SettingsAmbientBackground(
+      child: AppScaffold(
+      title: 'About',
       backgroundColor: const Color(0x00000000),
-      child: GradientBackground(
-        gradient: QGradients.page(brightness),
-        child: CustomScrollView(
-        slivers: [
-          const CupertinoSliverNavigationBar(
-            previousPageTitle: 'You',
-            largeTitle: Text('About'),
-            backgroundColor: Color(0x00000000),
-            border: null,
-          ),
-          SliverList(
-            delegate: SliverChildListDelegate([
-              const SizedBox(height: QSpace.lg),
+      transitionBetweenRoutes: true,
+      slivers: [
+        SliverPagePadding(
+          top: QSpace.lg,
+          child: QStagger(children: [
               Center(
                 child: Column(
                   children: [
                     Container(
-                      width: 72,
-                      height: 72,
+                      width: 76,
+                      height: 76,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
                         gradient: QGradients.warm,
+                        boxShadow: QElevation.brandGlow(context),
                       ),
                       child: const Icon(
                         CupertinoIcons.timer,
@@ -53,104 +49,97 @@ class AboutPage extends StatelessWidget {
                         size: 40,
                       ),
                     ),
-                    const SizedBox(height: QSpace.sm),
-                    Text('Quoril', style: QType.title3),
-                    Text('Focus, protected.', style: QType.footnote),
+                    const SizedBox(height: QSpace.md),
+                    Text('Quoril', style: QType.largeTitle),
+                    const SizedBox(height: 2),
+                    Text('Focus, protected.', style: QType.subhead),
                   ],
                 ),
               ),
               const SizedBox(height: QSpace.xl),
-              InsetSection(
-                header: 'Version',
-                children: const [
-                  InsetRow(
-                    icon: CupertinoIcons.number,
-                    title: 'Version',
-                    value: '1.1.6',
-                    showChevron: false,
+              const QSectionHeader(label: 'Version'),
+              FrostedGroup(children: const [
+                SettingsRow(
+                  icon: CupertinoIcons.number,
+                  title: 'Version',
+                  value: '1.1.6',
+                  chevron: false,
+                ),
+                SettingsRow(
+                  icon: CupertinoIcons.hammer,
+                  iconColor: QColors.labelSecondary,
+                  title: 'Build',
+                  value: '1160',
+                  chevron: false,
+                ),
+              ]),
+              const SizedBox(height: QSpace.lg),
+              FrostedGroup(children: [
+                SettingsRow(
+                  icon: CupertinoIcons.sparkles,
+                  iconColor: QColors.warn,
+                  title: 'What’s new',
+                  onTap: () => _info(
+                    context,
+                    'What’s New',
+                    'Version 1.1.6\n\nâ€¢ Hardened session reliability.\nâ€¢ New Liquid Glass surfaces across the app.\nâ€¢ Faster distraction nudges.',
                   ),
-                  InsetRow(
-                    icon: CupertinoIcons.hammer,
-                    iconColor: QColors.labelSecondary,
-                    title: 'Build',
-                    value: '1160',
-                    showChevron: false,
+                ),
+                SettingsRow(
+                  icon: CupertinoIcons.lock_shield_fill,
+                  iconColor: QColors.breakColor,
+                  title: 'Privacy policy',
+                  onTap: () => _info(
+                    context,
+                    'Privacy Policy',
+                    'Quoril processes usage data on-device wherever possible. We never sell your data.',
                   ),
-                ],
-              ),
-              const SizedBox(height: QSpace.xl),
-              InsetSection(
-                children: [
-                  InsetRow(
-                    icon: CupertinoIcons.sparkles,
-                    iconColor: QColors.warn,
-                    title: 'What’s New',
-                    onTap: () => _info(
-                      context,
-                      'What’s New',
-                      'Version 1.1.6\n\n• Hardened session reliability.\n• New Liquid Glass surfaces across the app.\n• Faster distraction nudges.',
-                    ),
+                ),
+                SettingsRow(
+                  icon: CupertinoIcons.doc_text_fill,
+                  iconColor: QColors.labelSecondary,
+                  title: 'Terms of service',
+                  onTap: () => _info(
+                    context,
+                    'Terms of Service',
+                    'By using Quoril you agree to our terms. Use the app responsibly.',
                   ),
-                  InsetRow(
-                    icon: CupertinoIcons.lock_shield_fill,
-                    iconColor: QColors.breakColor,
-                    title: 'Privacy Policy',
-                    onTap: () => _info(
-                      context,
-                      'Privacy Policy',
-                      'Quoril processes usage data on-device wherever possible. We never sell your data.',
-                    ),
+                ),
+                SettingsRow(
+                  icon: CupertinoIcons.heart_fill,
+                  iconColor: QColors.danger,
+                  title: 'Acknowledgements',
+                  onTap: () => _info(
+                    context,
+                    'Acknowledgements',
+                    'Built with Flutter and the Cupertino library.\n\nThank you to our alpha testers.',
                   ),
-                  InsetRow(
-                    icon: CupertinoIcons.doc_text_fill,
-                    iconColor: QColors.labelSecondary,
-                    title: 'Terms of Service',
-                    onTap: () => _info(
-                      context,
-                      'Terms of Service',
-                      'By using Quoril you agree to our terms. Use the app responsibly.',
-                    ),
-                  ),
-                  InsetRow(
-                    icon: CupertinoIcons.heart_fill,
-                    iconColor: QColors.danger,
-                    title: 'Acknowledgements',
-                    onTap: () => _info(
-                      context,
-                      'Acknowledgements',
-                      'Built with Flutter and the Cupertino library.\n\nThank you to our alpha testers.',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: QSpace.xl),
-              InsetSection(
-                children: [
-                  InsetRow(
-                    icon: CupertinoIcons.star_fill,
-                    iconColor: QColors.warn,
-                    title: 'Rate on the App Store',
-                    onTap: () => HapticFeedback.lightImpact(),
-                  ),
-                  InsetRow(
-                    icon: CupertinoIcons.envelope_fill,
-                    iconColor: QColors.wellbeing,
-                    title: 'Contact support',
-                    value: 'kilarimohansai@gmail.com',
-                    onTap: () => HapticFeedback.lightImpact(),
-                  ),
-                ],
-              ),
+                ),
+              ]),
+              const SizedBox(height: QSpace.lg),
+              FrostedGroup(children: [
+                SettingsRow(
+                  icon: CupertinoIcons.star_fill,
+                  iconColor: QColors.warn,
+                  title: 'Rate on the App Store',
+                  onTap: () => HapticFeedback.lightImpact(),
+                ),
+                SettingsRow(
+                  icon: CupertinoIcons.envelope_fill,
+                  iconColor: QColors.wellbeing,
+                  title: 'Contact support',
+                  value: 'kilarimohansai@gmail.com',
+                  onTap: () => HapticFeedback.lightImpact(),
+                ),
+              ]),
               const SizedBox(height: QSpace.xl),
               Center(
                 child: Text('Made with care in India', style: QType.caption),
               ),
-              const SizedBox(height: QSpace.xxl),
-            ]),
-          ),
-        ],
+              ]),
         ),
-      ),
+      ],
+    ),
     );
   }
 }
@@ -162,34 +151,25 @@ class _DocPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = MediaQuery.platformBrightnessOf(context);
-    return CupertinoPageScaffold(
+    return SettingsAmbientBackground(
+      child: AppScaffold(
+      title: title,
       backgroundColor: const Color(0x00000000),
-      child: GradientBackground(
-        gradient: QGradients.page(brightness),
-        child: CustomScrollView(
-        slivers: [
-          CupertinoSliverNavigationBar(
-            previousPageTitle: 'About',
-            largeTitle: Text(title),
-            backgroundColor: const Color(0x00000000),
-            border: null,
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(QSpace.lg),
-              child: Text(
-                body,
-                style: QType.body.copyWith(
-                  color: QColors.label.resolveFrom(context),
-                  height: 1.4,
-                ),
-              ),
+      transitionBetweenRoutes: true,
+      slivers: [
+        SliverPagePadding(
+          margin: const EdgeInsets.symmetric(horizontal: QSpace.lg),
+          top: QSpace.xs,
+          child: Text(
+            body,
+            style: QType.body.copyWith(
+              color: QColors.label.resolveFrom(context),
+              height: 1.4,
             ),
           ),
-        ],
         ),
-      ),
+      ],
+    ),
     );
   }
 }

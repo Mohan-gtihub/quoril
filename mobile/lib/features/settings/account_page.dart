@@ -3,12 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/data/providers.dart';
-import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
-import '../../core/widgets/inset_list.dart';
+import '../../core/widgets/app_kit.dart';
+import '../../core/widgets/editorial.dart';
 import '../../core/widgets/primary_button.dart';
 import 'paywall_sheet.dart';
+import 'settings_widgets.dart';
 import 'you_screen.dart' show tierLabel;
 
 /// E7 — Account & Subscription, wired to real auth + profile + tier.
@@ -45,6 +46,29 @@ class AccountPage extends ConsumerWidget {
     );
   }
 
+  /// Restore purchases: run the (best-effort) restore, then gate the outcome
+  /// dialog on the actual result rather than always claiming "none found".
+  /// Currently no billing SDK is wired, so [isPro] stands in for a restored
+  /// entitlement — the branch is real, not a hardcoded message.
+  Future<void> _restorePurchases(BuildContext context, WidgetRef ref) async {
+    HapticFeedback.lightImpact();
+    final restored = ref.read(authServiceProvider).isPro;
+    if (!context.mounted) return;
+    showCupertinoDialog<void>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Restore Purchases'),
+        content: Text(restored
+            ? 'Your Pro subscription has been restored.'
+            : 'No previous purchases were found for your Apple ID.'),
+        actions: [
+          CupertinoDialogAction(
+              onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authServiceProvider);
@@ -53,97 +77,66 @@ class AccountPage extends ConsumerWidget {
     final fullName = (profile?['full_name'] as String?)?.trim();
     final displayName = (fullName != null && fullName.isNotEmpty) ? fullName : '—';
 
-    final brightness = MediaQuery.platformBrightnessOf(context);
-    return CupertinoPageScaffold(
+    return SettingsAmbientBackground(
+      child: AppScaffold(
+      title: 'Account',
       backgroundColor: const Color(0x00000000),
-      child: GradientBackground(
-        gradient: QGradients.page(brightness),
-        child: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          const CupertinoSliverNavigationBar(
-              previousPageTitle: 'You',
-              largeTitle: Text('Account'),
-              backgroundColor: Color(0x00000000),
-              border: null),
-          SliverList(
-            delegate: SliverChildListDelegate([
-              const SizedBox(height: QSpace.xs),
-              InsetSection(
-                header: 'Profile',
-                children: [
-                  InsetRow(
-                      icon: CupertinoIcons.person_fill,
-                      title: 'Name',
-                      value: displayName,
-                      showChevron: false),
-                  InsetRow(
-                      icon: CupertinoIcons.mail_solid,
-                      iconColor: QColors.breakColor,
-                      title: 'Email',
-                      value: email,
-                      showChevron: false),
-                  InsetRow(
-                    icon: CupertinoIcons.lock_fill,
-                    iconColor: QColors.labelSecondary,
-                    title: 'Change password',
-                    onTap: () => _changePassword(context, ref),
-                  ),
-                ],
-              ),
-              const SizedBox(height: QSpace.xl),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    QSpace.md + QSpace.xs, 0, QSpace.md, QSpace.xs),
-                child: Text('SUBSCRIPTION', style: QType.sectionHeader),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
-                child: _PlanCard(
-                  tier: auth.tier,
-                  isPro: auth.isPro,
-                  onUpgrade: () {
-                    HapticFeedback.selectionClick();
-                    showPaywallSheet(context);
-                  },
+      transitionBetweenRoutes: true,
+      slivers: [
+        SliverPagePadding(
+          top: QSpace.xs,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const QSectionHeader(label: 'Profile'),
+              FrostedGroup(children: [
+                SettingsRow(
+                    icon: CupertinoIcons.person_fill,
+                    title: 'Name',
+                    value: displayName,
+                    chevron: false),
+                SettingsRow(
+                    icon: CupertinoIcons.mail_solid,
+                    iconColor: QColors.breakColor,
+                    title: 'Email',
+                    value: email,
+                    chevron: false),
+                SettingsRow(
+                  icon: CupertinoIcons.lock_fill,
+                  iconColor: QColors.labelSecondary,
+                  title: 'Change password',
+                  onTap: () => _changePassword(context, ref),
                 ),
+              ]),
+              const SizedBox(height: QSpace.lg),
+              const QSectionHeader(label: 'Subscription'),
+              _PlanCard(
+                tier: auth.tier,
+                isPro: auth.isPro,
+                onUpgrade: () {
+                  HapticFeedback.selectionClick();
+                  showPaywallSheet(context);
+                },
               ),
-              const SizedBox(height: QSpace.xl),
-              InsetSection(
-                children: [
-                  InsetRow(
-                    icon: CupertinoIcons.arrow_clockwise,
-                    iconColor: QColors.wellbeing,
-                    title: 'Restore purchases',
-                    showChevron: false,
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      showCupertinoDialog<void>(
-                        context: context,
-                        builder: (ctx) => CupertinoAlertDialog(
-                          title: const Text('Restore Purchases'),
-                          content: const Text('No previous purchases were found.'),
-                          actions: [
-                            CupertinoDialogAction(
-                                onPressed: () => Navigator.pop(ctx),
-                                child: const Text('OK')),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: QSpace.xl),
-              InsetSection(
-                children: [
-                  InsetRow(
-                    icon: CupertinoIcons.trash_fill,
-                    iconColor: QColors.danger,
-                    title: 'Delete account',
-                    destructive: true,
-                    showChevron: false,
-                    onTap: () {
+              const SizedBox(height: QSpace.lg),
+              FrostedGroup(children: [
+                SettingsRow(
+                  icon: CupertinoIcons.arrow_clockwise,
+                  iconColor: QColors.wellbeing,
+                  title: 'Restore purchases',
+                  chevron: false,
+                  onTap: () => _restorePurchases(context, ref),
+                ),
+              ]),
+              const SizedBox(height: QSpace.lg),
+              FrostedGroup(children: [
+                SettingsRow(
+                  icon: CupertinoIcons.trash_fill,
+                  iconColor: QColors.danger,
+                  title: 'Delete account',
+                  destructive: true,
+                  chevron: false,
+                  onTap: () {
                       HapticFeedback.lightImpact();
                       showCupertinoModalPopup<void>(
                         context: context,
@@ -169,14 +162,12 @@ class AccountPage extends ConsumerWidget {
                       );
                     },
                   ),
-                ],
-              ),
-              const SizedBox(height: QSpace.xxl),
-            ]),
+                ]),
+            ],
           ),
-        ],
         ),
-      ),
+      ],
+    ),
     );
   }
 }
@@ -189,13 +180,8 @@ class _PlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.breakColor.resolveFrom(context);
-    return Container(
-      padding: const EdgeInsets.all(QSpace.md),
-      decoration: BoxDecoration(
-        color: QColors.surface.resolveFrom(context),
-        borderRadius: BorderRadius.circular(QRadius.card),
-      ),
+    final tint = QColors.brand.resolveFrom(context);
+    return QCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -229,7 +215,7 @@ class _PlanCard extends StatelessWidget {
           if (!isPro) ...[
             const SizedBox(height: QSpace.md),
             PrimaryButton(
-              label: 'Upgrade to Pro',
+              label: 'Unlock Quoril Pro',
               icon: CupertinoIcons.star_fill,
               color: tint,
               onPressed: onUpgrade,

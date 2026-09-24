@@ -20,6 +20,7 @@ class GlassPanel extends StatelessWidget {
     this.borderAlpha = 0.24,
     this.onTap,
     this.shadow = true,
+    this.onDark = true,
   });
 
   final Widget child;
@@ -33,20 +34,26 @@ class GlassPanel extends StatelessWidget {
   final VoidCallback? onTap;
   final bool shadow;
 
+  /// When the panel sits over a *dark* surface (e.g. the ember gradient), the
+  /// specular sheen is white. Set false when it sits on a light grouped
+  /// background so the glass uses a dark scrim instead of an invisible
+  /// white-on-white frost.
+  final bool onDark;
+
   @override
   Widget build(BuildContext context) {
+    // Adaptive sheen: white specular over dark surfaces, a subtle dark scrim in
+    // light contexts — so the glass is visible in BOTH modes.
+    final brightness =
+        MediaQuery.maybeOf(context)?.platformBrightness ?? Brightness.light;
+    final overDark = onDark || brightness == Brightness.dark;
+    final sheen = overDark ? CupertinoColors.white : CupertinoColors.black;
+    final borderColor = overDark ? CupertinoColors.white : CupertinoColors.black;
+
     final panel = DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
-        boxShadow: shadow
-            ? [
-                BoxShadow(
-                  color: CupertinoColors.black.withValues(alpha: 0.22),
-                  blurRadius: 24,
-                  offset: const Offset(0, 12),
-                ),
-              ]
-            : null,
+        boxShadow: shadow ? QElevation.raised(context) : null,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(radius),
@@ -61,15 +68,15 @@ class GlassPanel extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  CupertinoColors.white.withValues(alpha: fillAlpha + 0.08),
-                  CupertinoColors.white.withValues(alpha: fillAlpha),
-                  CupertinoColors.white.withValues(alpha: fillAlpha - 0.04),
+                  sheen.withValues(alpha: fillAlpha + 0.08),
+                  sheen.withValues(alpha: fillAlpha),
+                  sheen.withValues(alpha: (fillAlpha - 0.04).clamp(0.0, 1.0)),
                 ],
                 stops: const [0.0, 0.45, 1.0],
               ),
               border: Border.all(
-                color: CupertinoColors.white.withValues(alpha: borderAlpha),
-                width: 1,
+                color: borderColor.withValues(alpha: borderAlpha),
+                width: 0.66,
               ),
             ),
             child: child,
@@ -143,23 +150,47 @@ class AvatarStack extends StatelessWidget {
   }
 }
 
-/// Centered empty state: symbol + line + optional action.
+/// Centered empty state: a symbol in a soft tinted disc, a title line, an
+/// optional message, and an optional action. Pass a section [accent] to tint
+/// the symbol + its disc with that screen's accent (defaults to neutral so it
+/// stays quiet unless a screen opts in).
 class EmptyState extends StatelessWidget {
-  const EmptyState({super.key, required this.icon, required this.title, this.message, this.action});
+  const EmptyState({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.message,
+    this.action,
+    this.accent,
+  });
   final IconData icon;
   final String title;
   final String? message;
   final Widget? action;
 
+  /// Optional section accent for the symbol + its disc.
+  final Color? accent;
+
   @override
   Widget build(BuildContext context) {
+    final tinted = accent != null;
+    final c = (accent ?? QColors.labelTertiary).resolveFrom(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(QSpace.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: QColors.labelTertiary.resolveFrom(context)),
+            Container(
+              width: 72,
+              height: 72,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: c.withValues(alpha: tinted ? 0.12 : 0.10),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 34, color: c),
+            ),
             const SizedBox(height: QSpace.md),
             Text(title, style: QType.title3, textAlign: TextAlign.center),
             if (message != null) ...[
@@ -194,7 +225,18 @@ class QChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[Icon(icon, size: 13, color: c), const SizedBox(width: 4)],
-          Text(label, style: QType.footnote.copyWith(color: c, fontWeight: FontWeight.w600)),
+          // Flexible + ellipsis so the pill shrinks gracefully inside a tight
+          // parent (e.g. a half-width KPI tile) instead of overflowing; in an
+          // unbounded row it still sizes to its full intrinsic width.
+          Flexible(
+            child: Text(
+              label,
+              style: QType.footnote.copyWith(color: c, fontWeight: FontWeight.w600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+            ),
+          ),
         ],
       ),
     );

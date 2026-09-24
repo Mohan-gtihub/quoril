@@ -55,6 +55,11 @@ const config: Config = {
           DEFAULT: v("--c-brand"),
           soft: "rgb(var(--c-brand) / 0.14)",
         },
+        // Apple-blue accent for primary CTAs and inline links
+        accent: {
+          DEFAULT: v("--c-accent"),
+          soft: "rgb(var(--c-accent) / 0.14)",
+        },
       },
       borderRadius: {
         tile: "24px",
@@ -69,8 +74,22 @@ const config: Config = {
         glow: "0 0 0 1px rgb(var(--c-brand) / 0.4), 0 8px 40px -8px rgb(var(--c-brand) / 0.45)",
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-        heading: ["var(--font-poppins)", "var(--font-inter)", "sans-serif"],
+        sans: [
+          "var(--font-inter)",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "SF Pro Text",
+          "system-ui",
+          "sans-serif",
+        ],
+        heading: [
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "SF Pro Display",
+          "var(--font-poppins)",
+          "var(--font-inter)",
+          "sans-serif",
+        ],
         // handwriting accent kept for the light theme's character
         hand: ["var(--font-handwriting)", "cursive"],
       },

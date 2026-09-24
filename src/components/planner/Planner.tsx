@@ -13,7 +13,6 @@ import type { Task } from '@/types/database'
 import { CreateTaskModal } from './CreateTaskModal'
 import { TaskDetailsPanel } from './TaskDetailsPanel'
 import { TaskCard } from './TaskCard'
-import { TodayColumn } from './TodayColumn'
 import { PlannerHeader } from './PlannerHeader'
 import { usePlannerStore } from '@/store/plannerStore'
 import { isSameDay, startOfToday, format } from 'date-fns'
@@ -30,7 +29,11 @@ interface ColumnDef {
     color: string
 }
 
-// -- Sub-Component for Droppable Column --
+// -- Single, unified column shell --------------------------------------------
+// One component renders every column so the four columns read as one system
+// (they used to be two divergent shells side-by-side, which looked broken).
+// "Today" is an accent variant: wider, lime dot + hairline, and a sticky
+// Start-focus footer. Everything else is the quiet neutral tile.
 function BoardColumn({
     column,
     tasks,
@@ -46,14 +49,17 @@ function BoardColumn({
     onTaskComplete: (id: string, col: TaskColumn) => void
     progress?: number
 }) {
-    const { setNodeRef } = useDroppable({ id: column.id })
+    // `isOver` drives the drop-target highlight — without it a drag gave no
+    // feedback about where it would land, a big part of why it "felt broken".
+    const { setNodeRef, isOver } = useDroppable({ id: column.id })
     const { hideEstDoneTimes } = useSettingsStore()
 
     const isToday = column.id === 'today'
+    const isDone = column.id === 'done'
     const count = tasks.length
     const totalMinutes = tasks.reduce((sum, t) => sum + (t.estimated_minutes || 0), 0)
-    // Use passed progress or fallback
     const displayProgress = progress ?? Math.min(100, count * 10)
+    const showProgress = column.id === 'this_week' || column.id === 'today'
 
     const formatTime = (minutes: number) => {
         if (minutes === 0) return '0m'
@@ -65,36 +71,39 @@ function BoardColumn({
     return (
         <div
             ref={setNodeRef}
-            className={`flex flex-col h-full rounded-[var(--radius-tile)] transition-colors duration-200 flex-shrink-0 border border-[var(--border-default)] bg-[var(--bg-card)] ${isToday ? 'w-80 lg:w-96 min-w-[280px]' : 'w-64 lg:w-72 min-w-[240px]'
-                }`}
+            className={[
+                'group/col flex flex-col h-full flex-shrink-0 overflow-hidden',
+                'rounded-[var(--radius-tile)] border bg-[var(--bg-card)]',
+                'transition-[box-shadow,border-color,transform] duration-200',
+                isToday
+                    ? 'w-80 lg:w-96 min-w-[288px] border-[var(--accent-primary)]/25 shadow-[var(--shadow-soft)]'
+                    : 'w-64 lg:w-72 min-w-[248px] border-[var(--border-default)]',
+                // Drop-target affordance: a clear ring + faint accent wash.
+                isOver ? 'ring-2 ring-[var(--accent-primary)]/50 border-transparent' : '',
+            ].join(' ')}
         >
-            {/* Column Header */}
-            <div className="px-5 pt-5 pb-4">
-                <div className="flex items-center justify-between">
+            {/* Today gets a slim accent hairline along the top edge. */}
+            {isToday && <div className="h-[3px] w-full bg-[var(--accent-primary)] flex-shrink-0" />}
+
+            {/* Header */}
+            <div className="px-4 pt-4 pb-3 flex-shrink-0">
+                <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${column.color}`}></div>
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${column.color}`} />
                         <div className="min-w-0">
                             <h2 className="text-[15px] font-semibold leading-none tracking-tight truncate text-[var(--text-primary)]">{column.title}</h2>
                             <p className="text-[11px] font-medium truncate text-[var(--text-muted)] mt-1.5">{column.subtitle}</p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        {column.id === 'done' ? (
-                            !hideEstDoneTimes && (
-                                <span className="text-[11px] font-semibold tabular-nums text-[var(--text-muted)]">
-                                    {count} done
-                                </span>
-                            )
-                        ) : (
-                            !hideEstDoneTimes && totalMinutes > 0 && (
-                                <span className="text-[11px] font-semibold tabular-nums text-[var(--text-muted)]">
-                                    {formatTime(totalMinutes)}
-                                </span>
-                            )
-                        )}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-[11px] font-semibold tabular-nums text-[var(--text-muted)]">
+                            {isDone
+                                ? `${count} done`
+                                : (!hideEstDoneTimes && totalMinutes > 0 ? formatTime(totalMinutes) : count || '')}
+                        </span>
 
-                        {column.id !== 'done' && (
+                        {!isDone && (
                             <button
                                 onClick={() => setShowCreateModal({ column: column.id, position: 'top' })}
                                 className="w-7 h-7 rounded-full bg-[var(--bg-hover)] hover:bg-[var(--bg-hover-strong)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
@@ -106,115 +115,120 @@ function BoardColumn({
                     </div>
                 </div>
 
-                {/* Progress Bar for specific columns */}
-                {(column.id === 'this_week' || column.id === 'today') && (
-                    <div className="w-full h-1.5 rounded-full overflow-hidden mt-4 bg-[var(--bg-hover)]">
+                {showProgress && (
+                    <div className="w-full h-1.5 rounded-full overflow-hidden mt-3.5 bg-[var(--track)]">
                         <motion.div
-                            className={`h-full rounded-full ${isToday ? 'bg-[var(--accent-primary)]' : 'bg-[var(--text-muted)]'}`}
+                            className={`h-full rounded-full ${isToday ? 'bg-[var(--accent-primary)]' : 'bg-[var(--text-tertiary)]'}`}
                             initial={{ width: 0 }}
                             animate={{ width: `${displayProgress}%` }}
                             transition={{ duration: 0.6, ease: 'easeOut' }}
                         />
                     </div>
                 )}
-
-                {/* Blitz Button for Today */}
-                {isToday && tasks.length > 0 && (
-                    <button
-                        onClick={() => {
-                            const topTask = tasks[0];
-                            if (topTask) {
-                                onBlitz(topTask)
-                            }
-                        }}
-                        className="w-full mt-4 py-2.5 text-sm font-semibold rounded-full flex items-center justify-center gap-2 transition-all bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105 active:scale-95"
-                    >
-                        Start focus
-                    </button>
-                )}
             </div>
 
-            {/* Task List */}
-            <div className="flex-1 overflow-y-auto px-3 pb-3 custom-scrollbar flex flex-col">
+            {/* Task list — a `gap`-based flex column so spacing is uniform and
+                never doubles/collapses. */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3 custom-scrollbar flex flex-col">
                 <SortableContext
                     id={column.id}
                     items={tasks.map(t => t.id)}
                     strategy={verticalListSortingStrategy}
                 >
-                    {column.id === 'done' ? (
-                        // DONE COLUMN: O(n) Grouping Algorithm
+                    {isDone ? (
                         (() => {
-                            const groupedByDay = tasks
-                                .reduce<Record<string, Task[]>>((acc, task) => {
-                                    // Fall back to the stable created_at (never updated_at, which
-                                    // drifts on every edit) if completed_at is missing.
-                                    const rawDate = task.completed_at || task.created_at || new Date().toISOString()
-                                    const dateObj = new Date(rawDate)
-                                    const dayKey = dateObj.toDateString()
-                                    if (!acc[dayKey]) acc[dayKey] = []
-                                    acc[dayKey].push(task)
-                                    return acc
-                                }, {})
+                            const groupedByDay = tasks.reduce<Record<string, Task[]>>((acc, task) => {
+                                // Stable created_at fallback (never updated_at, which drifts on edit).
+                                const rawDate = task.completed_at || task.created_at || new Date().toISOString()
+                                const dayKey = new Date(rawDate).toDateString()
+                                    ; (acc[dayKey] ||= []).push(task)
+                                return acc
+                            }, {})
 
                             return Object.entries(groupedByDay)
                                 .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
                                 .map(([day, dayTasks]) => {
                                     const date = new Date(day)
-                                    const isToday = isSameDay(date, new Date())
-
+                                    const dayIsToday = isSameDay(date, new Date())
                                     return (
                                         <div key={day}>
-                                            <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--text-tertiary)] mt-5 mb-2 px-1">
+                                            <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--text-tertiary)] mt-3 mb-2 px-1">
                                                 <span>
-                                                    {isToday ? 'Today' : date.toLocaleDateString(undefined, { weekday: 'short' })},
-                                                    {' '}
+                                                    {dayIsToday ? 'Today' : date.toLocaleDateString(undefined, { weekday: 'short' })}
+                                                    {', '}
                                                     {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                                 </span>
                                                 <span className="text-[var(--text-muted)] tabular-nums font-medium">
                                                     {dayTasks.length} {dayTasks.length === 1 ? 'task' : 'tasks'}
                                                 </span>
                                             </div>
-
                                             {dayTasks.map(task => (
-                                                <div key={task.id}>
-                                                    <TaskCard
-                                                        task={task}
-                                                        column={column.id}
-                                                        onComplete={() => onTaskComplete(task.id, column.id)}
-                                                    />
-                                                </div>
+                                                <TaskCard
+                                                    key={task.id}
+                                                    task={task}
+                                                    column={column.id}
+                                                    onComplete={() => onTaskComplete(task.id, column.id)}
+                                                />
                                             ))}
                                         </div>
                                     )
                                 })
                         })()
                     ) : (
-                        // OTHER COLUMNS: Standard Grid
                         tasks.map((task) => (
-                            <div key={task.id}>
-                                <TaskCard
-                                    task={task}
-                                    column={column.id}
-                                    onComplete={() => onTaskComplete(task.id, column.id)}
-                                />
-                            </div>
+                            <TaskCard
+                                key={task.id}
+                                task={task}
+                                column={column.id}
+                                onComplete={() => onTaskComplete(task.id, column.id)}
+                            />
                         ))
                     )}
                 </SortableContext>
 
-                {/* Empty State / Add Button */}
-                {column.id !== 'done' && (
-                    <div className="mt-2">
-                        <button
-                            onClick={() => setShowCreateModal({ column: column.id, position: 'bottom' })}
-                            className="w-full py-2.5 rounded-[var(--radius-tile)] text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Plus className="w-3.5 h-3.5" />
-                            Add task
-                        </button>
+                {/* Empty state — becomes an active drop zone while dragging over. */}
+                {count === 0 && (
+                    <div
+                        className={[
+                            'flex-1 min-h-[160px] rounded-[var(--radius-card)] border border-dashed',
+                            'flex flex-col items-center justify-center text-center px-4 transition-colors',
+                            isOver
+                                ? 'border-[var(--accent-primary)]/50 bg-[var(--accent-primary)]/[0.05]'
+                                : 'border-[var(--border-default)]',
+                        ].join(' ')}
+                    >
+                        <p className="text-sm font-semibold text-[var(--text-tertiary)]">
+                            {isDone ? 'Nothing finished yet' : 'Nothing here'}
+                        </p>
+                        <p className="text-xs text-[var(--text-muted)] mt-1">
+                            {isDone ? 'Completed tasks land here' : 'Drop a task or add one'}
+                        </p>
                     </div>
                 )}
+
+                {/* Ghost add-row (non-Done, non-empty). */}
+                {!isDone && count > 0 && (
+                    <button
+                        onClick={() => setShowCreateModal({ column: column.id, position: 'bottom' })}
+                        className="w-full mt-1 py-2.5 rounded-[var(--radius-card)] text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors flex items-center justify-center gap-2"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add task
+                    </button>
+                )}
             </div>
+
+            {/* Today footer — sticky Start-focus CTA (the accent lives here). */}
+            {isToday && count > 0 && (
+                <div className="p-3 border-t border-[var(--border-default)] flex-shrink-0">
+                    <button
+                        onClick={() => tasks[0] && onBlitz(tasks[0])}
+                        className="w-full py-2.5 text-sm font-semibold rounded-full flex items-center justify-center gap-2 transition-all bg-[var(--accent-primary)] text-[var(--accent-contrast)] hover:brightness-105 active:scale-[0.98]"
+                    >
+                        Start focus
+                    </button>
+                </div>
+            )}
         </div>
     )
 }
@@ -437,42 +451,26 @@ export function Planner() {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                {/* Board Columns container */}
+                {/* Board columns — one shell for all four, so they read as a set. */}
                 <div className="flex-1 overflow-x-auto overflow-y-hidden px-6 md:px-10 pb-6">
-                    <div className="flex h-full gap-4">
-                        {columns_def.map((col) => {
-                            if (col.id === 'today') {
-                                return (
-                                    <div key={col.id} className="min-w-[280px] w-80 lg:w-96 flex-shrink-0">
-                                        <TodayColumn
-                                            title={col.title}
-                                            tasks={tasksByColumn[col.id]}
-                                            columnId={col.id}
-                                            onTaskComplete={(id) => handleTaskComplete(id, col.id)}
-                                            onStartNow={handleBlitz}
-                                            onAddTask={() => setShowCreateModal({ column: 'today', position: 'top' })}
-                                        />
-                                    </div>
-                                )
-                            }
-                            return (
-                                <BoardColumn
-                                    key={col.id}
-                                    column={col}
-                                    tasks={tasksByColumn[col.id]}
-                                    onBlitz={handleBlitz}
-                                    setShowCreateModal={setShowCreateModal}
-                                    onTaskComplete={handleTaskComplete}
-                                    progress={progressMap[col.id]}
-                                />
-                            )
-                        })}
+                    <div className="flex h-full gap-4 items-stretch">
+                        {columns_def.map((col) => (
+                            <BoardColumn
+                                key={col.id}
+                                column={col}
+                                tasks={tasksByColumn[col.id]}
+                                onBlitz={handleBlitz}
+                                setShowCreateModal={setShowCreateModal}
+                                onTaskComplete={handleTaskComplete}
+                                progress={progressMap[col.id]}
+                            />
+                        ))}
                     </div>
                 </div>
 
-                <DragOverlay>
+                <DragOverlay dropAnimation={null}>
                     {activeTask ? (
-                        <div className={`${activeColumn === 'today' ? 'w-80 lg:w-96' : 'w-72'} opacity-90 cursor-grabbing`}>
+                        <div className={`${activeColumn === 'today' ? 'w-80 lg:w-96' : 'w-64 lg:w-72'} rotate-[1.5deg] cursor-grabbing shadow-[var(--shadow-lift)] rounded-[var(--radius-tile)]`}>
                             <TaskCard
                                 task={activeTask}
                                 column={activeColumn}

@@ -4,8 +4,11 @@ import {
     ArrowLeft, Play, Check, Palette, Timer, Target,
     Maximize2, Bell, Send, ShieldCheck, CheckCircle2, Plus, Minus,
     RefreshCw, Download, RotateCw, User as UserIcon, Mail, Lock,
-    LogOut, Flame, Crown, Sparkles
+    LogOut, Flame, Crown, Sparkles, Wand2, Plug
 } from 'lucide-react'
+import { AssistSettings } from '@/components/settings/AssistSettings'
+import { InsightSharingSection } from '@/components/settings/InsightSharingSection'
+import { IntegrationsSettings } from '@/components/settings/IntegrationsSettings'
 import { useAppUpdate } from '@/hooks/useAppUpdate'
 import { platform as appPlatform } from '@/services/platform'
 import { APP_NAME, APP_VERSION } from '@/constants'
@@ -209,6 +212,8 @@ const SECTIONS = [
     { id: 'focus', label: 'Focus & Breaks', icon: Timer, desc: 'Tune the length of your focus sprints and breaks.' },
     { id: 'goals', label: 'Daily Goal', icon: Target, desc: 'Set your daily focus target and how it’s celebrated.' },
     { id: 'reminders', label: 'Reminders', icon: Bell, desc: 'Gentle cues to keep your attention from drifting.' },
+    { id: 'assist', label: 'Assist', icon: Wand2, desc: 'Optional, opt-in suggestions that surface one at a time and never change your work on their own.' },
+    { id: 'integrations', label: 'Integrations', icon: Plug, desc: 'Connect Slack to turn messages into Quoril tasks.' },
     { id: 'notifications', label: 'Notifications', icon: Send, desc: 'System notifications and sounds for timers and tasks.' },
     { id: 'superfocus', label: 'Super Focus', icon: Maximize2, desc: 'Collapse the app to a minimal floating pill.' },
     { id: 'about', label: 'App Tracking', icon: ShieldCheck, desc: 'How Quoril records the apps you use.' },
@@ -566,6 +571,8 @@ export function Settings() {
                             >
                                 {activeSection.id === 'account' && <AccountSection />}
 
+                                {activeSection.id === 'assist' && <AssistSettings />}
+
                                 {activeSection.id === 'appearance' && (
                                     <>
                                         <Group title="Theme">
@@ -604,9 +611,18 @@ export function Settings() {
                                                 value={settings.aiInsightsEnabled}
                                                 onChange={(v: boolean) => settings.updateSettings({ aiInsightsEnabled: v })}
                                             />
+                                            <ToggleRow
+                                                label="AI-written planning explanations"
+                                                description="Let the planner explain a day's fit in one line. Only five totals are sent (planned minutes, open minutes, windows, blocks, adjustment) — never task titles, notes, apps, or calendar names. Planning still works locally when off."
+                                                value={settings.planningAIExplanationsEnabled}
+                                                onChange={(v: boolean) => settings.updateSettings({ planningAIExplanationsEnabled: v })}
+                                            />
                                         </Group>
+                                        <InsightSharingSection />
                                     </>
                                 )}
+
+                                {activeSection.id === 'integrations' && <IntegrationsSettings />}
 
                                 {activeSection.id === 'focus' && (
                                     <Group title="Pomodoro">

@@ -49,7 +49,9 @@ class InsetSection extends StatelessWidget {
 }
 
 /// A single inset-list row: leading icon, title, optional value/trailing, tap.
-class InsetRow extends StatelessWidget {
+/// Tappable rows flash a native touch-down highlight — the tactile feedback
+/// that separates a real iOS list from a Flutter list.
+class InsetRow extends StatefulWidget {
   const InsetRow({
     super.key,
     this.icon,
@@ -60,6 +62,7 @@ class InsetRow extends StatelessWidget {
     this.onTap,
     this.showChevron = true,
     this.destructive = false,
+    this.centered = false,
   });
 
   final IconData? icon;
@@ -71,34 +74,57 @@ class InsetRow extends StatelessWidget {
   final bool showChevron;
   final bool destructive;
 
+  /// Centered title with no icon/chevron — for Sign Out / Delete style rows.
+  final bool centered;
+
+  @override
+  State<InsetRow> createState() => _InsetRowState();
+}
+
+class _InsetRowState extends State<InsetRow> {
+  bool _pressed = false;
+
   @override
   Widget build(BuildContext context) {
-    final titleColor =
-        destructive ? QColors.danger.resolveFrom(context) : QColors.label.resolveFrom(context);
+    final titleColor = widget.destructive
+        ? QColors.danger.resolveFrom(context)
+        : QColors.label.resolveFrom(context);
+    final titleStyle = QType.body.copyWith(
+      color: titleColor,
+      fontWeight: widget.centered ? FontWeight.w400 : FontWeight.w400,
+    );
+    final title = widget.centered
+        ? Center(child: Text(widget.title, style: titleStyle))
+        : Expanded(child: Text(widget.title, style: titleStyle));
+
     final row = Padding(
       padding: const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: 11),
       child: Row(
         children: [
-          if (icon != null) ...[
+          if (widget.icon != null) ...[
             Container(
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: (iconColor ?? QColors.tint).resolveFrom(context),
-                borderRadius: BorderRadius.circular(6),
+                color: (widget.iconColor ?? QColors.tint).resolveFrom(context),
+                borderRadius: BorderRadius.circular(QRadius.iconTile),
               ),
-              child: Icon(icon, size: 17, color: CupertinoColors.white),
+              child: Icon(widget.icon, size: 17, color: CupertinoColors.white),
             ),
             const SizedBox(width: QSpace.sm),
           ],
-          Expanded(child: Text(title, style: QType.body.copyWith(color: titleColor))),
-          if (value != null)
+          title,
+          if (widget.value != null)
             Padding(
               padding: const EdgeInsets.only(left: QSpace.xs),
-              child: Text(value!, style: QType.body.copyWith(color: QColors.labelSecondary)),
+              child: Text(widget.value!,
+                  style: QType.body.copyWith(color: QColors.labelSecondary)),
             ),
-          ?trailing,
-          if (onTap != null && showChevron && trailing == null)
+          ?widget.trailing,
+          if (widget.onTap != null &&
+              widget.showChevron &&
+              widget.trailing == null &&
+              !widget.centered)
             Padding(
               padding: const EdgeInsets.only(left: QSpace.xxs),
               child: Icon(CupertinoIcons.chevron_right,
@@ -107,7 +133,20 @@ class InsetRow extends StatelessWidget {
         ],
       ),
     );
-    if (onTap == null) return row;
-    return GestureDetector(onTap: onTap, behavior: HitTestBehavior.opaque, child: row);
+    if (widget.onTap == null) return row;
+    return GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 90),
+        color: _pressed
+            ? QColors.fill.resolveFrom(context).withValues(alpha: 0.5)
+            : const Color(0x00000000),
+        child: row,
+      ),
+    );
   }
 }

@@ -36,6 +36,8 @@ import {
     validateCloudRows,
     validateExternalUrl,
     validateFocusSessionRow,
+    validateCalendarEventRow,
+    validateCalendarEventUpdate,
     validateFocusSessionUpdate,
     validateId,
     validateListRow,
@@ -145,7 +147,7 @@ let pendingDeepLink: string | null = null
 function parseDeepLink(raw: string): URL | null {
     try {
         const url = new URL(raw)
-        return url.protocol === 'quoril:' && ['auth', 'resume', 'focus'].includes(url.hostname)
+        return url.protocol === 'quoril:' && ['auth', 'resume', 'focus', 'slack'].includes(url.hostname)
             ? url
             : null
     } catch {
@@ -297,6 +299,14 @@ app.on('web-contents-created', (_event, contents) => {
 /* ---------------- WINDOW ---------------- */
 
 function createWindow() {
+    // Never spawn a duplicate. If a main window already exists, restore/focus it
+    // instead — this keeps stray callers (activate, tray, deep links) from piling
+    // up multiple identical windows.
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        restoreWindow()
+        return
+    }
+
     // Size the window to fit the current display's work area so it works on
     // small laptops (1366x768) up to large monitors without overflowing.
     const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize
@@ -911,6 +921,24 @@ const display = screen.getDisplayMatching(mainWindow.getBounds())
         safe(() => dbOps.saveSession(validateFocusSessionRow(s)))
     )
 
+    /* Calendar events (local-only schedule) */
+
+    ipcMain.handle('db:getCalendarEvents', (_, uid, from, to) =>
+        dbOps.getCalendarEvents(validateId(uid, 'user id'), assertString(from, 'from date'), assertString(to, 'to date'))
+    )
+
+    ipcMain.handle('db:saveCalendarEvent', (_, ev) =>
+        safe(() => dbOps.saveCalendarEvent(validateCalendarEventRow(ev)))
+    )
+
+    ipcMain.handle('db:updateCalendarEvent', (_, id, updates) =>
+        safe(() => dbOps.updateCalendarEvent(validateId(id, 'calendar event id'), validateCalendarEventUpdate(updates)))
+    )
+
+    ipcMain.handle('db:deleteCalendarEvent', (_, id) =>
+        safe(() => dbOps.deleteCalendarEvent(validateId(id, 'calendar event id')))
+    )
+
     /* Sync */
 
     ipcMain.handle('db:getPending', (_, table, limit?: number) => {
@@ -1118,6 +1146,11 @@ function safe(fn: () => any) {
 /* ---------------- APP ---------------- */
 
 app.whenReady().then(async () => {
+    // A second instance still resolves whenReady before app.quit() (called above
+    // when the lock was lost) tears the process down. Without this guard it would
+    // race ahead and createWindow(), leaking an orphan window on every relaunch.
+    if (!gotTheLock) return
+
     // Every feature reads through the local SQLite database, so continuing past a
     // failed init just turns one startup fault into a cascade of confusing
     // "Database not initialized" IPC errors in the renderer. Surface the real

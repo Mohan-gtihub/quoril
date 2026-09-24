@@ -10,9 +10,13 @@ import { FocusTimerPanel } from '../focus/FocusTimerPanel'
 import { BottomNav } from './BottomNav'
 import { NavToolbar } from './NavToolbar'
 import { platform } from '@/services/platform'
+import { RecommendationBanner } from '../automation/RecommendationBanner'
+import { CommandPalette } from '../ui/CommandPalette'
+import { useSlackDeepLink } from '@/hooks/useSlackDeepLink'
 
 export function Layout({ children }: LayoutProps) {
     const { showFocusPanel } = useFocusStore()
+    useSlackDeepLink()
 
     // Resize window when focus panel state changes
     useEffect(() => {
@@ -39,6 +43,7 @@ export function Layout({ children }: LayoutProps) {
     // Normal view
     return (
         <div className="flex flex-col h-full bg-transparent transition-colors duration-500">
+            <CommandPalette />
             <div className="flex flex-1 min-h-0 overflow-hidden">
                 <Sidebar />
                 <main className="flex-1 flex flex-col overflow-hidden min-h-0">
@@ -49,6 +54,7 @@ export function Layout({ children }: LayoutProps) {
                 </main>
             </div>
             <BottomNav />
+            <RecommendationBanner />
         </div>
     )
 }

@@ -6,6 +6,7 @@ import 'core/data/providers.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/sign_in_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/settings/theme_mode_provider.dart';
 import 'features/shell/app_shell.dart';
 
 Future<void> main() async {
@@ -17,7 +18,9 @@ Future<void> main() async {
   try {
     await Supabase.initialize(
       url: QConfig.supabaseUrl,
-      anonKey: QConfig.supabaseAnonKey,
+      // `publishableKey` supersedes the deprecated `anonKey`; the config value is
+      // the same publishable/anon key from the Supabase dashboard.
+      publishableKey: QConfig.supabaseAnonKey,
       authOptions: const FlutterAuthClientOptions(authFlowType: AuthFlowType.pkce),
     );
   } catch (e, st) {
@@ -26,16 +29,28 @@ Future<void> main() async {
   runApp(const ProviderScope(child: QuorilApp()));
 }
 
-class QuorilApp extends StatelessWidget {
+class QuorilApp extends ConsumerWidget {
   const QuorilApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final brightness = MediaQuery.maybeOf(context)?.platformBrightness ?? Brightness.light;
+  Widget build(BuildContext context, WidgetRef ref) {
+    // The Appearance setting can force light/dark; otherwise follow the OS.
+    final forced = ref.watch(themeModeProvider).forcedBrightness;
+    final brightness = forced ??
+        (MediaQuery.maybeOf(context)?.platformBrightness ?? Brightness.light);
     return CupertinoApp(
       title: 'Quoril',
       debugShowCheckedModeBanner: false,
       theme: brightness == Brightness.dark ? QTheme.dark : QTheme.light,
+      // When a mode is forced, override platformBrightness for the whole tree so
+      // screens that read it directly (the ember/page gradients) also flip.
+      builder: (context, child) {
+        if (forced == null) return child ?? const SizedBox.shrink();
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(platformBrightness: forced),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: const AuthGate(),
     );
   }

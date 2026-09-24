@@ -14,6 +14,11 @@ import { Settings } from '@/components/focus/Settings'
 import { Reports } from '@/components/reports/Reports'
 import { ActivityDashboard } from '@/components/dashboard/ActivityDashboard'
 import { ScreenTime } from '@/components/screentime/ScreenTime'
+import { CalendarScreen } from '@/components/calendar/CalendarScreen'
+import { InsightsScreen } from '@/components/insights/InsightsScreen'
+import { AttentionScreen } from '@/components/attention/AttentionScreen'
+import { DeepWorkScreen } from '@/components/deepwork/DeepWorkScreen'
+import { CalibrationScreen } from '@/components/calibration/CalibrationScreen'
 import { TitleBar } from '@/components/layout/TitleBar'
 import { useFocusStore } from '@/store/focusStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -332,8 +337,13 @@ function App() {
                                                     <Route path="/focus" element={<FocusMode />} />
                                                     <Route path="/settings" element={<Settings />} />
                                                     <Route path="/reports" element={<Reports />} />
+                                                    <Route path="/insights" element={<InsightsScreen />} />
+                                                    <Route path="/deep-work" element={<DeepWorkScreen />} />
+                                                    <Route path="/calibration" element={<CalibrationScreen />} />
+                                                    <Route path="/attention" element={<AttentionScreen />} />
                                                     <Route path="/activity" element={<ActivityDashboard />} />
                                                     <Route path="/screen-time" element={<ScreenTime />} />
+                                                    <Route path="/calendar" element={<CalendarScreen />} />
                                                     <Route path="/canvas" element={<Suspense fallback={null}><CanvasApp /></Suspense>} />
                                                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                                                 </Routes>

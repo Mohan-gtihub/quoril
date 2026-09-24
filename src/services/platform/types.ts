@@ -163,6 +163,14 @@ export interface CanvasPort {
   unfurlLink(url: string): Promise<{ url: string; title: string; description: string; image?: string; siteName?: string; fetchedAt?: number }>
 }
 
+export interface CalendarPort {
+  /** Events overlapping [fromISO, toISO). Local-only; empty on web. */
+  list(userId: string, fromISO: string, toISO: string): Promise<any[]>
+  save(ev: any): Promise<any>
+  update(id: string, patch: any): Promise<any>
+  remove(id: string): Promise<void>
+}
+
 export interface InsightsPort {
   /**
    * Turn an aggregated, privacy-safe report summary into structured suggestions.
@@ -189,4 +197,5 @@ export interface Platform {
   canvas: CanvasPort
   feedback: FeedbackPort
   insights: InsightsPort
+  calendar: CalendarPort
 }

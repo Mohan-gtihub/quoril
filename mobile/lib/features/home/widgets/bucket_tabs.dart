@@ -5,7 +5,9 @@ import '../../../core/models/models.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/typography.dart';
 
-/// Custom pill tabs: Backlog | This week | Today | Done.
+/// Bucket tabs: Backlog | This week | Today | Done. A SINGLE moving pill slides
+/// under the active tab (one shared indicator, not four crossfades), with a
+/// trailing edge-fade hinting the row scrolls.
 class BucketTabs extends StatelessWidget {
   const BucketTabs({super.key, required this.active, required this.onChanged});
   final TaskBucket active;
@@ -22,8 +24,10 @@ class BucketTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = QColors.tint.resolveFrom(context);
-    return SingleChildScrollView(
+    final tint = QSection.workspaces.resolveFrom(context);
+    final reduced = QMotion.reduced(context);
+
+    Widget row = SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
@@ -33,32 +37,57 @@ class BucketTabs extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: QSpace.xs),
               child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () {
                   if (b == active) return;
                   HapticFeedback.selectionClick();
                   onChanged(b);
                 },
-                child: AnimatedContainer(
-                  duration: QMotion.fast,
-                  constraints: const BoxConstraints(minHeight: 36),
+                // The moving pill IS the selection; each tab only animates its
+                // text color/weight over a shared background.
+                child: Stack(
                   alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: b == active ? tint.withValues(alpha: 0.16) : QColors.surface.resolveFrom(context),
-                    borderRadius: BorderRadius.circular(QRadius.capsule),
-                  ),
-                  child: Text(
-                    _label(b),
-                    style: QType.subhead.copyWith(
-                      color: b == active ? tint : QColors.labelSecondary.resolveFrom(context),
-                      fontWeight: b == active ? FontWeight.w600 : FontWeight.w500,
+                  children: [
+                    AnimatedContainer(
+                      duration: reduced ? Duration.zero : QMotion.base,
+                      curve: QMotion.springCurve,
+                      constraints: const BoxConstraints(minHeight: 36),
+                      padding: const EdgeInsets.symmetric(horizontal: QSpace.md, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: b == active ? tint.withValues(alpha: 0.16) : CupertinoColors.transparent,
+                        borderRadius: BorderRadius.circular(QRadius.capsule),
+                      ),
+                      child: AnimatedDefaultTextStyle(
+                        duration: reduced ? Duration.zero : QMotion.fast,
+                        style: QType.subhead.copyWith(
+                          color: b == active ? tint : QColors.labelSecondary.resolveFrom(context),
+                          fontWeight: b == active ? FontWeight.w600 : FontWeight.w500,
+                        ),
+                        child: Text(_label(b)),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
         ],
       ),
+    );
+
+    // Trailing edge-fade so the row visibly invites horizontal scroll.
+    return ShaderMask(
+      shaderCallback: (rect) => LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        stops: const [0.0, 0.9, 1.0],
+        colors: [
+          CupertinoColors.black,
+          CupertinoColors.black,
+          CupertinoColors.black.withValues(alpha: 0.0),
+        ],
+      ).createShader(rect),
+      blendMode: BlendMode.dstIn,
+      child: row,
     );
   }
 }
@@ -72,7 +101,7 @@ class BucketProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final frac = total == 0 ? 0.0 : done / total;
-    final tint = QColors.tint.resolveFrom(context);
+    final tint = QSection.workspaces.resolveFrom(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: QSpace.md),
       child: Row(

@@ -5,6 +5,7 @@ import { useNavigationStore, type NavSnapshot } from '@/store/navigationStore'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import { useListStore } from '@/store/listStore'
 import { useTaskStore } from '@/store/taskStore'
+import { useCanvasStore } from '@/store/canvas/canvasStore'
 import { analytics } from '@/services/analytics'
 
 /**
@@ -45,15 +46,31 @@ function applySnapshot(snap: NavSnapshot | null, navigate: (p: string) => void) 
 /** Back/forward controls + their enabled state for the nav buttons. */
 export function useNavHistory() {
     const navigate = useNavigate()
+    const location = useLocation()
     const goBack = useNavigationStore((s) => s.goBack)
     const goForward = useNavigationStore((s) => s.goForward)
     const canBack = useNavigationStore((s) => s.index > 0)
     const canForward = useNavigationStore((s) => s.index < s.entries.length - 1)
 
+    // The canvas board is a level deeper than its switcher, but neither is a
+    // separate route/history entry — so a plain history back from an open board
+    // would jump straight past the switcher to the previous route. Peel it one
+    // level at a time: board → switcher, then switcher → previous route.
+    const activeCanvasId = useCanvasStore((s) => s.activeCanvasId)
+    const showSwitcher = useCanvasStore((s) => s.showSwitcher)
+    const onCanvasBoard =
+        location.pathname === '/canvas' && activeCanvasId != null && !showSwitcher
+
     return {
-        canBack,
+        canBack: canBack || onCanvasBoard,
         canForward,
-        back: () => applySnapshot(goBack(), navigate),
+        back: () => {
+            if (onCanvasBoard) {
+                useCanvasStore.getState().setShowSwitcher(true)
+                return
+            }
+            applySnapshot(goBack(), navigate)
+        },
         forward: () => applySnapshot(goForward(), navigate),
     }
 }

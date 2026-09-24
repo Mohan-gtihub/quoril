@@ -230,7 +230,8 @@ export function TaskCard({ task, column, onComplete, draggable = true, disableTi
             {...attributes}
             {...listeners}
             className={cn(
-                "group rounded-[var(--radius-tile)] p-3.5 mb-2 transition-colors duration-200 border relative",
+                "group rounded-[var(--radius-card)] p-3.5 mb-2 transition-colors duration-200 border relative",
+                draggable && !isCompleted && "cursor-grab active:cursor-grabbing",
                 stateStyles
             )}
             style={style}

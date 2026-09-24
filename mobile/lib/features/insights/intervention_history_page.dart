@@ -7,7 +7,7 @@ import '../../core/theme/gradients.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/theme/typography.dart';
 import '../../core/widgets/common.dart';
-import '../../core/widgets/glass.dart';
+import '../../core/widgets/editorial.dart';
 
 /// Push page: full intervention (nudge) history for the week.
 class InterventionHistoryPage extends StatelessWidget {
@@ -58,46 +58,57 @@ class InterventionHistoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = Mock.interventions();
-
+    final sky = QSection.insights.resolveFrom(context);
     final brightness =
         MediaQuery.maybeOf(context)?.platformBrightness ?? Brightness.light;
+
     return CupertinoPageScaffold(
-      backgroundColor: QColors.bgGrouped.resolveFrom(context),
+      // Transparent so the faint sky ambient wash behind gives the frosted
+      // content cards something to refract.
+      backgroundColor: CupertinoColors.transparent,
       child: GradientBackground(
-        gradient: QGradients.page(brightness),
+        gradient: QGradients.ambient(sky, brightness),
         child: CustomScrollView(
         slivers: [
           CupertinoSliverNavigationBar(
             largeTitle: const Text('History'),
             previousPageTitle: 'Insights',
+            backgroundColor:
+                QColors.bgGrouped.resolveFrom(context).withValues(alpha: 0.7),
+            border: null,
+            transitionBetweenRoutes: true,
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(QSpace.md, QSpace.sm, QSpace.md, QSpace.xs),
-              child: GlassCard(
-                child: Row(
+              padding: const EdgeInsets.fromLTRB(
+                  QSpace.md, QSpace.md, QSpace.md, QSpace.xs),
+              child: QCard(
+                padding: const EdgeInsets.all(QSpace.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(CupertinoIcons.bell_fill,
-                        color: QColors.breakColor.resolveFrom(context), size: 22),
-                    const SizedBox(width: QSpace.sm),
-                    Expanded(
-                      child: RichText(
-                        text: TextSpan(
-                          style: QType.callout.copyWith(color: QColors.label.resolveFrom(context)),
-                          children: [
-                            const TextSpan(text: 'This week: '),
-                            TextSpan(
-                                text: '24 nudges',
-                                style: QType.callout.copyWith(fontWeight: FontWeight.w600)),
-                            const TextSpan(text: ' · '),
-                            TextSpan(
-                                text: '71% returned',
-                                style: QType.callout.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: QColors.wellbeing.resolveFrom(context))),
-                          ],
+                    Text('THIS WEEK', style: QType.eyebrow.copyWith(color: sky)),
+                    const SizedBox(height: QSpace.sm),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '24',
+                          style: QType.title1.copyWith(
+                            letterSpacing: -0.5,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: QSpace.xs),
+                        Text('nudges sent', style: QType.subhead),
+                        const Spacer(),
+                        QChip(
+                          icon: CupertinoIcons.arrow_uturn_left,
+                          label: '71% returned',
+                          color: QColors.wellbeing,
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -110,7 +121,7 @@ class InterventionHistoryPage extends StatelessWidget {
               child: EmptyState(
                 icon: CupertinoIcons.bell_slash,
                 title: 'No nudges yet',
-                message: 'Interventions will appear here as they happen.',
+                message: 'Your interventions will appear here.',
               ),
             )
           else
@@ -124,7 +135,7 @@ class InterventionHistoryPage extends StatelessWidget {
                     final oc = _outcome(it.outcome);
                     return Padding(
                       padding: const EdgeInsets.only(bottom: QSpace.sm),
-                      child: GlassCard(
+                      child: QCard(
                         child: Row(
                           children: [
                             Container(
@@ -155,7 +166,18 @@ class InterventionHistoryPage extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            Icon(oc.icon, color: oc.color(context), size: 22),
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(oc.icon,
+                                    color: oc.color(context), size: 22),
+                                const SizedBox(height: 2),
+                                Text(oc.label,
+                                    style: QType.caption2.copyWith(
+                                        color: oc.color(context),
+                                        fontWeight: FontWeight.w600)),
+                              ],
+                            ),
                           ],
                         ),
                       ),

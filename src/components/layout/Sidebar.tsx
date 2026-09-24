@@ -1,5 +1,5 @@
 ﻿import { useNavigate, useLocation } from 'react-router-dom'
-import { LayoutGrid, Settings, LogOut, BarChart3, Plus, Edit2, Trash2, Check, MoreHorizontal, FolderKanban, Archive, ChevronDown, Folders, Kanban, Smartphone, Map, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { LayoutGrid, Settings, LogOut, BarChart3, Plus, Edit2, Trash2, Check, MoreHorizontal, FolderKanban, Archive, ChevronDown, Folders, Kanban, Smartphone, Map, PanelLeftClose, PanelLeftOpen, CalendarDays, Sparkles, Brain, Target, Activity } from 'lucide-react'
 import { confirm as confirmDialog } from '@/components/ui/ConfirmDialog'
 import { useAuthStore } from '@/store/authStore'
 import { useDisplayName } from '@/hooks/useDisplayName'
@@ -356,8 +356,13 @@ export function Sidebar() {
                         {!collapsed && <span className="flex-1">Home</span>}
                     </button>
                     <NavItem icon={<Kanban size={14} />} label="Planner" path="/planner" active={location.pathname === '/planner'} />
+                    <NavItem icon={<CalendarDays size={14} />} label="Calendar" path="/calendar" active={location.pathname === '/calendar'} />
                     <NavItem icon={<Folders size={14} />} label="Workspaces" path="/workspaces" active={location.pathname === '/workspaces'} />
+                    <NavItem icon={<Sparkles size={14} />} label="Insights" path="/insights" active={location.pathname === '/insights'} />
                     <NavItem icon={<BarChart3 size={14} />} label="Reports" path="/reports" active={location.pathname === '/reports'} />
+                    <NavItem icon={<Brain size={14} />} label="Deep Work" path="/deep-work" active={location.pathname === '/deep-work'} />
+                    <NavItem icon={<Target size={14} />} label="Calibration" path="/calibration" active={location.pathname === '/calibration'} />
+                    <NavItem icon={<Activity size={14} />} label="Attention" path="/attention" active={location.pathname === '/attention'} />
                     <NavItem icon={<Smartphone size={14} />} label="Screen Time" path="/screen-time" active={location.pathname === '/screen-time'} />
                     <NavItem icon={<Map size={14} />} label="Canvas" path="/canvas" active={location.pathname === '/canvas'} />
                 </div>
