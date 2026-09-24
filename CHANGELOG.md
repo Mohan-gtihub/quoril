@@ -11,6 +11,16 @@ extracts it — so this file is the single source of truth for "what changed".
 
 ## [Unreleased]
 
+## [1.1.8] - 2026-09-25
+
+### Fixed
+
+- Hardened window handling so Quoril reliably keeps to a single window. If the
+  window is ever lost after a renderer hiccup, reopening from the tray or dock
+  now cleanly brings back one window instead of risking a leftover ghost
+  alongside a fresh one. Removed an unused legacy startup path that could open a
+  duplicate window.
+
 ## [1.1.7] - 2026-07-28
 
 ### Fixed
